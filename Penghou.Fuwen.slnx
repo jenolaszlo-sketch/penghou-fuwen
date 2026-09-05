@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Penghou.Fuwen/Penghou.Fuwen.csproj" />
+    <Project Path="src/Penghou.Fuwen.Compiler/Penghou.Fuwen.Compiler.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Penghou.Fuwen.Tests/Penghou.Fuwen.Tests.csproj" />
+    <Project Path="tests/Penghou.Fuwen.Compiler.Tests/Penghou.Fuwen.Compiler.Tests.csproj" />
+  </Folder>
+</Solution>

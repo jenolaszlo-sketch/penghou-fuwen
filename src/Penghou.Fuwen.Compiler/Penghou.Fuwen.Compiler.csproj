@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <PackageId>Penghou.Fuwen.Compiler</PackageId>
+    <Title>Penghou Fuwen Compiler</Title>
+    <Description>Resource-bounded validation and compilation for the Penghou Fuwen artifact-driven workflow language.</Description>
+    <PackageTags>workflow;dsl;compiler;artifacts;ai;automation;typed</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Penghou.Fuwen\Penghou.Fuwen.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Penghou.Fuwen.Compiler.Tests" />
+  </ItemGroup>
+
+</Project>

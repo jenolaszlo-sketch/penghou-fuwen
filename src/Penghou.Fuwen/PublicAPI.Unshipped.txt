@@ -1,0 +1,363 @@
+#nullable enable
+const Penghou.Fuwen.FuwenContracts.CanonicalJsonVersion = "penghou-canonical-json/v1" -> string!
+const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersion = "fuwen-execution/v1" -> string!
+const Penghou.Fuwen.FuwenContracts.IrVersion = "fuwen-ir/v1" -> string!
+const Penghou.Fuwen.FuwenContracts.MaximumCanonicalPlanBytes = 4194304 -> int
+const Penghou.Fuwen.FuwenContracts.SourceFingerprintVersion = "fuwen-source/v1" -> string!
+const Penghou.Fuwen.RuntimeNodeIdentity.MaximumKeyUtf8Bytes = 256 -> int
+const Penghou.Fuwen.StructuralNodeIdentity.MaximumPathUtf8Bytes = 1024 -> int
+const Penghou.Fuwen.StructuralNodeIdentity.MaximumSegmentCharacters = 64 -> int
+Penghou.Fuwen.ActivityNode
+Penghou.Fuwen.ActivityNode.Activity.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.ActivityNode.Activity.init -> void
+Penghou.Fuwen.ActivityNode.ActivityNode(string! Name, string! StructuralPath, Penghou.Fuwen.DescriptorReference! Activity, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArgumentBinding!>! Arguments, Penghou.Fuwen.FuwenType! OutputType) -> void
+Penghou.Fuwen.ActivityNode.Arguments.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArgumentBinding!>!
+Penghou.Fuwen.ActivityNode.Arguments.init -> void
+Penghou.Fuwen.ActivityNode.OutputType.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.ActivityNode.OutputType.init -> void
+Penghou.Fuwen.ArgumentBinding
+Penghou.Fuwen.ArgumentBinding.ArgumentBinding(string! Name, Penghou.Fuwen.Binding! Value) -> void
+Penghou.Fuwen.ArgumentBinding.Name.get -> string!
+Penghou.Fuwen.ArgumentBinding.Name.init -> void
+Penghou.Fuwen.ArgumentBinding.Value.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.ArgumentBinding.Value.init -> void
+Penghou.Fuwen.ArtifactPublicationReceipt
+Penghou.Fuwen.ArtifactPublicationReceipt.Artifact.get -> Penghou.Fuwen.ArtifactReference!
+Penghou.Fuwen.ArtifactPublicationReceipt.Artifact.init -> void
+Penghou.Fuwen.ArtifactPublicationReceipt.ArtifactPublicationReceipt(string! IdempotencyKey, Penghou.Fuwen.ArtifactReference! Artifact, string! ProviderReceiptId, Penghou.Fuwen.PublicationDisposition Disposition) -> void
+Penghou.Fuwen.ArtifactPublicationReceipt.Disposition.get -> Penghou.Fuwen.PublicationDisposition
+Penghou.Fuwen.ArtifactPublicationReceipt.Disposition.init -> void
+Penghou.Fuwen.ArtifactPublicationReceipt.IdempotencyKey.get -> string!
+Penghou.Fuwen.ArtifactPublicationReceipt.IdempotencyKey.init -> void
+Penghou.Fuwen.ArtifactPublicationReceipt.ProviderReceiptId.get -> string!
+Penghou.Fuwen.ArtifactPublicationReceipt.ProviderReceiptId.init -> void
+Penghou.Fuwen.ArtifactReference
+Penghou.Fuwen.ArtifactReference.ArtifactDescriptor.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.ArtifactReference.ArtifactDescriptor.init -> void
+Penghou.Fuwen.ArtifactReference.ArtifactId.get -> string!
+Penghou.Fuwen.ArtifactReference.ArtifactId.init -> void
+Penghou.Fuwen.ArtifactReference.ArtifactReference(string! Provider, string! ArtifactId, Penghou.Fuwen.DescriptorReference! ArtifactDescriptor, Penghou.Fuwen.ContentDigest! ContentDigest, long? ByteLength = null, string? LogicalName = null) -> void
+Penghou.Fuwen.ArtifactReference.ByteLength.get -> long?
+Penghou.Fuwen.ArtifactReference.ByteLength.init -> void
+Penghou.Fuwen.ArtifactReference.ContentDigest.get -> Penghou.Fuwen.ContentDigest!
+Penghou.Fuwen.ArtifactReference.ContentDigest.init -> void
+Penghou.Fuwen.ArtifactReference.LogicalName.get -> string?
+Penghou.Fuwen.ArtifactReference.LogicalName.init -> void
+Penghou.Fuwen.ArtifactReference.Provider.get -> string!
+Penghou.Fuwen.ArtifactReference.Provider.init -> void
+Penghou.Fuwen.ArtifactType
+Penghou.Fuwen.ArtifactType.ArtifactDescriptor.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.ArtifactType.ArtifactDescriptor.init -> void
+Penghou.Fuwen.ArtifactType.ArtifactType(Penghou.Fuwen.DescriptorReference! ArtifactDescriptor) -> void
+Penghou.Fuwen.Binding
+Penghou.Fuwen.CanonicalJson
+Penghou.Fuwen.CapabilityManifest
+Penghou.Fuwen.CapabilityManifest.CapabilityManifest(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.CapabilityRequirement!>! Requirements) -> void
+Penghou.Fuwen.CapabilityManifest.Requirements.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.CapabilityRequirement!>!
+Penghou.Fuwen.CapabilityManifest.Requirements.init -> void
+Penghou.Fuwen.CapabilityRequirement
+Penghou.Fuwen.CapabilityRequirement.CapabilityRequirement(string! Name, string? ScopeClass = null) -> void
+Penghou.Fuwen.CapabilityRequirement.Name.get -> string!
+Penghou.Fuwen.CapabilityRequirement.Name.init -> void
+Penghou.Fuwen.CapabilityRequirement.ScopeClass.get -> string?
+Penghou.Fuwen.CapabilityRequirement.ScopeClass.init -> void
+Penghou.Fuwen.ConditionalNode
+Penghou.Fuwen.ConditionalNode.Condition.get -> Penghou.Fuwen.ConditionExpression!
+Penghou.Fuwen.ConditionalNode.Condition.init -> void
+Penghou.Fuwen.ConditionalNode.ConditionalNode(string! Name, string! StructuralPath, Penghou.Fuwen.ConditionExpression! Condition, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Then, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Else) -> void
+Penghou.Fuwen.ConditionalNode.Else.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>!
+Penghou.Fuwen.ConditionalNode.Else.init -> void
+Penghou.Fuwen.ConditionalNode.Then.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>!
+Penghou.Fuwen.ConditionalNode.Then.init -> void
+Penghou.Fuwen.ConditionExpression
+Penghou.Fuwen.ConditionExpression.ConditionExpression(Penghou.Fuwen.ConditionOperator Operator, Penghou.Fuwen.Binding! Left, Penghou.Fuwen.Binding? Right = null) -> void
+Penghou.Fuwen.ConditionExpression.Left.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.ConditionExpression.Left.init -> void
+Penghou.Fuwen.ConditionExpression.Operator.get -> Penghou.Fuwen.ConditionOperator
+Penghou.Fuwen.ConditionExpression.Operator.init -> void
+Penghou.Fuwen.ConditionExpression.Right.get -> Penghou.Fuwen.Binding?
+Penghou.Fuwen.ConditionExpression.Right.init -> void
+Penghou.Fuwen.ConditionOperator
+Penghou.Fuwen.ConditionOperator.And = 6 -> Penghou.Fuwen.ConditionOperator
+Penghou.Fuwen.ConditionOperator.Equal = 0 -> Penghou.Fuwen.ConditionOperator
+Penghou.Fuwen.ConditionOperator.Exists = 9 -> Penghou.Fuwen.ConditionOperator
+Penghou.Fuwen.ConditionOperator.GreaterThan = 4 -> Penghou.Fuwen.ConditionOperator
+Penghou.Fuwen.ConditionOperator.GreaterThanOrEqual = 5 -> Penghou.Fuwen.ConditionOperator
+Penghou.Fuwen.ConditionOperator.LessThan = 2 -> Penghou.Fuwen.ConditionOperator
+Penghou.Fuwen.ConditionOperator.LessThanOrEqual = 3 -> Penghou.Fuwen.ConditionOperator
+Penghou.Fuwen.ConditionOperator.Not = 8 -> Penghou.Fuwen.ConditionOperator
+Penghou.Fuwen.ConditionOperator.NotEqual = 1 -> Penghou.Fuwen.ConditionOperator
+Penghou.Fuwen.ConditionOperator.Or = 7 -> Penghou.Fuwen.ConditionOperator
+Penghou.Fuwen.ContentDigest
+Penghou.Fuwen.ContentDigest.Algorithm.get -> string!
+Penghou.Fuwen.ContentDigest.Algorithm.init -> void
+Penghou.Fuwen.ContentDigest.ContentDigest(string! Algorithm, string! Contract, string! Value) -> void
+Penghou.Fuwen.ContentDigest.Contract.get -> string!
+Penghou.Fuwen.ContentDigest.Contract.init -> void
+Penghou.Fuwen.ContentDigest.Value.get -> string!
+Penghou.Fuwen.ContentDigest.Value.init -> void
+Penghou.Fuwen.ContextNode
+Penghou.Fuwen.ContextNode.Arguments.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArgumentBinding!>!
+Penghou.Fuwen.ContextNode.Arguments.init -> void
+Penghou.Fuwen.ContextNode.ContextNode(string! Name, string! StructuralPath, Penghou.Fuwen.DescriptorReference! Provider, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArgumentBinding!>! Arguments, Penghou.Fuwen.FuwenType! OutputType) -> void
+Penghou.Fuwen.ContextNode.OutputType.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.ContextNode.OutputType.init -> void
+Penghou.Fuwen.ContextNode.Provider.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.ContextNode.Provider.init -> void
+Penghou.Fuwen.DescriptorKind
+Penghou.Fuwen.DescriptorKind.Activity = 2 -> Penghou.Fuwen.DescriptorKind
+Penghou.Fuwen.DescriptorKind.Artifact = 1 -> Penghou.Fuwen.DescriptorKind
+Penghou.Fuwen.DescriptorKind.ContextProvider = 3 -> Penghou.Fuwen.DescriptorKind
+Penghou.Fuwen.DescriptorKind.InferenceProfile = 4 -> Penghou.Fuwen.DescriptorKind
+Penghou.Fuwen.DescriptorKind.PromptTemplate = 5 -> Penghou.Fuwen.DescriptorKind
+Penghou.Fuwen.DescriptorKind.Schema = 0 -> Penghou.Fuwen.DescriptorKind
+Penghou.Fuwen.DescriptorKind.Tool = 6 -> Penghou.Fuwen.DescriptorKind
+Penghou.Fuwen.DescriptorReference
+Penghou.Fuwen.DescriptorReference.ContentDigest.get -> Penghou.Fuwen.ContentDigest!
+Penghou.Fuwen.DescriptorReference.ContentDigest.init -> void
+Penghou.Fuwen.DescriptorReference.DescriptorReference(Penghou.Fuwen.DescriptorKind Kind, string! Name, string! Version, Penghou.Fuwen.ContentDigest! ContentDigest) -> void
+Penghou.Fuwen.DescriptorReference.Kind.get -> Penghou.Fuwen.DescriptorKind
+Penghou.Fuwen.DescriptorReference.Kind.init -> void
+Penghou.Fuwen.DescriptorReference.Name.get -> string!
+Penghou.Fuwen.DescriptorReference.Name.init -> void
+Penghou.Fuwen.DescriptorReference.Version.get -> string!
+Penghou.Fuwen.DescriptorReference.Version.init -> void
+Penghou.Fuwen.EnumMember
+Penghou.Fuwen.EnumMember.EnumMember(string! Name, string! Value) -> void
+Penghou.Fuwen.EnumMember.Name.get -> string!
+Penghou.Fuwen.EnumMember.Name.init -> void
+Penghou.Fuwen.EnumMember.Value.get -> string!
+Penghou.Fuwen.EnumMember.Value.init -> void
+Penghou.Fuwen.EnumRuntimeKey
+Penghou.Fuwen.EnumRuntimeKey.EnumRuntimeKey(Penghou.Fuwen.DescriptorReference! EnumSchema, string! Value) -> void
+Penghou.Fuwen.EnumRuntimeKey.EnumSchema.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.EnumRuntimeKey.EnumSchema.init -> void
+Penghou.Fuwen.EnumRuntimeKey.Value.get -> string!
+Penghou.Fuwen.EnumRuntimeKey.Value.init -> void
+Penghou.Fuwen.EnumSchemaDefinition
+Penghou.Fuwen.EnumSchemaDefinition.EnumSchemaDefinition(Penghou.Fuwen.DescriptorReference! Descriptor, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.EnumMember!>! Members) -> void
+Penghou.Fuwen.EnumSchemaDefinition.Members.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.EnumMember!>!
+Penghou.Fuwen.EnumSchemaDefinition.Members.init -> void
+Penghou.Fuwen.FuwenContracts
+Penghou.Fuwen.FuwenPrimitiveKind
+Penghou.Fuwen.FuwenPrimitiveKind.Boolean = 1 -> Penghou.Fuwen.FuwenPrimitiveKind
+Penghou.Fuwen.FuwenPrimitiveKind.Duration = 4 -> Penghou.Fuwen.FuwenPrimitiveKind
+Penghou.Fuwen.FuwenPrimitiveKind.Integer = 2 -> Penghou.Fuwen.FuwenPrimitiveKind
+Penghou.Fuwen.FuwenPrimitiveKind.Json = 5 -> Penghou.Fuwen.FuwenPrimitiveKind
+Penghou.Fuwen.FuwenPrimitiveKind.Number = 3 -> Penghou.Fuwen.FuwenPrimitiveKind
+Penghou.Fuwen.FuwenPrimitiveKind.String = 0 -> Penghou.Fuwen.FuwenPrimitiveKind
+Penghou.Fuwen.FuwenType
+Penghou.Fuwen.InferenceNode
+Penghou.Fuwen.InferenceNode.Arguments.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArgumentBinding!>!
+Penghou.Fuwen.InferenceNode.Arguments.init -> void
+Penghou.Fuwen.InferenceNode.ContextSnapshots.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.NodeOutputBinding!>!
+Penghou.Fuwen.InferenceNode.ContextSnapshots.init -> void
+Penghou.Fuwen.InferenceNode.InferenceNode(string! Name, string! StructuralPath, Penghou.Fuwen.DescriptorReference! Profile, Penghou.Fuwen.DescriptorReference! PromptTemplate, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArgumentBinding!>! Arguments, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.NodeOutputBinding!>! ContextSnapshots, Penghou.Fuwen.FuwenType! OutputType) -> void
+Penghou.Fuwen.InferenceNode.OutputType.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.InferenceNode.OutputType.init -> void
+Penghou.Fuwen.InferenceNode.Profile.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.InferenceNode.Profile.init -> void
+Penghou.Fuwen.InferenceNode.PromptTemplate.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.InferenceNode.PromptTemplate.init -> void
+Penghou.Fuwen.InMemoryWorkflowDefinitionStore
+Penghou.Fuwen.InMemoryWorkflowDefinitionStore.InMemoryWorkflowDefinitionStore() -> void
+Penghou.Fuwen.InMemoryWorkflowDefinitionStore.ReadAsync(string! executionFingerprint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.WorkflowDefinitionDocument?>
+Penghou.Fuwen.InMemoryWorkflowDefinitionStore.StoreAsync(Penghou.Fuwen.WorkflowDefinitionDocument! definition, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.WorkflowDefinitionWriteDisposition>
+Penghou.Fuwen.InputBinding
+Penghou.Fuwen.InputBinding.InputBinding(System.Collections.Generic.IReadOnlyList<string!>! Projection) -> void
+Penghou.Fuwen.InputBinding.Projection.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Fuwen.InputBinding.Projection.init -> void
+Penghou.Fuwen.IntegerRuntimeKey
+Penghou.Fuwen.IntegerRuntimeKey.IntegerRuntimeKey(long Value) -> void
+Penghou.Fuwen.IntegerRuntimeKey.Value.get -> long
+Penghou.Fuwen.IntegerRuntimeKey.Value.init -> void
+Penghou.Fuwen.IWorkflowDefinitionStore
+Penghou.Fuwen.IWorkflowDefinitionStore.ReadAsync(string! executionFingerprint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.WorkflowDefinitionDocument?>
+Penghou.Fuwen.IWorkflowDefinitionStore.StoreAsync(Penghou.Fuwen.WorkflowDefinitionDocument! definition, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.WorkflowDefinitionWriteDisposition>
+Penghou.Fuwen.ListBinding
+Penghou.Fuwen.ListBinding.Items.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Binding!>!
+Penghou.Fuwen.ListBinding.Items.init -> void
+Penghou.Fuwen.ListBinding.ListBinding(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Binding!>! Items) -> void
+Penghou.Fuwen.ListType
+Penghou.Fuwen.ListType.ItemType.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.ListType.ItemType.init -> void
+Penghou.Fuwen.ListType.ListType(Penghou.Fuwen.FuwenType! ItemType, int MaxItems) -> void
+Penghou.Fuwen.ListType.MaxItems.get -> int
+Penghou.Fuwen.ListType.MaxItems.init -> void
+Penghou.Fuwen.LiteralBinding
+Penghou.Fuwen.LiteralBinding.LiteralBinding(System.Text.Json.JsonElement Value) -> void
+Penghou.Fuwen.LiteralBinding.Value.get -> System.Text.Json.JsonElement
+Penghou.Fuwen.LiteralBinding.Value.init -> void
+Penghou.Fuwen.NamedTypeReference
+Penghou.Fuwen.NamedTypeReference.NamedTypeReference(Penghou.Fuwen.DescriptorReference! Schema) -> void
+Penghou.Fuwen.NamedTypeReference.Schema.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.NamedTypeReference.Schema.init -> void
+Penghou.Fuwen.NodeOutputBinding
+Penghou.Fuwen.NodeOutputBinding.NodeOutputBinding(string! NodePath, System.Collections.Generic.IReadOnlyList<string!>! Projection) -> void
+Penghou.Fuwen.NodeOutputBinding.NodePath.get -> string!
+Penghou.Fuwen.NodeOutputBinding.NodePath.init -> void
+Penghou.Fuwen.NodeOutputBinding.Projection.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Fuwen.NodeOutputBinding.Projection.init -> void
+Penghou.Fuwen.ObjectBinding
+Penghou.Fuwen.ObjectBinding.ObjectBinding(System.Collections.Generic.IReadOnlyDictionary<string!, Penghou.Fuwen.Binding!>! Properties) -> void
+Penghou.Fuwen.ObjectBinding.Properties.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Penghou.Fuwen.Binding!>!
+Penghou.Fuwen.ObjectBinding.Properties.init -> void
+Penghou.Fuwen.ObjectSchemaDefinition
+Penghou.Fuwen.ObjectSchemaDefinition.Fields.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.SchemaField!>!
+Penghou.Fuwen.ObjectSchemaDefinition.Fields.init -> void
+Penghou.Fuwen.ObjectSchemaDefinition.ObjectSchemaDefinition(Penghou.Fuwen.DescriptorReference! Descriptor, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.SchemaField!>! Fields) -> void
+Penghou.Fuwen.OptionalType
+Penghou.Fuwen.OptionalType.OptionalType(Penghou.Fuwen.FuwenType! ValueType) -> void
+Penghou.Fuwen.OptionalType.ValueType.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.OptionalType.ValueType.init -> void
+Penghou.Fuwen.PositionalRuntimeKey
+Penghou.Fuwen.PositionalRuntimeKey.Index.get -> long
+Penghou.Fuwen.PositionalRuntimeKey.Index.init -> void
+Penghou.Fuwen.PositionalRuntimeKey.PositionalRuntimeKey(long Index) -> void
+Penghou.Fuwen.PrimitiveType
+Penghou.Fuwen.PrimitiveType.Primitive.get -> Penghou.Fuwen.FuwenPrimitiveKind
+Penghou.Fuwen.PrimitiveType.Primitive.init -> void
+Penghou.Fuwen.PrimitiveType.PrimitiveType(Penghou.Fuwen.FuwenPrimitiveKind Primitive) -> void
+Penghou.Fuwen.PublicationDisposition
+Penghou.Fuwen.PublicationDisposition.Created = 0 -> Penghou.Fuwen.PublicationDisposition
+Penghou.Fuwen.PublicationDisposition.Replayed = 1 -> Penghou.Fuwen.PublicationDisposition
+Penghou.Fuwen.ResolvedSchemaDefinition
+Penghou.Fuwen.ResolvedSchemaDefinition.Descriptor.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.ResolvedSchemaDefinition.Descriptor.init -> void
+Penghou.Fuwen.ResolvedSchemaDefinition.ResolvedSchemaDefinition(Penghou.Fuwen.DescriptorReference! Descriptor) -> void
+Penghou.Fuwen.ResourceHandle
+Penghou.Fuwen.ResourceHandle.HandleId.get -> string!
+Penghou.Fuwen.ResourceHandle.HandleId.init -> void
+Penghou.Fuwen.ResourceHandle.Kind.get -> string!
+Penghou.Fuwen.ResourceHandle.Kind.init -> void
+Penghou.Fuwen.ResourceHandle.ResourceHandle(string! Kind, string! HandleId) -> void
+Penghou.Fuwen.ReturnNode
+Penghou.Fuwen.ReturnNode.ReturnNode(string! Name, string! StructuralPath, Penghou.Fuwen.Binding! Value) -> void
+Penghou.Fuwen.ReturnNode.Value.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.ReturnNode.Value.init -> void
+Penghou.Fuwen.RuntimeIdentityKey
+Penghou.Fuwen.RuntimeNodeIdentity
+Penghou.Fuwen.SchemaField
+Penghou.Fuwen.SchemaField.Name.get -> string!
+Penghou.Fuwen.SchemaField.Name.init -> void
+Penghou.Fuwen.SchemaField.SchemaField(string! Name, Penghou.Fuwen.FuwenType! Type) -> void
+Penghou.Fuwen.SchemaField.Type.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.SchemaField.Type.init -> void
+Penghou.Fuwen.SourceDocumentReference
+Penghou.Fuwen.SourceDocumentReference.ContentDigest.get -> Penghou.Fuwen.ContentDigest!
+Penghou.Fuwen.SourceDocumentReference.ContentDigest.init -> void
+Penghou.Fuwen.SourceDocumentReference.DocumentId.get -> string!
+Penghou.Fuwen.SourceDocumentReference.DocumentId.init -> void
+Penghou.Fuwen.SourceDocumentReference.LogicalName.get -> string!
+Penghou.Fuwen.SourceDocumentReference.LogicalName.init -> void
+Penghou.Fuwen.SourceDocumentReference.SourceDocumentReference(string! DocumentId, string! LogicalName, Penghou.Fuwen.ContentDigest! ContentDigest, long Utf8ByteLength) -> void
+Penghou.Fuwen.SourceDocumentReference.Utf8ByteLength.get -> long
+Penghou.Fuwen.SourceDocumentReference.Utf8ByteLength.init -> void
+Penghou.Fuwen.SourceIdentity
+Penghou.Fuwen.SourceMapEntry
+Penghou.Fuwen.SourceMapEntry.SourceMapEntry(string! StructuralPath, Penghou.Fuwen.SourceSpan! Span) -> void
+Penghou.Fuwen.SourceMapEntry.Span.get -> Penghou.Fuwen.SourceSpan!
+Penghou.Fuwen.SourceMapEntry.Span.init -> void
+Penghou.Fuwen.SourceMapEntry.StructuralPath.get -> string!
+Penghou.Fuwen.SourceMapEntry.StructuralPath.init -> void
+Penghou.Fuwen.SourceSpan
+Penghou.Fuwen.SourceSpan.DocumentId.get -> string!
+Penghou.Fuwen.SourceSpan.DocumentId.init -> void
+Penghou.Fuwen.SourceSpan.SourceSpan(string! DocumentId, long StartUtf8ByteOffset, long Utf8ByteLength, int StartLine, int StartUtf16Column) -> void
+Penghou.Fuwen.SourceSpan.StartLine.get -> int
+Penghou.Fuwen.SourceSpan.StartLine.init -> void
+Penghou.Fuwen.SourceSpan.StartUtf16Column.get -> int
+Penghou.Fuwen.SourceSpan.StartUtf16Column.init -> void
+Penghou.Fuwen.SourceSpan.StartUtf8ByteOffset.get -> long
+Penghou.Fuwen.SourceSpan.StartUtf8ByteOffset.init -> void
+Penghou.Fuwen.SourceSpan.Utf8ByteLength.get -> long
+Penghou.Fuwen.SourceSpan.Utf8ByteLength.init -> void
+Penghou.Fuwen.StringRuntimeKey
+Penghou.Fuwen.StringRuntimeKey.StringRuntimeKey(string! Value) -> void
+Penghou.Fuwen.StringRuntimeKey.Value.get -> string!
+Penghou.Fuwen.StringRuntimeKey.Value.init -> void
+Penghou.Fuwen.StructuralNodeIdentity
+Penghou.Fuwen.UuidRuntimeKey
+Penghou.Fuwen.UuidRuntimeKey.UuidRuntimeKey(string! Value) -> void
+Penghou.Fuwen.UuidRuntimeKey.Value.get -> string!
+Penghou.Fuwen.UuidRuntimeKey.Value.init -> void
+Penghou.Fuwen.WorkflowDefinitionConflictException
+Penghou.Fuwen.WorkflowDefinitionConflictException.WorkflowDefinitionConflictException(string! executionFingerprint) -> void
+Penghou.Fuwen.WorkflowDefinitionDocument
+Penghou.Fuwen.WorkflowDefinitionDocument.CanonicalBytes.get -> System.ReadOnlyMemory<byte>
+Penghou.Fuwen.WorkflowDefinitionDocument.ExecutionFingerprint.get -> string!
+Penghou.Fuwen.WorkflowDefinitionDocument.ReadPlan() -> Penghou.Fuwen.WorkflowPlan!
+Penghou.Fuwen.WorkflowDefinitionIntegrityException
+Penghou.Fuwen.WorkflowDefinitionIntegrityException.WorkflowDefinitionIntegrityException(string! message) -> void
+Penghou.Fuwen.WorkflowDefinitionWriteDisposition
+Penghou.Fuwen.WorkflowDefinitionWriteDisposition.AlreadyExists = 1 -> Penghou.Fuwen.WorkflowDefinitionWriteDisposition
+Penghou.Fuwen.WorkflowDefinitionWriteDisposition.Created = 0 -> Penghou.Fuwen.WorkflowDefinitionWriteDisposition
+Penghou.Fuwen.WorkflowNode
+Penghou.Fuwen.WorkflowNode.Name.get -> string!
+Penghou.Fuwen.WorkflowNode.Name.init -> void
+Penghou.Fuwen.WorkflowNode.StructuralPath.get -> string!
+Penghou.Fuwen.WorkflowNode.StructuralPath.init -> void
+Penghou.Fuwen.WorkflowNode.WorkflowNode(string! Name, string! StructuralPath) -> void
+Penghou.Fuwen.WorkflowPlan
+Penghou.Fuwen.WorkflowPlan.CanonicalJsonVersion.get -> string!
+Penghou.Fuwen.WorkflowPlan.CanonicalJsonVersion.init -> void
+Penghou.Fuwen.WorkflowPlan.CapabilityManifest.get -> Penghou.Fuwen.CapabilityManifest!
+Penghou.Fuwen.WorkflowPlan.CapabilityManifest.init -> void
+Penghou.Fuwen.WorkflowPlan.CatalogueBindings.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>!
+Penghou.Fuwen.WorkflowPlan.CatalogueBindings.init -> void
+Penghou.Fuwen.WorkflowPlan.CompilerSemanticVersion.get -> string!
+Penghou.Fuwen.WorkflowPlan.CompilerSemanticVersion.init -> void
+Penghou.Fuwen.WorkflowPlan.FingerprintVersion.get -> string!
+Penghou.Fuwen.WorkflowPlan.FingerprintVersion.init -> void
+Penghou.Fuwen.WorkflowPlan.InputType.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.WorkflowPlan.InputType.init -> void
+Penghou.Fuwen.WorkflowPlan.IrVersion.get -> string!
+Penghou.Fuwen.WorkflowPlan.IrVersion.init -> void
+Penghou.Fuwen.WorkflowPlan.LanguageVersion.get -> string!
+Penghou.Fuwen.WorkflowPlan.LanguageVersion.init -> void
+Penghou.Fuwen.WorkflowPlan.Name.get -> string!
+Penghou.Fuwen.WorkflowPlan.Name.init -> void
+Penghou.Fuwen.WorkflowPlan.Nodes.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>!
+Penghou.Fuwen.WorkflowPlan.Nodes.init -> void
+Penghou.Fuwen.WorkflowPlan.OutputType.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.WorkflowPlan.OutputType.init -> void
+Penghou.Fuwen.WorkflowPlan.Revision.get -> string!
+Penghou.Fuwen.WorkflowPlan.Revision.init -> void
+Penghou.Fuwen.WorkflowPlan.RoutingPolicyRevision.get -> string!
+Penghou.Fuwen.WorkflowPlan.RoutingPolicyRevision.init -> void
+Penghou.Fuwen.WorkflowPlan.Schemas.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>!
+Penghou.Fuwen.WorkflowPlan.Schemas.init -> void
+Penghou.Fuwen.WorkflowPlan.WorkflowPlan(string! IrVersion, string! LanguageVersion, string! CompilerSemanticVersion, string! CanonicalJsonVersion, string! FingerprintVersion, string! Name, string! Revision, Penghou.Fuwen.FuwenType! InputType, Penghou.Fuwen.FuwenType! OutputType, string! RoutingPolicyRevision, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>! Schemas, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>! CatalogueBindings, Penghou.Fuwen.CapabilityManifest! CapabilityManifest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Nodes) -> void
+Penghou.Fuwen.WorkflowPlanIdentity
+Penghou.Fuwen.WorkflowPlanValidator
+Penghou.Fuwen.WorkflowSourceMap
+Penghou.Fuwen.WorkflowSourceMap.Documents.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.SourceDocumentReference!>!
+Penghou.Fuwen.WorkflowSourceMap.Documents.init -> void
+Penghou.Fuwen.WorkflowSourceMap.Entries.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.SourceMapEntry!>!
+Penghou.Fuwen.WorkflowSourceMap.Entries.init -> void
+Penghou.Fuwen.WorkflowSourceMap.ExecutionFingerprint.get -> string!
+Penghou.Fuwen.WorkflowSourceMap.ExecutionFingerprint.init -> void
+Penghou.Fuwen.WorkflowSourceMap.SourceFingerprint.get -> Penghou.Fuwen.ContentDigest!
+Penghou.Fuwen.WorkflowSourceMap.SourceFingerprint.init -> void
+Penghou.Fuwen.WorkflowSourceMap.WorkflowSourceMap(string! ExecutionFingerprint, Penghou.Fuwen.ContentDigest! SourceFingerprint, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.SourceDocumentReference!>! Documents, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.SourceMapEntry!>! Entries) -> void
+Penghou.Fuwen.WorkflowSourceMapValidator
+static Penghou.Fuwen.CanonicalJson.Canonicalize(System.Text.Json.JsonElement element) -> byte[]!
+static Penghou.Fuwen.CanonicalJson.Deserialize<T>(System.ReadOnlySpan<byte> utf8Json) -> T
+static Penghou.Fuwen.CanonicalJson.Serialize<T>(T value) -> byte[]!
+static Penghou.Fuwen.RuntimeNodeIdentity.CreateFanOutItem(string! fanOutStructuralPath, Penghou.Fuwen.RuntimeIdentityKey! key, params string![]! descendantSegments) -> string!
+static Penghou.Fuwen.RuntimeNodeIdentity.CreateIteration(string! loopStructuralPath, int iteration, params string![]! descendantSegments) -> string!
+static Penghou.Fuwen.RuntimeNodeIdentity.GetCanonicalKeyBytes(Penghou.Fuwen.RuntimeIdentityKey! key) -> byte[]!
+static Penghou.Fuwen.RuntimeNodeIdentity.GetKeyPathSegment(Penghou.Fuwen.RuntimeIdentityKey! key) -> string!
+static Penghou.Fuwen.RuntimeNodeIdentity.ValidateUniqueKeys(System.Collections.Generic.IEnumerable<Penghou.Fuwen.RuntimeIdentityKey!>! keys) -> void
+static Penghou.Fuwen.SourceIdentity.ComputeSourceFingerprint(string! formattedSource) -> string!
+static Penghou.Fuwen.SourceIdentity.NormalizeFormattedSource(string! formattedSource) -> string!
+static Penghou.Fuwen.StructuralNodeIdentity.Create(string! workflowName, params string![]! lexicalSegments) -> string!
+static Penghou.Fuwen.StructuralNodeIdentity.ValidateSegment(string! segment) -> void
+static Penghou.Fuwen.WorkflowDefinitionDocument.Create(Penghou.Fuwen.WorkflowPlan! plan) -> Penghou.Fuwen.WorkflowDefinitionDocument!
+static Penghou.Fuwen.WorkflowDefinitionDocument.LoadVerified(string! executionFingerprint, System.ReadOnlySpan<byte> persistedBytes) -> Penghou.Fuwen.WorkflowDefinitionDocument!
+static Penghou.Fuwen.WorkflowPlanIdentity.ComputeExecutionFingerprint(Penghou.Fuwen.WorkflowPlan! plan) -> string!
+static Penghou.Fuwen.WorkflowPlanIdentity.GetCanonicalBytes(Penghou.Fuwen.WorkflowPlan! plan) -> byte[]!
+static Penghou.Fuwen.WorkflowPlanIdentity.ValidateExecutionFingerprint(string! executionFingerprint) -> void
+static Penghou.Fuwen.WorkflowPlanValidator.Validate(Penghou.Fuwen.WorkflowPlan! plan) -> void
+static Penghou.Fuwen.WorkflowSourceMapValidator.Validate(Penghou.Fuwen.WorkflowSourceMap! sourceMap) -> void
+static Penghou.Fuwen.WorkflowSourceMapValidator.ValidateForPlan(Penghou.Fuwen.WorkflowSourceMap! sourceMap, Penghou.Fuwen.WorkflowPlan! plan) -> void

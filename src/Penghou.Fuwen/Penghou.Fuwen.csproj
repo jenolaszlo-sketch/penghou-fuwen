@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <PackageId>Penghou.Fuwen</PackageId>
+    <Title>Penghou Fuwen</Title>
+    <Description>Provider-neutral typed contracts and immutable executable plans for artifact-driven AI workflows.</Description>
+    <PackageTags>workflow;dsl;compiler;artifacts;ai;automation;typed</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>true</IsPackable>
+    <PublicApiAnalyzerEnabled>true</PublicApiAnalyzerEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Penghou.Fuwen.Tests" />
+  </ItemGroup>
+
+</Project>

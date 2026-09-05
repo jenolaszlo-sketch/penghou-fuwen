@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-pack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Build
+        run: dotnet build Penghou.Fuwen.slnx --configuration Release
+
+      - name: Verify formatting
+        run: dotnet format Penghou.Fuwen.slnx --verify-no-changes --no-restore
+
+      - name: Test
+        run: dotnet test Penghou.Fuwen.slnx --configuration Release --no-build
+
+      - name: Verify independent canonical JSON vector
+        run: python3 tests/golden/canonical_json_v1.py
+
+      - name: Pack
+        run: dotnet pack Penghou.Fuwen.slnx --configuration Release --no-build --output artifacts --property:PackageVersion=0.0.0-ci.${{ github.run_id }}
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v6
+        with:
+          name: nuget-packages
+          path: |
+            artifacts/*.nupkg
+            artifacts/*.snupkg
+          if-no-files-found: error

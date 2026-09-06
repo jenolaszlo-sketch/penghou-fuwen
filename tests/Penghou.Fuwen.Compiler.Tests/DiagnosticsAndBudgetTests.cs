@@ -123,6 +123,20 @@ public sealed class DiagnosticsAndBudgetTests
     }
 
     [Fact]
+    public void CompilationResult_DoesNotExposeDefinitionWhenDiagnosticsContainErrors()
+    {
+        var plan = CompilerPlanFixture.Create(CompilerPlanFixture.CreateNodes(new LiteralBinding(JsonDocument.Parse("\"detached\"").RootElement.Clone())));
+        var result = new CompilationResult(
+            plan,
+            [new CompilerDiagnostic("FWN-TEST", DiagnosticSeverity.Error, DiagnosticPhase.Validation, "rejected")],
+            new CompilationUsageSummary(),
+            CompilationBudget.Default);
+
+        result.Definition.Should().BeNull();
+        result.Succeeded.Should().BeFalse();
+    }
+
+    [Fact]
     public void Collection_RejectsInputBeyondHardEnumerationCeiling()
     {
         IEnumerable<CompilerDiagnostic> Infinite()

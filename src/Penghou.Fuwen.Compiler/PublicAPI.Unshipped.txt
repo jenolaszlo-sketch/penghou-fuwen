@@ -55,6 +55,7 @@ Penghou.Fuwen.Compiler.CompilationResult
 Penghou.Fuwen.Compiler.CompilationResult.CompilationResult(Penghou.Fuwen.WorkflowPlan? plan, System.Collections.Generic.IEnumerable<Penghou.Fuwen.Compiler.CompilerDiagnostic!>! diagnostics, Penghou.Fuwen.Compiler.CompilationUsageSummary! usage, Penghou.Fuwen.Compiler.CompilationBudget! budget) -> void
 Penghou.Fuwen.Compiler.CompilationResult.Budget.get -> Penghou.Fuwen.Compiler.CompilationBudget!
 Penghou.Fuwen.Compiler.CompilationResult.Diagnostics.get -> Penghou.Fuwen.Compiler.DiagnosticCollection!
+Penghou.Fuwen.Compiler.CompilationResult.Definition.get -> Penghou.Fuwen.WorkflowDefinitionDocument?
 Penghou.Fuwen.Compiler.CompilationResult.Plan.get -> Penghou.Fuwen.WorkflowPlan?
 Penghou.Fuwen.Compiler.CompilationResult.Succeeded.get -> bool
 Penghou.Fuwen.Compiler.CompilationResult.Usage.get -> Penghou.Fuwen.Compiler.CompilationUsageSummary!
@@ -101,6 +102,7 @@ const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetCatalogueLookupsExcee
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetCatalogueLookupMillisecondsExceeded = "FWN-BUDGET-112" -> string!
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetCompilationMillisecondsExceeded = "FWN-BUDGET-113" -> string!
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetDiagnosticsExceeded = "FWN-BUDGET-114" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CanonicalDefinitionTooLarge = "FWN-BUDGET-115" -> string!
 Penghou.Fuwen.Compiler.DiagnosticBuilder
 Penghou.Fuwen.Compiler.DiagnosticBuilder.DiagnosticBuilder(int maximumCount = 100) -> void
 Penghou.Fuwen.Compiler.DiagnosticBuilder.Add(Penghou.Fuwen.Compiler.CompilerDiagnostic! diagnostic) -> bool
@@ -165,6 +167,32 @@ Penghou.Fuwen.Compiler.TrustedCatalogueResolver
 Penghou.Fuwen.Compiler.TrustedCatalogueResolver.ResolveAsync(Penghou.Fuwen.DescriptorReference! descriptor, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.DescriptorResolutionResult!>
 Penghou.Fuwen.Compiler.TrustedCatalogueResolver.ResolveManyAsync(System.Collections.Generic.IEnumerable<Penghou.Fuwen.DescriptorReference!>! descriptors, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.DescriptorResolutionBatchResult!>
 Penghou.Fuwen.Compiler.TrustedCatalogueResolver.TrustedCatalogueResolver(Penghou.Fuwen.Compiler.ITrustedCatalogue! catalogue, Penghou.Fuwen.Compiler.CompilationBudget? budget = null) -> void
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.SemanticValidationFailed = "FWN-VALIDATION-001" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BindingReferenceInvalid = "FWN-BINDING-001" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BindingTypeMismatch = "FWN-TYPING-001" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BindingProjectionInvalid = "FWN-TYPING-002" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CapabilityManifestMismatch = "FWN-ADMISSION-001" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CapabilityNotGranted = "FWN-ADMISSION-002" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueSchemaPayloadMissing = "FWN-CATALOGUE-004" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueSchemaMismatch = "FWN-CATALOGUE-005" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.ContextSnapshotInvalid = "FWN-BINDING-002" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.ContextSnapshotDuplicate = "FWN-BINDING-003" -> string!
+Penghou.Fuwen.Compiler.CapabilityGrantPolicy
+Penghou.Fuwen.Compiler.CapabilityGrantPolicy.CapabilityGrantPolicy(System.Collections.Generic.IEnumerable<Penghou.Fuwen.CapabilityRequirement!>! grantedCapabilities) -> void
+static Penghou.Fuwen.Compiler.CapabilityGrantPolicy.AllowAll.get -> Penghou.Fuwen.Compiler.CapabilityGrantPolicy!
+Penghou.Fuwen.Compiler.CapabilityGrantPolicy.IsGranted(Penghou.Fuwen.CapabilityRequirement! requirement) -> bool
+Penghou.Fuwen.Compiler.WorkflowPlanBuilder
+Penghou.Fuwen.Compiler.WorkflowPlanBuilder.WorkflowPlanBuilder(string! name, string! revision, Penghou.Fuwen.FuwenType! inputType, Penghou.Fuwen.FuwenType! outputType, string! routingPolicyRevision, string! languageVersion = "fuwen-language/v1") -> void
+Penghou.Fuwen.Compiler.WorkflowPlanBuilder.AddCatalogueBinding(Penghou.Fuwen.DescriptorReference! descriptor) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
+Penghou.Fuwen.Compiler.WorkflowPlanBuilder.AddNode(Penghou.Fuwen.WorkflowNode! node) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
+Penghou.Fuwen.Compiler.WorkflowPlanBuilder.AddSchema(Penghou.Fuwen.ResolvedSchemaDefinition! schema) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
+Penghou.Fuwen.Compiler.WorkflowPlanBuilder.Build() -> Penghou.Fuwen.WorkflowPlan!
+Penghou.Fuwen.Compiler.WorkflowPlanBuilder.RequireCapability(Penghou.Fuwen.CapabilityRequirement! capability) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
+Penghou.Fuwen.Compiler.WorkflowPlanBuilder.SetExecutionOrder(Penghou.Fuwen.WorkflowExecutionOrder! order) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
+Penghou.Fuwen.Compiler.WorkflowCompiler
+Penghou.Fuwen.Compiler.WorkflowCompiler.WorkflowCompiler(Penghou.Fuwen.Compiler.ITrustedCatalogue! catalogue, Penghou.Fuwen.Compiler.CompilationBudget? hostBudget = null, Penghou.Fuwen.Compiler.CapabilityGrantPolicy? capabilityPolicy = null) -> void
+Penghou.Fuwen.Compiler.WorkflowCompiler.Compile(Penghou.Fuwen.WorkflowPlan! plan, Penghou.Fuwen.Compiler.CompilationBudget? callerBudget = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> Penghou.Fuwen.Compiler.CompilationResult!
+Penghou.Fuwen.Compiler.WorkflowCompiler.CompileAsync(Penghou.Fuwen.WorkflowPlan! plan, Penghou.Fuwen.Compiler.CompilationBudget? callerBudget = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.CompilationResult!>
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueDescriptorDigestMismatch = "FWN-CATALOGUE-002" -> string!
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueDescriptorNotFound = "FWN-CATALOGUE-001" -> string!
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueResolutionInvalidResult = "FWN-CATALOGUE-003" -> string!

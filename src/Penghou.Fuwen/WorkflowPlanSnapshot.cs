@@ -292,7 +292,8 @@ internal static class WorkflowPlanSnapshot
         {
             return type switch
             {
-                PrimitiveType value => new PrimitiveType(value.Primitive),
+                PrimitiveType value when Enum.IsDefined(value.Primitive) => new PrimitiveType(value.Primitive),
+                PrimitiveType => throw new ArgumentOutOfRangeException(nameof(type), "Primitive type is not supported."),
                 NamedTypeReference value => new NamedTypeReference(CloneDescriptor(value.Schema, state)),
                 OptionalType value => new OptionalType(CloneType(value.ValueType, state)),
                 ListType value => new ListType(CloneType(value.ItemType, state), value.MaxItems),

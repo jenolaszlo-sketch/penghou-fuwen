@@ -43,9 +43,20 @@ public static class CompilerDiagnosticCodes
     public const string BudgetCatalogueLookupMillisecondsExceeded = "FWN-BUDGET-112";
     public const string BudgetCompilationMillisecondsExceeded = "FWN-BUDGET-113";
     public const string BudgetDiagnosticsExceeded = "FWN-BUDGET-114";
+    public const string CanonicalDefinitionTooLarge = "FWN-BUDGET-115";
     public const string CatalogueDescriptorNotFound = "FWN-CATALOGUE-001";
     public const string CatalogueDescriptorDigestMismatch = "FWN-CATALOGUE-002";
     public const string CatalogueResolutionInvalidResult = "FWN-CATALOGUE-003";
+    public const string CatalogueSchemaPayloadMissing = "FWN-CATALOGUE-004";
+    public const string CatalogueSchemaMismatch = "FWN-CATALOGUE-005";
+    public const string SemanticValidationFailed = "FWN-VALIDATION-001";
+    public const string BindingReferenceInvalid = "FWN-BINDING-001";
+    public const string BindingTypeMismatch = "FWN-TYPING-001";
+    public const string BindingProjectionInvalid = "FWN-TYPING-002";
+    public const string CapabilityManifestMismatch = "FWN-ADMISSION-001";
+    public const string CapabilityNotGranted = "FWN-ADMISSION-002";
+    public const string ContextSnapshotInvalid = "FWN-BINDING-002";
+    public const string ContextSnapshotDuplicate = "FWN-BINDING-003";
 }
 
 /// <summary>An immutable compiler diagnostic suitable for machine and human consumption.</summary>
@@ -114,6 +125,7 @@ public sealed class DiagnosticCollection : IReadOnlyList<CompilerDiagnostic>
             .ThenBy(static d => d.Actual, StringComparer.Ordinal)
             .ToArray();
 
+        HasErrors = snapshot.Any(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         DroppedCount = Math.Max(0, snapshot.Length - maximumCount);
         _items = Array.AsReadOnly(snapshot.Take(maximumCount).ToArray());
     }
@@ -134,6 +146,7 @@ public sealed class DiagnosticCollection : IReadOnlyList<CompilerDiagnostic>
             .ThenBy(static d => d.Expected, StringComparer.Ordinal)
             .ThenBy(static d => d.Actual, StringComparer.Ordinal)
             .ToArray();
+        HasErrors = snapshot.Any(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         DroppedCount = checked(Math.Max(0, snapshot.Length - maximumCount) + alreadyDropped);
         _items = Array.AsReadOnly(snapshot.Take(maximumCount).ToArray());
     }
@@ -141,6 +154,7 @@ public sealed class DiagnosticCollection : IReadOnlyList<CompilerDiagnostic>
     public int Count => _items.Count;
     public int DroppedCount { get; }
     public bool IsTruncated => DroppedCount != 0;
+    internal bool HasErrors { get; }
     public CompilerDiagnostic this[int index] => _items[index];
     public IEnumerator<CompilerDiagnostic> GetEnumerator() => _items.GetEnumerator();
     System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
@@ -211,14 +225,29 @@ public sealed class CompilationResult
         Usage = usage ?? throw new ArgumentNullException(nameof(usage));
         Budget = budget ?? throw new ArgumentNullException(nameof(budget));
         Diagnostics = new DiagnosticCollection(diagnostics, budget.MaxDiagnostics);
-        _definition = plan is null ? null : WorkflowDefinitionDocument.Create(plan);
+        _definition = plan is null || Diagnostics.HasErrors ? null : WorkflowDefinitionDocument.Create(plan);
+    }
+
+    internal CompilationResult(
+        WorkflowDefinitionDocument? definition,
+        IEnumerable<CompilerDiagnostic> diagnostics,
+        CompilationUsageSummary usage,
+        CompilationBudget budget)
+    {
+        ArgumentNullException.ThrowIfNull(diagnostics);
+        Usage = usage ?? throw new ArgumentNullException(nameof(usage));
+        Budget = budget ?? throw new ArgumentNullException(nameof(budget));
+        Diagnostics = new DiagnosticCollection(diagnostics, budget.MaxDiagnostics);
+        _definition = definition is null || Diagnostics.HasErrors ? null : definition;
     }
 
     public WorkflowPlan? Plan => _definition?.ReadPlan();
+    /// <summary>The canonical immutable definition when compilation and capability checks succeeded; error diagnostics suppress it.</summary>
+    public WorkflowDefinitionDocument? Definition => _definition;
     public DiagnosticCollection Diagnostics { get; }
     public CompilationUsageSummary Usage { get; }
     public CompilationBudget Budget { get; }
-    public bool Succeeded => Plan is not null && Diagnostics.All(static d => d.Severity != DiagnosticSeverity.Error);
+    public bool Succeeded => Plan is not null && !Diagnostics.HasErrors;
 }
 
 internal static class CompilerContractValidation

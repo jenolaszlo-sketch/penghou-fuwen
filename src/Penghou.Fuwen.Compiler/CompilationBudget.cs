@@ -96,6 +96,23 @@ public sealed class CompilationBudget
 
     public static CompilationBudget CreateEffective(CompilationBudget host, CompilationBudget caller) => ApplyCaller(host, caller);
 
+    internal CompilationBudget WithCatalogueLookupMilliseconds(long maximumMilliseconds) =>
+        new(
+            MaxSourceBytes,
+            MaxTokens,
+            MaxAstNodes,
+            MaxNestingDepth,
+            MaxWorkflowNodes,
+            MaxSchemas,
+            MaxSchemaDepth,
+            MaxSchemaFields,
+            MaxExpressions,
+            MaxStringBytes,
+            MaxDiagnostics,
+            MaxCatalogueLookups,
+            maximumMilliseconds,
+            MaxCompilationMilliseconds);
+
     public bool IsAtMost(CompilationBudget ceiling) => ceiling is not null && Values(ceiling, this).All(static x => x.requested <= x.host);
 
     internal long Limit(CompilationBudgetDimension dimension) => dimension switch

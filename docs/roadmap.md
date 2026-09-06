@@ -222,8 +222,14 @@ Progress:
 - [x] Introduce IR/fingerprint v2 region-local ordered phases, explicit final
   return barriers, same-region earlier-phase binding rules, aggregate schedule
   limits, and historical v1/v2 golden-vector isolation.
-- [ ] Implement the programmatic compiler/admission pipeline and its constrained
-  builder, then enforce the full semantic rejection matrix.
+- [x] Implement the first constrained programmatic builder and semantic compiler
+  path: explicit execution schedules, detached snapshots, exact trusted
+  descriptor/schema resolution, binding/projection/condition/return checks,
+  inferred capability assertions, host capability grants, canonical definition
+  output, bounded diagnostics, and multi-target rejection tests.
+- [ ] Complete executable host admission: trusted callable signatures,
+  side-effect/idempotency/retry contracts, policy/grant revision identity, an
+  unforgeable admission receipt, and the remaining semantic rejection matrix.
 
 ### Marang Gate 0.5 — plan acceptance and supervisory execution
 
@@ -335,6 +341,12 @@ All unchecked items are proposed work, not implemented guarantees.
   invalid projections, missing returns, incompatible result types, and forged
   capability declarations. Route the builder and future parser through this same
   admission pipeline.
+  The first programmatic compiler slice now performs detached semantic
+  compilation, trusted schema substitution, exact capability assertion, and
+  minimal host capability checking. It deliberately returns a canonical
+  `WorkflowDefinitionDocument`, not an execution authorization receipt. Full
+  admission remains open until trusted callable signatures, effect/retry policy,
+  and policy/grant revision identity exist.
 - [x] **Resolve execution order before freezing more IR.**
   `WorkflowPlanIdentity.NormalizeNodes` sorts siblings by structural path; the
   golden fixture consequently places `return_result` before `validate`.
@@ -826,12 +838,15 @@ only after repeated integration demonstrates a real reusable boundary.
 
 Continue with Delivery milestone B:
 
-1. Implement a constrained programmatic definition builder that lowers
-   through the same binder, type checker, and validator future source uses.
-2. Validate acyclic references, definite assignment, branch returns, nominal
-   boundaries, capability closure, and catalogue pins with rejection tests.
-3. Keep loops out of the builder until Zhinu proves its durable state-loop
-   primitive; Fuwen loop IR and syntax follow that runtime contract.
+1. Extend trusted catalogue descriptors with bounded callable input/output
+   signatures plus explicit side-effect, idempotency, and retry-safety metadata.
+2. Add a separate immutable host-admission receipt bound to the exact execution
+   fingerprint, catalogue snapshot, policy/grant revision, and effective limits;
+   executors must not accept a bare verified definition as authorization.
+3. Complete argument/type/condition/literal/definite-assignment rejection tests
+   and close catalogue exception/deadline and aggregate-budget gaps.
+4. Keep loops, waits, runtime execution, and the text grammar out of this batch.
 
 Do **not** begin with the text grammar. The next deliverable is a programmatic
-compile path that produces the already-frozen canonical `WorkflowPlan`.
+admission boundary that can safely hand the already-compiled canonical plan to
+the later execution port.

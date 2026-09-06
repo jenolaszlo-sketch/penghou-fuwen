@@ -111,6 +111,52 @@ public sealed class CatalogueTests
     }
 
     [Fact]
+    public async Task Resolver_NormalizesRecoverableProviderFault()
+    {
+        var descriptor = Descriptor(DescriptorKind.Activity, "sample.fault", "1", 'a');
+        var resolver = new TrustedCatalogueResolver(new FaultingCatalogue(
+            new InvalidOperationException("provider fault")));
+
+        var result = await resolver.ResolveAsync(descriptor, TestContext.Current.CancellationToken);
+
+        result.Status.Should().Be(DescriptorResolutionStatus.InvalidRequest);
+        result.Diagnostics.Select(static diagnostic => diagnostic.Code)
+            .Should().Equal(CompilerDiagnosticCodes.CatalogueResolutionInvalidResult);
+    }
+
+    [Fact]
+    public async Task Resolver_NormalizesProviderOwnedCancellation()
+    {
+        var descriptor = Descriptor(DescriptorKind.Activity, "sample.cancelled", "1", 'a');
+        var resolver = new TrustedCatalogueResolver(new FaultingCatalogue(
+            new OperationCanceledException("provider-owned cancellation")));
+
+        var result = await resolver.ResolveAsync(descriptor, TestContext.Current.CancellationToken);
+
+        result.Status.Should().Be(DescriptorResolutionStatus.InvalidRequest);
+        result.Diagnostics.Select(static diagnostic => diagnostic.Code)
+            .Should().Equal(CompilerDiagnosticCodes.CatalogueResolutionInvalidResult);
+    }
+
+    [Fact]
+    public async Task Resolver_PreservesCallerCancellationWhileProviderIsPending()
+    {
+        var descriptor = Descriptor(DescriptorKind.Activity, "sample.pending", "1", 'a');
+        var catalogue = new BlockingCatalogue();
+        var resolver = new TrustedCatalogueResolver(catalogue);
+        using var cancellation = new CancellationTokenSource();
+        var pending = resolver.ResolveAsync(descriptor, cancellation.Token).AsTask();
+
+        await catalogue.Started.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+        cancellation.Cancel();
+
+        var act = async () => await pending;
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        await catalogue.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+        catalogue.Release();
+    }
+
+    [Fact]
     public void Catalogue_RejectsAnUnboundedDescriptorSequence()
     {
         var descriptor = Descriptor(DescriptorKind.Activity, "sample.activity", "1", 'a');
@@ -269,6 +315,14 @@ public sealed class CatalogueTests
         }
     }
 
+    private sealed class FaultingCatalogue(Exception exception) : ITrustedCatalogue
+    {
+        public ValueTask<DescriptorResolutionResult> ResolveAsync(
+            DescriptorReference descriptor,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromException<DescriptorResolutionResult>(exception);
+    }
+
     private sealed class BlockingCatalogue : ITrustedCatalogue
     {
         private readonly TaskCompletionSource<DescriptorResolutionResult> pending =
@@ -277,10 +331,14 @@ public sealed class CatalogueTests
         public TaskCompletionSource<bool> Cancelled { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+        public TaskCompletionSource<bool> Started { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         public ValueTask<DescriptorResolutionResult> ResolveAsync(
             DescriptorReference descriptor,
             CancellationToken cancellationToken = default)
         {
+            Started.TrySetResult(true);
             cancellationToken.Register(static state => ((TaskCompletionSource<bool>)state!).TrySetResult(true), Cancelled);
             return new ValueTask<DescriptorResolutionResult>(pending.Task);
         }

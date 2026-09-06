@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Penghou.Fuwen.Tests" />
+    <InternalsVisibleTo Include="Penghou.Fuwen.Compiler" />
   </ItemGroup>
 
 </Project>

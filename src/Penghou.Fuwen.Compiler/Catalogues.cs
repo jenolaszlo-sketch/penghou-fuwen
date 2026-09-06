@@ -425,11 +425,25 @@ public class TrustedCatalogueResolver
         {
             result = await providerTask.ConfigureAwait(false);
         }
+        catch (OperationCanceledException)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ProviderFailure(descriptor, elapsedTicks);
+        }
+        catch (Exception exception) when (IsRecoverableProviderException(exception))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ProviderFailure(descriptor, elapsedTicks);
+        }
         finally
         {
             lookupCancellation.Dispose();
         }
 
+        // The caller may cancel after the pre-await check but before the
+        // provider task completes. Preserve that cancellation even when the
+        // provider returned a successful result.
+        cancellationToken.ThrowIfCancellationRequested();
         elapsedTicks = Math.Max(elapsedTicks, Math.Max(0, Stopwatch.GetTimestamp() - startedTicks));
         if (Stopwatch.GetTimestamp() >= deadlineTicks)
             return new LookupOutcome(null, true, elapsedTicks);
@@ -464,6 +478,19 @@ public class TrustedCatalogueResolver
 
         return new LookupOutcome(result, false, elapsedTicks);
     }
+
+    private static LookupOutcome ProviderFailure(
+        DescriptorReference descriptor,
+        long elapsedTicks) => new(
+        new DescriptorResolutionResult(
+            descriptor,
+            DescriptorResolutionStatus.InvalidRequest,
+            diagnostics: [CatalogueDiagnostics.InvalidResult()]),
+        false,
+        elapsedTicks);
+
+    private static bool IsRecoverableProviderException(Exception exception) =>
+        exception is not (OutOfMemoryException or StackOverflowException or AccessViolationException);
 
     private static void ObserveProviderCompletion(
         Task<DescriptorResolutionResult> providerTask,

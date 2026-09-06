@@ -53,10 +53,17 @@ and identity design gate closes.
 
 ## Current status
 
-The project is in its executable-plan architecture spike. The next batch
-defines the smallest versioned IR, stable node identities, canonical JSON,
-execution fingerprints, and immutable definition-store verification. Parser
-work is intentionally deferred until those semantics are proven.
+The executable-plan identity and storage foundation is complete. Fuwen now has
+an IR v2 structured execution schedule, immutable canonical definitions,
+trusted catalogue resolution, and a constrained programmatic builder/compiler
+that rejects invalid references, projections, return types, untrusted schema
+changes, capability mismatches, and missing host grants.
+
+The current compiler output proves semantic compilation and canonical identity;
+it is not yet an execution authorization receipt. The next batch adds trusted
+callable signatures, side-effect/idempotency/retry contracts, and an immutable
+host-admission receipt bound to exact policy and catalogue revisions. Parser
+work remains deferred until that programmatic execution boundary is proven.
 
 See [the roadmap](docs/roadmap.md) and
 [the first implementation batch](docs/first-batch.md).

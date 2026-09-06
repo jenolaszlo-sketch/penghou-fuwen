@@ -87,7 +87,10 @@ Parser/grammar, Zhinu execution, Baize, Nuwa integration, fan-out execution,
 Hongxian, UI, general loops, waits, interaction, compensation, imports,
 secrets, or a Guyabano migration.
 
-The next batch is a constrained programmatic compile path with trusted
-catalogues, stable diagnostics, resource budgets, binding/type validation, and
-acyclic structured-control-flow validation. It does not begin the text grammar
-or add loops before Zhinu's durable state-loop semantics are proven.
+The initial constrained programmatic compile path is now implemented with
+trusted catalogue/schema resolution, explicit execution schedules, stable
+diagnostics, resource budgets, binding/type validation, exact capability
+assertions, and canonical definition output. Complete executable admission still
+requires trusted callable signatures, side-effect/idempotency/retry policy, and
+an immutable receipt bound to the host policy revision. The work does not begin
+the text grammar or add loops.

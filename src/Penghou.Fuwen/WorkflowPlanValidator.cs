@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Xml;
 
 namespace Penghou.Fuwen;
 
@@ -487,6 +488,8 @@ public static class WorkflowPlanValidator
     {
         if (value.ValueKind is JsonValueKind.Undefined)
             return false;
+        if (type is OptionalType optional)
+            return value.ValueKind is JsonValueKind.Null || LiteralMatchesType(value, optional.ValueType);
         if (type is PrimitiveType primitive)
         {
             return primitive.Primitive switch
@@ -495,11 +498,25 @@ public static class WorkflowPlanValidator
                 FuwenPrimitiveKind.Boolean => value.ValueKind is JsonValueKind.True or JsonValueKind.False,
                 FuwenPrimitiveKind.Integer => value.ValueKind is JsonValueKind.Number && value.TryGetInt64(out _),
                 FuwenPrimitiveKind.Number => value.ValueKind is JsonValueKind.Number,
+                FuwenPrimitiveKind.Duration => value.ValueKind is JsonValueKind.String && IsDuration(value),
                 FuwenPrimitiveKind.Json => true,
                 _ => false,
             };
         }
         return false;
+    }
+
+    private static bool IsDuration(JsonElement value)
+    {
+        try
+        {
+            _ = XmlConvert.ToTimeSpan(value.GetString()!);
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
     }
 
     private static bool TypesEquivalent(FuwenType left, FuwenType right)
@@ -688,8 +705,10 @@ public static class WorkflowPlanValidator
         ArgumentNullException.ThrowIfNull(type);
         switch (type)
         {
-            case PrimitiveType:
+            case PrimitiveType primitive when Enum.IsDefined(primitive.Primitive):
                 break;
+            case PrimitiveType:
+                throw new ArgumentOutOfRangeException(nameof(type), "Primitive type is not supported.");
             case NamedTypeReference named:
                 RequireKind(named.Schema, DescriptorKind.Schema);
                 break;

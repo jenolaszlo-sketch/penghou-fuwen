@@ -43,6 +43,9 @@ public static class CompilerDiagnosticCodes
     public const string BudgetCatalogueLookupMillisecondsExceeded = "FWN-BUDGET-112";
     public const string BudgetCompilationMillisecondsExceeded = "FWN-BUDGET-113";
     public const string BudgetDiagnosticsExceeded = "FWN-BUDGET-114";
+    public const string CatalogueDescriptorNotFound = "FWN-CATALOGUE-001";
+    public const string CatalogueDescriptorDigestMismatch = "FWN-CATALOGUE-002";
+    public const string CatalogueResolutionInvalidResult = "FWN-CATALOGUE-003";
 }
 
 /// <summary>An immutable compiler diagnostic suitable for machine and human consumption.</summary>

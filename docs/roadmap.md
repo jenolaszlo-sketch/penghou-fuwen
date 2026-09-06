@@ -4,7 +4,7 @@
 
 **Delivery milestone A complete — Delivery milestone B in progress**
 
-Last reviewed: **2026-09-06**
+Last reviewed: **2026-09-07**
 
 Fuwen is the proposed typed authoring and compilation layer for portable,
 capability-reviewed AI workflows. It produces an immutable executable plan; it
@@ -216,7 +216,9 @@ Progress:
 - [x] Keep definition loading an integrity/compatibility boundary: verify exact
   canonical bytes, supported IR/canonical/fingerprint contracts, size, and
   content identity without presenting the result as semantically admitted.
-- [ ] Add trusted catalogue interfaces and exact immutable resolution results.
+- [x] Add trusted catalogue interfaces and exact immutable resolution results,
+  including deterministic snapshots, strict result invariants, cancellation,
+  lookup/count deadlines, and bounded catalogue/schema inputs.
 - [ ] Decide and encode execution ordering and return-barrier semantics.
 - [ ] Implement the programmatic compiler/admission pipeline and its constrained
   builder, then enforce the full semantic rejection matrix.
@@ -331,7 +333,7 @@ All unchecked items are proposed work, not implemented guarantees.
   invalid projections, missing returns, incompatible result types, and forged
   capability declarations. Route the builder and future parser through this same
   admission pipeline.
-- [ ] **Resolve execution order before freezing more IR.**
+- [x] **Resolve execution order before freezing more IR.**
   `WorkflowPlanIdentity.NormalizeNodes` sorts siblings by structural path; the
   golden fixture consequently places `return_result` before `validate`.
   Bindings express data dependencies, but two side-effecting activities need not
@@ -340,7 +342,9 @@ All unchecked items are proposed work, not implemented guarantees.
   decide whether validation runs before a result or which write happens first.
   Preserve order-independent identity for genuinely independent nodes and prove
   that changing a required ordering changes execution identity. Keep control
-  structure semantic; do not introduce arbitrary backward edges.
+  structure semantic; do not introduce arbitrary backward edges. ADR 0002
+  selects lexical regions with ordered completion phases for IR v2; the v2
+  contract, validator, and golden vector remain to be implemented.
 - [x] **Freeze once, validate once, hash the exact frozen bytes.**
   `WorkflowDefinitionDocument.Create` serializes the caller's plan twice: once
   for bytes and again for the fingerprint. Public records retain caller-owned
@@ -614,9 +618,11 @@ Penghou.Fuwen.Compiler
   unsupported JSON Schema features.
 - [ ] Use nominal typing at named workflow/activity/inference boundaries and
   for enums; restricted structural compatibility for literals/projections.
-- [ ] Define trusted catalogues for schemas, activities, inference profiles,
+- [x] Define trusted catalogue resolution for schemas, activities, inference profiles,
   registered templates, tools, and context providers.
-- [ ] Pin descriptor identity, version, and hash during compilation.
+- [x] Require exact descriptor kind, name, version, and content-digest resolution
+  at the trusted catalogue boundary. The future binder must use these resolved
+  pins when constructing a plan.
 - [ ] Enforce hard limits for source bytes, tokens, AST nodes, nesting, workflow
   nodes, schemas/depth/fields, expressions, strings, diagnostics, catalogue
   lookups, lookup time, and total compile time.
@@ -818,14 +824,13 @@ only after repeated integration demonstrates a real reusable boundary.
 
 Continue with Delivery milestone B:
 
-1. Add trusted catalogue interfaces and exact descriptor-resolution results.
-2. Decide explicit execution ordering, validation barriers, and return semantics
-   before extending the public IR or compiler.
-3. Implement a constrained programmatic definition builder that lowers
+1. Implement ADR 0002 as an intentional IR/fingerprint v2 contract with a new
+   golden vector; do not reinterpret the historical v1 bytes.
+2. Implement a constrained programmatic definition builder that lowers
    through the same binder, type checker, and validator future source uses.
-4. Validate acyclic references, definite assignment, branch returns, nominal
+3. Validate acyclic references, definite assignment, branch returns, nominal
    boundaries, capability closure, and catalogue pins with rejection tests.
-5. Keep loops out of the builder until Zhinu proves its durable state-loop
+4. Keep loops out of the builder until Zhinu proves its durable state-loop
    primitive; Fuwen loop IR and syntax follow that runtime contract.
 
 Do **not** begin with the text grammar. The next deliverable is a programmatic

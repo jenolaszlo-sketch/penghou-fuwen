@@ -128,3 +128,43 @@ Penghou.Fuwen.Compiler.DiagnosticSeverity
 Penghou.Fuwen.Compiler.DiagnosticSeverity.Error = 2 -> Penghou.Fuwen.Compiler.DiagnosticSeverity
 Penghou.Fuwen.Compiler.DiagnosticSeverity.Info = 0 -> Penghou.Fuwen.Compiler.DiagnosticSeverity
 Penghou.Fuwen.Compiler.DiagnosticSeverity.Warning = 1 -> Penghou.Fuwen.Compiler.DiagnosticSeverity
+Penghou.Fuwen.Compiler.DescriptorResolutionBatchResult
+Penghou.Fuwen.Compiler.DescriptorResolutionBatchResult.Diagnostics.get -> Penghou.Fuwen.Compiler.DiagnosticCollection!
+Penghou.Fuwen.Compiler.DescriptorResolutionBatchResult.Results.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Compiler.DescriptorResolutionResult!>!
+Penghou.Fuwen.Compiler.DescriptorResolutionBatchResult.Succeeded.get -> bool
+Penghou.Fuwen.Compiler.DescriptorResolutionBatchResult.Usage.get -> Penghou.Fuwen.Compiler.CompilationUsageSummary!
+Penghou.Fuwen.Compiler.DescriptorResolutionResult
+Penghou.Fuwen.Compiler.DescriptorResolutionResult.Descriptor.get -> Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor?
+Penghou.Fuwen.Compiler.DescriptorResolutionResult.DescriptorResolutionResult(Penghou.Fuwen.DescriptorReference! requested, Penghou.Fuwen.Compiler.DescriptorResolutionStatus status, Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor? descriptor = null, System.Collections.Generic.IEnumerable<Penghou.Fuwen.Compiler.CompilerDiagnostic!>? diagnostics = null, Penghou.Fuwen.Compiler.CompilationUsageSummary? usage = null, int maximumDiagnostics = 100) -> void
+Penghou.Fuwen.Compiler.DescriptorResolutionResult.Diagnostics.get -> Penghou.Fuwen.Compiler.DiagnosticCollection!
+Penghou.Fuwen.Compiler.DescriptorResolutionResult.IsResolved.get -> bool
+Penghou.Fuwen.Compiler.DescriptorResolutionResult.Requested.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.Compiler.DescriptorResolutionResult.Resolved.get -> Penghou.Fuwen.DescriptorReference?
+Penghou.Fuwen.Compiler.DescriptorResolutionResult.Status.get -> Penghou.Fuwen.Compiler.DescriptorResolutionStatus
+Penghou.Fuwen.Compiler.DescriptorResolutionResult.Succeeded.get -> bool
+Penghou.Fuwen.Compiler.DescriptorResolutionResult.Usage.get -> Penghou.Fuwen.Compiler.CompilationUsageSummary!
+Penghou.Fuwen.Compiler.DescriptorResolutionStatus
+Penghou.Fuwen.Compiler.DescriptorResolutionStatus.BudgetExceeded = 4 -> Penghou.Fuwen.Compiler.DescriptorResolutionStatus
+Penghou.Fuwen.Compiler.DescriptorResolutionStatus.DigestMismatch = 2 -> Penghou.Fuwen.Compiler.DescriptorResolutionStatus
+Penghou.Fuwen.Compiler.DescriptorResolutionStatus.InvalidRequest = 3 -> Penghou.Fuwen.Compiler.DescriptorResolutionStatus
+Penghou.Fuwen.Compiler.DescriptorResolutionStatus.NotFound = 1 -> Penghou.Fuwen.Compiler.DescriptorResolutionStatus
+Penghou.Fuwen.Compiler.DescriptorResolutionStatus.Resolved = 0 -> Penghou.Fuwen.Compiler.DescriptorResolutionStatus
+Penghou.Fuwen.Compiler.ITrustedCatalogue
+Penghou.Fuwen.Compiler.ITrustedCatalogue.ResolveAsync(Penghou.Fuwen.DescriptorReference! descriptor, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.DescriptorResolutionResult!>
+Penghou.Fuwen.Compiler.InMemoryTrustedCatalogue
+Penghou.Fuwen.Compiler.InMemoryTrustedCatalogue.Descriptors.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor!>!
+Penghou.Fuwen.Compiler.InMemoryTrustedCatalogue.InMemoryTrustedCatalogue(System.Collections.Generic.IEnumerable<Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor!>! descriptors) -> void
+Penghou.Fuwen.Compiler.InMemoryTrustedCatalogue.ResolveAsync(Penghou.Fuwen.DescriptorReference! descriptor, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.DescriptorResolutionResult!>
+Penghou.Fuwen.Compiler.InMemoryTrustedCatalogue.TryGet(Penghou.Fuwen.DescriptorReference! descriptor, out Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor? result) -> bool
+Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor
+Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor.Descriptor.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor.RequiredCapabilities.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.CapabilityRequirement!>!
+Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor.SchemaDefinition.get -> Penghou.Fuwen.ResolvedSchemaDefinition?
+Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor.TrustedCatalogueDescriptor(Penghou.Fuwen.DescriptorReference! descriptor, Penghou.Fuwen.ResolvedSchemaDefinition? schemaDefinition = null, System.Collections.Generic.IEnumerable<Penghou.Fuwen.CapabilityRequirement!>? requiredCapabilities = null) -> void
+Penghou.Fuwen.Compiler.TrustedCatalogueResolver
+Penghou.Fuwen.Compiler.TrustedCatalogueResolver.ResolveAsync(Penghou.Fuwen.DescriptorReference! descriptor, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.DescriptorResolutionResult!>
+Penghou.Fuwen.Compiler.TrustedCatalogueResolver.ResolveManyAsync(System.Collections.Generic.IEnumerable<Penghou.Fuwen.DescriptorReference!>! descriptors, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.DescriptorResolutionBatchResult!>
+Penghou.Fuwen.Compiler.TrustedCatalogueResolver.TrustedCatalogueResolver(Penghou.Fuwen.Compiler.ITrustedCatalogue! catalogue, Penghou.Fuwen.Compiler.CompilationBudget? budget = null) -> void
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueDescriptorDigestMismatch = "FWN-CATALOGUE-002" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueDescriptorNotFound = "FWN-CATALOGUE-001" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueResolutionInvalidResult = "FWN-CATALOGUE-003" -> string!

@@ -30,7 +30,8 @@ internal static class WorkflowPlanSnapshot
                 SnapshotList(plan.Schemas, "schemas", CloneSchema, state),
                 SnapshotList(plan.CatalogueBindings, "catalogue bindings", CloneDescriptor, state),
                 CloneCapabilities(plan.CapabilityManifest, state),
-                SnapshotList(plan.Nodes, "workflow nodes", CloneNode, state));
+                SnapshotList(plan.Nodes, "workflow nodes", CloneNode, state),
+                plan.ExecutionOrder is null ? null : CloneExecutionOrder(plan.ExecutionOrder, state));
         }
         finally
         {
@@ -51,6 +52,68 @@ internal static class WorkflowPlanSnapshot
         {
             state.Exit(manifest);
         }
+    }
+
+    private static WorkflowExecutionOrder CloneExecutionOrder(
+        WorkflowExecutionOrder order,
+        SnapshotState state)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+        state.Enter(order);
+        try
+        {
+            state.CheckExecutionOrderBudget(order);
+            return new WorkflowExecutionOrder(
+                SnapshotList(order.Regions, "execution regions", CloneExecutionRegion, state));
+        }
+        finally
+        {
+            state.Exit(order);
+        }
+    }
+
+    private static WorkflowExecutionRegion CloneExecutionRegion(
+        WorkflowExecutionRegion region,
+        SnapshotState state)
+    {
+        ArgumentNullException.ThrowIfNull(region);
+        state.CountExecutionRegion();
+        state.Enter(region);
+        try
+        {
+            return new WorkflowExecutionRegion(
+                region.RegionPath,
+                SnapshotList(region.Phases, "execution phases", CloneExecutionPhase, state));
+        }
+        finally
+        {
+            state.Exit(region);
+        }
+    }
+
+    private static WorkflowExecutionPhase CloneExecutionPhase(
+        WorkflowExecutionPhase phase,
+        SnapshotState state)
+    {
+        ArgumentNullException.ThrowIfNull(phase);
+        state.CountExecutionPhase();
+        state.Enter(phase);
+        try
+        {
+            return new WorkflowExecutionPhase(
+                SnapshotList(phase.NodePaths, "execution phase node paths", CloneExecutionNodePath, state));
+        }
+        finally
+        {
+            state.Exit(phase);
+        }
+    }
+
+    private static string CloneExecutionNodePath(string value, SnapshotState state)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        state.CountExecutionEntry();
+        return value;
     }
 
     private static ResolvedSchemaDefinition CloneSchema(ResolvedSchemaDefinition schema, SnapshotState state)
@@ -349,6 +412,9 @@ internal static class WorkflowPlanSnapshot
         private int nodes;
         private int bindings;
         private int schemaFields;
+        private int executionRegions;
+        private int executionPhases;
+        private int executionEntries;
 
         internal void Enter(object value)
         {
@@ -396,6 +462,50 @@ internal static class WorkflowPlanSnapshot
             if (++schemaFields > WorkflowPlanSnapshotLimits.MaximumTotalSchemaFields)
                 throw new WorkflowPlanSnapshotException("total schema field count exceeds the bounded limit");
         }
+
+        internal void CountExecutionRegion()
+        {
+            if (++executionRegions > WorkflowPlanSnapshotLimits.MaximumExecutionRegions)
+                throw new WorkflowPlanSnapshotException("execution region count exceeds the bounded limit");
+        }
+
+        internal void CountExecutionPhase()
+        {
+            if (++executionPhases > WorkflowPlanSnapshotLimits.MaximumExecutionPhases)
+                throw new WorkflowPlanSnapshotException("execution phase count exceeds the bounded limit");
+        }
+
+        internal void CountExecutionEntry()
+        {
+            if (++executionEntries > WorkflowPlanSnapshotLimits.MaximumExecutionEntries)
+                throw new WorkflowPlanSnapshotException("execution entry count exceeds the bounded limit");
+        }
+
+        internal void CheckExecutionOrderBudget(WorkflowExecutionOrder order)
+        {
+            ArgumentNullException.ThrowIfNull(order.Regions);
+            if (order.Regions.Count > WorkflowPlanSnapshotLimits.MaximumExecutionRegions)
+                throw new WorkflowPlanSnapshotException("execution region count exceeds the bounded limit");
+
+            long phaseCount = 0;
+            long entryCount = 0;
+            foreach (var region in order.Regions)
+            {
+                ArgumentNullException.ThrowIfNull(region);
+                ArgumentNullException.ThrowIfNull(region.Phases);
+                phaseCount += region.Phases.Count;
+                if (phaseCount > WorkflowPlanSnapshotLimits.MaximumExecutionPhases)
+                    throw new WorkflowPlanSnapshotException("execution phase count exceeds the bounded limit");
+                foreach (var phase in region.Phases)
+                {
+                    ArgumentNullException.ThrowIfNull(phase);
+                    ArgumentNullException.ThrowIfNull(phase.NodePaths);
+                    entryCount += phase.NodePaths.Count;
+                    if (entryCount > WorkflowPlanSnapshotLimits.MaximumExecutionEntries)
+                        throw new WorkflowPlanSnapshotException("execution entry count exceeds the bounded limit");
+                }
+            }
+        }
     }
 }
 
@@ -406,6 +516,10 @@ internal static class WorkflowPlanSnapshotLimits
     internal const int MaximumTotalNodes = 2_048;
     internal const int MaximumTotalBindings = 16_384;
     internal const int MaximumTotalSchemaFields = 16_384;
+    internal const int MaximumExecutionRegions = 1_024;
+    internal const int MaximumExecutionPhases = 4_096;
+    internal const int MaximumExecutionEntries = 16_384;
+    internal const int MaximumExecutionNodePaths = MaximumExecutionEntries;
     internal const int MaximumNestingDepth = 128;
 }
 

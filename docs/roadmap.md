@@ -219,7 +219,9 @@ Progress:
 - [x] Add trusted catalogue interfaces and exact immutable resolution results,
   including deterministic snapshots, strict result invariants, cancellation,
   lookup/count deadlines, and bounded catalogue/schema inputs.
-- [ ] Decide and encode execution ordering and return-barrier semantics.
+- [x] Introduce IR/fingerprint v2 region-local ordered phases, explicit final
+  return barriers, same-region earlier-phase binding rules, aggregate schedule
+  limits, and historical v1/v2 golden-vector isolation.
 - [ ] Implement the programmatic compiler/admission pipeline and its constrained
   builder, then enforce the full semantic rejection matrix.
 
@@ -342,9 +344,9 @@ All unchecked items are proposed work, not implemented guarantees.
   decide whether validation runs before a result or which write happens first.
   Preserve order-independent identity for genuinely independent nodes and prove
   that changing a required ordering changes execution identity. Keep control
-  structure semantic; do not introduce arbitrary backward edges. ADR 0002
-  selects lexical regions with ordered completion phases for IR v2; the v2
-  contract, validator, and golden vector remain to be implemented.
+  structure semantic; do not introduce arbitrary backward edges. ADR 0002 is
+  implemented through lexical regions with ordered completion phases in IR v2,
+  with a separate fingerprint contract and golden vector.
 - [x] **Freeze once, validate once, hash the exact frozen bytes.**
   `WorkflowDefinitionDocument.Create` serializes the caller's plan twice: once
   for bytes and again for the fingerprint. Public records retain caller-owned
@@ -824,13 +826,11 @@ only after repeated integration demonstrates a real reusable boundary.
 
 Continue with Delivery milestone B:
 
-1. Implement ADR 0002 as an intentional IR/fingerprint v2 contract with a new
-   golden vector; do not reinterpret the historical v1 bytes.
-2. Implement a constrained programmatic definition builder that lowers
+1. Implement a constrained programmatic definition builder that lowers
    through the same binder, type checker, and validator future source uses.
-3. Validate acyclic references, definite assignment, branch returns, nominal
+2. Validate acyclic references, definite assignment, branch returns, nominal
    boundaries, capability closure, and catalogue pins with rejection tests.
-4. Keep loops out of the builder until Zhinu proves its durable state-loop
+3. Keep loops out of the builder until Zhinu proves its durable state-loop
    primitive; Fuwen loop IR and syntax follow that runtime contract.
 
 Do **not** begin with the text grammar. The next deliverable is a programmatic

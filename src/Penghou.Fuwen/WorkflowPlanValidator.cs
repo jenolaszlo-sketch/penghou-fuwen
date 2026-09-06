@@ -1,9 +1,11 @@
+using System.Text.Json;
+
 namespace Penghou.Fuwen;
 
 /// <summary>Rejects malformed or unsupported executable-plan contracts.</summary>
 public static class WorkflowPlanValidator
 {
-    /// <summary>Validates compatibility and the identity-critical v1 invariants.</summary>
+    /// <summary>Validates compatibility and the identity-critical plan invariants.</summary>
     public static void Validate(WorkflowPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -19,8 +21,17 @@ public static class WorkflowPlanValidator
         ValidateSchemas(plan.Schemas);
         ValidateDescriptors(plan.CatalogueBindings);
         ValidateCapabilities(plan.CapabilityManifest);
-        ValidateNodes(plan.Name, plan.Nodes, new HashSet<string>(StringComparer.Ordinal));
+        var nodes = new Dictionary<string, NodeLocation>(StringComparer.Ordinal);
+        ValidateNodes(
+            plan.Name,
+            plan.Nodes,
+            plan.Name,
+            new HashSet<string>(StringComparer.Ordinal),
+            nodes);
         ValidateCatalogueClosure(plan);
+
+        if (string.Equals(plan.IrVersion, FuwenContracts.IrVersionV2, StringComparison.Ordinal))
+            ValidateExecutionOrder(plan, nodes);
     }
 
     /// <summary>
@@ -30,15 +41,40 @@ public static class WorkflowPlanValidator
     internal static void ValidateCompatibility(WorkflowPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        RequireVersion(plan.IrVersion, FuwenContracts.IrVersion, nameof(plan.IrVersion));
+        var isV1 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV1, StringComparison.Ordinal);
+        var isV2 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV2, StringComparison.Ordinal);
+        if (!isV1 && !isV2)
+            throw new NotSupportedException(
+                $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'. Expected '{FuwenContracts.IrVersionV1}' or '{FuwenContracts.IrVersionV2}'.");
+
         RequireVersion(plan.CanonicalJsonVersion, FuwenContracts.CanonicalJsonVersion, nameof(plan.CanonicalJsonVersion));
-        RequireVersion(plan.FingerprintVersion, FuwenContracts.ExecutionFingerprintVersion, nameof(plan.FingerprintVersion));
+        var expectedFingerprint = isV1
+            ? FuwenContracts.ExecutionFingerprintVersionV1
+            : FuwenContracts.ExecutionFingerprintVersionV2;
+        RequireVersion(plan.FingerprintVersion, expectedFingerprint, nameof(plan.FingerprintVersion));
+        if (isV2)
+            RequireVersion(plan.CompilerSemanticVersion, FuwenContracts.CompilerSemanticVersionV2, nameof(plan.CompilerSemanticVersion));
+        if (isV1 && plan.ExecutionOrder is not null)
+            throw new ArgumentException(
+                "IR v1 does not contain an execution order; historical v1 plans are never silently upgraded.",
+                nameof(plan.ExecutionOrder));
+        if (isV2 && plan.ExecutionOrder is null)
+            throw new ArgumentException(
+                "IR v2 requires an explicit execution order.",
+                nameof(plan.ExecutionOrder));
     }
 
-    private static void ValidateNodes(string parentPath, IEnumerable<WorkflowNode> nodes, ISet<string> paths)
+    private static void ValidateNodes(
+        string parentPath,
+        IEnumerable<WorkflowNode> nodes,
+        string regionPath,
+        ISet<string> paths,
+        IDictionary<string, NodeLocation> locations)
     {
+        ArgumentNullException.ThrowIfNull(nodes);
         foreach (var node in nodes)
         {
+            ArgumentNullException.ThrowIfNull(node);
             StructuralNodeIdentity.ValidateSegment(node.Name);
             RequireText(node.StructuralPath, nameof(node.StructuralPath));
             var expectedPath = $"{parentPath}/{node.Name}";
@@ -46,6 +82,7 @@ public static class WorkflowPlanValidator
                 throw new ArgumentException($"Node path '{node.StructuralPath}' must equal '{expectedPath}'.", nameof(nodes));
             if (!paths.Add(node.StructuralPath))
                 throw new ArgumentException($"Duplicate structural node path '{node.StructuralPath}'.", nameof(nodes));
+            locations.Add(node.StructuralPath, new NodeLocation(node, regionPath));
 
             switch (node)
             {
@@ -66,8 +103,18 @@ public static class WorkflowPlanValidator
                     ValidateType(activity.OutputType);
                     break;
                 case ConditionalNode conditional:
-                    ValidateNodes($"{conditional.StructuralPath}/$then", conditional.Then, paths);
-                    ValidateNodes($"{conditional.StructuralPath}/$else", conditional.Else, paths);
+                    ValidateNodes(
+                        $"{conditional.StructuralPath}/$then",
+                        conditional.Then,
+                        $"{conditional.StructuralPath}/$then",
+                        paths,
+                        locations);
+                    ValidateNodes(
+                        $"{conditional.StructuralPath}/$else",
+                        conditional.Else,
+                        $"{conditional.StructuralPath}/$else",
+                        paths,
+                        locations);
                     break;
                 case ReturnNode:
                     break;
@@ -76,6 +123,407 @@ public static class WorkflowPlanValidator
             }
         }
     }
+
+    private static void ValidateExecutionOrder(
+        WorkflowPlan plan,
+        IReadOnlyDictionary<string, NodeLocation> locations)
+    {
+        var order = plan.ExecutionOrder!;
+        ArgumentNullException.ThrowIfNull(order.Regions);
+        ValidateExecutionOrderBounds(order);
+
+        var expected = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        CollectExpectedRegions(plan.Name, plan.Nodes, expected);
+
+        var seenRegions = new HashSet<string>(StringComparer.Ordinal);
+        var phasesByRegion = new Dictionary<string, IReadOnlyDictionary<string, int>>(StringComparer.Ordinal);
+        foreach (var region in order.Regions)
+        {
+            ArgumentNullException.ThrowIfNull(region);
+            RequireText(region.RegionPath, nameof(region.RegionPath));
+            if (!expected.TryGetValue(region.RegionPath, out var expectedPaths))
+                throw new ArgumentException(
+                    $"Execution region '{region.RegionPath}' is unknown or wrongly scoped.",
+                    nameof(plan.ExecutionOrder));
+            if (!seenRegions.Add(region.RegionPath))
+                throw new ArgumentException(
+                    $"Duplicate execution region '{region.RegionPath}'.",
+                    nameof(plan.ExecutionOrder));
+
+            ArgumentNullException.ThrowIfNull(region.Phases);
+            var scheduled = new HashSet<string>(StringComparer.Ordinal);
+            var phaseByPath = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (var phaseIndex = 0; phaseIndex < region.Phases.Count; phaseIndex++)
+            {
+                var phase = region.Phases[phaseIndex];
+                ArgumentNullException.ThrowIfNull(phase);
+                ArgumentNullException.ThrowIfNull(phase.NodePaths);
+                if (phase.NodePaths.Count == 0)
+                    throw new ArgumentException(
+                        $"Execution region '{region.RegionPath}' contains an empty phase.",
+                        nameof(plan.ExecutionOrder));
+
+                foreach (var nodePath in phase.NodePaths)
+                {
+                    RequireText(nodePath, nameof(nodePath));
+                    if (!locations.TryGetValue(nodePath, out var location))
+                        throw new ArgumentException(
+                            $"Execution phase in region '{region.RegionPath}' contains unknown node path '{nodePath}'.",
+                            nameof(plan.ExecutionOrder));
+                    if (!string.Equals(location.RegionPath, region.RegionPath, StringComparison.Ordinal))
+                        throw new ArgumentException(
+                            $"Node path '{nodePath}' is wrongly scoped to execution region '{region.RegionPath}'.",
+                            nameof(plan.ExecutionOrder));
+                    if (!scheduled.Add(nodePath))
+                        throw new ArgumentException(
+                            $"Node path '{nodePath}' appears more than once in execution region '{region.RegionPath}'.",
+                            nameof(plan.ExecutionOrder));
+                    phaseByPath.Add(nodePath, phaseIndex);
+                }
+            }
+
+            var missing = expectedPaths.FirstOrDefault(path => !scheduled.Contains(path));
+            if (missing is not null)
+                throw new ArgumentException(
+                    $"Execution order is missing node path '{missing}' from region '{region.RegionPath}'.",
+                    nameof(plan.ExecutionOrder));
+            phasesByRegion.Add(region.RegionPath, phaseByPath);
+        }
+
+        var missingRegion = expected.Keys.FirstOrDefault(path => !seenRegions.Contains(path));
+        if (missingRegion is not null)
+            throw new ArgumentException(
+                $"Execution order is missing region '{missingRegion}'.",
+                nameof(plan.ExecutionOrder));
+
+        ValidateRootReturn(plan, locations, phasesByRegion);
+        ValidateBindings(plan, locations, phasesByRegion);
+    }
+
+    private static void ValidateExecutionOrderBounds(WorkflowExecutionOrder order)
+    {
+        if (order.Regions.Count > WorkflowPlanSnapshotLimits.MaximumExecutionRegions)
+            throw new ArgumentException(
+                "Execution order region count exceeds the bounded limit.",
+                nameof(order));
+
+        long phaseCount = 0;
+        long entryCount = 0;
+        foreach (var region in order.Regions)
+        {
+            ArgumentNullException.ThrowIfNull(region);
+            ArgumentNullException.ThrowIfNull(region.Phases);
+            if (region.Phases.Count > WorkflowPlanSnapshotLimits.MaximumExecutionPhases)
+                throw new ArgumentException(
+                    "Execution order phase count exceeds the bounded limit.",
+                    nameof(order));
+            phaseCount += region.Phases.Count;
+            foreach (var phase in region.Phases)
+            {
+                ArgumentNullException.ThrowIfNull(phase);
+                ArgumentNullException.ThrowIfNull(phase.NodePaths);
+                if (phase.NodePaths.Count > WorkflowPlanSnapshotLimits.MaximumExecutionEntries)
+                    throw new ArgumentException(
+                        "Execution order entry count exceeds the bounded limit.",
+                        nameof(order));
+                entryCount += phase.NodePaths.Count;
+            }
+        }
+
+        if (phaseCount > WorkflowPlanSnapshotLimits.MaximumExecutionPhases)
+            throw new ArgumentException(
+                "Aggregate execution order phase count exceeds the bounded limit.",
+                nameof(order));
+        if (entryCount > WorkflowPlanSnapshotLimits.MaximumExecutionEntries)
+            throw new ArgumentException(
+                "Aggregate execution order entry count exceeds the bounded limit.",
+                nameof(order));
+    }
+
+    private static void CollectExpectedRegions(
+        string regionPath,
+        IEnumerable<WorkflowNode> nodes,
+        IDictionary<string, HashSet<string>> expected)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        if (!expected.TryGetValue(regionPath, out var paths))
+        {
+            paths = new HashSet<string>(StringComparer.Ordinal);
+            expected.Add(regionPath, paths);
+        }
+
+        foreach (var node in nodes)
+        {
+            ArgumentNullException.ThrowIfNull(node);
+            paths.Add(node.StructuralPath);
+            if (node is not ConditionalNode conditional)
+                continue;
+
+            CollectExpectedRegions($"{conditional.StructuralPath}/$then", conditional.Then, expected);
+            CollectExpectedRegions($"{conditional.StructuralPath}/$else", conditional.Else, expected);
+        }
+    }
+
+    private static void ValidateRootReturn(
+        WorkflowPlan plan,
+        IReadOnlyDictionary<string, NodeLocation> locations,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> phasesByRegion)
+    {
+        var rootReturns = locations.Values
+            .Where(location => string.Equals(location.RegionPath, plan.Name, StringComparison.Ordinal))
+            .Where(location => location.Node is ReturnNode)
+            .ToArray();
+        if (rootReturns.Length != 1)
+            throw new ArgumentException(
+                $"IR v2 requires exactly one root return node; found {rootReturns.Length}.",
+                nameof(plan.Nodes));
+
+        var branchReturn = locations.Values
+            .FirstOrDefault(location => !string.Equals(location.RegionPath, plan.Name, StringComparison.Ordinal) && location.Node is ReturnNode);
+        if (branchReturn is not null)
+            throw new ArgumentException(
+                $"Branch-local return node '{branchReturn.Node.StructuralPath}' is not supported by IR v2.",
+                nameof(plan.Nodes));
+
+        if (!phasesByRegion.TryGetValue(plan.Name, out var rootPhases) || rootPhases.Count == 0)
+            throw new ArgumentException("IR v2 requires a non-empty root execution order.", nameof(plan.ExecutionOrder));
+
+        var rootReturnPath = rootReturns[0].Node.StructuralPath;
+        var finalPhase = rootPhases
+            .Where(pair => pair.Value == rootPhases.Values.Max())
+            .Select(pair => pair.Key)
+            .ToArray();
+        if (finalPhase.Length != 1 || !string.Equals(finalPhase[0], rootReturnPath, StringComparison.Ordinal))
+            throw new ArgumentException(
+                "The root return node must be the sole member of the final root execution phase.",
+                nameof(plan.ExecutionOrder));
+    }
+
+    private static void ValidateBindings(
+        WorkflowPlan plan,
+        IReadOnlyDictionary<string, NodeLocation> locations,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> phasesByRegion)
+    {
+        foreach (var location in locations.Values)
+        {
+            switch (location.Node)
+            {
+                case ContextNode context:
+                    ValidateArgumentsForExecution(context.Arguments, location, locations, phasesByRegion);
+                    break;
+                case InferenceNode inference:
+                    ValidateArgumentsForExecution(inference.Arguments, location, locations, phasesByRegion);
+                    foreach (var snapshot in inference.ContextSnapshots)
+                        ValidateNodeOutputBinding(snapshot, location, locations, phasesByRegion);
+                    break;
+                case ActivityNode activity:
+                    ValidateArgumentsForExecution(activity.Arguments, location, locations, phasesByRegion);
+                    break;
+                case ConditionalNode conditional:
+                    ValidateBindingForExecution(conditional.Condition.Left, location, locations, phasesByRegion);
+                    if (conditional.Condition.Right is not null)
+                        ValidateBindingForExecution(conditional.Condition.Right, location, locations, phasesByRegion);
+                    break;
+                case ReturnNode @return:
+                    ValidateBindingForExecution(@return.Value, location, locations, phasesByRegion);
+                    ValidateReturnValue(plan, @return, locations);
+                    break;
+            }
+        }
+    }
+
+    private static void ValidateArgumentsForExecution(
+        IReadOnlyList<ArgumentBinding> arguments,
+        NodeLocation consumer,
+        IReadOnlyDictionary<string, NodeLocation> locations,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> phasesByRegion)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+        foreach (var argument in arguments)
+        {
+            ArgumentNullException.ThrowIfNull(argument);
+            ValidateBindingForExecution(argument.Value, consumer, locations, phasesByRegion);
+        }
+    }
+
+    private static void ValidateBindingForExecution(
+        Binding binding,
+        NodeLocation consumer,
+        IReadOnlyDictionary<string, NodeLocation> locations,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> phasesByRegion)
+    {
+        ArgumentNullException.ThrowIfNull(binding);
+        switch (binding)
+        {
+            case InputBinding input:
+                ValidateProjection(input.Projection);
+                break;
+            case NodeOutputBinding output:
+                ValidateNodeOutputBinding(output, consumer, locations, phasesByRegion);
+                break;
+            case LiteralBinding:
+                break;
+            case ListBinding list:
+                ArgumentNullException.ThrowIfNull(list.Items);
+                foreach (var item in list.Items)
+                    ValidateBindingForExecution(item, consumer, locations, phasesByRegion);
+                break;
+            case ObjectBinding @object:
+                ArgumentNullException.ThrowIfNull(@object.Properties);
+                foreach (var property in @object.Properties)
+                    ValidateBindingForExecution(property.Value, consumer, locations, phasesByRegion);
+                break;
+            default:
+                throw new NotSupportedException($"Unsupported binding type '{binding.GetType().Name}'.");
+        }
+    }
+
+    private static void ValidateNodeOutputBinding(
+        NodeOutputBinding output,
+        NodeLocation consumer,
+        IReadOnlyDictionary<string, NodeLocation> locations,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> phasesByRegion)
+    {
+        ArgumentNullException.ThrowIfNull(output);
+        RequireText(output.NodePath, nameof(output.NodePath));
+        ValidateProjection(output.Projection);
+        if (!locations.TryGetValue(output.NodePath, out var source))
+            throw new ArgumentException(
+                $"Node output binding references unknown node path '{output.NodePath}'.",
+                nameof(output));
+        if (source.Node is ReturnNode or ConditionalNode)
+            throw new ArgumentException(
+                $"Node '{output.NodePath}' cannot be used as an output source.",
+                nameof(output));
+        if (!string.Equals(source.RegionPath, consumer.RegionPath, StringComparison.Ordinal))
+            throw new ArgumentException(
+                $"Node output binding from '{output.NodePath}' crosses execution regions '{source.RegionPath}' and '{consumer.RegionPath}'.",
+                nameof(output));
+
+        var sourcePhase = phasesByRegion[source.RegionPath][source.Node.StructuralPath];
+        var consumerPhase = phasesByRegion[consumer.RegionPath][consumer.Node.StructuralPath];
+        if (sourcePhase >= consumerPhase)
+            throw new ArgumentException(
+                $"Node output binding from '{output.NodePath}' must refer to an earlier execution phase than '{consumer.Node.StructuralPath}'.",
+                nameof(output));
+    }
+
+    private static void ValidateProjection(IReadOnlyList<string> projection)
+    {
+        ArgumentNullException.ThrowIfNull(projection);
+        foreach (var segment in projection)
+            StructuralNodeIdentity.ValidateSegment(segment);
+    }
+
+    private static void ValidateReturnValue(
+        WorkflowPlan plan,
+        ReturnNode returnNode,
+        IReadOnlyDictionary<string, NodeLocation> locations)
+    {
+        if (returnNode.Value is LiteralBinding literal)
+        {
+            if (!LiteralMatchesType(literal.Value, plan.OutputType))
+                throw new ArgumentException(
+                    $"Return node '{returnNode.StructuralPath}' has a literal value incompatible with the declared output type.",
+                    nameof(returnNode.Value));
+            return;
+        }
+
+        if (returnNode.Value is not InputBinding and not NodeOutputBinding)
+            throw new ArgumentException(
+                $"IR v2 does not support return binding shape '{returnNode.Value.GetType().Name}'; use an input or node-output binding.",
+                nameof(returnNode.Value));
+
+        var actualType = returnNode.Value switch
+        {
+            InputBinding input => ResolveProjectionType(plan.InputType, input.Projection, plan.Schemas),
+            NodeOutputBinding output when locations.TryGetValue(output.NodePath, out var source) =>
+                ResolveProjectionType(GetNodeOutputType(source.Node), output.Projection, plan.Schemas),
+            _ => null,
+        };
+        if (actualType is null)
+            throw new ArgumentException(
+                $"IR v2 cannot resolve the return binding shape for '{returnNode.StructuralPath}'.",
+                nameof(returnNode.Value));
+        if (!TypesEquivalent(actualType, plan.OutputType))
+            throw new ArgumentException(
+                $"Return node '{returnNode.StructuralPath}' produces '{DescribeType(actualType)}', but the declared output type is '{DescribeType(plan.OutputType)}'.",
+                nameof(returnNode.Value));
+    }
+
+    private static FuwenType? GetNodeOutputType(WorkflowNode node) => node switch
+    {
+        ContextNode context => context.OutputType,
+        InferenceNode inference => inference.OutputType,
+        ActivityNode activity => activity.OutputType,
+        _ => null,
+    };
+
+    private static FuwenType? ResolveProjectionType(
+        FuwenType? type,
+        IReadOnlyList<string> projection,
+        IReadOnlyList<ResolvedSchemaDefinition> schemas)
+    {
+        if (type is null)
+            return null;
+        ValidateProjection(projection);
+        foreach (var segment in projection)
+        {
+            if (type is not NamedTypeReference named)
+                return null;
+            var definition = schemas.FirstOrDefault(schema => schema.Descriptor == named.Schema);
+            if (definition is not ObjectSchemaDefinition @object)
+                return null;
+            var field = @object.Fields.FirstOrDefault(candidate =>
+                string.Equals(candidate.Name, segment, StringComparison.Ordinal));
+            if (field is null)
+                return null;
+            type = field.Type;
+        }
+        return type;
+    }
+
+    private static bool LiteralMatchesType(JsonElement value, FuwenType type)
+    {
+        if (value.ValueKind is JsonValueKind.Undefined)
+            return false;
+        if (type is PrimitiveType primitive)
+        {
+            return primitive.Primitive switch
+            {
+                FuwenPrimitiveKind.String => value.ValueKind is JsonValueKind.String,
+                FuwenPrimitiveKind.Boolean => value.ValueKind is JsonValueKind.True or JsonValueKind.False,
+                FuwenPrimitiveKind.Integer => value.ValueKind is JsonValueKind.Number && value.TryGetInt64(out _),
+                FuwenPrimitiveKind.Number => value.ValueKind is JsonValueKind.Number,
+                FuwenPrimitiveKind.Json => true,
+                _ => false,
+            };
+        }
+        return false;
+    }
+
+    private static bool TypesEquivalent(FuwenType left, FuwenType right)
+    {
+        return (left, right) switch
+        {
+            (PrimitiveType first, PrimitiveType second) => first.Primitive == second.Primitive,
+            (NamedTypeReference first, NamedTypeReference second) => first.Schema == second.Schema,
+            (OptionalType first, OptionalType second) => TypesEquivalent(first.ValueType, second.ValueType),
+            (ListType first, ListType second) => first.MaxItems == second.MaxItems && TypesEquivalent(first.ItemType, second.ItemType),
+            (ArtifactType first, ArtifactType second) => first.ArtifactDescriptor == second.ArtifactDescriptor,
+            _ => false,
+        };
+    }
+
+    private static string DescribeType(FuwenType type) => type switch
+    {
+        PrimitiveType primitive => primitive.Primitive.ToString(),
+        NamedTypeReference named => $"{named.Schema.Kind}:{named.Schema.Name}@{named.Schema.Version}",
+        OptionalType optional => $"optional<{DescribeType(optional.ValueType)}>",
+        ListType list => $"list<{DescribeType(list.ItemType)}>",
+        ArtifactType artifact => $"artifact<{artifact.ArtifactDescriptor.Name}@{artifact.ArtifactDescriptor.Version}>",
+        _ => type.GetType().Name,
+    };
 
     private static void ValidateCatalogueClosure(WorkflowPlan plan)
     {
@@ -279,4 +727,6 @@ public static class WorkflowPlanValidator
         if (string.IsNullOrWhiteSpace(value))
             throw new ArgumentException("Value cannot be empty or whitespace.", parameterName);
     }
+
+    private sealed record NodeLocation(WorkflowNode Node, string RegionPath);
 }

@@ -27,6 +27,37 @@ public sealed class WorkflowDefinitionStoreTests
     }
 
     [Fact]
+    public void V2_definition_loads_and_round_trips_with_its_v2_fingerprint()
+    {
+        var definition = WorkflowDefinitionDocument.Create(PlanFixture.CreateV2());
+
+        var loaded = WorkflowDefinitionDocument.LoadVerified(
+            definition.ExecutionFingerprint,
+            definition.CanonicalBytes.Span);
+
+        loaded.ExecutionFingerprint.Should().Be(definition.ExecutionFingerprint);
+        loaded.CanonicalBytes.ToArray().Should().Equal(definition.CanonicalBytes.ToArray());
+        loaded.ReadPlan().IrVersion.Should().Be(FuwenContracts.IrVersionV2);
+        WorkflowPlanIdentity.ComputeExecutionFingerprint(loaded.ReadPlan())
+            .Should().Be(definition.ExecutionFingerprint);
+    }
+
+    [Fact]
+    public void V1_and_v2_fingerprint_claims_cannot_cross_versions()
+    {
+        var v1 = WorkflowDefinitionDocument.Create(PlanFixture.Create());
+        var v2 = WorkflowDefinitionDocument.Create(PlanFixture.CreateV2());
+        var v1ClaimForV2 = v1.ExecutionFingerprint.Replace("/v1:", "/v2:", StringComparison.Ordinal);
+        var v2ClaimForV1 = v2.ExecutionFingerprint.Replace("/v2:", "/v1:", StringComparison.Ordinal);
+
+        var v1Act = () => WorkflowDefinitionDocument.LoadVerified(v2ClaimForV1, v1.CanonicalBytes.Span);
+        var v2Act = () => WorkflowDefinitionDocument.LoadVerified(v1ClaimForV2, v2.CanonicalBytes.Span);
+
+        v1Act.Should().Throw<WorkflowDefinitionIntegrityException>().WithMessage("*fingerprint mismatch*");
+        v2Act.Should().Throw<WorkflowDefinitionIntegrityException>().WithMessage("*fingerprint mismatch*");
+    }
+
+    [Fact]
     public void Load_rejects_noncanonical_persisted_JSON()
     {
         var definition = WorkflowDefinitionDocument.Create(PlanFixture.Create());

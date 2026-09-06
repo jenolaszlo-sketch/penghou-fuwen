@@ -81,6 +81,79 @@ public sealed class WorkflowPlanIdentityTests
     }
 
     [Fact]
+    public void V2_plan_has_an_explicit_execution_order_and_stable_golden_fingerprint()
+    {
+        var plan = PlanFixture.CreateV2();
+        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
+        var goldenPath = Path.Combine(AppContext.BaseDirectory, "golden", "workflow_plan_v2.json");
+        var goldenFile = File.ReadAllBytes(goldenPath);
+        var goldenLength = goldenFile.Length;
+        while (goldenLength > 0 && goldenFile[goldenLength - 1] is (byte)'\r' or (byte)'\n')
+            goldenLength--;
+
+        canonicalBytes.Should().Equal(goldenFile.AsSpan(0, goldenLength).ToArray());
+        WorkflowPlanIdentity.ComputeExecutionFingerprint(plan)
+            .Should().Be("sha256:fuwen-execution/v2:2bf5c628bcecfdb0970730bc160ee10f2bcbf326875f30430e5b832fafe96571");
+    }
+
+    [Fact]
+    public void V2_phase_order_cannot_move_a_data_dependency_forward()
+    {
+        var plan = PlanFixture.CreateV2();
+        var order = plan.ExecutionOrder!;
+        var phaseOrderChanged = plan with
+        {
+            ExecutionOrder = order with
+            {
+                Regions =
+                [
+                    order.Regions[0] with
+                    {
+                        Phases =
+                        [
+                            order.Regions[0].Phases[0],
+                            order.Regions[0].Phases[2],
+                            order.Regions[0].Phases[1],
+                            order.Regions[0].Phases[3],
+                        ],
+                    },
+                ],
+            },
+        };
+
+        var act = () => WorkflowPlanIdentity.GetCanonicalBytes(phaseOrderChanged);
+
+        act.Should().Throw<ArgumentException>().WithMessage("*earlier execution phase*");
+    }
+
+    [Fact]
+    public void V2_node_order_inside_a_phase_is_not_executable_semantics()
+    {
+        var plan = PlanFixture.CreateV2();
+        var root = plan.ExecutionOrder!.Regions[0];
+        var reordered = plan with
+        {
+            ExecutionOrder = plan.ExecutionOrder with
+            {
+                Regions =
+                [
+                    root with
+                    {
+                        Phases = root.Phases.Select((phase, index) => index == 2
+                            ? phase with { NodePaths = phase.NodePaths.Reverse().ToArray() }
+                            : phase).ToArray(),
+                    },
+                ],
+            },
+        };
+
+        WorkflowPlanIdentity.GetCanonicalBytes(reordered)
+            .Should().Equal(WorkflowPlanIdentity.GetCanonicalBytes(plan));
+        WorkflowPlanIdentity.ComputeExecutionFingerprint(reordered)
+            .Should().Be(WorkflowPlanIdentity.ComputeExecutionFingerprint(plan));
+    }
+
+    [Fact]
     public void Plan_round_trips_to_identical_canonical_bytes()
     {
         var bytes = WorkflowPlanIdentity.GetCanonicalBytes(PlanFixture.Create());
@@ -264,6 +337,99 @@ internal static class PlanFixture
             [activity, answer, contextProvider, contextSnapshot, profile, request, severity, template],
             new CapabilityManifest([new CapabilityRequirement("inference"), new CapabilityRequirement("context.read")]),
             nodes);
+    }
+
+    internal static WorkflowPlan CreateV2()
+    {
+        var v1 = Create();
+        var audit = Descriptor(DescriptorKind.Activity, "sample.audit");
+        var auditPath = StructuralNodeIdentity.Create(v1.Name, "audit");
+        var nodes = v1.Nodes
+            .Concat(new WorkflowNode[]
+            {
+                new ActivityNode(
+                    "audit",
+                    auditPath,
+                    audit,
+                    [],
+                    new PrimitiveType(FuwenPrimitiveKind.Boolean)),
+            })
+            .ToArray();
+        return v1 with
+        {
+            IrVersion = FuwenContracts.IrVersionV2,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV2,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV2,
+            CatalogueBindings = [audit, .. v1.CatalogueBindings],
+            Nodes = nodes,
+            ExecutionOrder = new WorkflowExecutionOrder(
+                new[]
+                {
+                    new WorkflowExecutionRegion(
+                        "answer",
+                        new[]
+                        {
+                            new WorkflowExecutionPhase(new[] { "answer/context" }),
+                            new WorkflowExecutionPhase(new[] { "answer/infer" }),
+                            new WorkflowExecutionPhase(new[] { "answer/validate", auditPath }),
+                            new WorkflowExecutionPhase(new[] { "answer/return_result" }),
+                        }),
+                }),
+        };
+    }
+
+    internal static WorkflowPlan CreateV2WithConditional(bool branchReturn = false, bool branchReadsRoot = false)
+    {
+        var plan = CreateV2();
+        var checkPath = StructuralNodeIdentity.Create(plan.Name, "check");
+        var branchPath = $"{checkPath}/$then/then_work";
+        var branchNode = branchReturn
+            ? (WorkflowNode)new ReturnNode("then_work", branchPath, new InputBinding([]))
+            : new ActivityNode(
+                "then_work",
+                branchPath,
+                Descriptor(DescriptorKind.Activity, "sample.validate"),
+                branchReadsRoot
+                    ? [new ArgumentBinding("answer", new NodeOutputBinding("answer/infer", []))]
+                    : [],
+                new PrimitiveType(FuwenPrimitiveKind.Boolean));
+        var conditional = new ConditionalNode(
+            "check",
+            checkPath,
+            new ConditionExpression(ConditionOperator.Exists, new InputBinding([])),
+            [branchNode],
+            []);
+        var nodes = plan.Nodes.ToArray();
+        var context = nodes.Single(node => node.Name == "context");
+        var inference = nodes.Single(node => node.Name == "infer");
+        var validate = nodes.Single(node => node.Name == "validate");
+        var audit = nodes.Single(node => node.Name == "audit");
+        var @return = nodes.Single(node => node.Name == "return_result");
+        nodes = [context, inference, validate, audit, conditional, @return];
+        return plan with
+        {
+            Nodes = nodes,
+            ExecutionOrder = new WorkflowExecutionOrder(
+                new[]
+                {
+                    new WorkflowExecutionRegion(
+                        $"{checkPath}/$else",
+                        Array.Empty<WorkflowExecutionPhase>()),
+                    new WorkflowExecutionRegion(
+                        plan.Name,
+                        new[]
+                        {
+                            new WorkflowExecutionPhase(new[] { "answer/context" }),
+                            new WorkflowExecutionPhase(new[] { "answer/infer" }),
+                            new WorkflowExecutionPhase(new[] { "answer/validate", "answer/audit" }),
+                            new WorkflowExecutionPhase(new[] { checkPath }),
+                            new WorkflowExecutionPhase(new[] { "answer/return_result" }),
+                        }),
+                    new WorkflowExecutionRegion(
+                        $"{checkPath}/$then",
+                        new[] { new WorkflowExecutionPhase(new[] { branchPath }) }),
+                }),
+        };
     }
 
     internal static DescriptorReference Descriptor(DescriptorKind kind, string name) => new(

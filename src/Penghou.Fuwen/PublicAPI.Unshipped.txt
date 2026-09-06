@@ -1,7 +1,14 @@
 #nullable enable
 const Penghou.Fuwen.FuwenContracts.CanonicalJsonVersion = "penghou-canonical-json/v1" -> string!
+const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersion = "compiler-semantics/1" -> string!
+const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersionV1 = "compiler-semantics/1" -> string!
+const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersionV2 = "compiler-semantics/2" -> string!
 const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersion = "fuwen-execution/v1" -> string!
+const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersionV1 = "fuwen-execution/v1" -> string!
+const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersionV2 = "fuwen-execution/v2" -> string!
 const Penghou.Fuwen.FuwenContracts.IrVersion = "fuwen-ir/v1" -> string!
+const Penghou.Fuwen.FuwenContracts.IrVersionV1 = "fuwen-ir/v1" -> string!
+const Penghou.Fuwen.FuwenContracts.IrVersionV2 = "fuwen-ir/v2" -> string!
 const Penghou.Fuwen.FuwenContracts.MaximumCanonicalPlanBytes = 4194304 -> int
 const Penghou.Fuwen.FuwenContracts.SourceFingerprintVersion = "fuwen-source/v1" -> string!
 const Penghou.Fuwen.RuntimeNodeIdentity.MaximumKeyUtf8Bytes = 256 -> int
@@ -298,6 +305,20 @@ Penghou.Fuwen.WorkflowNode.Name.init -> void
 Penghou.Fuwen.WorkflowNode.StructuralPath.get -> string!
 Penghou.Fuwen.WorkflowNode.StructuralPath.init -> void
 Penghou.Fuwen.WorkflowNode.WorkflowNode(string! Name, string! StructuralPath) -> void
+Penghou.Fuwen.WorkflowExecutionOrder
+Penghou.Fuwen.WorkflowExecutionOrder.Regions.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowExecutionRegion!>!
+Penghou.Fuwen.WorkflowExecutionOrder.Regions.init -> void
+Penghou.Fuwen.WorkflowExecutionOrder.WorkflowExecutionOrder(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowExecutionRegion!>! Regions) -> void
+Penghou.Fuwen.WorkflowExecutionPhase
+Penghou.Fuwen.WorkflowExecutionPhase.NodePaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Fuwen.WorkflowExecutionPhase.NodePaths.init -> void
+Penghou.Fuwen.WorkflowExecutionPhase.WorkflowExecutionPhase(System.Collections.Generic.IReadOnlyList<string!>! NodePaths) -> void
+Penghou.Fuwen.WorkflowExecutionRegion
+Penghou.Fuwen.WorkflowExecutionRegion.Phases.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowExecutionPhase!>!
+Penghou.Fuwen.WorkflowExecutionRegion.Phases.init -> void
+Penghou.Fuwen.WorkflowExecutionRegion.RegionPath.get -> string!
+Penghou.Fuwen.WorkflowExecutionRegion.RegionPath.init -> void
+Penghou.Fuwen.WorkflowExecutionRegion.WorkflowExecutionRegion(string! RegionPath, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowExecutionPhase!>! Phases) -> void
 Penghou.Fuwen.WorkflowPlan
 Penghou.Fuwen.WorkflowPlan.CanonicalJsonVersion.get -> string!
 Penghou.Fuwen.WorkflowPlan.CanonicalJsonVersion.init -> void
@@ -305,6 +326,8 @@ Penghou.Fuwen.WorkflowPlan.CapabilityManifest.get -> Penghou.Fuwen.CapabilityMan
 Penghou.Fuwen.WorkflowPlan.CapabilityManifest.init -> void
 Penghou.Fuwen.WorkflowPlan.CatalogueBindings.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>!
 Penghou.Fuwen.WorkflowPlan.CatalogueBindings.init -> void
+Penghou.Fuwen.WorkflowPlan.ExecutionOrder.get -> Penghou.Fuwen.WorkflowExecutionOrder?
+Penghou.Fuwen.WorkflowPlan.ExecutionOrder.init -> void
 Penghou.Fuwen.WorkflowPlan.CompilerSemanticVersion.get -> string!
 Penghou.Fuwen.WorkflowPlan.CompilerSemanticVersion.init -> void
 Penghou.Fuwen.WorkflowPlan.FingerprintVersion.get -> string!
@@ -327,7 +350,7 @@ Penghou.Fuwen.WorkflowPlan.RoutingPolicyRevision.get -> string!
 Penghou.Fuwen.WorkflowPlan.RoutingPolicyRevision.init -> void
 Penghou.Fuwen.WorkflowPlan.Schemas.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>!
 Penghou.Fuwen.WorkflowPlan.Schemas.init -> void
-Penghou.Fuwen.WorkflowPlan.WorkflowPlan(string! IrVersion, string! LanguageVersion, string! CompilerSemanticVersion, string! CanonicalJsonVersion, string! FingerprintVersion, string! Name, string! Revision, Penghou.Fuwen.FuwenType! InputType, Penghou.Fuwen.FuwenType! OutputType, string! RoutingPolicyRevision, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>! Schemas, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>! CatalogueBindings, Penghou.Fuwen.CapabilityManifest! CapabilityManifest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Nodes) -> void
+Penghou.Fuwen.WorkflowPlan.WorkflowPlan(string! IrVersion, string! LanguageVersion, string! CompilerSemanticVersion, string! CanonicalJsonVersion, string! FingerprintVersion, string! Name, string! Revision, Penghou.Fuwen.FuwenType! InputType, Penghou.Fuwen.FuwenType! OutputType, string! RoutingPolicyRevision, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>! Schemas, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>! CatalogueBindings, Penghou.Fuwen.CapabilityManifest! CapabilityManifest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Nodes, Penghou.Fuwen.WorkflowExecutionOrder? ExecutionOrder = null) -> void
 Penghou.Fuwen.WorkflowPlanIdentity
 Penghou.Fuwen.WorkflowPlanValidator
 Penghou.Fuwen.WorkflowSourceMap

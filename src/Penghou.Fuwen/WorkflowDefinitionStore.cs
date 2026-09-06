@@ -38,7 +38,9 @@ public sealed class WorkflowDefinitionDocument
         if (bytes.Length > FuwenContracts.MaximumCanonicalPlanBytes)
             throw new WorkflowDefinitionIntegrityException(
                 $"Workflow definition exceeds {FuwenContracts.MaximumCanonicalPlanBytes} bytes.");
-        return new WorkflowDefinitionDocument(WorkflowPlanIdentity.ComputeExecutionFingerprint(bytes), bytes);
+        return new WorkflowDefinitionDocument(
+            WorkflowPlanIdentity.ComputeExecutionFingerprint(bytes, snapshot.FingerprintVersion),
+            bytes);
     }
 
     /// <summary>
@@ -58,10 +60,11 @@ public sealed class WorkflowDefinitionDocument
             throw new WorkflowDefinitionIntegrityException(
                 $"Persisted workflow definition exceeds {FuwenContracts.MaximumCanonicalPlanBytes} bytes.");
         var persistedCopy = persistedBytes.ToArray();
+        WorkflowPlan plan;
         byte[] canonicalBytes;
         try
         {
-            var plan = CanonicalJson.Deserialize<WorkflowPlan>(persistedCopy);
+            plan = CanonicalJson.Deserialize<WorkflowPlan>(persistedCopy);
             canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytesForVerification(plan);
         }
         catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidOperationException or NotSupportedException or NullReferenceException)
@@ -71,7 +74,7 @@ public sealed class WorkflowDefinitionDocument
         if (!persistedCopy.AsSpan().SequenceEqual(canonicalBytes))
             throw new WorkflowDefinitionIntegrityException("Persisted workflow definition is not canonical IR.");
 
-        var computed = WorkflowPlanIdentity.ComputeExecutionFingerprint(canonicalBytes);
+        var computed = WorkflowPlanIdentity.ComputeExecutionFingerprint(canonicalBytes, plan.FingerprintVersion);
         if (!string.Equals(executionFingerprint, computed, StringComparison.Ordinal))
             throw new WorkflowDefinitionIntegrityException(
                 $"Workflow definition fingerprint mismatch. Claimed '{executionFingerprint}', computed '{computed}'.");

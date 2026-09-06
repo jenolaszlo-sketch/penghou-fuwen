@@ -1,4 +1,6 @@
 using System.Text;
+using System.Security.Cryptography;
+using System.Text.Json;
 using FluentAssertions;
 
 namespace Penghou.Fuwen.Tests;
@@ -70,6 +72,18 @@ public sealed class WorkflowDefinitionStoreTests
     }
 
     [Fact]
+    public void Load_rejects_unsupported_IR_versions_without_claiming_semantic_admission()
+    {
+        var plan = PlanFixture.Create() with { IrVersion = "fuwen-ir/v999" };
+        var bytes = CanonicalJson.Serialize(plan);
+        var fingerprint = $"sha256:fuwen-execution/v1:{Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant()}";
+
+        var act = () => WorkflowDefinitionDocument.LoadVerified(fingerprint, bytes);
+
+        act.Should().Throw<WorkflowDefinitionIntegrityException>().WithMessage("*invalid*");
+    }
+
+    [Fact]
     public void Exposed_bytes_are_defensive_copies()
     {
         var definition = WorkflowDefinitionDocument.Create(PlanFixture.Create());
@@ -78,6 +92,130 @@ public sealed class WorkflowDefinitionStoreTests
 
         definition.CanonicalBytes.Span[0].Should().NotBe(first[0]);
         definition.ReadPlan().Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Create_detaches_nested_collections_before_hashing()
+    {
+        var plan = PlanFixture.Create();
+        var schemas = (ResolvedSchemaDefinition[])plan.Schemas;
+        var request = (ObjectSchemaDefinition)schemas.Single(schema => schema.Descriptor.Name == "sample.request");
+        var fields = request.Fields.ToArray();
+        schemas[Array.IndexOf(schemas, request)] = request with { Fields = fields };
+        var definition = WorkflowDefinitionDocument.Create(plan);
+        var expected = definition.CanonicalBytes.ToArray();
+
+        fields[0] = new SchemaField("changed", new PrimitiveType(FuwenPrimitiveKind.Boolean));
+
+        definition.CanonicalBytes.ToArray().Should().Equal(expected);
+    }
+
+    [Fact]
+    public void Create_clones_literals_from_disposed_json_documents()
+    {
+        var plan = PlanFixture.Create();
+        WorkflowDefinitionDocument definition;
+        using (var json = JsonDocument.Parse("{\"answer\":\"frozen\"}"))
+        {
+            var nodes = (WorkflowNode[])plan.Nodes;
+            var activity = (ActivityNode)nodes.Single(node => node.Name == "validate");
+            nodes[2] = activity with
+            {
+                Arguments = [new ArgumentBinding("payload", new LiteralBinding(json.RootElement))],
+            };
+
+            definition = WorkflowDefinitionDocument.Create(plan);
+        }
+        var expected = definition.CanonicalBytes.ToArray();
+
+        definition.CanonicalBytes.ToArray().Should().Equal(expected);
+    }
+
+    [Fact]
+    public void Create_rejects_oversized_canonical_plans()
+    {
+        var plan = PlanFixture.Create() with { Revision = new string('r', FuwenContracts.MaximumCanonicalPlanBytes) };
+
+        var act = () => WorkflowDefinitionDocument.Create(plan);
+
+        act.Should().Throw<WorkflowDefinitionIntegrityException>().WithMessage("*exceeds*");
+    }
+
+    [Fact]
+    public void Create_fingerprint_is_sha256_of_the_exact_canonical_bytes()
+    {
+        var definition = WorkflowDefinitionDocument.Create(PlanFixture.Create());
+        var expected = Convert.ToHexString(SHA256.HashData(definition.CanonicalBytes.Span)).ToLowerInvariant();
+
+        definition.ExecutionFingerprint.Should().Be($"sha256:fuwen-execution/v1:{expected}");
+    }
+
+    [Fact]
+    public void Create_rejects_null_nested_entries_before_serialization()
+    {
+        var nodes = PlanFixture.Create().Nodes.ToArray();
+        nodes[0] = null!;
+        var plan = PlanFixture.Create() with { Nodes = nodes };
+
+        var act = () => WorkflowDefinitionDocument.Create(plan);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Create_rejects_cyclic_binding_graphs_with_a_bounded_failure()
+    {
+        var plan = PlanFixture.Create();
+        var items = new List<Binding>();
+        var cyclic = new ListBinding(items);
+        items.Add(cyclic);
+        var nodes = plan.Nodes.ToArray();
+        var context = (ContextNode)nodes[0];
+        nodes[0] = context with
+        {
+            Arguments = [new ArgumentBinding("cycle", cyclic)],
+        };
+        plan = plan with { Nodes = nodes };
+
+        var act = () => WorkflowDefinitionDocument.Create(plan);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*reference cycle detected*");
+    }
+
+    [Fact]
+    public void Create_rejects_excessive_binding_nesting_before_stack_exhaustion()
+    {
+        Binding nested = new InputBinding([]);
+        for (var index = 0; index < WorkflowPlanSnapshotLimits.MaximumNestingDepth; index++)
+            nested = new ListBinding([nested]);
+
+        var plan = PlanFixture.Create();
+        var nodes = plan.Nodes.ToArray();
+        var context = (ContextNode)nodes[0];
+        nodes[0] = context with { Arguments = [new ArgumentBinding("nested", nested)] };
+        plan = plan with { Nodes = nodes };
+
+        var act = () => WorkflowDefinitionDocument.Create(plan);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*maximum nesting depth exceeded*");
+    }
+
+    [Fact]
+    public void Create_rejects_large_collections_before_snapshot_allocation()
+    {
+        var plan = PlanFixture.Create();
+        var schemas = plan.Schemas.ToArray();
+        var requestIndex = Array.FindIndex(schemas, schema => schema.Descriptor.Name == "sample.request");
+        var request = (ObjectSchemaDefinition)schemas[requestIndex];
+        var fields = Enumerable.Range(0, WorkflowPlanSnapshotLimits.MaximumCollectionCount + 1)
+            .Select(index => new SchemaField($"field_{index}", new PrimitiveType(FuwenPrimitiveKind.String)))
+            .ToArray();
+        schemas[requestIndex] = request with { Fields = fields };
+        plan = plan with { Schemas = schemas };
+
+        var act = () => WorkflowDefinitionDocument.Create(plan);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*schema fields collection count exceeds*");
     }
 
     [Fact]

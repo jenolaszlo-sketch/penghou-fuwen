@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace Penghou.Fuwen;
 
@@ -32,13 +33,21 @@ public sealed class WorkflowDefinitionDocument
     public static WorkflowDefinitionDocument Create(WorkflowPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        var bytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
-        return new WorkflowDefinitionDocument(WorkflowPlanIdentity.ComputeExecutionFingerprint(plan), bytes);
+        var snapshot = WorkflowPlanSnapshot.Create(plan);
+        var bytes = WorkflowPlanIdentity.GetCanonicalBytesFrozen(snapshot);
+        if (bytes.Length > FuwenContracts.MaximumCanonicalPlanBytes)
+            throw new WorkflowDefinitionIntegrityException(
+                $"Workflow definition exceeds {FuwenContracts.MaximumCanonicalPlanBytes} bytes.");
+        return new WorkflowDefinitionDocument(WorkflowPlanIdentity.ComputeExecutionFingerprint(bytes), bytes);
     }
 
     /// <summary>
-    /// Loads untrusted persisted bytes and verifies compatibility, canonical
-    /// representation, and the claimed execution fingerprint.
+    /// Loads untrusted persisted bytes and verifies only the supported
+    /// compatibility envelope, canonical representation, size bound, and
+    /// claimed execution fingerprint. This is an integrity boundary, not
+    /// semantic validation, catalogue admission, authorization, or execution
+    /// approval; callers must use the compiler admission pipeline before
+    /// executing a loaded plan.
     /// </summary>
     public static WorkflowDefinitionDocument LoadVerified(
         string executionFingerprint,
@@ -49,12 +58,20 @@ public sealed class WorkflowDefinitionDocument
             throw new WorkflowDefinitionIntegrityException(
                 $"Persisted workflow definition exceeds {FuwenContracts.MaximumCanonicalPlanBytes} bytes.");
         var persistedCopy = persistedBytes.ToArray();
-        var plan = CanonicalJson.Deserialize<WorkflowPlan>(persistedCopy);
-        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
+        byte[] canonicalBytes;
+        try
+        {
+            var plan = CanonicalJson.Deserialize<WorkflowPlan>(persistedCopy);
+            canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytesForVerification(plan);
+        }
+        catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidOperationException or NotSupportedException or NullReferenceException)
+        {
+            throw new WorkflowDefinitionIntegrityException("Persisted workflow definition is invalid.");
+        }
         if (!persistedCopy.AsSpan().SequenceEqual(canonicalBytes))
             throw new WorkflowDefinitionIntegrityException("Persisted workflow definition is not canonical IR.");
 
-        var computed = WorkflowPlanIdentity.ComputeExecutionFingerprint(plan);
+        var computed = WorkflowPlanIdentity.ComputeExecutionFingerprint(canonicalBytes);
         if (!string.Equals(executionFingerprint, computed, StringComparison.Ordinal))
             throw new WorkflowDefinitionIntegrityException(
                 $"Workflow definition fingerprint mismatch. Claimed '{executionFingerprint}', computed '{computed}'.");
@@ -62,7 +79,11 @@ public sealed class WorkflowDefinitionDocument
         return new WorkflowDefinitionDocument(computed, canonicalBytes);
     }
 
-    /// <summary>Deserializes and revalidates the document as a resolved plan.</summary>
+    /// <summary>Deserializes the verified canonical bytes as a resolved plan.</summary>
+    /// <remarks>
+    /// The returned plan is not semantically admitted for execution. Hosts
+    /// must run the compiler/admission pipeline before executing it.
+    /// </remarks>
     public WorkflowPlan ReadPlan() => CanonicalJson.Deserialize<WorkflowPlan>(canonicalBytes);
 }
 

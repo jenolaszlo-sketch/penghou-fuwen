@@ -85,10 +85,22 @@ are never silently upgraded in place.
 
 `IWorkflowDefinitionStore` is immutable and content addressed. Repeating a
 byte-identical write is idempotent; conflicting content under an existing
-fingerprint is rejected. Reads reparse persisted JSON, reject noncanonical
-bytes and unsupported contracts, validate the plan, and recompute its execution
-fingerprint before returning it. The in-memory provider is the reference
-behavior for future durable stores.
+fingerprint is rejected. `WorkflowDefinitionDocument.LoadVerified` reparses
+persisted JSON, enforces the size and supported-contract envelope, rejects
+noncanonical bytes, and recomputes the execution fingerprint before returning
+it. This is integrity verification only: canonical bytes and a matching hash
+do not prove binding/type correctness, catalogue membership, capability grants,
+authorization, or permission to execute. `ReadPlan` likewise only
+deserializes the verified bytes. A host must pass the plan through the future
+compiler/admission pipeline before execution. The in-memory provider is the
+reference behavior for future durable stores.
+
+Programmatic plan freezing is resource-bounded before it allocates snapshot
+collections. It rejects null/hostile entries, excessive collection counts,
+aggregate nodes/bindings/schema fields, excessive nesting, and caller-owned
+reference cycles with stable bounded failures. These construction limits are
+admission/resource-safety guards and do not add fields or change canonical v1
+bytes.
 
 ## Source maps
 

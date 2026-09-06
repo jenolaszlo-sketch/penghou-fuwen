@@ -2,9 +2,9 @@
 
 ## Status
 
-**Delivery milestone A complete — Delivery milestone B next**
+**Delivery milestone A complete — Delivery milestone B in progress**
 
-Last reviewed: **2026-09-01**
+Last reviewed: **2026-09-06**
 
 Fuwen is the proposed typed authoring and compilation layer for portable,
 capability-reviewed AI workflows. It produces an immutable executable plan; it
@@ -206,6 +206,21 @@ Activities:
 Exit: tests can construct, reject, canonicalize, fingerprint, persist, and
 reload a non-trivial typed plan without a parser or runtime.
 
+Progress:
+
+- [x] Establish stable compiler diagnostic, immutable result, usage-summary,
+  host/caller budget, budget-evaluation, and bounded collection contracts.
+- [x] Deep-freeze caller-owned plan graphs, clone JSON literals, hash the exact
+  canonical buffer once, and reject oversized, cyclic, or excessively nested
+  programmatic plans before unsafe traversal/allocation.
+- [x] Keep definition loading an integrity/compatibility boundary: verify exact
+  canonical bytes, supported IR/canonical/fingerprint contracts, size, and
+  content identity without presenting the result as semantically admitted.
+- [ ] Add trusted catalogue interfaces and exact immutable resolution results.
+- [ ] Decide and encode execution ordering and return-barrier semantics.
+- [ ] Implement the programmatic compiler/admission pipeline and its constrained
+  builder, then enforce the full semantic rejection matrix.
+
 ### Marang Gate 0.5 — plan acceptance and supervisory execution
 
 This is a prioritization overlay on milestones B and C, not a new IR version.
@@ -222,7 +237,9 @@ effects are authorized.
   structural paths and deterministic typed loop/fan-out key helpers.
 - `WorkflowDefinitionDocument.LoadVerified` and
   `InMemoryWorkflowDefinitionStore` provide canonical-byte, size, and
-  fingerprint verification at an immutable content-addressed store boundary.
+  fingerprint integrity verification at an immutable content-addressed store
+  boundary. `LoadVerified`/`ReadPlan` do not perform semantic admission or
+  authorize execution; a future compiler/admission pipeline remains mandatory.
 - `FuwenType`, `ArtifactReference`, and the plan/node input-output fields
   provide provider-neutral type and artifact shapes.
 
@@ -292,6 +309,129 @@ integration, and broader provider conformance follow the P0/P1 gates.
 integration gate. Do not mark either gate complete until rejection tests prove
 the corresponding invariants and the implementation is present in the public
 packages.
+
+### Implementation review — admission, usability, and first-consumer fit
+
+Reviewed against the current source, tests, and Qingniao integration needs.
+Delivery A proves identity/storage foundations; the compiler project still
+contains scaffolding only. The existing P0/P1 gates above remain authoritative.
+The items below refine those gates rather than create another milestone list.
+All unchecked items are proposed work, not implemented guarantees.
+
+#### Priority 0 — make a verified plan mean something precise (Delivery B)
+
+- [ ] **Separate integrity verification, semantic validation, and host admission.**
+  `LoadVerified` checks canonical bytes, compatibility, size, and fingerprints;
+  `WorkflowPlanValidator`
+  currently checks paths, descriptor closure, and selected shapes. It does not
+  resolve binding values, condition operands, return values, or inference context
+  references. Introduce distinct outcomes (and an admitted-plan boundary for the
+  executor) so a caller cannot mistake a valid hash for permission to execute.
+  Require negative fixtures for unknown/cyclic references, cross-branch access,
+  invalid projections, missing returns, incompatible result types, and forged
+  capability declarations. Route the builder and future parser through this same
+  admission pipeline.
+- [ ] **Resolve execution order before freezing more IR.**
+  `WorkflowPlanIdentity.NormalizeNodes` sorts siblings by structural path; the
+  golden fixture consequently places `return_result` before `validate`.
+  Bindings express data dependencies, but two side-effecting activities need not
+  exchange data. Decide how sequencing, required validation, branch completion,
+  and return barriers are represented explicitly. Lexicographic order must never
+  decide whether validation runs before a result or which write happens first.
+  Preserve order-independent identity for genuinely independent nodes and prove
+  that changing a required ordering changes execution identity. Keep control
+  structure semantic; do not introduce arbitrary backward edges.
+- [x] **Freeze once, validate once, hash the exact frozen bytes.**
+  `WorkflowDefinitionDocument.Create` serializes the caller's plan twice: once
+  for bytes and again for the fingerprint. Public records retain caller-owned
+  collections, so changing input between traversals can produce an inconsistent
+  document. Snapshot deeply, clone literal `JsonElement` values before their
+  owning document is disposed, and hash the one canonical byte buffer. Apply
+  the persisted size ceiling on creation too. Test mutation during enumeration,
+  disposed literals, oversized creation, and matching document bytes/digest.
+- [ ] **Close compatibility and resource-limit holes at every entry point.**
+  Language/compiler semantic versions currently need only be nonblank; primitive
+  enum values and descriptor digest formats are not fully checked. Specify the
+  supported version matrix, fail closed on unknown executable semantics, validate
+  digest contracts and schema/descriptor consistency against trusted catalogues,
+  and use tuple keys rather than delimiter-concatenated identity strings.
+  Bound programmatically constructed trees before recursive traversal, as well
+  as persisted JSON; reject null entries and excessive depth with bounded stable
+  diagnostics. Include unknown enums, delimiter-bearing names, recursive schemas,
+  and hostile collection/depth fixtures.
+- [ ] **Prove numeric and Unicode identity portability before expanding hashing.**
+  `CanonicalJson.WriteNumber` selects decimal then double; define accepted numeric
+  range/precision and reject unsupported loss rather than accidentally giving
+  distinct numeric literals one identity. Extend the Python/.NET vectors beyond
+  ASCII and small integers: decimal precision boundaries, tiny/huge exponents,
+  negative zero, escaped characters, non-BMP text, and property ordering.
+  The Python fixture currently uses Python's default escaping/ordering, which is
+  not proof of equivalence to .NET for these cases. Compare the existing Siming
+  canonical contract before sharing an implementation; preserve published hash
+  versions and never silently reinterpret historical bytes.
+
+#### Priority 1 — shorten the path from a valid plan to a useful workflow (B/C)
+
+- [ ] **Provide an explain/validate experience with the programmatic compiler.**
+  Return bounded diagnostics with stable codes, structural path, expected/actual
+  type, source span when available, and actionable repair guidance. Offer a
+  deterministic plan explanation showing resolved dependencies, descriptor pins,
+  required capabilities, effective limits, side effects, and admission failures.
+  This can serve tests, CLI users, and model-assisted correction before a parser
+  or UI exists. A preview must perform no activity or external side effect.
+- [ ] **Make restart impact inspectable.** Expose a plan comparison that explains
+  changed descriptors, inputs, context snapshots, and affected dependents while
+  distinguishing structural identity from permission to reuse a result. Zhinu
+  remains authoritative for restart and reuse; its adapter checks the proposed
+  impact against durable execution state. Use Qingniao candidate/Test/Review and
+  Guyabano focused-retry cases as acceptance fixtures.
+- [ ] **Test runtime values at typed boundaries as well as compiled bindings.**
+  Validate actual activity, context, and inference outputs before downstream
+  consumption, including optional absence versus JSON null, list limits, artifact
+  descriptor/content identity, and outcome schemas. Artifact byte verification
+  and access remain host/provider responsibilities; possession of an artifact
+  reference or `ResourceHandle` is not an authority grant. Document the verifier
+  seam and test wrong-type and unauthorized-reference provider responses.
+- [ ] **Use recorded provider failures as the execution-port contract tests.**
+  Distinguish malformed JSON, repaired-but-schema-invalid data, tool mapping
+  failure, truncation, provider error, cancellation, and policy rejection.
+  Preserve successful sibling evidence and use declared typed outcomes to choose
+  correction or escalation. Keep retries, cancellation, and execution budgets
+  enforceable by Zhinu/host policy and keep model review separate from
+  deterministic validation. Test adapter conformance with fakes before Baize.
+- [ ] **Add two small end-to-end consumer fixtures before broad syntax.**
+  Use Qingniao's candidate -> seal -> Test/Review -> decision as the coding fixture,
+  plus an artifact-driven document or media fixture with no filesystem-specific
+  node types. The complete concurrent Qingniao replacement needs structured
+  parallelism; a sequential Delivery C pilot must be labeled as such. One
+  explicitly unrolled correction can prove the bounded policy before general
+  loop syntax. Do not hide unimplemented parallelism or waits in opaque activities
+  and then claim equivalent Fuwen semantics.
+
+#### Scope and delivery clarifications
+
+- The supervisory P0 overlay requires a checkpoint/input node; the original
+  non-interactive first preview does not. Apply that requirement when enabling
+  supervisor-authored interactive plans, not as a prerequisite for every simple
+  read-only compiler fixture. Keep interactive acceptance disabled until its
+  gate passes.
+- Structured parallelism is necessary to replace the full Qingniao Test/Review
+  flow; keyed fan-out additionally serves Guyabano decomposition. Neither is
+  implemented merely because runtime identity helpers exist.
+- Before implementing loops, inspect the current Zhinu package and its loop
+  conformance tests. The old reminder to wait for Zhinu loop work is a dependency
+  verification task, not evidence that the upstream feature is still missing.
+- Keep workflow revision lineage in Fuwen and run/session history in
+  Zhinu/Hongxian. Review whether deployment routing changes belong in execution
+  identity or runtime provenance; require an explicit compatibility decision.
+- Defer a language server, graphical editor, optimizer, plugin marketplace, and
+  extra adapter packages until the builder and executable pilot establish demand.
+  Fuwen does not implement a scheduler, session ledger, distributed transaction
+  manager, artifact store, sandbox, or independent authority over host grants.
+- At delivery boundaries, align README/first-batch status with this roadmap and
+  replace overlapping checklist wording with links to the completed gate and its
+  tests. Test counts demonstrate coverage only for exercised behavior, not a
+  percentage of product completion.
 
 ### Delivery milestone C — Prove durable execution with fakes
 
@@ -467,7 +607,7 @@ Penghou.Fuwen.Compiler
 
 - [x] Scaffold solution, tests, README, architecture docs, CI, formatting,
   packaging, and trusted publishing consistent with the ecosystem.
-- [ ] Implement IR, schema, descriptor, diagnostics, source maps, fingerprints,
+- [x] Implement IR, schema, descriptor, diagnostics, source maps, fingerprints,
   and capability-manifest contracts.
 - [ ] Define a constrained JSON-Schema-compatible dialect: objects, arrays,
   scalar primitives, null, enums, optional fields, and bounded nesting. Reject
@@ -678,8 +818,9 @@ only after repeated integration demonstrates a real reusable boundary.
 
 Continue with Delivery milestone B:
 
-1. Define stable compiler diagnostics and hard compilation-budget contracts.
-2. Add trusted catalogue interfaces and exact descriptor-resolution results.
+1. Add trusted catalogue interfaces and exact descriptor-resolution results.
+2. Decide explicit execution ordering, validation barriers, and return semantics
+   before extending the public IR or compiler.
 3. Implement a constrained programmatic definition builder that lowers
    through the same binder, type checker, and validator future source uses.
 4. Validate acyclic references, definite assignment, branch returns, nominal

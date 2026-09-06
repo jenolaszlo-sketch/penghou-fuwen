@@ -11,14 +11,32 @@ public static class WorkflowPlanIdentity
     public static byte[] GetCanonicalBytes(WorkflowPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        WorkflowPlanValidator.Validate(plan);
-        return CanonicalJson.Serialize(Normalize(plan));
+        return GetCanonicalBytesFrozen(WorkflowPlanSnapshot.Create(plan));
     }
 
     /// <summary>Computes the self-describing SHA-256 execution fingerprint.</summary>
     public static string ComputeExecutionFingerprint(WorkflowPlan plan)
     {
         var hash = SHA256.HashData(GetCanonicalBytes(plan));
+        return $"sha256:{FuwenContracts.ExecutionFingerprintVersion}:{Convert.ToHexString(hash).ToLowerInvariant()}";
+    }
+
+    internal static byte[] GetCanonicalBytesFrozen(WorkflowPlan plan)
+    {
+        WorkflowPlanValidator.Validate(plan);
+        return CanonicalJson.Serialize(Normalize(plan));
+    }
+
+    internal static byte[] GetCanonicalBytesForVerification(WorkflowPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        WorkflowPlanValidator.ValidateCompatibility(plan);
+        return CanonicalJson.Serialize(Normalize(plan));
+    }
+
+    internal static string ComputeExecutionFingerprint(ReadOnlySpan<byte> canonicalBytes)
+    {
+        var hash = SHA256.HashData(canonicalBytes);
         return $"sha256:{FuwenContracts.ExecutionFingerprintVersion}:{Convert.ToHexString(hash).ToLowerInvariant()}";
     }
 

@@ -1,1 +1,130 @@
 #nullable enable
+const Penghou.Fuwen.Compiler.CompilationBudget.DefaultMaximumDiagnostics = 100 -> int
+Penghou.Fuwen.Compiler.CompilationBudget
+Penghou.Fuwen.Compiler.CompilationBudget.CompilationBudget(long maxSourceBytes = 1048576, long maxTokens = 100000, long maxAstNodes = 100000, int maxNestingDepth = 128, int maxWorkflowNodes = 1000, int maxSchemas = 1000, int maxSchemaDepth = 64, int maxSchemaFields = 10000, int maxExpressions = 100000, long maxStringBytes = 1048576, int maxDiagnostics = 100, int maxCatalogueLookups = 10000, long maxCatalogueLookupMilliseconds = 5000, long maxCompilationMilliseconds = 30000) -> void
+static Penghou.Fuwen.Compiler.CompilationBudget.Default.get -> Penghou.Fuwen.Compiler.CompilationBudget!
+static Penghou.Fuwen.Compiler.CompilationBudget.HostDefaults.get -> Penghou.Fuwen.Compiler.CompilationBudget!
+Penghou.Fuwen.Compiler.CompilationBudget.MaxAstNodes.get -> long
+Penghou.Fuwen.Compiler.CompilationBudget.MaxCatalogueLookupMilliseconds.get -> long
+Penghou.Fuwen.Compiler.CompilationBudget.MaxCatalogueLookups.get -> int
+Penghou.Fuwen.Compiler.CompilationBudget.MaxCompilationMilliseconds.get -> long
+Penghou.Fuwen.Compiler.CompilationBudget.MaxDiagnostics.get -> int
+Penghou.Fuwen.Compiler.CompilationBudget.MaxExpressions.get -> int
+Penghou.Fuwen.Compiler.CompilationBudget.MaxNestingDepth.get -> int
+Penghou.Fuwen.Compiler.CompilationBudget.MaxSchemaDepth.get -> int
+Penghou.Fuwen.Compiler.CompilationBudget.MaxSchemaFields.get -> int
+Penghou.Fuwen.Compiler.CompilationBudget.MaxSchemas.get -> int
+Penghou.Fuwen.Compiler.CompilationBudget.MaxSourceBytes.get -> long
+Penghou.Fuwen.Compiler.CompilationBudget.MaxStringBytes.get -> long
+Penghou.Fuwen.Compiler.CompilationBudget.MaxTokens.get -> long
+Penghou.Fuwen.Compiler.CompilationBudget.MaxWorkflowNodes.get -> int
+static Penghou.Fuwen.Compiler.CompilationBudget.ApplyCaller(Penghou.Fuwen.Compiler.CompilationBudget! host, Penghou.Fuwen.Compiler.CompilationBudget! caller) -> Penghou.Fuwen.Compiler.CompilationBudget!
+static Penghou.Fuwen.Compiler.CompilationBudget.CreateEffective(Penghou.Fuwen.Compiler.CompilationBudget! host, Penghou.Fuwen.Compiler.CompilationBudget! caller) -> Penghou.Fuwen.Compiler.CompilationBudget!
+Penghou.Fuwen.Compiler.CompilationBudget.IsAtMost(Penghou.Fuwen.Compiler.CompilationBudget! ceiling) -> bool
+Penghou.Fuwen.Compiler.CompilationBudget.Narrow(Penghou.Fuwen.Compiler.CompilationBudget! caller) -> Penghou.Fuwen.Compiler.CompilationBudget!
+Penghou.Fuwen.Compiler.CompilationBudgetDimension
+Penghou.Fuwen.Compiler.CompilationBudgetDimension.AstNodes = 2 -> Penghou.Fuwen.Compiler.CompilationBudgetDimension
+Penghou.Fuwen.Compiler.CompilationBudgetDimension.CatalogueLookupMilliseconds = 12 -> Penghou.Fuwen.Compiler.CompilationBudgetDimension
+Penghou.Fuwen.Compiler.CompilationBudgetDimension.CatalogueLookups = 11 -> Penghou.Fuwen.Compiler.CompilationBudgetDimension
+Penghou.Fuwen.Compiler.CompilationBudgetDimension.CompilationMilliseconds = 13 -> Penghou.Fuwen.Compiler.CompilationBudgetDimension
+Penghou.Fuwen.Compiler.CompilationBudgetDimension.Diagnostics = 10 -> Penghou.Fuwen.Compiler.CompilationBudgetDimension
+Penghou.Fuwen.Compiler.CompilationBudgetDimension.Expressions = 8 -> Penghou.Fuwen.Compiler.CompilationBudgetDimension
+Penghou.Fuwen.Compiler.CompilationBudgetDimension.NestingDepth = 3 -> Penghou.Fuwen.Compiler.CompilationBudgetDimension
+Penghou.Fuwen.Compiler.CompilationBudgetDimension.SchemaDepth = 6 -> Penghou.Fuwen.Compiler.CompilationBudgetDimension
+Penghou.Fuwen.Compiler.CompilationBudgetDimension.SchemaFields = 7 -> Penghou.Fuwen.Compiler.CompilationBudgetDimension
+Penghou.Fuwen.Compiler.CompilationBudgetDimension.Schemas = 5 -> Penghou.Fuwen.Compiler.CompilationBudgetDimension
+Penghou.Fuwen.Compiler.CompilationBudgetDimension.SourceBytes = 0 -> Penghou.Fuwen.Compiler.CompilationBudgetDimension
+Penghou.Fuwen.Compiler.CompilationBudgetDimension.StringBytes = 9 -> Penghou.Fuwen.Compiler.CompilationBudgetDimension
+Penghou.Fuwen.Compiler.CompilationBudgetDimension.Tokens = 1 -> Penghou.Fuwen.Compiler.CompilationBudgetDimension
+Penghou.Fuwen.Compiler.CompilationBudgetDimension.WorkflowNodes = 4 -> Penghou.Fuwen.Compiler.CompilationBudgetDimension
+Penghou.Fuwen.Compiler.CompilationBudgetEvaluation
+Penghou.Fuwen.Compiler.CompilationBudgetEvaluation.Budget.get -> Penghou.Fuwen.Compiler.CompilationBudget!
+Penghou.Fuwen.Compiler.CompilationBudgetEvaluation.Diagnostics.get -> Penghou.Fuwen.Compiler.DiagnosticCollection!
+Penghou.Fuwen.Compiler.CompilationBudgetEvaluation.ExceededDimensions.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Compiler.CompilationBudgetDimension>!
+Penghou.Fuwen.Compiler.CompilationBudgetEvaluation.IsWithinBudget.get -> bool
+Penghou.Fuwen.Compiler.CompilationBudgetEvaluation.Usage.get -> Penghou.Fuwen.Compiler.CompilationUsageSummary!
+static Penghou.Fuwen.Compiler.CompilationBudgetEvaluator.Evaluate(Penghou.Fuwen.Compiler.CompilationBudget! budget, Penghou.Fuwen.Compiler.CompilationUsageSummary! usage) -> Penghou.Fuwen.Compiler.CompilationBudgetEvaluation!
+Penghou.Fuwen.Compiler.CompilationBudgetEvaluator
+Penghou.Fuwen.Compiler.CompilationBudgetTracker
+Penghou.Fuwen.Compiler.CompilationBudgetTracker.CompilationBudgetTracker(Penghou.Fuwen.Compiler.CompilationBudget! budget) -> void
+Penghou.Fuwen.Compiler.CompilationBudgetTracker.Evaluate() -> Penghou.Fuwen.Compiler.CompilationBudgetEvaluation!
+Penghou.Fuwen.Compiler.CompilationBudgetTracker.IsExceeded(Penghou.Fuwen.Compiler.CompilationBudgetDimension dimension) -> bool
+Penghou.Fuwen.Compiler.CompilationBudgetTracker.Snapshot() -> Penghou.Fuwen.Compiler.CompilationUsageSummary!
+Penghou.Fuwen.Compiler.CompilationBudgetTracker.TryConsume(Penghou.Fuwen.Compiler.CompilationBudgetDimension dimension, long amount = 1) -> bool
+Penghou.Fuwen.Compiler.CompilationResult
+Penghou.Fuwen.Compiler.CompilationResult.CompilationResult(Penghou.Fuwen.WorkflowPlan? plan, System.Collections.Generic.IEnumerable<Penghou.Fuwen.Compiler.CompilerDiagnostic!>! diagnostics, Penghou.Fuwen.Compiler.CompilationUsageSummary! usage, Penghou.Fuwen.Compiler.CompilationBudget! budget) -> void
+Penghou.Fuwen.Compiler.CompilationResult.Budget.get -> Penghou.Fuwen.Compiler.CompilationBudget!
+Penghou.Fuwen.Compiler.CompilationResult.Diagnostics.get -> Penghou.Fuwen.Compiler.DiagnosticCollection!
+Penghou.Fuwen.Compiler.CompilationResult.Plan.get -> Penghou.Fuwen.WorkflowPlan?
+Penghou.Fuwen.Compiler.CompilationResult.Succeeded.get -> bool
+Penghou.Fuwen.Compiler.CompilationResult.Usage.get -> Penghou.Fuwen.Compiler.CompilationUsageSummary!
+Penghou.Fuwen.Compiler.CompilationUsageSummary
+Penghou.Fuwen.Compiler.CompilationUsageSummary.CompilationUsageSummary(long sourceBytes = 0, long tokens = 0, long astNodes = 0, int nestingDepth = 0, int workflowNodes = 0, int schemas = 0, int schemaDepth = 0, int schemaFields = 0, int expressions = 0, long stringBytes = 0, int diagnostics = 0, int catalogueLookups = 0, long catalogueLookupMilliseconds = 0, long compilationMilliseconds = 0) -> void
+Penghou.Fuwen.Compiler.CompilationUsageSummary.AstNodes.get -> long
+Penghou.Fuwen.Compiler.CompilationUsageSummary.CatalogueLookupMilliseconds.get -> long
+Penghou.Fuwen.Compiler.CompilationUsageSummary.CatalogueLookups.get -> int
+Penghou.Fuwen.Compiler.CompilationUsageSummary.CompilationMilliseconds.get -> long
+Penghou.Fuwen.Compiler.CompilationUsageSummary.Diagnostics.get -> int
+Penghou.Fuwen.Compiler.CompilationUsageSummary.Expressions.get -> int
+Penghou.Fuwen.Compiler.CompilationUsageSummary.NestingDepth.get -> int
+Penghou.Fuwen.Compiler.CompilationUsageSummary.SchemaDepth.get -> int
+Penghou.Fuwen.Compiler.CompilationUsageSummary.SchemaFields.get -> int
+Penghou.Fuwen.Compiler.CompilationUsageSummary.Schemas.get -> int
+Penghou.Fuwen.Compiler.CompilationUsageSummary.SourceBytes.get -> long
+Penghou.Fuwen.Compiler.CompilationUsageSummary.StringBytes.get -> long
+Penghou.Fuwen.Compiler.CompilationUsageSummary.Tokens.get -> long
+Penghou.Fuwen.Compiler.CompilationUsageSummary.WorkflowNodes.get -> int
+Penghou.Fuwen.Compiler.CompilerDiagnostic
+Penghou.Fuwen.Compiler.CompilerDiagnostic.CompilerDiagnostic(string! code, Penghou.Fuwen.Compiler.DiagnosticSeverity severity, Penghou.Fuwen.Compiler.DiagnosticPhase phase, string! message, string? path = null, Penghou.Fuwen.SourceSpan? span = null, string? expected = null, string? actual = null) -> void
+Penghou.Fuwen.Compiler.CompilerDiagnostic.Actual.get -> string?
+Penghou.Fuwen.Compiler.CompilerDiagnostic.Code.get -> string!
+Penghou.Fuwen.Compiler.CompilerDiagnostic.Expected.get -> string?
+Penghou.Fuwen.Compiler.CompilerDiagnostic.Message.get -> string!
+Penghou.Fuwen.Compiler.CompilerDiagnostic.Path.get -> string?
+Penghou.Fuwen.Compiler.CompilerDiagnostic.Phase.get -> Penghou.Fuwen.Compiler.DiagnosticPhase
+Penghou.Fuwen.Compiler.CompilerDiagnostic.Severity.get -> Penghou.Fuwen.Compiler.DiagnosticSeverity
+Penghou.Fuwen.Compiler.CompilerDiagnostic.Span.get -> Penghou.Fuwen.SourceSpan?
+Penghou.Fuwen.Compiler.CompilerDiagnosticCodes
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.DiagnosticsTruncated = "FWN-BUDGET-002" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.InvalidBudget = "FWN-BUDGET-003" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetSourceBytesExceeded = "FWN-BUDGET-101" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetTokensExceeded = "FWN-BUDGET-102" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetAstNodesExceeded = "FWN-BUDGET-103" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetNestingDepthExceeded = "FWN-BUDGET-104" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetWorkflowNodesExceeded = "FWN-BUDGET-105" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetSchemasExceeded = "FWN-BUDGET-106" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetSchemaDepthExceeded = "FWN-BUDGET-107" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetSchemaFieldsExceeded = "FWN-BUDGET-108" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetExpressionsExceeded = "FWN-BUDGET-109" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetStringBytesExceeded = "FWN-BUDGET-110" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetCatalogueLookupsExceeded = "FWN-BUDGET-111" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetCatalogueLookupMillisecondsExceeded = "FWN-BUDGET-112" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetCompilationMillisecondsExceeded = "FWN-BUDGET-113" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.BudgetDiagnosticsExceeded = "FWN-BUDGET-114" -> string!
+Penghou.Fuwen.Compiler.DiagnosticBuilder
+Penghou.Fuwen.Compiler.DiagnosticBuilder.DiagnosticBuilder(int maximumCount = 100) -> void
+Penghou.Fuwen.Compiler.DiagnosticBuilder.Add(Penghou.Fuwen.Compiler.CompilerDiagnostic! diagnostic) -> bool
+Penghou.Fuwen.Compiler.DiagnosticBuilder.Count.get -> int
+Penghou.Fuwen.Compiler.DiagnosticBuilder.DroppedCount.get -> int
+Penghou.Fuwen.Compiler.DiagnosticBuilder.ToImmutable() -> Penghou.Fuwen.Compiler.DiagnosticCollection!
+Penghou.Fuwen.Compiler.DiagnosticCollection
+const Penghou.Fuwen.Compiler.DiagnosticCollection.MaximumInputDiagnostics = 100000 -> int
+Penghou.Fuwen.Compiler.DiagnosticCollection.DiagnosticCollection(System.Collections.Generic.IEnumerable<Penghou.Fuwen.Compiler.CompilerDiagnostic!>! diagnostics, int maximumCount = 100) -> void
+Penghou.Fuwen.Compiler.DiagnosticCollection.Count.get -> int
+Penghou.Fuwen.Compiler.DiagnosticCollection.DroppedCount.get -> int
+Penghou.Fuwen.Compiler.DiagnosticCollection.IsTruncated.get -> bool
+Penghou.Fuwen.Compiler.DiagnosticCollection.this[int index].get -> Penghou.Fuwen.Compiler.CompilerDiagnostic!
+Penghou.Fuwen.Compiler.DiagnosticCollection.GetEnumerator() -> System.Collections.Generic.IEnumerator<Penghou.Fuwen.Compiler.CompilerDiagnostic!>!
+Penghou.Fuwen.Compiler.DiagnosticPhase
+Penghou.Fuwen.Compiler.DiagnosticPhase.Admission = 6 -> Penghou.Fuwen.Compiler.DiagnosticPhase
+Penghou.Fuwen.Compiler.DiagnosticPhase.Binding = 3 -> Penghou.Fuwen.Compiler.DiagnosticPhase
+Penghou.Fuwen.Compiler.DiagnosticPhase.Budget = 7 -> Penghou.Fuwen.Compiler.DiagnosticPhase
+Penghou.Fuwen.Compiler.DiagnosticPhase.General = 0 -> Penghou.Fuwen.Compiler.DiagnosticPhase
+Penghou.Fuwen.Compiler.DiagnosticPhase.Lexing = 1 -> Penghou.Fuwen.Compiler.DiagnosticPhase
+Penghou.Fuwen.Compiler.DiagnosticPhase.Parsing = 2 -> Penghou.Fuwen.Compiler.DiagnosticPhase
+Penghou.Fuwen.Compiler.DiagnosticPhase.Typing = 4 -> Penghou.Fuwen.Compiler.DiagnosticPhase
+Penghou.Fuwen.Compiler.DiagnosticPhase.Validation = 5 -> Penghou.Fuwen.Compiler.DiagnosticPhase
+Penghou.Fuwen.Compiler.DiagnosticSeverity
+Penghou.Fuwen.Compiler.DiagnosticSeverity.Error = 2 -> Penghou.Fuwen.Compiler.DiagnosticSeverity
+Penghou.Fuwen.Compiler.DiagnosticSeverity.Info = 0 -> Penghou.Fuwen.Compiler.DiagnosticSeverity
+Penghou.Fuwen.Compiler.DiagnosticSeverity.Warning = 1 -> Penghou.Fuwen.Compiler.DiagnosticSeverity

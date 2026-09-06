@@ -7,9 +7,7 @@ public static class WorkflowPlanValidator
     public static void Validate(WorkflowPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        RequireVersion(plan.IrVersion, FuwenContracts.IrVersion, nameof(plan.IrVersion));
-        RequireVersion(plan.CanonicalJsonVersion, FuwenContracts.CanonicalJsonVersion, nameof(plan.CanonicalJsonVersion));
-        RequireVersion(plan.FingerprintVersion, FuwenContracts.ExecutionFingerprintVersion, nameof(plan.FingerprintVersion));
+        ValidateCompatibility(plan);
         StructuralNodeIdentity.ValidateSegment(plan.Name);
         RequireText(plan.LanguageVersion, nameof(plan.LanguageVersion));
         RequireText(plan.CompilerSemanticVersion, nameof(plan.CompilerSemanticVersion));
@@ -23,6 +21,18 @@ public static class WorkflowPlanValidator
         ValidateCapabilities(plan.CapabilityManifest);
         ValidateNodes(plan.Name, plan.Nodes, new HashSet<string>(StringComparer.Ordinal));
         ValidateCatalogueClosure(plan);
+    }
+
+    /// <summary>
+    /// Validates only the versioned serialization and identity contracts that
+    /// this library can safely interpret. It does not semantically admit a plan.
+    /// </summary>
+    internal static void ValidateCompatibility(WorkflowPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        RequireVersion(plan.IrVersion, FuwenContracts.IrVersion, nameof(plan.IrVersion));
+        RequireVersion(plan.CanonicalJsonVersion, FuwenContracts.CanonicalJsonVersion, nameof(plan.CanonicalJsonVersion));
+        RequireVersion(plan.FingerprintVersion, FuwenContracts.ExecutionFingerprintVersion, nameof(plan.FingerprintVersion));
     }
 
     private static void ValidateNodes(string parentPath, IEnumerable<WorkflowNode> nodes, ISet<string> paths)

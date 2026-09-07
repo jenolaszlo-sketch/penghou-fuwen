@@ -17,6 +17,12 @@ documents, datasets, reports, images, audio, video, prompts, model outputs, and
 manifests are all host-described artifacts. Code generation is the first
 demanding pilot, not a privileged language concept.
 
+Fuwen is also the planning boundary for adaptive workflows. An AI, user, or
+supervisor may propose a materially different objective or path, but it does
+not mutate an activated plan. Fuwen compiles each accepted proposal into a new
+immutable plan revision; Zhinu deterministically executes an admitted revision,
+and Hongxian preserves the evidence explaining why revisions changed.
+
 `WorkflowPlan` is compiled structured workflow semantics. Its canonical JSON
 is a portable serialization of that IR, not a second authoring language or a
 generic executable-graph format. Node identifiers and references express
@@ -52,7 +58,8 @@ Penghou.Fuwen.Zhinu -> Zhinu durable execution
 
 Fuwen owns syntax, formatting, schemas, restricted expressions, binding, type
 checking, catalogue resolution, graph validation, capability analysis, stable
-node identity, canonical IR, fingerprints, source maps, and diagnostics.
+node identity, canonical IR, fingerprints, source maps, diagnostics, immutable
+plan-revision lineage, and semantic comparison between plan revisions.
 
 Existing components remain authoritative:
 
@@ -152,6 +159,79 @@ or references rather than rewriting history.
 22. Repetition safety is explicit and fingerprinted. A construct declares its
    applicable bound, timeout, budget, cancellation, or permitted durable
    suspension semantics. Changing these semantics changes plan identity.
+23. An activated plan is immutable. Retry executes the same plan; material
+   objective, acceptance-criteria, dependency, or execution-path change creates
+   a new plan revision.
+24. Revision lineage is not execution behavior. Parentage and proposal evidence
+   belong in an immutable revision envelope referencing an execution
+   fingerprint; they do not alter canonical plan semantics merely to record
+   history.
+25. Fuwen can classify semantic differences and possible correspondence between
+   stable structural nodes, but it cannot authorize physical artifact reuse.
+   Zhinu combines that analysis with durable inputs, provenance, evidence, and
+   host policy.
+
+## Adaptive planning and workflow evolution
+
+The target stack is:
+
+```text
+AI / user / supervisory checkpoint
+              |
+      Accept / Retry / Replan
+              |
+        Fuwen admission
+              |
+    immutable PlanRevision N
+              |
+       Zhinu generation N
+              |
+      deterministic execution
+
+Hongxian records the decisions, references, and outcomes across the timeline.
+```
+
+The workflow instance survives multiple plan revisions and Zhinu execution
+generations. Fuwen owns the immutable planning records required at that seam:
+
+- a stable `PlanRevisionId` referencing one exact execution fingerprint;
+- optional parent revision identity so lineage can branch without rewriting
+  history;
+- bounded proposal/reason/evidence references without chain-of-thought;
+- deterministic semantic comparison of nodes, descriptors, dependencies,
+  objectives, acceptance criteria, and required validation;
+- explicit distinction between structural correspondence and a runtime reuse
+  decision.
+
+The revision envelope should remain separate from canonical executable IR.
+Reactivating byte-identical semantics may create a new revision or execution
+generation without manufacturing a new execution fingerprint. Display names
+must not establish correspondence, and an explicit durable identity override
+must never allow changed semantics to masquerade as reusable work.
+
+The current `WorkflowPlan.Revision` is already part of published fingerprint
+contracts. Do not silently reinterpret or remove it. The revision-envelope
+design must either give that field a precise execution-semantic meaning or
+introduce the new separation under a versioned IR/fingerprint contract while
+continuing to verify historical plans with their original rules.
+
+Initial comparison output should be bounded and explainable: unchanged, added,
+removed, changed, dependency-changed, objective-changed, and
+validation-requirement-changed. It may identify candidate reusable work but
+must not claim that an artifact is valid. Runtime inputs, producer semantics,
+artifact provenance, evidence freshness, and policy remain outside Fuwen.
+
+Delivery order:
+
+1. Finish trusted callable metadata and the host-admission receipt.
+2. Define the immutable revision envelope and its identity/lineage invariants.
+3. Add deterministic plan comparison using stable structural identity and
+   semantic fingerprints.
+4. Hand the comparison to a later Fuwen.Zhinu transition adapter; do not add
+   scheduling, quiescence, artifact mutation, or generation state to Fuwen.
+
+Automated plan generation, transition activation, rollback policy, branch
+selection, and AI autonomy are not part of this Fuwen milestone.
 
 ## Active delivery strategy
 
@@ -833,6 +913,10 @@ only after repeated integration demonstrates a real reusable boundary.
 - Typed activity and inference failure taxonomy.
 - Parser implementation after IR stabilizes; ANTLR is not yet mandated.
 - Whether repeated use eventually justifies `Penghou.Fuwen.Hongxian`.
+- Exact immutable plan-revision envelope and whether its identifier is
+  content-derived or host-issued while still binding one execution fingerprint.
+- The minimum semantic node digest and comparison categories needed by Zhinu to
+  evaluate reuse without making Fuwen responsible for runtime artifacts.
 
 ## Resume point
 
@@ -845,7 +929,10 @@ Continue with Delivery milestone B:
    executors must not accept a bare verified definition as authorization.
 3. Complete argument/type/condition/literal/definite-assignment rejection tests
    and close catalogue exception/deadline and aggregate-budget gaps.
-4. Keep loops, waits, runtime execution, and the text grammar out of this batch.
+4. Then define immutable plan-revision lineage and deterministic semantic plan
+   comparison as the prerequisite for Zhinu workflow evolution.
+5. Keep loops, waits, runtime execution, transition activation, and the text
+   grammar out of this batch.
 
 Do **not** begin with the text grammar. The next deliverable is a programmatic
 admission boundary that can safely hand the already-compiled canonical plan to

@@ -472,9 +472,15 @@ All unchecked items are proposed work, not implemented guarantees.
   disposed literals, oversized creation, and matching document bytes/digest.
 - [ ] **Close compatibility and resource-limit holes at every entry point.**
   Supported IR/compiler/canonical/fingerprint versions and primitive enums now
-  fail closed, but descriptor digest formats are not fully checked. Define the
-  supported digest contract and validate schema/descriptor consistency against
-  trusted catalogues.
+  fail closed. Descriptor admission now requires the current canonical
+  lowercase SHA-256 identity shape (with a bounded nonblank contract), and the
+  core validator and compiler catalogue boundary share the same rule. The
+  provider-neutral `ContentDigest` transport remains open for artifact/source/
+  evidence contracts, and `LoadVerified` continues to verify historical bytes
+  without semantic admission or reinterpretation. This closes the descriptor
+  digest portion of this item. Schema/descriptor consistency is checked against
+  trusted catalogues; the recursive-schema policy and broader hostile-shape
+  fixtures below remain before the item is complete.
   Bound programmatically constructed trees before recursive traversal, as well
   as persisted JSON; reject null entries and excessive depth with bounded stable
   diagnostics. Include unknown enums, delimiter-bearing names, recursive schemas,
@@ -957,21 +963,19 @@ only after repeated integration demonstrates a real reusable boundary.
 
 Continue with Delivery milestone B:
 
-1. Define and enforce the supported digest identity contract without silently
-   reinterpreting historical persisted fingerprints.
-2. Decide and enforce recursive-schema and enum-literal semantics, then tighten
+1. Decide and enforce recursive-schema and enum-literal semantics, then tighten
    context-snapshot output typing.
-3. Extend the initial pure explain projection with trusted callable-effect
+2. Extend the initial pure explain projection with trusted callable-effect
    summaries and repair-oriented diagnostics where the compiler retains enough
    evidence to do so safely.
-4. Then begin Delivery C's typed execution ports and sequential fake-Zhinu
+3. Then begin Delivery C's typed execution ports and sequential fake-Zhinu
    adapter slice; plan comparison is ready for later transition analysis.
-5. Keep loops, waits, transition activation, artifact-reuse authorization, and
+4. Keep loops, waits, transition activation, artifact-reuse authorization, and
    the text grammar out of this batch.
 
 Do **not** begin with the text grammar. The next deliverable is programmatic
 safety closure and explanation enrichment, followed by the narrow typed
 execution-port slice. Immutable revision lineage, deterministic plan comparison,
-and the first pure explanation projection are complete. The admission receipt
-is the authorization seam for a later execution port; it is not itself an
-executor.
+the first pure explanation projection, and canonical descriptor-digest
+admission are complete. The admission receipt is the authorization seam for a
+later execution port; it is not itself an executor.

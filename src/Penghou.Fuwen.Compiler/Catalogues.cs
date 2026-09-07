@@ -800,9 +800,6 @@ internal static class CatalogueContractValidation
     internal const int MaximumCapabilities = 256;
     internal const int MaximumDescriptorNameLength = 256;
     internal const int MaximumDescriptorVersionLength = 128;
-    internal const int MaximumDigestAlgorithmLength = 32;
-    internal const int MaximumDigestContractLength = 64;
-    internal const int MaximumDigestValueLength = 512;
     internal const int MaximumCallableParameters = 256;
     internal const int MaximumCallableParameterNameLength = 128;
     internal const int MaximumSchemaDepth = 64;
@@ -835,10 +832,7 @@ internal static class CatalogueContractValidation
             throw new ArgumentOutOfRangeException(nameof(descriptor), "Descriptor kind is not supported.");
         Text(descriptor.Name, nameof(descriptor.Name), MaximumDescriptorNameLength);
         Text(descriptor.Version, nameof(descriptor.Version), MaximumDescriptorVersionLength);
-        ArgumentNullException.ThrowIfNull(descriptor.ContentDigest);
-        Text(descriptor.ContentDigest.Algorithm, nameof(descriptor.ContentDigest.Algorithm), MaximumDigestAlgorithmLength);
-        Text(descriptor.ContentDigest.Contract, nameof(descriptor.ContentDigest.Contract), MaximumDigestContractLength);
-        Text(descriptor.ContentDigest.Value, nameof(descriptor.ContentDigest.Value), MaximumDigestValueLength);
+        DescriptorDigestValidation.Validate(descriptor.ContentDigest, nameof(descriptor.ContentDigest));
     }
 
     internal static bool DigestsEqual(ContentDigest left, ContentDigest right) =>

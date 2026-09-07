@@ -43,6 +43,33 @@ public sealed class WorkflowDefinitionStoreTests
     }
 
     [Fact]
+    public void LoadVerified_preserves_historical_descriptor_digest_identity_without_semantic_admission()
+    {
+        var source = PlanFixture.Create();
+        var historicalDescriptor = source.CatalogueBindings[0] with
+        {
+            ContentDigest = new ContentDigest("legacy-digest", "descriptor/legacy", "legacy-value"),
+        };
+        var historicalPlan = source with
+        {
+            CatalogueBindings = [historicalDescriptor, .. source.CatalogueBindings.Skip(1)],
+        };
+        var bytes = WorkflowPlanIdentity.GetCanonicalBytesForVerification(historicalPlan);
+        var fingerprint = WorkflowPlanIdentity.ComputeExecutionFingerprint(bytes, historicalPlan.FingerprintVersion);
+
+        var loaded = WorkflowDefinitionDocument.LoadVerified(
+            fingerprint,
+            bytes);
+
+        loaded.ReadPlan().CatalogueBindings
+            .Single(descriptor =>
+                descriptor.Kind == historicalDescriptor.Kind &&
+                descriptor.Name == historicalDescriptor.Name &&
+                descriptor.Version == historicalDescriptor.Version)
+            .ContentDigest.Should().Be(historicalDescriptor.ContentDigest);
+    }
+
+    [Fact]
     public void V1_and_v2_fingerprint_claims_cannot_cross_versions()
     {
         var v1 = WorkflowDefinitionDocument.Create(PlanFixture.Create());

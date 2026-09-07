@@ -705,11 +705,10 @@ public static class WorkflowPlanValidator
 
     private static void ValidateDescriptor(DescriptorReference descriptor)
     {
+        ArgumentNullException.ThrowIfNull(descriptor);
         RequireText(descriptor.Name, nameof(descriptor.Name));
         RequireText(descriptor.Version, nameof(descriptor.Version));
-        RequireText(descriptor.ContentDigest.Algorithm, nameof(descriptor.ContentDigest.Algorithm));
-        RequireText(descriptor.ContentDigest.Contract, nameof(descriptor.ContentDigest.Contract));
-        RequireText(descriptor.ContentDigest.Value, nameof(descriptor.ContentDigest.Value));
+        DescriptorDigestValidation.Validate(descriptor.ContentDigest, nameof(descriptor.ContentDigest));
     }
 
     private static void ValidateCapabilities(CapabilityManifest manifest)

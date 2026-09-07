@@ -40,6 +40,25 @@ public sealed class CatalogueTests
             .Should().Equal(CompilerDiagnosticCodes.CatalogueDescriptorNotFound);
     }
 
+    [Theory]
+    [InlineData("sha-256", "descriptor/v1", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
+    [InlineData("sha256", "descriptor/v1", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")]
+    [InlineData("sha256", "descriptor/v1", "aaaaaaaa")]
+    public void Trusted_catalogue_rejects_noncanonical_descriptor_digest_identity(
+        string algorithm,
+        string contract,
+        string value)
+    {
+        var descriptor = Descriptor(DescriptorKind.Schema, "sample.invalid", "1", 'a') with
+        {
+            ContentDigest = new ContentDigest(algorithm, contract, value),
+        };
+
+        var act = () => new TrustedCatalogueDescriptor(descriptor);
+
+        act.Should().Throw<ArgumentException>().WithMessage("*descriptor content digest*");
+    }
+
     [Fact]
     public async Task Catalogue_SnapshotsEntriesAndResults()
     {

@@ -182,6 +182,10 @@ public sealed class PlanRevisionDocument
         var descriptor = artifact.ArtifactDescriptor;
         if (!Enum.IsDefined(descriptor.Kind))
             throw new ArgumentOutOfRangeException(nameof(reference), "Artifact descriptor kind is unsupported.");
+        if (descriptor.Kind != DescriptorKind.Artifact)
+            throw new ArgumentException(
+                $"Artifact descriptor must be of kind '{DescriptorKind.Artifact}', not '{descriptor.Kind}'.",
+                nameof(reference));
         var descriptorSnapshot = new DescriptorReference(
             descriptor.Kind,
             Text(descriptor.Name, nameof(descriptor.Name), 256)!,

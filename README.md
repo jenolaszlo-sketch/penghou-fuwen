@@ -68,8 +68,8 @@ the exact execution fingerprint, immutable catalogue snapshot, resolved trusted
 metadata, finite capability grants, policy revision, and effective limits.
 Unversioned catalogues and policies—and the test-only `AllowAll` policy—cannot
 issue a receipt. Parser work remains deferred while the programmatic compiler
-is made useful end to end. Immutable plan-revision documents now
-bind host-issued lineage IDs and parentage to one verified definition plus
+is hardened for its first execution adapter. Immutable plan-revision documents
+now bind host-issued lineage IDs and parentage to one verified definition plus
 content-addressed objective, acceptance, validation, and supporting artifact
 evidence. Their fingerprints prove integrity only; they do not authorize or
 activate execution. Deterministic plan comparison reports exact structural-path,
@@ -82,6 +82,9 @@ an admission receipt or execute workflow work.
 Trusted catalogue results are also charged cumulatively against the existing
 structural and UTF-8 text budgets, preventing many individually valid descriptor
 payloads from amplifying compiler memory beyond the admitted limits.
+Caller-controlled plan text and JSON literals are preflighted before snapshot
+allocation, artifact references enforce artifact descriptor kinds, and every
+supported IR version now requires its exact compiler-semantics contract.
 
 See [the roadmap](docs/roadmap.md) and
 [the first implementation batch](docs/first-batch.md).

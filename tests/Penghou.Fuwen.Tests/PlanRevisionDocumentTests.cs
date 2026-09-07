@@ -105,6 +105,39 @@ public sealed class PlanRevisionDocumentTests
     }
 
     [Fact]
+    public void ArtifactReference_requires_an_artifact_descriptor()
+    {
+        var descriptor = new DescriptorReference(
+            DescriptorKind.Schema,
+            "not-an-artifact",
+            "1",
+            Digest("descriptor/v1", 'd'));
+
+        var act = () => new ArtifactReference(
+            "test-artifacts",
+            "evidence/1",
+            descriptor,
+            Digest("artifact/v1", 'a'));
+
+        act.Should().Throw<ArgumentException>().WithMessage("*must be of kind 'Artifact'*");
+    }
+
+    [Fact]
+    public void ArtifactReference_with_cannot_bypass_the_artifact_descriptor_invariant()
+    {
+        var artifact = Artifact("evidence/1", 'a');
+        var descriptor = new DescriptorReference(
+            DescriptorKind.Schema,
+            "not-an-artifact",
+            "1",
+            Digest("descriptor/v1", 'd'));
+
+        var act = () => artifact with { ArtifactDescriptor = descriptor };
+
+        act.Should().Throw<ArgumentException>().WithMessage("*must be of kind 'Artifact'*");
+    }
+
+    [Fact]
     public async Task Store_IsIdempotentAndRejectsRevisionIdReuseWithChangedContent()
     {
         var definition = WorkflowDefinitionDocument.Create(PlanFixture.CreateV2());

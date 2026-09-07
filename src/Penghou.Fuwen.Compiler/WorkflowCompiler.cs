@@ -143,6 +143,16 @@ public sealed class WorkflowCompiler
             // below observes caller-owned arrays, dictionaries, or JSON values.
             plan = WorkflowPlanSnapshot.Create(input);
         }
+        catch (WorkflowPlanPayloadSizeException exception)
+        {
+            diagnostics.Add(new CompilerDiagnostic(
+                CompilerDiagnosticCodes.CanonicalDefinitionTooLarge,
+                DiagnosticSeverity.Error,
+                DiagnosticPhase.Budget,
+                "The programmatic workflow definition exceeds the hard pre-snapshot payload limit.",
+                actual: exception.Message));
+            return Failure(diagnostics, new CompilationUsageSummary(), budget);
+        }
         catch (Exception exception) when (IsUserPlanFailure(exception))
         {
             diagnostics.Add(Diagnostic(

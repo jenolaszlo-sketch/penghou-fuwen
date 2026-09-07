@@ -53,8 +53,10 @@ public static class WorkflowPlanValidator
             ? FuwenContracts.ExecutionFingerprintVersionV1
             : FuwenContracts.ExecutionFingerprintVersionV2;
         RequireVersion(plan.FingerprintVersion, expectedFingerprint, nameof(plan.FingerprintVersion));
-        if (isV2)
-            RequireVersion(plan.CompilerSemanticVersion, FuwenContracts.CompilerSemanticVersionV2, nameof(plan.CompilerSemanticVersion));
+        var expectedCompilerSemantics = isV1
+            ? FuwenContracts.CompilerSemanticVersionV1
+            : FuwenContracts.CompilerSemanticVersionV2;
+        RequireVersion(plan.CompilerSemanticVersion, expectedCompilerSemantics, nameof(plan.CompilerSemanticVersion));
         if (isV1 && plan.ExecutionOrder is not null)
             throw new ArgumentException(
                 "IR v1 does not contain an execution order; historical v1 plans are never silently upgraded.",
@@ -691,11 +693,11 @@ public static class WorkflowPlanValidator
 
     private static void ValidateDescriptors(IEnumerable<DescriptorReference> descriptors)
     {
-        var identities = new HashSet<string>(StringComparer.Ordinal);
+        var identities = new HashSet<(DescriptorKind Kind, string Name, string Version)>();
         foreach (var descriptor in descriptors)
         {
             ValidateDescriptor(descriptor);
-            var identity = $"{descriptor.Kind:D}|{descriptor.Name}|{descriptor.Version}";
+            var identity = (descriptor.Kind, descriptor.Name, descriptor.Version);
             if (!identities.Add(identity))
                 throw new ArgumentException($"Duplicate descriptor binding '{descriptor.Kind}:{descriptor.Name}@{descriptor.Version}'.", nameof(descriptors));
         }
@@ -713,13 +715,16 @@ public static class WorkflowPlanValidator
     private static void ValidateCapabilities(CapabilityManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
-        var duplicate = manifest.Requirements
-            .GroupBy(requirement => $"{requirement.Name}|{requirement.ScopeClass}", StringComparer.Ordinal)
-            .FirstOrDefault(group => group.Count() > 1);
-        if (duplicate is not null)
-            throw new ArgumentException($"Duplicate capability requirement '{duplicate.Key}'.", nameof(manifest));
+        var identities = new HashSet<(string Name, string? ScopeClass)>();
         foreach (var requirement in manifest.Requirements)
+        {
+            ArgumentNullException.ThrowIfNull(requirement);
             RequireText(requirement.Name, nameof(requirement.Name));
+            if (!identities.Add((requirement.Name, requirement.ScopeClass)))
+                throw new ArgumentException(
+                    $"Duplicate capability requirement '{requirement.Name}|{requirement.ScopeClass}'.",
+                    nameof(manifest));
+        }
     }
 
     private static void ValidateType(FuwenType type)

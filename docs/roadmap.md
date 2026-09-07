@@ -437,15 +437,12 @@ All unchecked items are proposed work, not implemented guarantees.
 
 - [x] **Separate integrity verification, semantic validation, and host admission.**
   `LoadVerified` checks canonical bytes, compatibility, size, and fingerprints;
-  `WorkflowPlanValidator`
-  currently checks paths, descriptor closure, and selected shapes. It does not
-  resolve binding values, condition operands, return values, or inference context
-  references. Distinct outcomes and an admitted-plan boundary now prevent a
-  caller from mistaking a valid hash for permission to execute.
-  Require negative fixtures for unknown/cyclic references, cross-branch access,
-  invalid projections, missing returns, incompatible result types, and forged
-  capability declarations. Route the builder and future parser through this same
-  admission pipeline.
+  `WorkflowPlanValidator` checks structural paths, descriptor closure, scheduled
+  dataflow, region boundaries, projections, returns, and identity-critical
+  shapes. The compiler adds trusted binding, type, callable, context-reference,
+  and capability checks. Distinct outcomes and an admitted-plan boundary prevent
+  a caller from mistaking a valid hash for permission to execute. The builder and
+  future parser must continue through this same admission pipeline.
   The programmatic compiler performs detached semantic compilation, trusted
   schema substitution, exact capability assertion, trusted callable/effect/
   retry checks, and finite host grant checking. `WorkflowAdmissionService`
@@ -474,11 +471,10 @@ All unchecked items are proposed work, not implemented guarantees.
   the persisted size ceiling on creation too. Test mutation during enumeration,
   disposed literals, oversized creation, and matching document bytes/digest.
 - [ ] **Close compatibility and resource-limit holes at every entry point.**
-  Language/compiler semantic versions currently need only be nonblank; primitive
-  enum values and descriptor digest formats are not fully checked. Specify the
-  supported version matrix, fail closed on unknown executable semantics, validate
-  digest contracts and schema/descriptor consistency against trusted catalogues,
-  and use tuple keys rather than delimiter-concatenated identity strings.
+  Supported IR/compiler/canonical/fingerprint versions and primitive enums now
+  fail closed, but descriptor digest formats are not fully checked. Define the
+  supported digest contract and validate schema/descriptor consistency against
+  trusted catalogues.
   Bound programmatically constructed trees before recursive traversal, as well
   as persisted JSON; reject null entries and excessive depth with bounded stable
   diagnostics. Include unknown enums, delimiter-bearing names, recursive schemas,
@@ -486,8 +482,12 @@ All unchecked items are proposed work, not implemented guarantees.
   Aggregate trusted-catalogue metadata accounting is complete: resolved schema,
   callable, capability, and descriptor payloads are charged atomically against
   the existing AST-node and UTF-8 string-byte ceilings, including the combined
-  plan-plus-catalogue compiler budget. Snapshot-boundary text limits, digest
-  validation, delimiter-safe keys, and recursive-schema policy remain.
+  plan-plus-catalogue compiler budget. Digest validation and recursive-schema
+  policy remain. Caller-controlled text and JSON
+  literals are now preflighted before snapshot allocation; historical IR v1 is
+  bound to its exact compiler-semantics contract; descriptor and capability
+  duplicate detection now uses typed identities instead of delimiter-built keys;
+  and artifact references cannot carry non-artifact descriptors.
 - [ ] **Prove numeric and Unicode identity portability before expanding hashing.**
   `CanonicalJson.WriteNumber` selects decimal then double; define accepted numeric
   range/precision and reject unsupported loss rather than accidentally giving
@@ -957,8 +957,8 @@ only after repeated integration demonstrates a real reusable boundary.
 
 Continue with Delivery milestone B:
 
-1. Bound text and literal copying at the programmatic snapshot boundary, then
-   tighten digest identity and delimiter-safe duplicate keys.
+1. Define and enforce the supported digest identity contract without silently
+   reinterpreting historical persisted fingerprints.
 2. Decide and enforce recursive-schema and enum-literal semantics, then tighten
    context-snapshot output typing.
 3. Extend the initial pure explain projection with trusted callable-effect

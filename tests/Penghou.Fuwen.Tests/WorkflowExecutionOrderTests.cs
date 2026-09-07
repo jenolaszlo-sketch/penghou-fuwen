@@ -56,6 +56,16 @@ public sealed class WorkflowExecutionOrderTests
     }
 
     [Fact]
+    public void V1_requires_the_exact_historical_compiler_semantics_contract()
+    {
+        var plan = PlanFixture.Create() with { CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV2 };
+
+        var act = () => WorkflowPlanIdentity.GetCanonicalBytes(plan);
+
+        act.Should().Throw<NotSupportedException>().WithMessage("*compiler-semantics/1*");
+    }
+
+    [Fact]
     public void V1_with_a_schedule_is_rejected_instead_of_being_reinterpreted()
     {
         var plan = PlanFixture.Create() with { ExecutionOrder = PlanFixture.CreateV2().ExecutionOrder };

@@ -8,6 +8,9 @@ internal static class WorkflowPlanSnapshot
     internal static WorkflowPlan Create(WorkflowPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        if (plan.ExecutionOrder is not null)
+            new SnapshotState().CheckExecutionOrderBudget(plan.ExecutionOrder);
+        new WorkflowPlanPayloadBounds().Validate(plan);
         var state = new SnapshotState();
         state.Enter(plan);
         try
@@ -522,9 +525,17 @@ internal static class WorkflowPlanSnapshotLimits
     internal const int MaximumExecutionEntries = 16_384;
     internal const int MaximumExecutionNodePaths = MaximumExecutionEntries;
     internal const int MaximumNestingDepth = 128;
+    internal const int MaximumTextUtf8Bytes = FuwenContracts.MaximumCanonicalPlanBytes;
+    // Keep enough room for a single canonical-plan-sized text field plus the
+    // surrounding identity metadata; canonical-size enforcement remains the
+    // responsibility of WorkflowDefinitionDocument.
+    internal const int MaximumTotalTextUtf8Bytes = 2 * FuwenContracts.MaximumCanonicalPlanBytes;
+    internal const int MaximumJsonLiteralBytes = FuwenContracts.MaximumCanonicalPlanBytes;
+    internal const int MaximumTotalJsonLiteralBytes = FuwenContracts.MaximumCanonicalPlanBytes;
+    internal const int MaximumJsonLiteralNodes = 100_000;
 }
 
-internal sealed class WorkflowPlanSnapshotException : InvalidOperationException
+internal class WorkflowPlanSnapshotException : InvalidOperationException
 {
     internal WorkflowPlanSnapshotException(string reason)
         : base($"Workflow plan snapshot rejected: {reason}.") { }

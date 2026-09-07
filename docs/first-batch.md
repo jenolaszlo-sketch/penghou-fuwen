@@ -90,7 +90,8 @@ secrets, or a Guyabano migration.
 The initial constrained programmatic compile path is now implemented with
 trusted catalogue/schema resolution, explicit execution schedules, stable
 diagnostics, resource budgets, binding/type validation, exact capability
-assertions, and canonical definition output. Complete executable admission still
-requires trusted callable signatures, side-effect/idempotency/retry policy, and
-an immutable receipt bound to the host policy revision. The work does not begin
-the text grammar or add loops.
+assertions, trusted callable signatures, conservative
+side-effect/idempotency/retry rejection, and canonical definition output.
+Complete executable admission still requires an immutable receipt bound to the
+catalogue snapshot, host policy/grants, and effective limits. The work does not
+begin the text grammar or add loops.

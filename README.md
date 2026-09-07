@@ -57,13 +57,15 @@ The executable-plan identity and storage foundation is complete. Fuwen now has
 an IR v2 structured execution schedule, immutable canonical definitions,
 trusted catalogue resolution, and a constrained programmatic builder/compiler
 that rejects invalid references, projections, return types, untrusted schema
-changes, capability mismatches, and missing host grants.
+changes, capability mismatches, missing host grants, callable signature
+mismatches, and unsafe callable retry/effect combinations.
 
 The current compiler output proves semantic compilation and canonical identity;
-it is not yet an execution authorization receipt. The next batch adds trusted
-callable signatures, side-effect/idempotency/retry contracts, and an immutable
-host-admission receipt bound to exact policy and catalogue revisions. Parser
-work remains deferred until that programmatic execution boundary is proven.
+it is not yet an execution authorization receipt. Trusted callable signatures
+and conservative side-effect/idempotency/retry checks are implemented. The next
+batch adds an immutable host-admission receipt bound to exact policy, grants,
+effective limits, and catalogue revisions. Parser work remains deferred until
+that programmatic execution boundary is proven.
 
 See [the roadmap](docs/roadmap.md) and
 [the first implementation batch](docs/first-batch.md).

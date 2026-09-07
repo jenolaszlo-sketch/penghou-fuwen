@@ -49,6 +49,9 @@ public static class CompilerDiagnosticCodes
     public const string CatalogueResolutionInvalidResult = "FWN-CATALOGUE-003";
     public const string CatalogueSchemaPayloadMissing = "FWN-CATALOGUE-004";
     public const string CatalogueSchemaMismatch = "FWN-CATALOGUE-005";
+    public const string CatalogueCallableContractMissing = "FWN-CATALOGUE-006";
+    public const string CatalogueCallableContractInvalid = "FWN-CATALOGUE-007";
+    public const string CatalogueCallableContractReferenceMissing = "FWN-CATALOGUE-008";
     public const string SemanticValidationFailed = "FWN-VALIDATION-001";
     public const string BindingReferenceInvalid = "FWN-BINDING-001";
     public const string BindingTypeMismatch = "FWN-TYPING-001";
@@ -57,6 +60,12 @@ public static class CompilerDiagnosticCodes
     public const string CapabilityNotGranted = "FWN-ADMISSION-002";
     public const string ContextSnapshotInvalid = "FWN-BINDING-002";
     public const string ContextSnapshotDuplicate = "FWN-BINDING-003";
+    public const string CallableArgumentMissing = "FWN-SIGNATURE-001";
+    public const string CallableArgumentUnknown = "FWN-SIGNATURE-002";
+    public const string CallableArgumentTypeMismatch = "FWN-SIGNATURE-003";
+    public const string CallableOutputTypeMismatch = "FWN-SIGNATURE-004";
+    public const string CallableEffectRejected = "FWN-EFFECT-001";
+    public const string CallableRetryRejected = "FWN-EFFECT-002";
 }
 
 /// <summary>An immutable compiler diagnostic suitable for machine and human consumption.</summary>

@@ -161,8 +161,9 @@ Penghou.Fuwen.Compiler.InMemoryTrustedCatalogue.TryGet(Penghou.Fuwen.DescriptorR
 Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor
 Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor.Descriptor.get -> Penghou.Fuwen.DescriptorReference!
 Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor.RequiredCapabilities.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.CapabilityRequirement!>!
+Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor.CallableContract.get -> Penghou.Fuwen.Compiler.CallableContract?
 Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor.SchemaDefinition.get -> Penghou.Fuwen.ResolvedSchemaDefinition?
-Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor.TrustedCatalogueDescriptor(Penghou.Fuwen.DescriptorReference! descriptor, Penghou.Fuwen.ResolvedSchemaDefinition? schemaDefinition = null, System.Collections.Generic.IEnumerable<Penghou.Fuwen.CapabilityRequirement!>? requiredCapabilities = null) -> void
+Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor.TrustedCatalogueDescriptor(Penghou.Fuwen.DescriptorReference! descriptor, Penghou.Fuwen.ResolvedSchemaDefinition? schemaDefinition = null, System.Collections.Generic.IEnumerable<Penghou.Fuwen.CapabilityRequirement!>? requiredCapabilities = null, Penghou.Fuwen.Compiler.CallableContract? callableContract = null) -> void
 Penghou.Fuwen.Compiler.TrustedCatalogueResolver
 Penghou.Fuwen.Compiler.TrustedCatalogueResolver.ResolveAsync(Penghou.Fuwen.DescriptorReference! descriptor, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.DescriptorResolutionResult!>
 Penghou.Fuwen.Compiler.TrustedCatalogueResolver.ResolveManyAsync(System.Collections.Generic.IEnumerable<Penghou.Fuwen.DescriptorReference!>! descriptors, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.DescriptorResolutionBatchResult!>
@@ -193,6 +194,53 @@ Penghou.Fuwen.Compiler.WorkflowCompiler
 Penghou.Fuwen.Compiler.WorkflowCompiler.WorkflowCompiler(Penghou.Fuwen.Compiler.ITrustedCatalogue! catalogue, Penghou.Fuwen.Compiler.CompilationBudget? hostBudget = null, Penghou.Fuwen.Compiler.CapabilityGrantPolicy? capabilityPolicy = null) -> void
 Penghou.Fuwen.Compiler.WorkflowCompiler.Compile(Penghou.Fuwen.WorkflowPlan! plan, Penghou.Fuwen.Compiler.CompilationBudget? callerBudget = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> Penghou.Fuwen.Compiler.CompilationResult!
 Penghou.Fuwen.Compiler.WorkflowCompiler.CompileAsync(Penghou.Fuwen.WorkflowPlan! plan, Penghou.Fuwen.Compiler.CompilationBudget? callerBudget = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.CompilationResult!>
+Penghou.Fuwen.Compiler.CallableParameter
+Penghou.Fuwen.Compiler.CallableParameter.CallableParameter(string! Name, Penghou.Fuwen.FuwenType! Type) -> void
+Penghou.Fuwen.Compiler.CallableParameter.Name.get -> string!
+Penghou.Fuwen.Compiler.CallableParameter.Name.init -> void
+Penghou.Fuwen.Compiler.CallableParameter.Type.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.Compiler.CallableParameter.Type.init -> void
+Penghou.Fuwen.Compiler.CallableSignature
+Penghou.Fuwen.Compiler.CallableSignature.CallableSignature(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Compiler.CallableParameter!>! Parameters, Penghou.Fuwen.FuwenType! OutputType) -> void
+Penghou.Fuwen.Compiler.CallableSignature.Parameters.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Compiler.CallableParameter!>!
+Penghou.Fuwen.Compiler.CallableSignature.Parameters.init -> void
+Penghou.Fuwen.Compiler.CallableSignature.OutputType.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.Compiler.CallableSignature.OutputType.init -> void
+Penghou.Fuwen.Compiler.CallableContract
+Penghou.Fuwen.Compiler.CallableContract.CallableContract(Penghou.Fuwen.Compiler.CallableSignature! Signature, Penghou.Fuwen.Compiler.CallableEffect Effect, Penghou.Fuwen.Compiler.CallableIdempotency Idempotency, Penghou.Fuwen.Compiler.CallableRetrySafety RetrySafety) -> void
+Penghou.Fuwen.Compiler.CallableContract.Signature.get -> Penghou.Fuwen.Compiler.CallableSignature!
+Penghou.Fuwen.Compiler.CallableContract.Signature.init -> void
+Penghou.Fuwen.Compiler.CallableContract.Effect.get -> Penghou.Fuwen.Compiler.CallableEffect
+Penghou.Fuwen.Compiler.CallableContract.Effect.init -> void
+Penghou.Fuwen.Compiler.CallableContract.Idempotency.get -> Penghou.Fuwen.Compiler.CallableIdempotency
+Penghou.Fuwen.Compiler.CallableContract.Idempotency.init -> void
+Penghou.Fuwen.Compiler.CallableContract.RetrySafety.get -> Penghou.Fuwen.Compiler.CallableRetrySafety
+Penghou.Fuwen.Compiler.CallableContract.RetrySafety.init -> void
+Penghou.Fuwen.Compiler.CallableEffect
+Penghou.Fuwen.Compiler.CallableEffect.None = 0 -> Penghou.Fuwen.Compiler.CallableEffect
+Penghou.Fuwen.Compiler.CallableEffect.Read = 1 -> Penghou.Fuwen.Compiler.CallableEffect
+Penghou.Fuwen.Compiler.CallableEffect.Write = 2 -> Penghou.Fuwen.Compiler.CallableEffect
+Penghou.Fuwen.Compiler.CallableEffect.External = 3 -> Penghou.Fuwen.Compiler.CallableEffect
+Penghou.Fuwen.Compiler.CallableEffect.Destructive = 4 -> Penghou.Fuwen.Compiler.CallableEffect
+Penghou.Fuwen.Compiler.CallableIdempotency
+Penghou.Fuwen.Compiler.CallableIdempotency.Idempotent = 0 -> Penghou.Fuwen.Compiler.CallableIdempotency
+Penghou.Fuwen.Compiler.CallableIdempotency.IdempotentWithKey = 1 -> Penghou.Fuwen.Compiler.CallableIdempotency
+Penghou.Fuwen.Compiler.CallableIdempotency.NonIdempotent = 2 -> Penghou.Fuwen.Compiler.CallableIdempotency
+Penghou.Fuwen.Compiler.CallableIdempotency.Unknown = 3 -> Penghou.Fuwen.Compiler.CallableIdempotency
+Penghou.Fuwen.Compiler.CallableRetrySafety
+Penghou.Fuwen.Compiler.CallableRetrySafety.Safe = 0 -> Penghou.Fuwen.Compiler.CallableRetrySafety
+Penghou.Fuwen.Compiler.CallableRetrySafety.Unsafe = 1 -> Penghou.Fuwen.Compiler.CallableRetrySafety
+Penghou.Fuwen.Compiler.CallableRetrySafety.HostControlled = 2 -> Penghou.Fuwen.Compiler.CallableRetrySafety
+Penghou.Fuwen.Compiler.CallableRetrySafety.Unknown = 3 -> Penghou.Fuwen.Compiler.CallableRetrySafety
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CallableArgumentMissing = "FWN-SIGNATURE-001" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CallableArgumentUnknown = "FWN-SIGNATURE-002" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CallableArgumentTypeMismatch = "FWN-SIGNATURE-003" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CallableOutputTypeMismatch = "FWN-SIGNATURE-004" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CallableEffectRejected = "FWN-EFFECT-001" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CallableRetryRejected = "FWN-EFFECT-002" -> string!
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueDescriptorDigestMismatch = "FWN-CATALOGUE-002" -> string!
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueDescriptorNotFound = "FWN-CATALOGUE-001" -> string!
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueResolutionInvalidResult = "FWN-CATALOGUE-003" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueCallableContractMissing = "FWN-CATALOGUE-006" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueCallableContractInvalid = "FWN-CATALOGUE-007" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueCallableContractReferenceMissing = "FWN-CATALOGUE-008" -> string!

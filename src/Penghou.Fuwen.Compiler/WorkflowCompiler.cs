@@ -171,7 +171,10 @@ public sealed class WorkflowCompiler
             return Failure(diagnostics, catalogueUsage, budget);
         }
 
-        var bindingDiagnostics = WorkflowBindingValidator.Validate(trustedPlan);
+        var trustedDescriptors = resolved.Results
+            .Where(static result => result.Succeeded && result.Descriptor is not null)
+            .ToDictionary(static result => result.Requested, static result => result.Descriptor!, EqualityComparer<DescriptorReference>.Default);
+        var bindingDiagnostics = WorkflowBindingValidator.Validate(trustedPlan, trustedDescriptors);
         diagnostics.AddRange(bindingDiagnostics);
         if (bindingDiagnostics.Any(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
             return Failure(diagnostics, catalogueUsage, budget);
@@ -305,6 +308,32 @@ public sealed class WorkflowCompiler
             }
         }
 
+        foreach (var descriptor in resolved.Values)
+        {
+            if (descriptor.CallableContract is null)
+                continue;
+            foreach (var reference in CallableContractReferences(descriptor.CallableContract))
+            {
+                var isResolved = resolved.TryGetValue(reference, out var referencedDescriptor);
+                var hasRequiredSchemaPayload = reference.Kind != DescriptorKind.Schema ||
+                    (referencedDescriptor?.SchemaDefinition is not null &&
+                     trustedSchemas.Any(schema => schema.Descriptor.Equals(reference)));
+                if (!isResolved || !hasRequiredSchemaPayload)
+                {
+                    diagnostics.Add(new CompilerDiagnostic(
+                        CompilerDiagnosticCodes.CatalogueCallableContractReferenceMissing,
+                        DiagnosticSeverity.Error,
+                        DiagnosticPhase.Binding,
+                        $"Trusted callable descriptor '{descriptor.Descriptor.Name}@{descriptor.Descriptor.Version}' references '{reference.Name}@{reference.Version}', which is outside the plan's resolved type closure.",
+                        path: descriptor.Descriptor.Name,
+                        expected: CatalogueContractValidation.Display(reference),
+                        actual: "unresolved"));
+                }
+            }
+        }
+        if (diagnostics.Any(static diagnostic => diagnostic.Code == CompilerDiagnosticCodes.CatalogueCallableContractReferenceMissing))
+            return null;
+
         return plan with
         {
             Schemas = trustedSchemas.ToArray(),
@@ -340,6 +369,36 @@ public sealed class WorkflowCompiler
         (ArtifactType first, ArtifactType second) => first.ArtifactDescriptor.Equals(second.ArtifactDescriptor),
         _ => false,
     };
+
+    private static IEnumerable<DescriptorReference> CallableContractReferences(CallableContract contract)
+    {
+        foreach (var parameter in contract.Signature.Parameters)
+            foreach (var reference in TypeReferences(parameter.Type))
+                yield return reference;
+        foreach (var reference in TypeReferences(contract.Signature.OutputType))
+            yield return reference;
+    }
+
+    private static IEnumerable<DescriptorReference> TypeReferences(FuwenType type)
+    {
+        switch (type)
+        {
+            case NamedTypeReference named:
+                yield return named.Schema;
+                break;
+            case ArtifactType artifact:
+                yield return artifact.ArtifactDescriptor;
+                break;
+            case OptionalType optional:
+                foreach (var reference in TypeReferences(optional.ValueType))
+                    yield return reference;
+                break;
+            case ListType list:
+                foreach (var reference in TypeReferences(list.ItemType))
+                    yield return reference;
+                break;
+        }
+    }
 
     private CompilationResult Failure(
         IEnumerable<CompilerDiagnostic> diagnostics,
@@ -395,7 +454,9 @@ public sealed class WorkflowCompiler
 
 internal static class WorkflowBindingValidator
 {
-    internal static IReadOnlyList<CompilerDiagnostic> Validate(WorkflowPlan plan)
+    internal static IReadOnlyList<CompilerDiagnostic> Validate(
+        WorkflowPlan plan,
+        IReadOnlyDictionary<DescriptorReference, TrustedCatalogueDescriptor> descriptors)
     {
         var diagnostics = new List<CompilerDiagnostic>();
         var locations = new Dictionary<string, NodeLocation>(StringComparer.Ordinal);
@@ -405,10 +466,10 @@ internal static class WorkflowBindingValidator
             switch (location.Node)
             {
                 case ContextNode context:
-                    ValidateArguments(context.Arguments, location, plan, locations, diagnostics);
+                    ValidateCallableNode(context.Provider, DescriptorKind.ContextProvider, context.Arguments, context.OutputType, location, plan, locations, descriptors, diagnostics);
                     break;
                 case InferenceNode inference:
-                    ValidateArguments(inference.Arguments, location, plan, locations, diagnostics);
+                    ValidateCallableNode(inference.Profile, DescriptorKind.InferenceProfile, inference.Arguments, inference.OutputType, location, plan, locations, descriptors, diagnostics);
                     var contextSources = new HashSet<string>(StringComparer.Ordinal);
                     foreach (var snapshot in inference.ContextSnapshots)
                     {
@@ -434,7 +495,7 @@ internal static class WorkflowBindingValidator
                     }
                     break;
                 case ActivityNode activity:
-                    ValidateArguments(activity.Arguments, location, plan, locations, diagnostics);
+                    ValidateCallableNode(activity.Activity, DescriptorKind.Activity, activity.Arguments, activity.OutputType, location, plan, locations, descriptors, diagnostics);
                     break;
                 case ConditionalNode conditional:
                     ValidateCondition(conditional.Condition, location, plan, locations, diagnostics);
@@ -446,6 +507,103 @@ internal static class WorkflowBindingValidator
         }
 
         return diagnostics;
+    }
+
+    private static void ValidateCallableNode(
+        DescriptorReference descriptorReference,
+        DescriptorKind expectedKind,
+        IReadOnlyList<ArgumentBinding> arguments,
+        FuwenType outputType,
+        NodeLocation location,
+        WorkflowPlan plan,
+        IReadOnlyDictionary<string, NodeLocation> locations,
+        IReadOnlyDictionary<DescriptorReference, TrustedCatalogueDescriptor> descriptors,
+        List<CompilerDiagnostic> diagnostics)
+    {
+        if (!descriptors.TryGetValue(descriptorReference, out var descriptor) || descriptor.CallableContract is null)
+        {
+            diagnostics.Add(new CompilerDiagnostic(
+                CompilerDiagnosticCodes.CatalogueCallableContractMissing,
+                DiagnosticSeverity.Error,
+                DiagnosticPhase.Binding,
+                $"Trusted {expectedKind} descriptor '{descriptorReference.Name}@{descriptorReference.Version}' does not provide a callable contract.",
+                path: location.Node.StructuralPath));
+            return;
+        }
+
+        var contract = descriptor.CallableContract;
+        if (descriptor.Descriptor.Kind != expectedKind)
+        {
+            diagnostics.Add(new CompilerDiagnostic(
+                CompilerDiagnosticCodes.CatalogueCallableContractInvalid,
+                DiagnosticSeverity.Error,
+                DiagnosticPhase.Binding,
+                $"Descriptor '{descriptorReference.Name}@{descriptorReference.Version}' has kind '{descriptor.Descriptor.Kind}', not '{expectedKind}'.",
+                path: location.Node.StructuralPath));
+            return;
+        }
+
+        if (!Enum.IsDefined(contract.Effect) || contract.Effect is CallableEffect.External or CallableEffect.Destructive)
+            diagnostics.Add(new CompilerDiagnostic(
+                CompilerDiagnosticCodes.CallableEffectRejected,
+                DiagnosticSeverity.Error,
+                DiagnosticPhase.Admission,
+                $"Callable '{descriptorReference.Name}@{descriptorReference.Version}' has an effect outside the conservative compilation matrix.",
+                path: location.Node.StructuralPath,
+                actual: contract.Effect.ToString()));
+        if (!Enum.IsDefined(contract.Idempotency) || contract.Idempotency != CallableIdempotency.Idempotent ||
+            !Enum.IsDefined(contract.RetrySafety) || contract.RetrySafety != CallableRetrySafety.Safe)
+            diagnostics.Add(new CompilerDiagnostic(
+                CompilerDiagnosticCodes.CallableRetryRejected,
+                DiagnosticSeverity.Error,
+                DiagnosticPhase.Admission,
+                $"Callable '{descriptorReference.Name}@{descriptorReference.Version}' is not conservatively retry-safe.",
+                path: location.Node.StructuralPath,
+                actual: $"{contract.Idempotency}/{contract.RetrySafety}"));
+
+        var expected = contract.Signature.Parameters.ToDictionary(static parameter => parameter.Name, StringComparer.Ordinal);
+        var supplied = arguments.GroupBy(static argument => argument.Name, StringComparer.Ordinal)
+            .ToDictionary(static group => group.Key, static group => group.First(), StringComparer.Ordinal);
+        foreach (var parameter in contract.Signature.Parameters)
+        {
+            if (!supplied.ContainsKey(parameter.Name))
+            {
+                diagnostics.Add(new CompilerDiagnostic(
+                    CompilerDiagnosticCodes.CallableArgumentMissing,
+                    DiagnosticSeverity.Error,
+                    DiagnosticPhase.Binding,
+                    $"Callable argument '{parameter.Name}' is required.",
+                    path: location.Node.StructuralPath,
+                    expected: parameter.Name,
+                    actual: "missing"));
+            }
+        }
+        foreach (var argument in arguments)
+        {
+            if (!expected.TryGetValue(argument.Name, out var parameter))
+            {
+                diagnostics.Add(new CompilerDiagnostic(
+                    CompilerDiagnosticCodes.CallableArgumentUnknown,
+                    DiagnosticSeverity.Error,
+                    DiagnosticPhase.Binding,
+                    $"Callable does not declare argument '{argument.Name}'.",
+                    path: location.Node.StructuralPath,
+                    actual: argument.Name));
+                ValidateBinding(argument.Value, null, location, plan, locations, diagnostics);
+                continue;
+            }
+            ValidateBinding(argument.Value, parameter.Type, location, plan, locations, diagnostics, CompilerDiagnosticCodes.CallableArgumentTypeMismatch, exact: true);
+        }
+
+        if (!EquivalentExact(outputType, contract.Signature.OutputType))
+            diagnostics.Add(new CompilerDiagnostic(
+                CompilerDiagnosticCodes.CallableOutputTypeMismatch,
+                DiagnosticSeverity.Error,
+                DiagnosticPhase.Typing,
+                "Callable node output type does not match the trusted callable signature.",
+                path: location.Node.StructuralPath,
+                expected: Describe(contract.Signature.OutputType),
+                actual: Describe(outputType)));
     }
 
     private static void CollectLocations(
@@ -510,12 +668,14 @@ internal static class WorkflowBindingValidator
         NodeLocation consumer,
         WorkflowPlan plan,
         IReadOnlyDictionary<string, NodeLocation> locations,
-        List<CompilerDiagnostic> diagnostics)
+        List<CompilerDiagnostic> diagnostics,
+        string mismatchCode = CompilerDiagnosticCodes.BindingTypeMismatch,
+        bool exact = false)
     {
         switch (binding)
         {
             case InputBinding input:
-                return CheckExpected(ResolveProjection(plan.InputType, input.Projection, plan.Schemas, diagnostics, consumer.Node.StructuralPath), expected, consumer, diagnostics);
+                return CheckExpected(ResolveProjection(plan.InputType, input.Projection, plan.Schemas, diagnostics, consumer.Node.StructuralPath), expected, consumer, diagnostics, mismatchCode, exact);
             case NodeOutputBinding output:
                 if (!locations.TryGetValue(output.NodePath, out var source))
                 {
@@ -534,18 +694,18 @@ internal static class WorkflowBindingValidator
                     ActivityNode activity => activity.OutputType,
                     _ => null,
                 };
-                return CheckExpected(ResolveProjection(sourceType, output.Projection, plan.Schemas, diagnostics, consumer.Node.StructuralPath), expected, consumer, diagnostics);
+                return CheckExpected(ResolveProjection(sourceType, output.Projection, plan.Schemas, diagnostics, consumer.Node.StructuralPath), expected, consumer, diagnostics, mismatchCode, exact);
             case LiteralBinding literal:
                 if (literal.Value.ValueKind == JsonValueKind.Undefined)
                     return null;
-                if (expected is not null && !LiteralMatches(literal.Value, expected))
-                    diagnostics.Add(TypeMismatch(expected, consumer.Node.StructuralPath));
+                if (expected is not null && !LiteralMatches(literal.Value, expected, exact))
+                    diagnostics.Add(TypeMismatch(expected, consumer.Node.StructuralPath, mismatchCode));
                 return expected ?? InferLiteral(literal.Value);
             case ListBinding list:
                 if (expected is ListType expectedList && list.Items.Count > expectedList.MaxItems)
-                    diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "List literal exceeds its declared maximum.", path: consumer.Node.StructuralPath));
+                    diagnostics.Add(new CompilerDiagnostic(mismatchCode, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "List literal exceeds its declared maximum.", path: consumer.Node.StructuralPath));
                 foreach (var item in list.Items)
-                    ValidateBinding(item, expected is ListType listType ? listType.ItemType : null, consumer, plan, locations, diagnostics);
+                    ValidateBinding(item, expected is ListType listType ? listType.ItemType : null, consumer, plan, locations, diagnostics, mismatchCode, exact);
                 return expected;
             case ObjectBinding @object:
                 var objectExpected = expected is OptionalType optional ? optional.ValueType : expected;
@@ -557,18 +717,18 @@ internal static class WorkflowBindingValidator
                     {
                         if (!fields.TryGetValue(property.Key, out var field))
                         {
-                            diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, $"Object field '{property.Key}' is not declared by schema '{named.Schema.Name}'.", path: consumer.Node.StructuralPath));
+                            diagnostics.Add(new CompilerDiagnostic(mismatchCode, DiagnosticSeverity.Error, DiagnosticPhase.Typing, $"Object field '{property.Key}' is not declared by schema '{named.Schema.Name}'.", path: consumer.Node.StructuralPath));
                             continue;
                         }
-                        ValidateBinding(property.Value, field.Type, consumer, plan, locations, diagnostics);
+                        ValidateBinding(property.Value, field.Type, consumer, plan, locations, diagnostics, mismatchCode, exact);
                     }
                     foreach (var field in objectSchema.Fields.Where(field => field.Type is not OptionalType && !@object.Properties.ContainsKey(field.Name)))
-                        diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, $"Required object field '{field.Name}' is missing.", path: consumer.Node.StructuralPath));
+                        diagnostics.Add(new CompilerDiagnostic(mismatchCode, DiagnosticSeverity.Error, DiagnosticPhase.Typing, $"Required object field '{field.Name}' is missing.", path: consumer.Node.StructuralPath));
                 }
                 else
                 {
                     foreach (var property in @object.Properties)
-                        ValidateBinding(property.Value, null, consumer, plan, locations, diagnostics);
+                        ValidateBinding(property.Value, null, consumer, plan, locations, diagnostics, mismatchCode, exact);
                 }
                 return expected;
             default:
@@ -607,26 +767,36 @@ internal static class WorkflowBindingValidator
         return type;
     }
 
-    private static FuwenType? CheckExpected(FuwenType? actual, FuwenType? expected, NodeLocation consumer, List<CompilerDiagnostic> diagnostics)
+    private static FuwenType? CheckExpected(
+        FuwenType? actual,
+        FuwenType? expected,
+        NodeLocation consumer,
+        List<CompilerDiagnostic> diagnostics,
+        string mismatchCode,
+        bool exact)
     {
-        if (actual is not null && expected is not null && !Equivalent(actual, expected))
-            diagnostics.Add(TypeMismatch(expected, consumer.Node.StructuralPath));
+        if (actual is not null && expected is not null && !(exact ? EquivalentExact(actual, expected) : Equivalent(actual, expected)))
+            diagnostics.Add(TypeMismatch(expected, consumer.Node.StructuralPath, mismatchCode));
         return actual;
     }
 
-    private static CompilerDiagnostic TypeMismatch(FuwenType expected, string path) =>
-        new(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Binding value is incompatible with its expected type.", path: path, expected: Describe(expected));
+    private static CompilerDiagnostic TypeMismatch(FuwenType expected, string path, string code) =>
+        new(code, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Binding value is incompatible with its expected type.", path: path, expected: Describe(expected));
 
-    private static bool LiteralMatches(JsonElement value, FuwenType type) =>
+    private static bool LiteralMatches(JsonElement value, FuwenType type, bool exact) =>
         type switch
         {
-            OptionalType optional => value.ValueKind == JsonValueKind.Null || LiteralMatches(value, optional.ValueType),
+            OptionalType optional => value.ValueKind == JsonValueKind.Null || LiteralMatches(value, optional.ValueType, exact),
             PrimitiveType primitive => primitive.Primitive switch
             {
                 FuwenPrimitiveKind.String => value.ValueKind == JsonValueKind.String,
                 FuwenPrimitiveKind.Duration => value.ValueKind == JsonValueKind.String && IsDuration(value),
                 FuwenPrimitiveKind.Boolean => value.ValueKind is JsonValueKind.True or JsonValueKind.False,
                 FuwenPrimitiveKind.Integer => value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out _),
+                // JSON canonicalization does not preserve a distinct lexical
+                // identity for integral-looking numbers such as 1 and 1.0.
+                // A Number parameter therefore accepts every JSON number;
+                // Integer remains the narrower TryGetInt64 contract.
                 FuwenPrimitiveKind.Number => value.ValueKind == JsonValueKind.Number,
                 FuwenPrimitiveKind.Json => true,
                 _ => false,
@@ -666,6 +836,15 @@ internal static class WorkflowBindingValidator
         OptionalType first when right is OptionalType second => Equivalent(first.ValueType, second.ValueType),
         ListType first when right is ListType second => first.MaxItems == second.MaxItems && Equivalent(first.ItemType, second.ItemType),
         ArtifactType first when right is ArtifactType second => first.ArtifactDescriptor.Equals(second.ArtifactDescriptor),
+        _ => false,
+    };
+    private static bool EquivalentExact(FuwenType left, FuwenType right) => (left, right) switch
+    {
+        (PrimitiveType first, PrimitiveType second) => first.Primitive == second.Primitive,
+        (NamedTypeReference first, NamedTypeReference second) => first.Schema.Equals(second.Schema),
+        (OptionalType first, OptionalType second) => EquivalentExact(first.ValueType, second.ValueType),
+        (ListType first, ListType second) => first.MaxItems == second.MaxItems && EquivalentExact(first.ItemType, second.ItemType),
+        (ArtifactType first, ArtifactType second) => first.ArtifactDescriptor.Equals(second.ArtifactDescriptor),
         _ => false,
     };
     private static string Describe(FuwenType type) => type.GetType().Name;

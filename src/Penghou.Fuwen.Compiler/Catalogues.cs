@@ -21,11 +21,13 @@ public sealed class TrustedCatalogueDescriptor
     private readonly DescriptorReference descriptor;
     private readonly ResolvedSchemaDefinition? schemaDefinition;
     private readonly IReadOnlyList<CapabilityRequirement> requiredCapabilities;
+    private readonly CallableContract? callableContract;
 
     public TrustedCatalogueDescriptor(
         DescriptorReference descriptor,
         ResolvedSchemaDefinition? schemaDefinition = null,
-        IEnumerable<CapabilityRequirement>? requiredCapabilities = null)
+        IEnumerable<CapabilityRequirement>? requiredCapabilities = null,
+        CallableContract? callableContract = null)
     {
         this.descriptor = CatalogueContractValidation.SnapshotDescriptor(descriptor);
         this.schemaDefinition = schemaDefinition is null
@@ -33,6 +35,7 @@ public sealed class TrustedCatalogueDescriptor
             : CatalogueContractValidation.SnapshotSchema(schemaDefinition, this.descriptor);
         requiredCapabilities ??= Array.Empty<CapabilityRequirement>();
         this.requiredCapabilities = CatalogueContractValidation.SnapshotCapabilities(requiredCapabilities);
+        this.callableContract = CatalogueContractValidation.SnapshotCallableContract(callableContract, this.descriptor);
         CatalogueContractValidation.ValidateAggregateSchemaNodes([this]);
     }
 
@@ -41,6 +44,9 @@ public sealed class TrustedCatalogueDescriptor
     public ResolvedSchemaDefinition? SchemaDefinition => schemaDefinition;
 
     public IReadOnlyList<CapabilityRequirement> RequiredCapabilities => requiredCapabilities;
+
+    /// <summary>The trusted callable signature and conservative effect metadata, when supplied.</summary>
+    public CallableContract? CallableContract => callableContract;
 }
 
 /// <summary>A bounded, immutable result for one exact descriptor lookup.</summary>
@@ -89,7 +95,8 @@ public sealed class DescriptorResolutionResult
         this.descriptor = descriptor is null ? null : new TrustedCatalogueDescriptor(
             descriptor.Descriptor,
             descriptor.SchemaDefinition,
-            descriptor.RequiredCapabilities);
+            descriptor.RequiredCapabilities,
+            descriptor.CallableContract);
         this.diagnostics = new DiagnosticCollection(
             diagnostics ?? Array.Empty<CompilerDiagnostic>(),
             maximumDiagnostics);
@@ -163,7 +170,8 @@ public sealed class InMemoryTrustedCatalogue : ITrustedCatalogue
             .Select(static descriptor => new TrustedCatalogueDescriptor(
                 descriptor.Descriptor,
                 descriptor.SchemaDefinition,
-                descriptor.RequiredCapabilities))
+                descriptor.RequiredCapabilities,
+                descriptor.CallableContract))
             .OrderBy(static descriptor => descriptor.Descriptor, DescriptorReferenceComparer.Instance)
             .ToArray();
         CatalogueContractValidation.ValidateAggregateSchemaNodes(snapshot);
@@ -188,7 +196,8 @@ public sealed class InMemoryTrustedCatalogue : ITrustedCatalogue
         Array.AsReadOnly(orderedEntries.Select(static descriptor => new TrustedCatalogueDescriptor(
             descriptor.Descriptor,
             descriptor.SchemaDefinition,
-            descriptor.RequiredCapabilities)).ToArray());
+            descriptor.RequiredCapabilities,
+            descriptor.CallableContract)).ToArray());
 
     public bool TryGet(
         DescriptorReference descriptor,
@@ -207,7 +216,8 @@ public sealed class InMemoryTrustedCatalogue : ITrustedCatalogue
             result = new TrustedCatalogueDescriptor(
                 found.Descriptor,
                 found.SchemaDefinition,
-                found.RequiredCapabilities);
+                found.RequiredCapabilities,
+                found.CallableContract);
             return true;
         }
 
@@ -676,6 +686,8 @@ internal static class CatalogueContractValidation
     internal const int MaximumDigestAlgorithmLength = 32;
     internal const int MaximumDigestContractLength = 64;
     internal const int MaximumDigestValueLength = 512;
+    internal const int MaximumCallableParameters = 256;
+    internal const int MaximumCallableParameterNameLength = 128;
     internal const int MaximumSchemaDepth = 64;
     internal const int MaximumTotalSchemaNodes = 16_384;
 
@@ -805,6 +817,56 @@ internal static class CatalogueContractValidation
 
         var state = new SchemaSnapshotState();
         return CloneSchema(schema, state);
+    }
+
+    internal static CallableContract? SnapshotCallableContract(
+        CallableContract? contract,
+        DescriptorReference descriptor)
+    {
+        if (contract is null)
+            return null;
+
+        if (descriptor.Kind is DescriptorKind.Schema or DescriptorKind.Artifact or DescriptorKind.PromptTemplate)
+            throw new ArgumentException($"Descriptor kind '{descriptor.Kind}' cannot carry a callable contract.", nameof(contract));
+        if (!Enum.IsDefined(contract.Effect) || !Enum.IsDefined(contract.Idempotency) || !Enum.IsDefined(contract.RetrySafety))
+            throw new ArgumentOutOfRangeException(nameof(contract), "Callable contract metadata is not supported.");
+        ArgumentNullException.ThrowIfNull(contract.Signature);
+        ArgumentNullException.ThrowIfNull(contract.Signature.OutputType);
+        ArgumentNullException.ThrowIfNull(contract.Signature.Parameters);
+
+        if (contract.Signature.Parameters.Count < 0 ||
+            contract.Signature.Parameters.Count > MaximumCallableParameters)
+        {
+            throw new ArgumentException(
+                $"Callable parameters exceed the bounded limit of {MaximumCallableParameters} items.",
+                nameof(contract));
+        }
+
+        var state = new SchemaSnapshotState();
+        var parameters = new List<CallableParameter>(contract.Signature.Parameters.Count);
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < contract.Signature.Parameters.Count; index++)
+        {
+            var parameter = contract.Signature.Parameters[index];
+            if (parameter is null)
+                throw new ArgumentException("A callable parameter cannot be null.", nameof(contract));
+            Text(parameter.Name, nameof(parameter.Name), MaximumCallableParameterNameLength);
+            StructuralNodeIdentity.ValidateSegment(parameter.Name);
+            if (!names.Add(parameter.Name))
+                throw new ArgumentException($"Callable parameter '{parameter.Name}' is duplicated.", nameof(contract));
+            parameters.Add(new CallableParameter(parameter.Name, CloneType(parameter.Type, state)));
+        }
+
+        var output = CloneType(contract.Signature.OutputType, state);
+        return new CallableContract(
+            new CallableSignature(
+                Array.AsReadOnly(parameters
+                    .OrderBy(static parameter => parameter.Name, StringComparer.Ordinal)
+                    .ToArray()),
+                output),
+            contract.Effect,
+            contract.Idempotency,
+            contract.RetrySafety);
     }
 
     internal static void ValidateAggregateSchemaNodes(IEnumerable<TrustedCatalogueDescriptor> descriptors)

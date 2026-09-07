@@ -70,6 +70,70 @@ public sealed class CatalogueTests
     }
 
     [Fact]
+    public async Task Catalogue_SnapshotsCallableContractsAndRejectsInvalidShapes()
+    {
+        var activity = Descriptor(DescriptorKind.Activity, "sample.callable", "1", 'a');
+        var parameters = new List<CallableParameter>
+        {
+            new("zeta", new PrimitiveType(FuwenPrimitiveKind.String)),
+            new("request", new PrimitiveType(FuwenPrimitiveKind.String)),
+        };
+        var entry = new TrustedCatalogueDescriptor(
+            activity,
+            callableContract: new CallableContract(
+                new CallableSignature(parameters, new PrimitiveType(FuwenPrimitiveKind.Boolean)),
+                CallableEffect.Read,
+                CallableIdempotency.Idempotent,
+                CallableRetrySafety.Safe));
+        var catalogue = new InMemoryTrustedCatalogue([entry]);
+
+        parameters[0] = new CallableParameter("changed", new PrimitiveType(FuwenPrimitiveKind.Json));
+        var resolved = await catalogue.ResolveAsync(activity, TestContext.Current.CancellationToken);
+
+        resolved.Descriptor!.CallableContract!.Signature.Parameters
+            .Select(static parameter => parameter.Name)
+            .Should().Equal("request", "zeta");
+        resolved.Descriptor.CallableContract.Signature.Parameters
+            .Should().NotBeSameAs(parameters);
+
+        var schema = Descriptor(DescriptorKind.Schema, "sample.schema", "1", 'a');
+        var wrongKind = () => new TrustedCatalogueDescriptor(
+            schema,
+            callableContract: entry.CallableContract);
+        var duplicate = () => new TrustedCatalogueDescriptor(
+            activity,
+            callableContract: new CallableContract(
+                new CallableSignature(
+                    [
+                        new CallableParameter("request", new PrimitiveType(FuwenPrimitiveKind.String)),
+                        new CallableParameter("request", new PrimitiveType(FuwenPrimitiveKind.String)),
+                    ],
+                    new PrimitiveType(FuwenPrimitiveKind.Boolean)),
+                CallableEffect.Read,
+                CallableIdempotency.Idempotent,
+                CallableRetrySafety.Safe));
+        var undefined = () => new TrustedCatalogueDescriptor(
+            activity,
+            callableContract: entry.CallableContract! with { Effect = (CallableEffect)999 });
+        var oversized = () => new TrustedCatalogueDescriptor(
+            activity,
+            callableContract: new CallableContract(
+                new CallableSignature(
+                    Enumerable.Range(0, 257)
+                        .Select(index => new CallableParameter($"p_{index}", new PrimitiveType(FuwenPrimitiveKind.String)))
+                        .ToArray(),
+                    new PrimitiveType(FuwenPrimitiveKind.Boolean)),
+                CallableEffect.Read,
+                CallableIdempotency.Idempotent,
+                CallableRetrySafety.Safe));
+
+        wrongKind.Should().Throw<ArgumentException>();
+        duplicate.Should().Throw<ArgumentException>().WithMessage("*duplicated*");
+        undefined.Should().Throw<ArgumentOutOfRangeException>();
+        oversized.Should().Throw<ArgumentException>().WithMessage("*256*");
+    }
+
+    [Fact]
     public async Task Resolver_SortsBatchRequestsAndEnforcesLookupBudget()
     {
         var first = Descriptor(DescriptorKind.Activity, "z.activity", "1", 'a');

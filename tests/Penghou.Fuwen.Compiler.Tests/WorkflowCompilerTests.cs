@@ -387,6 +387,203 @@ public sealed class WorkflowCompilerTests
         result.Usage.CatalogueLookups.Should().Be(0);
     }
 
+    [Fact]
+    public void Compiler_RequiresTrustedCallableMetadata()
+    {
+        var plan = Fixture.CreatePlan();
+        var activity = plan.Nodes.OfType<ActivityNode>().Single();
+        var catalogue = Fixture.CreateCatalogue(
+            omitCallable: activity.Activity);
+
+        var result = new WorkflowCompiler(catalogue, capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(plan, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.CatalogueCallableContractMissing);
+    }
+
+    [Fact]
+    public void Compiler_RequiresExactCallableArgumentNamesAndTypes()
+    {
+        var plan = Fixture.CreatePlan();
+        var activity = plan.Nodes.OfType<ActivityNode>().Single();
+        using var number = JsonDocument.Parse("1");
+        var changed = plan with
+        {
+            Nodes = plan.Nodes.Select(node => node == activity
+                ? activity with
+                {
+                    Arguments =
+                    [
+                        new ArgumentBinding("other", new LiteralBinding(number.RootElement.Clone())),
+                    ],
+                }
+                : node).ToArray(),
+        };
+
+        var result = new WorkflowCompiler(Fixture.CreateCatalogue(), capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(changed, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.CallableArgumentMissing);
+        result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.CallableArgumentUnknown);
+    }
+
+    [Fact]
+    public void Compiler_RejectsCallableOutputTypeMismatch()
+    {
+        var plan = Fixture.CreatePlan();
+        var activity = plan.Nodes.OfType<ActivityNode>().Single();
+        var changed = plan with
+        {
+            Nodes = plan.Nodes.Select(node => node == activity
+                ? activity with { OutputType = new PrimitiveType(FuwenPrimitiveKind.String) }
+                : node).ToArray(),
+        };
+
+        var result = new WorkflowCompiler(Fixture.CreateCatalogue(), capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(changed, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.CallableOutputTypeMismatch);
+    }
+
+    [Fact]
+    public void Compiler_RejectsCallableArgumentTypeMismatch()
+    {
+        var plan = Fixture.CreatePlan();
+        var activity = plan.Nodes.OfType<ActivityNode>().Single();
+        using var text = JsonDocument.Parse("\"not-an-answer\"");
+        var changed = plan with
+        {
+            Nodes = plan.Nodes.Select(node => node == activity
+                ? activity with
+                {
+                    Arguments =
+                    [
+                        new ArgumentBinding("answer", new LiteralBinding(text.RootElement.Clone())),
+                    ],
+                }
+                : node).ToArray(),
+        };
+
+        var result = new WorkflowCompiler(Fixture.CreateCatalogue(), capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(changed, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.CallableArgumentTypeMismatch);
+    }
+
+    [Theory]
+    [InlineData(CallableEffect.None)]
+    [InlineData(CallableEffect.Read)]
+    [InlineData(CallableEffect.Write)]
+    public void Compiler_AcceptsConservativeCallableEffects(CallableEffect effect)
+    {
+        var plan = Fixture.CreatePlan();
+        var activity = plan.Nodes.OfType<ActivityNode>().Single();
+        var catalogue = Fixture.CreateCatalogue(
+            transformCallable: (descriptor, contract) => descriptor.Equals(activity.Activity)
+                ? contract! with { Effect = effect }
+                : contract);
+
+        var result = new WorkflowCompiler(catalogue, capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(plan, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Compiler_AcceptsIntegralJsonForNumberParameter()
+    {
+        var plan = Fixture.CreatePlan();
+        var inference = plan.Nodes.OfType<InferenceNode>().Single();
+        using var number = JsonDocument.Parse("1");
+        var changed = plan with
+        {
+            Nodes = plan.Nodes.Select(node => node == inference
+                ? inference with
+                {
+                    Arguments =
+                    [
+                        new ArgumentBinding("request", new LiteralBinding(number.RootElement.Clone())),
+                    ],
+                }
+                : node).ToArray(),
+        };
+        var catalogue = Fixture.CreateCatalogue(
+            transformCallable: (descriptor, contract) => descriptor.Equals(inference.Profile)
+                ? contract! with
+                {
+                    Signature = contract.Signature with
+                    {
+                        Parameters =
+                        [
+                            new CallableParameter("request", new PrimitiveType(FuwenPrimitiveKind.Number)),
+                        ],
+                    },
+                }
+                : contract);
+
+        var result = new WorkflowCompiler(catalogue, capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(changed, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(CallableEffect.External, CallableIdempotency.Idempotent, CallableRetrySafety.Safe, CompilerDiagnosticCodes.CallableEffectRejected)]
+    [InlineData(CallableEffect.Destructive, CallableIdempotency.Idempotent, CallableRetrySafety.Safe, CompilerDiagnosticCodes.CallableEffectRejected)]
+    [InlineData(CallableEffect.Read, CallableIdempotency.IdempotentWithKey, CallableRetrySafety.Safe, CompilerDiagnosticCodes.CallableRetryRejected)]
+    [InlineData(CallableEffect.Read, CallableIdempotency.NonIdempotent, CallableRetrySafety.Safe, CompilerDiagnosticCodes.CallableRetryRejected)]
+    [InlineData(CallableEffect.Read, CallableIdempotency.Unknown, CallableRetrySafety.Safe, CompilerDiagnosticCodes.CallableRetryRejected)]
+    [InlineData(CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Unsafe, CompilerDiagnosticCodes.CallableRetryRejected)]
+    [InlineData(CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.HostControlled, CompilerDiagnosticCodes.CallableRetryRejected)]
+    [InlineData(CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Unknown, CompilerDiagnosticCodes.CallableRetryRejected)]
+    public void Compiler_RejectsUnsafeCallableContracts(
+        CallableEffect effect,
+        CallableIdempotency idempotency,
+        CallableRetrySafety retrySafety,
+        string expectedCode)
+    {
+        var plan = Fixture.CreatePlan();
+        var activity = plan.Nodes.OfType<ActivityNode>().Single();
+        var catalogue = Fixture.CreateCatalogue(
+            transformCallable: (descriptor, contract) => descriptor.Equals(activity.Activity)
+                ? contract! with { Effect = effect, Idempotency = idempotency, RetrySafety = retrySafety }
+                : contract);
+
+        var result = new WorkflowCompiler(catalogue, capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(plan, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Should().Contain(d => d.Code == expectedCode);
+    }
+
+    [Fact]
+    public void Compiler_RejectsCallableTypeReferencesOutsideDeclaredClosure()
+    {
+        var plan = Fixture.CreatePlan();
+        var activity = plan.Nodes.OfType<ActivityNode>().Single();
+        var hiddenSchema = Fixture.Descriptor(DescriptorKind.Schema, "sample.hidden");
+        var catalogue = Fixture.CreateCatalogue(
+            transformCallable: (descriptor, contract) => descriptor.Equals(activity.Activity)
+                ? new CallableContract(
+                    new CallableSignature(
+                        [new CallableParameter("answer", new NamedTypeReference(hiddenSchema))],
+                        contract!.Signature.OutputType),
+                    contract.Effect,
+                    contract.Idempotency,
+                    contract.RetrySafety)
+                : contract);
+
+        var result = new WorkflowCompiler(catalogue, capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(plan, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.CatalogueCallableContractReferenceMissing);
+    }
+
     private static class Fixture
     {
         internal static WorkflowPlan CreatePlan()
@@ -442,15 +639,60 @@ public sealed class WorkflowCompilerTests
         internal static InMemoryTrustedCatalogue CreateCatalogue(
             WorkflowPlan? source = null,
             CapabilityRequirement? required = null,
-            bool omitSchemaPayload = false)
+            bool omitSchemaPayload = false,
+            DescriptorReference? omitCallable = null,
+            Func<DescriptorReference, CallableContract?, CallableContract?>? transformCallable = null)
         {
             var plan = source ?? CreatePlan();
             var descriptors = plan.Schemas.Select(schema => new TrustedCatalogueDescriptor(schema.Descriptor, omitSchemaPayload ? null : schema))
-                .Concat(plan.CatalogueBindings.Select(descriptor => new TrustedCatalogueDescriptor(descriptor, requiredCapabilities: required is null ? [] : [required])))
+                .Concat(plan.CatalogueBindings.Select(descriptor =>
+                {
+                    var callable = descriptor.Equals(omitCallable) ? null : CallableFor(descriptor, plan);
+                    if (transformCallable is not null)
+                        callable = transformCallable(descriptor, callable);
+                    return new TrustedCatalogueDescriptor(
+                        descriptor,
+                        requiredCapabilities: required is null ? [] : [required],
+                        callableContract: callable);
+                }))
                 .GroupBy(descriptor => descriptor.Descriptor)
                 .Select(group => group.First())
                 .ToArray();
             return new InMemoryTrustedCatalogue(descriptors);
+        }
+
+        private static CallableContract? CallableFor(DescriptorReference descriptor, WorkflowPlan plan)
+        {
+            CallableSignature? signature = descriptor.Kind switch
+            {
+                DescriptorKind.ContextProvider => plan.Nodes.OfType<ContextNode>()
+                    .Where(node => node.Provider.Equals(descriptor))
+                    .Select(node => new CallableSignature(
+                        [new CallableParameter("request", plan.InputType)],
+                        node.OutputType))
+                    .SingleOrDefault(),
+                DescriptorKind.InferenceProfile => plan.Nodes.OfType<InferenceNode>()
+                    .Where(node => node.Profile.Equals(descriptor))
+                    .Select(node => new CallableSignature(
+                        [new CallableParameter("request", new PrimitiveType(FuwenPrimitiveKind.String))],
+                        node.OutputType))
+                    .SingleOrDefault(),
+                DescriptorKind.Activity => plan.Nodes.OfType<ActivityNode>()
+                    .Where(node => node.Activity.Equals(descriptor))
+                    .Select(node => new CallableSignature(
+                        [new CallableParameter("answer", plan.Nodes.OfType<InferenceNode>().Single().OutputType)],
+                        node.OutputType))
+                    .SingleOrDefault(),
+                _ => null,
+            };
+
+            return signature is null
+                ? null
+                : new CallableContract(
+                    signature,
+                    CallableEffect.Read,
+                    CallableIdempotency.Idempotent,
+                    CallableRetrySafety.Safe);
         }
 
         internal static DescriptorReference Descriptor(DescriptorKind kind, string name) =>

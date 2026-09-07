@@ -307,9 +307,15 @@ Progress:
   descriptor/schema resolution, binding/projection/condition/return checks,
   inferred capability assertions, host capability grants, canonical definition
   output, bounded diagnostics, and multi-target rejection tests.
-- [ ] Complete executable host admission: trusted callable signatures,
-  side-effect/idempotency/retry contracts, policy/grant revision identity, an
-  unforgeable admission receipt, and the remaining semantic rejection matrix.
+- [x] Add bounded trusted callable signatures with deeply snapshotted named
+  parameters and output types; require exact argument names and nominal output
+  contracts; reject missing metadata, undeclared type closure, unsupported
+  effects, keyed/non-idempotent/unknown invocation semantics, and unsafe or
+  host-controlled retry claims. These checks validate a conservative compiler
+  slice but do not authorize execution.
+- [ ] Complete executable host admission: catalogue snapshot identity,
+  policy/grant revision identity, an unforgeable admission receipt, and the
+  remaining semantic rejection matrix.
 
 ### Marang Gate 0.5 — plan acceptance and supervisory execution
 
@@ -922,16 +928,14 @@ only after repeated integration demonstrates a real reusable boundary.
 
 Continue with Delivery milestone B:
 
-1. Extend trusted catalogue descriptors with bounded callable input/output
-   signatures plus explicit side-effect, idempotency, and retry-safety metadata.
-2. Add a separate immutable host-admission receipt bound to the exact execution
+1. Add a separate immutable host-admission receipt bound to the exact execution
    fingerprint, catalogue snapshot, policy/grant revision, and effective limits;
    executors must not accept a bare verified definition as authorization.
-3. Complete argument/type/condition/literal/definite-assignment rejection tests
+2. Complete argument/type/condition/literal/definite-assignment rejection tests
    and close catalogue exception/deadline and aggregate-budget gaps.
-4. Then define immutable plan-revision lineage and deterministic semantic plan
+3. Then define immutable plan-revision lineage and deterministic semantic plan
    comparison as the prerequisite for Zhinu workflow evolution.
-5. Keep loops, waits, runtime execution, transition activation, and the text
+4. Keep loops, waits, runtime execution, transition activation, and the text
    grammar out of this batch.
 
 Do **not** begin with the text grammar. The next deliverable is a programmatic

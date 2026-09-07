@@ -104,6 +104,7 @@ public static class WorkflowPlanValidator
                     ValidateType(activity.OutputType);
                     break;
                 case ConditionalNode conditional:
+                    ValidateConditionShape(conditional.Condition);
                     ValidateNodes(
                         $"{conditional.StructuralPath}/$then",
                         conditional.Then,
@@ -123,6 +124,27 @@ public static class WorkflowPlanValidator
                     throw new NotSupportedException($"Unsupported workflow node type '{node.GetType().Name}'.");
             }
         }
+    }
+
+    private static void ValidateConditionShape(ConditionExpression condition)
+    {
+        ArgumentNullException.ThrowIfNull(condition);
+        ArgumentNullException.ThrowIfNull(condition.Left);
+        if (!Enum.IsDefined(condition.Operator))
+            throw new ArgumentOutOfRangeException(
+                nameof(condition),
+                condition.Operator,
+                "Condition operator is not supported by this IR version.");
+
+        var unary = condition.Operator is ConditionOperator.Not or ConditionOperator.Exists;
+        if (unary && condition.Right is not null)
+            throw new ArgumentException(
+                $"Unary condition operator '{condition.Operator}' cannot have a right operand.",
+                nameof(condition));
+        if (!unary && condition.Right is null)
+            throw new ArgumentException(
+                $"Binary condition operator '{condition.Operator}' requires a right operand.",
+                nameof(condition));
     }
 
     private static void ValidateExecutionOrder(

@@ -475,6 +475,63 @@ public sealed class WorkflowCompilerTests
     }
 
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Compiler_RejectsStructuralContainerForScalarCallableParameter(bool useList)
+    {
+        var plan = Fixture.CreatePlan();
+        var inference = plan.Nodes.OfType<InferenceNode>().Single();
+        Binding invalid = useList
+            ? new ListBinding([])
+            : new ObjectBinding(new Dictionary<string, Binding>());
+        var changed = plan with
+        {
+            Nodes = plan.Nodes.Select(node => node == inference
+                ? inference with { Arguments = [new ArgumentBinding("request", invalid)] }
+                : node).ToArray(),
+        };
+
+        var result = new WorkflowCompiler(Fixture.CreateCatalogue(), capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(changed, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.CallableArgumentTypeMismatch);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Compiler_AcceptsStructuralContainerForJsonCallableParameter(bool useList)
+    {
+        var plan = Fixture.CreatePlan();
+        var inference = plan.Nodes.OfType<InferenceNode>().Single();
+        Binding value = useList
+            ? new ListBinding([])
+            : new ObjectBinding(new Dictionary<string, Binding>());
+        var changed = plan with
+        {
+            Nodes = plan.Nodes.Select(node => node == inference
+                ? inference with { Arguments = [new ArgumentBinding("request", value)] }
+                : node).ToArray(),
+        };
+        var catalogue = Fixture.CreateCatalogue(
+            transformCallable: (descriptor, contract) => descriptor.Equals(inference.Profile)
+                ? contract! with
+                {
+                    Signature = contract.Signature with
+                    {
+                        Parameters = [new CallableParameter("request", new PrimitiveType(FuwenPrimitiveKind.Json))],
+                    },
+                }
+                : contract);
+
+        var result = new WorkflowCompiler(catalogue, capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(changed, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeTrue();
+    }
+
+    [Theory]
     [InlineData(CallableEffect.None)]
     [InlineData(CallableEffect.Read)]
     [InlineData(CallableEffect.Write)]

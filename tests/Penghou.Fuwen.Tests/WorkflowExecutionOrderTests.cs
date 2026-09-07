@@ -6,6 +6,31 @@ namespace Penghou.Fuwen.Tests;
 public sealed class WorkflowExecutionOrderTests
 {
     [Fact]
+    public void Undefined_and_wrong_arity_condition_operators_are_rejected()
+    {
+        var source = PlanFixture.CreateV2WithConditional();
+        var conditional = source.Nodes.OfType<ConditionalNode>().Single();
+
+        WorkflowPlan WithCondition(ConditionExpression condition) => source with
+        {
+            Nodes = source.Nodes.Select(node => node == conditional
+                ? conditional with { Condition = condition }
+                : node).ToArray(),
+        };
+
+        var undefined = () => WorkflowPlanValidator.Validate(WithCondition(
+            new ConditionExpression((ConditionOperator)999, new InputBinding([]), new InputBinding([]))));
+        var unaryWithRight = () => WorkflowPlanValidator.Validate(WithCondition(
+            new ConditionExpression(ConditionOperator.Not, new InputBinding([]), new InputBinding([]))));
+        var binaryWithoutRight = () => WorkflowPlanValidator.Validate(WithCondition(
+            new ConditionExpression(ConditionOperator.Equal, new InputBinding([]))));
+
+        undefined.Should().Throw<ArgumentOutOfRangeException>();
+        unaryWithRight.Should().Throw<ArgumentException>().WithMessage("*cannot have a right operand*");
+        binaryWithoutRight.Should().Throw<ArgumentException>().WithMessage("*requires a right operand*");
+    }
+
+    [Fact]
     public void V2_requires_an_explicit_execution_order()
     {
         var plan = PlanFixture.Create() with

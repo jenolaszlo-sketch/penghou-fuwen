@@ -760,14 +760,28 @@ internal static class WorkflowBindingValidator
                     diagnostics.Add(TypeMismatch(expected, consumer.Node.StructuralPath, mismatchCode));
                 return expected ?? InferLiteral(literal.Value);
             case ListBinding list:
-                if (expected is ListType expectedList && list.Items.Count > expectedList.MaxItems)
+                var listExpected = expected is OptionalType optionalList ? optionalList.ValueType : expected;
+                if (listExpected is PrimitiveType { Primitive: FuwenPrimitiveKind.Json })
+                {
+                    foreach (var item in list.Items)
+                        ValidateBinding(item, null, consumer, plan, locations, diagnostics, mismatchCode, exact);
+                    return expected;
+                }
+                if (listExpected is not null and not ListType)
+                    diagnostics.Add(TypeMismatch(expected!, consumer.Node.StructuralPath, mismatchCode));
+                if (listExpected is ListType expectedList && list.Items.Count > expectedList.MaxItems)
                     diagnostics.Add(new CompilerDiagnostic(mismatchCode, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "List literal exceeds its declared maximum.", path: consumer.Node.StructuralPath));
                 foreach (var item in list.Items)
-                    ValidateBinding(item, expected is ListType listType ? listType.ItemType : null, consumer, plan, locations, diagnostics, mismatchCode, exact);
+                    ValidateBinding(item, listExpected is ListType listType ? listType.ItemType : null, consumer, plan, locations, diagnostics, mismatchCode, exact);
                 return expected;
             case ObjectBinding @object:
                 var objectExpected = expected is OptionalType optional ? optional.ValueType : expected;
-                if (objectExpected is NamedTypeReference named &&
+                if (objectExpected is PrimitiveType { Primitive: FuwenPrimitiveKind.Json })
+                {
+                    foreach (var property in @object.Properties)
+                        ValidateBinding(property.Value, null, consumer, plan, locations, diagnostics, mismatchCode, exact);
+                }
+                else if (objectExpected is NamedTypeReference named &&
                     plan.Schemas.FirstOrDefault(schema => schema.Descriptor.Equals(named.Schema)) is ObjectSchemaDefinition objectSchema)
                 {
                     var fields = objectSchema.Fields.ToDictionary(field => field.Name, StringComparer.Ordinal);
@@ -785,6 +799,8 @@ internal static class WorkflowBindingValidator
                 }
                 else
                 {
+                    if (objectExpected is not null)
+                        diagnostics.Add(TypeMismatch(expected!, consumer.Node.StructuralPath, mismatchCode));
                     foreach (var property in @object.Properties)
                         ValidateBinding(property.Value, null, consumer, plan, locations, diagnostics, mismatchCode, exact);
                 }

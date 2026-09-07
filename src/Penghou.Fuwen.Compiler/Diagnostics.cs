@@ -58,6 +58,8 @@ public static class CompilerDiagnosticCodes
     public const string BindingProjectionInvalid = "FWN-TYPING-002";
     public const string CapabilityManifestMismatch = "FWN-ADMISSION-001";
     public const string CapabilityNotGranted = "FWN-ADMISSION-002";
+    public const string AdmissionCatalogueSnapshotUnavailable = "FWN-ADMISSION-003";
+    public const string AdmissionPolicyRevisionUnavailable = "FWN-ADMISSION-004";
     public const string ContextSnapshotInvalid = "FWN-BINDING-002";
     public const string ContextSnapshotDuplicate = "FWN-BINDING-003";
     public const string CallableArgumentMissing = "FWN-SIGNATURE-001";
@@ -223,6 +225,7 @@ public sealed class DiagnosticBuilder
 public sealed class CompilationResult
 {
     private readonly WorkflowDefinitionDocument? _definition;
+    private readonly CompilationAdmissionEvidence? admissionEvidence;
 
     public CompilationResult(
         WorkflowPlan? plan,
@@ -241,13 +244,15 @@ public sealed class CompilationResult
         WorkflowDefinitionDocument? definition,
         IEnumerable<CompilerDiagnostic> diagnostics,
         CompilationUsageSummary usage,
-        CompilationBudget budget)
+        CompilationBudget budget,
+        CompilationAdmissionEvidence? admissionEvidence = null)
     {
         ArgumentNullException.ThrowIfNull(diagnostics);
         Usage = usage ?? throw new ArgumentNullException(nameof(usage));
         Budget = budget ?? throw new ArgumentNullException(nameof(budget));
         Diagnostics = new DiagnosticCollection(diagnostics, budget.MaxDiagnostics);
         _definition = definition is null || Diagnostics.HasErrors ? null : definition;
+        this.admissionEvidence = _definition is null ? null : admissionEvidence;
     }
 
     public WorkflowPlan? Plan => _definition?.ReadPlan();
@@ -257,6 +262,8 @@ public sealed class CompilationResult
     public CompilationUsageSummary Usage { get; }
     public CompilationBudget Budget { get; }
     public bool Succeeded => Plan is not null && !Diagnostics.HasErrors;
+
+    internal CompilationAdmissionEvidence? AdmissionEvidence => admissionEvidence;
 }
 
 internal static class CompilerContractValidation

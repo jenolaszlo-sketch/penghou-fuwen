@@ -244,3 +244,27 @@ const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueResolutionInvalidR
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueCallableContractMissing = "FWN-CATALOGUE-006" -> string!
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueCallableContractInvalid = "FWN-CATALOGUE-007" -> string!
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.CatalogueCallableContractReferenceMissing = "FWN-CATALOGUE-008" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.AdmissionCatalogueSnapshotUnavailable = "FWN-ADMISSION-003" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.AdmissionPolicyRevisionUnavailable = "FWN-ADMISSION-004" -> string!
+Penghou.Fuwen.Compiler.CapabilityGrantPolicy.CapabilityGrantPolicy(string! policyRevision, System.Collections.Generic.IEnumerable<Penghou.Fuwen.CapabilityRequirement!>! grantedCapabilities) -> void
+Penghou.Fuwen.Compiler.CapabilityGrantPolicy.GrantSetFingerprint.get -> string!
+Penghou.Fuwen.Compiler.CapabilityGrantPolicy.PolicyRevision.get -> string?
+Penghou.Fuwen.Compiler.ITrustedCatalogueSnapshot
+Penghou.Fuwen.Compiler.ITrustedCatalogueSnapshot.SnapshotRevision.get -> string!
+Penghou.Fuwen.Compiler.InMemoryTrustedCatalogue.SnapshotRevision.get -> string!
+Penghou.Fuwen.Compiler.WorkflowAdmissionReceipt
+Penghou.Fuwen.Compiler.WorkflowAdmissionReceipt.CapabilityGrantFingerprint.get -> string!
+Penghou.Fuwen.Compiler.WorkflowAdmissionReceipt.CapabilityPolicyRevision.get -> string!
+Penghou.Fuwen.Compiler.WorkflowAdmissionReceipt.CatalogueSnapshotRevision.get -> string!
+Penghou.Fuwen.Compiler.WorkflowAdmissionReceipt.EffectiveBudget.get -> Penghou.Fuwen.Compiler.CompilationBudget!
+Penghou.Fuwen.Compiler.WorkflowAdmissionReceipt.ExecutionFingerprint.get -> string!
+Penghou.Fuwen.Compiler.WorkflowAdmissionReceipt.ReceiptFingerprint.get -> string!
+Penghou.Fuwen.Compiler.WorkflowAdmissionReceipt.ResolvedDescriptorSetFingerprint.get -> string!
+Penghou.Fuwen.Compiler.WorkflowAdmissionResult
+Penghou.Fuwen.Compiler.WorkflowAdmissionResult.Compilation.get -> Penghou.Fuwen.Compiler.CompilationResult!
+Penghou.Fuwen.Compiler.WorkflowAdmissionResult.Diagnostics.get -> Penghou.Fuwen.Compiler.DiagnosticCollection!
+Penghou.Fuwen.Compiler.WorkflowAdmissionResult.Receipt.get -> Penghou.Fuwen.Compiler.WorkflowAdmissionReceipt?
+Penghou.Fuwen.Compiler.WorkflowAdmissionResult.Succeeded.get -> bool
+Penghou.Fuwen.Compiler.WorkflowAdmissionService
+Penghou.Fuwen.Compiler.WorkflowAdmissionService.AdmitAsync(Penghou.Fuwen.WorkflowPlan! plan, Penghou.Fuwen.Compiler.CompilationBudget? callerBudget = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.WorkflowAdmissionResult!>
+Penghou.Fuwen.Compiler.WorkflowAdmissionService.WorkflowAdmissionService(Penghou.Fuwen.Compiler.WorkflowCompiler! compiler) -> void

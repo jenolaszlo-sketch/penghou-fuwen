@@ -17,3 +17,19 @@ The first design and implementation batches must address:
 The host remains authoritative for authorization, trusted catalogues, resource
 scopes, routing, budgets, and secrets. This document will become a full threat
 model before the first public preview.
+
+## Host-admission receipt boundary
+
+`WorkflowAdmissionReceipt` is an opaque in-process capability token with no
+public constructor. Its fingerprint binds the canonical execution identity,
+immutable catalogue snapshot, exact resolved trusted metadata, versioned finite
+policy and grant set, and effective compilation limits. Semantic compilation,
+verified definition loading, an unversioned authority, and the test-only
+`CapabilityGrantPolicy.AllowAll` mode cannot mint a receipt.
+
+The receipt is not digitally signed and must not be serialized or trusted as a
+cross-process credential. Reflection, a compromised host process, or unsafe
+deserialization is outside this capability boundary. A future remote execution
+adapter must use an authenticated envelope or independently repeat admission;
+it must not accept receipt-shaped data merely because the fields and fingerprint
+are internally consistent.

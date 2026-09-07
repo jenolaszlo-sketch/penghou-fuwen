@@ -134,6 +134,34 @@ public sealed class CatalogueTests
     }
 
     [Fact]
+    public void CatalogueSnapshotRevision_IsOrderIndependentAndCoversTrustedMetadata()
+    {
+        var firstDescriptor = Descriptor(DescriptorKind.Activity, "sample.first", "1", 'a');
+        var secondDescriptor = Descriptor(DescriptorKind.Activity, "sample.second", "1", 'b');
+        var first = new TrustedCatalogueDescriptor(
+            firstDescriptor,
+            requiredCapabilities: [new CapabilityRequirement("read")],
+            callableContract: Callable(CallableEffect.Read));
+        var second = new TrustedCatalogueDescriptor(
+            secondDescriptor,
+            callableContract: Callable(CallableEffect.Read));
+
+        var ordered = new InMemoryTrustedCatalogue([first, second]);
+        var reversed = new InMemoryTrustedCatalogue([second, first]);
+        var metadataChanged = new InMemoryTrustedCatalogue([
+            new TrustedCatalogueDescriptor(
+                firstDescriptor,
+                requiredCapabilities: [new CapabilityRequirement("read")],
+                callableContract: Callable(CallableEffect.Write)),
+            second,
+        ]);
+
+        ordered.SnapshotRevision.Should().StartWith("sha256:fuwen-catalogue-snapshot/v1:");
+        reversed.SnapshotRevision.Should().Be(ordered.SnapshotRevision);
+        metadataChanged.SnapshotRevision.Should().NotBe(ordered.SnapshotRevision);
+    }
+
+    [Fact]
     public async Task Resolver_SortsBatchRequestsAndEnforcesLookupBudget()
     {
         var first = Descriptor(DescriptorKind.Activity, "z.activity", "1", 'a');
@@ -363,6 +391,12 @@ public sealed class CatalogueTests
             name,
             version,
             new ContentDigest("sha256", "descriptor/v1", new string(digest, 64)));
+
+    private static CallableContract Callable(CallableEffect effect) => new(
+        new CallableSignature([], new PrimitiveType(FuwenPrimitiveKind.Boolean)),
+        effect,
+        CallableIdempotency.Idempotent,
+        CallableRetrySafety.Safe);
 
     private sealed class CountingCatalogue : ITrustedCatalogue
     {

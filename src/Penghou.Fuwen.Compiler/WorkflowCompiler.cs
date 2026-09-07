@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Xml;
@@ -11,9 +12,27 @@ public sealed class CapabilityGrantPolicy
 {
     private readonly IReadOnlySet<CapabilityRequirement> grants;
     private readonly bool allowAll;
+    private readonly string? policyRevision;
 
     /// <summary>Creates a policy with the exact capability grants supplied by the host.</summary>
     public CapabilityGrantPolicy(IEnumerable<CapabilityRequirement> grantedCapabilities)
+        : this(grantedCapabilities, null)
+    {
+    }
+
+    /// <summary>Creates a finite grant policy with an immutable host policy revision.</summary>
+    public CapabilityGrantPolicy(
+        string policyRevision,
+        IEnumerable<CapabilityRequirement> grantedCapabilities)
+        : this(
+            grantedCapabilities,
+            PolicyRevisionText(policyRevision, nameof(policyRevision)))
+    {
+    }
+
+    private CapabilityGrantPolicy(
+        IEnumerable<CapabilityRequirement> grantedCapabilities,
+        string? policyRevision)
     {
         ArgumentNullException.ThrowIfNull(grantedCapabilities);
         var snapshot = grantedCapabilities
@@ -26,21 +45,50 @@ public sealed class CapabilityGrantPolicy
             throw new ArgumentException("A capability grant name cannot be empty.", nameof(grantedCapabilities));
         if (snapshot.Distinct().Count() != snapshot.Length)
             throw new ArgumentException("Capability grants must be unique.", nameof(grantedCapabilities));
-        grants = new HashSet<CapabilityRequirement>(snapshot);
+        var ordered = snapshot
+            .OrderBy(static grant => grant.Name, StringComparer.Ordinal)
+            .ThenBy(static grant => grant.ScopeClass, StringComparer.Ordinal)
+            .ToArray();
+        grants = new HashSet<CapabilityRequirement>(ordered);
+        this.policyRevision = policyRevision;
+        GrantSetFingerprint = ComputeGrantSetFingerprint(ordered);
     }
 
     private CapabilityGrantPolicy(bool allowAll)
     {
         this.allowAll = allowAll;
         grants = new HashSet<CapabilityRequirement>();
+        GrantSetFingerprint = ComputeGrantSetFingerprint([]);
     }
 
     /// <summary>A policy intended for tests or a trusted host that has already authorized every catalogue capability.</summary>
     public static CapabilityGrantPolicy AllowAll { get; } = new(true);
 
+    /// <summary>The host authorization-policy revision, or null for a legacy unversioned policy.</summary>
+    public string? PolicyRevision => policyRevision;
+
+    /// <summary>Deterministic identity of the exact finite grant set.</summary>
+    public string GrantSetFingerprint { get; }
+
     /// <summary>Returns whether the host has granted the exact capability and scope.</summary>
     public bool IsGranted(CapabilityRequirement requirement) =>
         allowAll || grants.Contains(requirement);
+
+    internal bool CanIssueAdmissionReceipt => !allowAll && policyRevision is not null;
+
+    private static string ComputeGrantSetFingerprint(IReadOnlyList<CapabilityRequirement> values)
+    {
+        var hash = SHA256.HashData(CanonicalJson.Serialize(values));
+        return $"sha256:fuwen-capability-grants/v1:{Convert.ToHexString(hash).ToLowerInvariant()}";
+    }
+
+    private static string PolicyRevisionText(string value, string parameterName)
+    {
+        var result = CompilerContractValidation.Text(value, parameterName, 256, required: true)!;
+        return !string.IsNullOrWhiteSpace(result)
+            ? result
+            : throw new ArgumentException("The policy revision cannot be whitespace.", parameterName);
+    }
 }
 
 /// <summary>Compiles a detached programmatic plan through semantic validation, catalogue resolution, and capability checks.</summary>
@@ -218,7 +266,17 @@ public sealed class WorkflowCompiler
         var finalUsage = PlanUsage.WithCompilationMilliseconds(usage, PlanUsage.ElapsedMilliseconds(started));
         if (CompilationDeadlineExceeded(started, budget, diagnostics, finalUsage, out deadlineFailure))
             return deadlineFailure!;
-        return new CompilationResult(definition, diagnostics, finalUsage, budget);
+        var resolvedDescriptors = resolved.Results
+            .Where(static result => result.Succeeded && result.Descriptor is not null)
+            .Select(static result => result.Descriptor!)
+            .ToArray();
+        var admissionEvidence = new CompilationAdmissionEvidence(
+            (catalogue as ITrustedCatalogueSnapshot)?.SnapshotRevision,
+            CatalogueIdentity.ComputeResolvedSetFingerprint(resolvedDescriptors),
+            capabilityPolicy.PolicyRevision,
+            capabilityPolicy.GrantSetFingerprint,
+            capabilityPolicy.CanIssueAdmissionReceipt);
+        return new CompilationResult(definition, diagnostics, finalUsage, budget, admissionEvidence);
     }
 
     private WorkflowPlan? CreateResolvedPlan(

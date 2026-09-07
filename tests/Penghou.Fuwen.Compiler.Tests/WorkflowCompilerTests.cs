@@ -584,7 +584,7 @@ public sealed class WorkflowCompilerTests
         result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.CatalogueCallableContractReferenceMissing);
     }
 
-    private static class Fixture
+    internal static class Fixture
     {
         internal static WorkflowPlan CreatePlan()
         {

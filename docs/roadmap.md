@@ -223,7 +223,7 @@ artifact provenance, evidence freshness, and policy remain outside Fuwen.
 
 Delivery order:
 
-1. Finish trusted callable metadata and the host-admission receipt.
+1. Finish trusted callable metadata and the host-admission receipt. **Complete.**
 2. Define the immutable revision envelope and its identity/lineage invariants.
 3. Add deterministic plan comparison using stable structural identity and
    semantic fingerprints.
@@ -313,9 +313,12 @@ Progress:
   effects, keyed/non-idempotent/unknown invocation semantics, and unsafe or
   host-controlled retry claims. These checks validate a conservative compiler
   slice but do not authorize execution.
-- [ ] Complete executable host admission: catalogue snapshot identity,
-  policy/grant revision identity, an unforgeable admission receipt, and the
-  remaining semantic rejection matrix.
+- [x] Complete executable host admission for the programmatic slice: immutable
+  catalogue snapshot identity, exact resolved-metadata identity, finite
+  policy/grant identity, effective-budget identity, and an opaque in-process
+  receipt with no public constructor. Unversioned catalogues and policies,
+  failed compilation, and test-only `AllowAll` cannot issue a receipt. This is
+  an in-process authorization token, not a signed transport credential.
 
 ### Marang Gate 0.5 — plan acceptance and supervisory execution
 
@@ -409,30 +412,32 @@ packages.
 ### Implementation review — admission, usability, and first-consumer fit
 
 Reviewed against the current source, tests, and Qingniao integration needs.
-Delivery A proves identity/storage foundations; the compiler project still
-contains scaffolding only. The existing P0/P1 gates above remain authoritative.
+Delivery A proves identity/storage foundations; Delivery B now includes a
+working programmatic compiler and explicit host-admission boundary. The existing
+P0/P1 gates above remain authoritative.
 The items below refine those gates rather than create another milestone list.
 All unchecked items are proposed work, not implemented guarantees.
 
 #### Priority 0 — make a verified plan mean something precise (Delivery B)
 
-- [ ] **Separate integrity verification, semantic validation, and host admission.**
+- [x] **Separate integrity verification, semantic validation, and host admission.**
   `LoadVerified` checks canonical bytes, compatibility, size, and fingerprints;
   `WorkflowPlanValidator`
   currently checks paths, descriptor closure, and selected shapes. It does not
   resolve binding values, condition operands, return values, or inference context
-  references. Introduce distinct outcomes (and an admitted-plan boundary for the
-  executor) so a caller cannot mistake a valid hash for permission to execute.
+  references. Distinct outcomes and an admitted-plan boundary now prevent a
+  caller from mistaking a valid hash for permission to execute.
   Require negative fixtures for unknown/cyclic references, cross-branch access,
   invalid projections, missing returns, incompatible result types, and forged
   capability declarations. Route the builder and future parser through this same
   admission pipeline.
-  The first programmatic compiler slice now performs detached semantic
-  compilation, trusted schema substitution, exact capability assertion, and
-  minimal host capability checking. It deliberately returns a canonical
-  `WorkflowDefinitionDocument`, not an execution authorization receipt. Full
-  admission remains open until trusted callable signatures, effect/retry policy,
-  and policy/grant revision identity exist.
+  The programmatic compiler performs detached semantic compilation, trusted
+  schema substitution, exact capability assertion, trusted callable/effect/
+  retry checks, and finite host grant checking. `WorkflowAdmissionService`
+  consumes that exact resolution trace once and issues an opaque receipt bound
+  to the definition, catalogue snapshot, resolved metadata, policy, grants, and
+  effective budget. Cross-process signed admission remains a deliberate later
+  extension, not an implied guarantee.
 - [x] **Resolve execution order before freezing more IR.**
   `WorkflowPlanIdentity.NormalizeNodes` sorts siblings by structural path; the
   golden fixture consequently places `return_result` before `validate`.
@@ -928,16 +933,14 @@ only after repeated integration demonstrates a real reusable boundary.
 
 Continue with Delivery milestone B:
 
-1. Add a separate immutable host-admission receipt bound to the exact execution
-   fingerprint, catalogue snapshot, policy/grant revision, and effective limits;
-   executors must not accept a bare verified definition as authorization.
-2. Complete argument/type/condition/literal/definite-assignment rejection tests
+1. Complete argument/type/condition/literal/definite-assignment rejection tests
    and close catalogue exception/deadline and aggregate-budget gaps.
-3. Then define immutable plan-revision lineage and deterministic semantic plan
+2. Define immutable plan-revision lineage and deterministic semantic plan
    comparison as the prerequisite for Zhinu workflow evolution.
-4. Keep loops, waits, runtime execution, transition activation, and the text
+3. Keep loops, waits, runtime execution, transition activation, and the text
    grammar out of this batch.
 
-Do **not** begin with the text grammar. The next deliverable is a programmatic
-admission boundary that can safely hand the already-compiled canonical plan to
-the later execution port.
+Do **not** begin with the text grammar. The next deliverable is programmatic
+semantic-rejection closure followed by immutable revision lineage and plan
+comparison. The completed receipt is the authorization seam for a later
+execution port; it is not itself an executor.

@@ -1,5 +1,6 @@
 #pragma warning disable CS1591
 using System.Diagnostics;
+using System.Security.Cryptography;
 
 using Penghou.Fuwen;
 
@@ -157,8 +158,19 @@ public interface ITrustedCatalogue
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Optional authority identity for an immutable trusted-catalogue snapshot.
+/// Semantic compilation can use an unversioned catalogue, but host admission
+/// requires this identity.
+/// </summary>
+public interface ITrustedCatalogueSnapshot
+{
+    /// <summary>The bounded host or content-derived revision of this immutable snapshot.</summary>
+    string SnapshotRevision { get; }
+}
+
 /// <summary>A deterministic in-memory trusted catalogue useful for hosts and tests.</summary>
-public sealed class InMemoryTrustedCatalogue : ITrustedCatalogue
+public sealed class InMemoryTrustedCatalogue : ITrustedCatalogue, ITrustedCatalogueSnapshot
 {
     private readonly IReadOnlyDictionary<DescriptorKey, TrustedCatalogueDescriptor> entries;
     private readonly IReadOnlyList<TrustedCatalogueDescriptor> orderedEntries;
@@ -190,7 +202,11 @@ public sealed class InMemoryTrustedCatalogue : ITrustedCatalogue
 
         entries = new Dictionary<DescriptorKey, TrustedCatalogueDescriptor>(dictionary);
         orderedEntries = Array.AsReadOnly(snapshot);
+        SnapshotRevision = CatalogueIdentity.ComputeSnapshotRevision(orderedEntries);
     }
+
+    /// <inheritdoc />
+    public string SnapshotRevision { get; }
 
     public IReadOnlyList<TrustedCatalogueDescriptor> Descriptors =>
         Array.AsReadOnly(orderedEntries.Select(static descriptor => new TrustedCatalogueDescriptor(
@@ -256,6 +272,39 @@ public sealed class InMemoryTrustedCatalogue : ITrustedCatalogue
             DescriptorResolutionStatus.Resolved,
             found));
     }
+}
+
+internal static class CatalogueIdentity
+{
+    private const string SnapshotContract = "fuwen-catalogue-snapshot/v1";
+    private const string ResolvedSetContract = "fuwen-resolved-descriptors/v1";
+
+    internal static string ComputeSnapshotRevision(IEnumerable<TrustedCatalogueDescriptor> descriptors) =>
+        Compute(SnapshotContract, descriptors);
+
+    internal static string ComputeResolvedSetFingerprint(IEnumerable<TrustedCatalogueDescriptor> descriptors) =>
+        Compute(ResolvedSetContract, descriptors);
+
+    private static string Compute(string contract, IEnumerable<TrustedCatalogueDescriptor> descriptors)
+    {
+        ArgumentNullException.ThrowIfNull(descriptors);
+        var claims = CatalogueContractValidation.ReadBoundedDescriptors(descriptors)
+            .Select(static descriptor => new DescriptorClaim(
+                descriptor.Descriptor,
+                descriptor.SchemaDefinition,
+                descriptor.RequiredCapabilities,
+                descriptor.CallableContract))
+            .OrderBy(static claim => claim.Descriptor, DescriptorReferenceComparer.Instance)
+            .ToArray();
+        var hash = SHA256.HashData(CanonicalJson.Serialize(claims));
+        return $"sha256:{contract}:{Convert.ToHexString(hash).ToLowerInvariant()}";
+    }
+
+    private sealed record DescriptorClaim(
+        DescriptorReference Descriptor,
+        ResolvedSchemaDefinition? SchemaDefinition,
+        IReadOnlyList<CapabilityRequirement> RequiredCapabilities,
+        CallableContract? CallableContract);
 }
 
 /// <summary>Resolves exact descriptors with compiler lookup and time budgets.</summary>

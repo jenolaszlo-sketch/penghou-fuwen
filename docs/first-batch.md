@@ -92,6 +92,9 @@ trusted catalogue/schema resolution, explicit execution schedules, stable
 diagnostics, resource budgets, binding/type validation, exact capability
 assertions, trusted callable signatures, conservative
 side-effect/idempotency/retry rejection, and canonical definition output.
-Complete executable admission still requires an immutable receipt bound to the
-catalogue snapshot, host policy/grants, and effective limits. The work does not
-begin the text grammar or add loops.
+The separate host-admission boundary is also complete for the programmatic
+slice. It issues an opaque in-process receipt bound to the exact definition,
+immutable catalogue snapshot and resolved metadata, versioned finite host
+policy/grants, and effective limits. A bare verified definition remains
+insufficient authorization, and `AllowAll` cannot issue a receipt. The work does
+not begin the text grammar or add loops.

@@ -60,12 +60,15 @@ that rejects invalid references, projections, return types, untrusted schema
 changes, capability mismatches, missing host grants, callable signature
 mismatches, and unsafe callable retry/effect combinations.
 
-The current compiler output proves semantic compilation and canonical identity;
-it is not yet an execution authorization receipt. Trusted callable signatures
-and conservative side-effect/idempotency/retry checks are implemented. The next
-batch adds an immutable host-admission receipt bound to exact policy, grants,
-effective limits, and catalogue revisions. Parser work remains deferred until
-that programmatic execution boundary is proven.
+The compiler deliberately separates three boundaries: canonical-definition
+integrity, semantic compilation, and host admission. Trusted callable signatures
+and conservative side-effect/idempotency/retry checks are implemented.
+`WorkflowAdmissionService` can now issue an opaque in-process receipt bound to
+the exact execution fingerprint, immutable catalogue snapshot, resolved trusted
+metadata, finite capability grants, policy revision, and effective limits.
+Unversioned catalogues and policies—and the test-only `AllowAll` policy—cannot
+issue a receipt. Parser work remains deferred while revision lineage and
+semantic plan comparison are completed.
 
 See [the roadmap](docs/roadmap.md) and
 [the first implementation batch](docs/first-batch.md).

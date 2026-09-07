@@ -68,7 +68,11 @@ the exact execution fingerprint, immutable catalogue snapshot, resolved trusted
 metadata, finite capability grants, policy revision, and effective limits.
 Unversioned catalogues and policies—and the test-only `AllowAll` policy—cannot
 issue a receipt. Parser work remains deferred while revision lineage and
-semantic plan comparison are completed.
+semantic plan comparison are completed. Immutable plan-revision documents now
+bind host-issued lineage IDs and parentage to one verified definition plus
+content-addressed objective, acceptance, validation, and supporting artifact
+evidence. Their fingerprints prove integrity only; they do not authorize or
+activate execution.
 
 See [the roadmap](docs/roadmap.md) and
 [the first implementation batch](docs/first-batch.md).

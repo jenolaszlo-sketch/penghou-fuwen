@@ -384,3 +384,59 @@ static Penghou.Fuwen.WorkflowPlanIdentity.ValidateExecutionFingerprint(string! e
 static Penghou.Fuwen.WorkflowPlanValidator.Validate(Penghou.Fuwen.WorkflowPlan! plan) -> void
 static Penghou.Fuwen.WorkflowSourceMapValidator.Validate(Penghou.Fuwen.WorkflowSourceMap! sourceMap) -> void
 static Penghou.Fuwen.WorkflowSourceMapValidator.ValidateForPlan(Penghou.Fuwen.WorkflowSourceMap! sourceMap, Penghou.Fuwen.WorkflowPlan! plan) -> void
+Penghou.Fuwen.PlanRevisionDocument
+Penghou.Fuwen.PlanRevisionDocument.CanonicalBytes.get -> System.ReadOnlyMemory<byte>
+Penghou.Fuwen.PlanRevisionDocument.EnvelopeFingerprint.get -> string!
+Penghou.Fuwen.PlanRevisionEnvelope
+Penghou.Fuwen.PlanRevisionEnvelope.EnvelopeVersion.get -> string!
+Penghou.Fuwen.PlanRevisionEnvelope.EnvelopeVersion.init -> void
+Penghou.Fuwen.PlanRevisionEnvelope.ExecutionFingerprint.get -> string!
+Penghou.Fuwen.PlanRevisionEnvelope.ExecutionFingerprint.init -> void
+Penghou.Fuwen.PlanRevisionEnvelope.ParentRevisionId.get -> string?
+Penghou.Fuwen.PlanRevisionEnvelope.ParentRevisionId.init -> void
+Penghou.Fuwen.PlanRevisionEnvelope.PlanRevisionEnvelope(string! EnvelopeVersion, string! PlanRevisionId, string! ExecutionFingerprint, string? ParentRevisionId, Penghou.Fuwen.PlanRevisionSemantics! Semantics, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PlanRevisionReference!>! References) -> void
+Penghou.Fuwen.PlanRevisionEnvelope.PlanRevisionId.get -> string!
+Penghou.Fuwen.PlanRevisionEnvelope.PlanRevisionId.init -> void
+Penghou.Fuwen.PlanRevisionEnvelope.References.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PlanRevisionReference!>!
+Penghou.Fuwen.PlanRevisionEnvelope.References.init -> void
+Penghou.Fuwen.PlanRevisionEnvelope.Semantics.get -> Penghou.Fuwen.PlanRevisionSemantics!
+Penghou.Fuwen.PlanRevisionEnvelope.Semantics.init -> void
+Penghou.Fuwen.PlanRevisionIntegrityException
+Penghou.Fuwen.PlanRevisionIntegrityException.PlanRevisionIntegrityException(string! message) -> void
+Penghou.Fuwen.PlanRevisionReference
+Penghou.Fuwen.PlanRevisionReference.Artifact.get -> Penghou.Fuwen.ArtifactReference!
+Penghou.Fuwen.PlanRevisionReference.Artifact.init -> void
+Penghou.Fuwen.PlanRevisionReference.Kind.get -> Penghou.Fuwen.PlanRevisionReferenceKind
+Penghou.Fuwen.PlanRevisionReference.Kind.init -> void
+Penghou.Fuwen.PlanRevisionReference.PlanRevisionReference(Penghou.Fuwen.PlanRevisionReferenceKind Kind, Penghou.Fuwen.ArtifactReference! Artifact) -> void
+Penghou.Fuwen.PlanRevisionReferenceKind
+Penghou.Fuwen.PlanRevisionReferenceKind.Evidence = 2 -> Penghou.Fuwen.PlanRevisionReferenceKind
+Penghou.Fuwen.PlanRevisionReferenceKind.Proposal = 0 -> Penghou.Fuwen.PlanRevisionReferenceKind
+Penghou.Fuwen.PlanRevisionReferenceKind.Reason = 1 -> Penghou.Fuwen.PlanRevisionReferenceKind
+Penghou.Fuwen.PlanRevisionSemantics
+Penghou.Fuwen.PlanRevisionSemantics.AcceptanceCriteria.get -> Penghou.Fuwen.ContentDigest!
+Penghou.Fuwen.PlanRevisionSemantics.AcceptanceCriteria.init -> void
+Penghou.Fuwen.PlanRevisionSemantics.Objective.get -> Penghou.Fuwen.ContentDigest!
+Penghou.Fuwen.PlanRevisionSemantics.Objective.init -> void
+Penghou.Fuwen.PlanRevisionSemantics.PlanRevisionSemantics(Penghou.Fuwen.ContentDigest! Objective, Penghou.Fuwen.ContentDigest! AcceptanceCriteria, Penghou.Fuwen.ContentDigest! ValidationRequirements) -> void
+Penghou.Fuwen.PlanRevisionSemantics.ValidationRequirements.get -> Penghou.Fuwen.ContentDigest!
+Penghou.Fuwen.PlanRevisionSemantics.ValidationRequirements.init -> void
+const Penghou.Fuwen.PlanRevisionDocument.EnvelopeVersion = "fuwen-revision/v1" -> string!
+const Penghou.Fuwen.PlanRevisionDocument.MaximumCanonicalBytes = 262144 -> int
+const Penghou.Fuwen.PlanRevisionDocument.MaximumReferences = 64 -> int
+static Penghou.Fuwen.PlanRevisionDocument.Create(Penghou.Fuwen.WorkflowDefinitionDocument! definition, string! planRevisionId, string? parentRevisionId, Penghou.Fuwen.PlanRevisionSemantics! semantics, System.Collections.Generic.IEnumerable<Penghou.Fuwen.PlanRevisionReference!>? references = null) -> Penghou.Fuwen.PlanRevisionDocument!
+static Penghou.Fuwen.PlanRevisionDocument.LoadVerified(string! envelopeFingerprint, System.ReadOnlySpan<byte> persistedBytes) -> Penghou.Fuwen.PlanRevisionDocument!
+static Penghou.Fuwen.PlanRevisionDocument.ValidateEnvelopeFingerprint(string! envelopeFingerprint) -> void
+Penghou.Fuwen.PlanRevisionDocument.ReadEnvelope() -> Penghou.Fuwen.PlanRevisionEnvelope!
+Penghou.Fuwen.IPlanRevisionStore
+Penghou.Fuwen.IPlanRevisionStore.ReadAsync(string! planRevisionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.PlanRevisionDocument?>
+Penghou.Fuwen.IPlanRevisionStore.StoreAsync(Penghou.Fuwen.PlanRevisionDocument! revision, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.PlanRevisionWriteDisposition>
+Penghou.Fuwen.InMemoryPlanRevisionStore
+Penghou.Fuwen.InMemoryPlanRevisionStore.InMemoryPlanRevisionStore() -> void
+Penghou.Fuwen.InMemoryPlanRevisionStore.ReadAsync(string! planRevisionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.PlanRevisionDocument?>
+Penghou.Fuwen.InMemoryPlanRevisionStore.StoreAsync(Penghou.Fuwen.PlanRevisionDocument! revision, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.PlanRevisionWriteDisposition>
+Penghou.Fuwen.PlanRevisionConflictException
+Penghou.Fuwen.PlanRevisionConflictException.PlanRevisionConflictException(string! planRevisionId) -> void
+Penghou.Fuwen.PlanRevisionWriteDisposition
+Penghou.Fuwen.PlanRevisionWriteDisposition.AlreadyExists = 1 -> Penghou.Fuwen.PlanRevisionWriteDisposition
+Penghou.Fuwen.PlanRevisionWriteDisposition.Created = 0 -> Penghou.Fuwen.PlanRevisionWriteDisposition

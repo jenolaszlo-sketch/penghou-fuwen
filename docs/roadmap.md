@@ -225,6 +225,7 @@ Delivery order:
 
 1. Finish trusted callable metadata and the host-admission receipt. **Complete.**
 2. Define the immutable revision envelope and its identity/lineage invariants.
+   **Complete.**
 3. Add deterministic plan comparison using stable structural identity and
    semantic fingerprints.
 4. Hand the comparison to a later Fuwen.Zhinu transition adapter; do not add
@@ -323,6 +324,13 @@ Progress:
   wrong-arity condition operators and structural list/object bindings supplied
   where trusted callable signatures require scalar values. Preserve structured
   values only for compatible list/object schemas or the explicit `json` type.
+- [x] Add immutable plan-revision lineage outside executable IR: host-issued
+  opaque revision IDs, optional direct parentage, verified execution-definition
+  binding, explicit objective/acceptance/validation content identities, bounded
+  immutable artifact references, canonical envelope fingerprints, verified
+  loading, and an idempotent store that rejects changed reuse of a revision ID.
+  Lineage documents remain integrity evidence and never authorize activation,
+  precedence, execution, or artifact reuse.
 
 ### Marang Gate 0.5 — plan acceptance and supervisory execution
 
@@ -928,8 +936,6 @@ only after repeated integration demonstrates a real reusable boundary.
 - Typed activity and inference failure taxonomy.
 - Parser implementation after IR stabilizes; ANTLR is not yet mandated.
 - Whether repeated use eventually justifies `Penghou.Fuwen.Hongxian`.
-- Exact immutable plan-revision envelope and whether its identifier is
-  content-derived or host-issued while still binding one execution fingerprint.
 - The minimum semantic node digest and comparison categories needed by Zhinu to
   evaluate reuse without making Fuwen responsible for runtime artifacts.
 
@@ -939,8 +945,8 @@ Continue with Delivery milestone B:
 
 1. Complete argument/type/condition/literal/definite-assignment rejection tests
    and close catalogue exception/deadline and aggregate-budget gaps.
-2. Define immutable plan-revision lineage and deterministic semantic plan
-   comparison as the prerequisite for Zhinu workflow evolution.
+2. Add deterministic semantic plan comparison as the prerequisite for Zhinu
+   workflow evolution; lineage envelopes are complete.
 3. Keep loops, waits, runtime execution, transition activation, and the text
    grammar out of this batch.
 

@@ -440,3 +440,24 @@ Penghou.Fuwen.PlanRevisionConflictException.PlanRevisionConflictException(string
 Penghou.Fuwen.PlanRevisionWriteDisposition
 Penghou.Fuwen.PlanRevisionWriteDisposition.AlreadyExists = 1 -> Penghou.Fuwen.PlanRevisionWriteDisposition
 Penghou.Fuwen.PlanRevisionWriteDisposition.Created = 0 -> Penghou.Fuwen.PlanRevisionWriteDisposition
+Penghou.Fuwen.PlanChange
+Penghou.Fuwen.PlanChange.Kind.get -> Penghou.Fuwen.PlanChangeKind
+Penghou.Fuwen.PlanChange.Kind.init -> void
+Penghou.Fuwen.PlanChange.PlanChange(string? StructuralPath, Penghou.Fuwen.PlanChangeKind Kind) -> void
+Penghou.Fuwen.PlanChange.StructuralPath.get -> string?
+Penghou.Fuwen.PlanChange.StructuralPath.init -> void
+Penghou.Fuwen.PlanChangeKind
+Penghou.Fuwen.PlanChangeKind.AcceptanceCriteriaChanged = 6 -> Penghou.Fuwen.PlanChangeKind
+Penghou.Fuwen.PlanChangeKind.Added = 1 -> Penghou.Fuwen.PlanChangeKind
+Penghou.Fuwen.PlanChangeKind.Changed = 3 -> Penghou.Fuwen.PlanChangeKind
+Penghou.Fuwen.PlanChangeKind.DependencyChanged = 4 -> Penghou.Fuwen.PlanChangeKind
+Penghou.Fuwen.PlanChangeKind.ObjectiveChanged = 5 -> Penghou.Fuwen.PlanChangeKind
+Penghou.Fuwen.PlanChangeKind.Removed = 2 -> Penghou.Fuwen.PlanChangeKind
+Penghou.Fuwen.PlanChangeKind.Unchanged = 0 -> Penghou.Fuwen.PlanChangeKind
+Penghou.Fuwen.PlanChangeKind.ValidationRequirementChanged = 7 -> Penghou.Fuwen.PlanChangeKind
+Penghou.Fuwen.PlanRevisionComparer
+Penghou.Fuwen.PlanRevisionComparison
+Penghou.Fuwen.PlanRevisionComparison.Changes.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PlanChange!>!
+Penghou.Fuwen.PlanRevisionComparison.ExecutionFingerprintEqual.get -> bool
+Penghou.Fuwen.PlanRevisionComparison.PlanRevisionComparison(bool executionFingerprintEqual, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PlanChange!>! changes) -> void
+static Penghou.Fuwen.PlanRevisionComparer.Compare(Penghou.Fuwen.PlanRevisionDocument! beforeRevision, Penghou.Fuwen.WorkflowDefinitionDocument! beforeDefinition, Penghou.Fuwen.PlanRevisionDocument! afterRevision, Penghou.Fuwen.WorkflowDefinitionDocument! afterDefinition) -> Penghou.Fuwen.PlanRevisionComparison!

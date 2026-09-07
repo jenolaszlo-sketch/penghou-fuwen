@@ -227,7 +227,10 @@ Delivery order:
 2. Define the immutable revision envelope and its identity/lineage invariants.
    **Complete.**
 3. Add deterministic plan comparison using stable structural identity and
-   semantic fingerprints.
+   semantic fingerprints. **Complete.** Exact structural paths establish
+   correspondence; renames are removed plus added. Results distinguish node,
+   dependency, workflow, objective, acceptance, and validation changes without
+   authorizing artifact reuse.
 4. Hand the comparison to a later Fuwen.Zhinu transition adapter; do not add
    scheduling, quiescence, artifact mutation, or generation state to Fuwen.
 
@@ -504,8 +507,9 @@ All unchecked items are proposed work, not implemented guarantees.
   changed descriptors, inputs, context snapshots, and affected dependents while
   distinguishing structural identity from permission to reuse a result. Zhinu
   remains authoritative for restart and reuse; its adapter checks the proposed
-  impact against durable execution state. Use Qingniao candidate/Test/Review and
-  Guyabano focused-retry cases as acceptance fixtures.
+  impact against durable execution state. The deterministic direct-comparison
+  surface is complete; transitive dependent-impact analysis plus Qingniao
+  candidate/Test/Review and Guyabano focused-retry adapter fixtures remain.
 - [ ] **Test runtime values at typed boundaries as well as compiled bindings.**
   Validate actual activity, context, and inference outputs before downstream
   consumption, including optional absence versus JSON null, list limits, artifact
@@ -945,12 +949,15 @@ Continue with Delivery milestone B:
 
 1. Complete argument/type/condition/literal/definite-assignment rejection tests
    and close catalogue exception/deadline and aggregate-budget gaps.
-2. Add deterministic semantic plan comparison as the prerequisite for Zhinu
-   workflow evolution; lineage envelopes are complete.
-3. Keep loops, waits, runtime execution, transition activation, and the text
+2. Add the bounded explain/validate experience over the existing programmatic
+   compiler, including stable diagnostics and a side-effect-free plan preview.
+3. Then begin Delivery C's typed execution ports and sequential fake-Zhinu
+   adapter slice; plan comparison is ready for later transition analysis.
+4. Keep loops, waits, transition activation, artifact-reuse authorization, and the text
    grammar out of this batch.
 
 Do **not** begin with the text grammar. The next deliverable is programmatic
-semantic-rejection closure followed by immutable revision lineage and plan
-comparison. The completed receipt is the authorization seam for a later
-execution port; it is not itself an executor.
+semantic-rejection closure and an explainable preview, followed by the narrow
+typed execution-port slice. Immutable revision lineage and deterministic plan
+comparison are complete. The admission receipt is the authorization seam for a
+later execution port; it is not itself an executor.

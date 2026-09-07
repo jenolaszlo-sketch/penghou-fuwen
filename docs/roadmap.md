@@ -319,6 +319,10 @@ Progress:
   receipt with no public constructor. Unversioned catalogues and policies,
   failed compilation, and test-only `AllowAll` cannot issue a receipt. This is
   an in-process authorization token, not a signed transport credential.
+- [x] Harden the remaining programmatic semantic boundary against undefined or
+  wrong-arity condition operators and structural list/object bindings supplied
+  where trusted callable signatures require scalar values. Preserve structured
+  values only for compatible list/object schemas or the explicit `json` type.
 
 ### Marang Gate 0.5 — plan acceptance and supervisory execution
 

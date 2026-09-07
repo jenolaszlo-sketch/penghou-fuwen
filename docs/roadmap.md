@@ -503,6 +503,11 @@ All unchecked items are proposed work, not implemented guarantees.
   required capabilities, effective limits, side effects, and admission failures.
   This can serve tests, CLI users, and model-assisted correction before a parser
   or UI exists. A preview must perform no activity or external side effect.
+  The first pure `WorkflowExplanation` projection is complete: it distinguishes
+  compilation from admission and exposes detached plan, descriptor pins,
+  inferred requirements, effective limits, usage, and bounded diagnostics.
+  Trusted callable-effect summaries, repair-oriented diagnostic enrichment,
+  and CLI/consumer presentation remain.
 - [ ] **Make restart impact inspectable.** Expose a plan comparison that explains
   changed descriptors, inputs, context snapshots, and affected dependents while
   distinguishing structural identity from permission to reuse a result. Zhinu
@@ -947,17 +952,21 @@ only after repeated integration demonstrates a real reusable boundary.
 
 Continue with Delivery milestone B:
 
-1. Complete argument/type/condition/literal/definite-assignment rejection tests
-   and close catalogue exception/deadline and aggregate-budget gaps.
-2. Add the bounded explain/validate experience over the existing programmatic
-   compiler, including stable diagnostics and a side-effect-free plan preview.
-3. Then begin Delivery C's typed execution ports and sequential fake-Zhinu
+1. Close aggregate trusted-catalogue metadata budgeting so many individually
+   valid descriptor payloads cannot amplify beyond host limits.
+2. Bound text and literal copying at the programmatic snapshot boundary, then
+   tighten digest identity and delimiter-safe duplicate keys.
+3. Extend the initial pure explain projection with trusted callable-effect
+   summaries and repair-oriented diagnostics where the compiler retains enough
+   evidence to do so safely.
+4. Then begin Delivery C's typed execution ports and sequential fake-Zhinu
    adapter slice; plan comparison is ready for later transition analysis.
-4. Keep loops, waits, transition activation, artifact-reuse authorization, and the text
-   grammar out of this batch.
+5. Keep loops, waits, transition activation, artifact-reuse authorization, and
+   the text grammar out of this batch.
 
 Do **not** begin with the text grammar. The next deliverable is programmatic
-semantic-rejection closure and an explainable preview, followed by the narrow
-typed execution-port slice. Immutable revision lineage and deterministic plan
-comparison are complete. The admission receipt is the authorization seam for a
-later execution port; it is not itself an executor.
+safety closure and explanation enrichment, followed by the narrow typed
+execution-port slice. Immutable revision lineage, deterministic plan comparison,
+and the first pure explanation projection are complete. The admission receipt
+is the authorization seam for a later execution port; it is not itself an
+executor.

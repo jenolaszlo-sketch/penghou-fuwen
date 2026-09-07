@@ -75,6 +75,10 @@ evidence. Their fingerprints prove integrity only; they do not authorize or
 activate execution. Deterministic plan comparison reports exact structural-path,
 dependency, descriptor, execution-order, objective, acceptance, and validation
 changes. It is an explanation surface, not permission to reuse runtime artifacts.
+`WorkflowExplanation` now projects completed compilation or admission results
+into a deterministic, side-effect-free view of the plan, descriptor pins,
+required capabilities, limits, usage, and bounded diagnostics. It cannot issue
+an admission receipt or execute workflow work.
 
 See [the roadmap](docs/roadmap.md) and
 [the first implementation batch](docs/first-batch.md).

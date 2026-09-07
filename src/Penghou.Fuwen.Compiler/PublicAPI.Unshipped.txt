@@ -268,3 +268,17 @@ Penghou.Fuwen.Compiler.WorkflowAdmissionResult.Succeeded.get -> bool
 Penghou.Fuwen.Compiler.WorkflowAdmissionService
 Penghou.Fuwen.Compiler.WorkflowAdmissionService.AdmitAsync(Penghou.Fuwen.WorkflowPlan! plan, Penghou.Fuwen.Compiler.CompilationBudget? callerBudget = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.WorkflowAdmissionResult!>
 Penghou.Fuwen.Compiler.WorkflowAdmissionService.WorkflowAdmissionService(Penghou.Fuwen.Compiler.WorkflowCompiler! compiler) -> void
+Penghou.Fuwen.Compiler.WorkflowExplanation
+static Penghou.Fuwen.Compiler.WorkflowExplanation.Create(Penghou.Fuwen.Compiler.CompilationResult! compilation) -> Penghou.Fuwen.Compiler.WorkflowExplanation!
+static Penghou.Fuwen.Compiler.WorkflowExplanation.Create(Penghou.Fuwen.Compiler.WorkflowAdmissionResult! admission) -> Penghou.Fuwen.Compiler.WorkflowExplanation!
+Penghou.Fuwen.Compiler.WorkflowExplanation.AdmissionEvaluated.get -> bool
+Penghou.Fuwen.Compiler.WorkflowExplanation.AdmissionSucceeded.get -> bool
+Penghou.Fuwen.Compiler.WorkflowExplanation.Compilation.get -> Penghou.Fuwen.Compiler.CompilationResult!
+Penghou.Fuwen.Compiler.WorkflowExplanation.CompilationSucceeded.get -> bool
+Penghou.Fuwen.Compiler.WorkflowExplanation.Diagnostics.get -> Penghou.Fuwen.Compiler.DiagnosticCollection!
+Penghou.Fuwen.Compiler.WorkflowExplanation.EffectiveBudget.get -> Penghou.Fuwen.Compiler.CompilationBudget!
+Penghou.Fuwen.Compiler.WorkflowExplanation.ExecutionFingerprint.get -> string?
+Penghou.Fuwen.Compiler.WorkflowExplanation.Plan.get -> Penghou.Fuwen.WorkflowPlan?
+Penghou.Fuwen.Compiler.WorkflowExplanation.RequiredCapabilities.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.CapabilityRequirement!>!
+Penghou.Fuwen.Compiler.WorkflowExplanation.ResolvedDescriptorPins.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>!
+Penghou.Fuwen.Compiler.WorkflowExplanation.Usage.get -> Penghou.Fuwen.Compiler.CompilationUsageSummary!

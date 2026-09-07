@@ -106,6 +106,21 @@ public sealed class DiagnosticsAndBudgetTests
     }
 
     [Fact]
+    public void Tracker_BatchConsumptionIsAtomicAcrossRepeatedDimensions()
+    {
+        var tracker = new CompilationBudgetTracker(new CompilationBudget(maxAstNodes: 3));
+
+        var accepted = tracker.TryConsumeBatch(
+        [
+            (CompilationBudgetDimension.AstNodes, 2),
+            (CompilationBudgetDimension.AstNodes, 2),
+        ]);
+
+        accepted.Should().BeFalse();
+        tracker.Snapshot().AstNodes.Should().Be(0);
+    }
+
+    [Fact]
     public void CompilationResult_DoesNotRetainCallerPlanOrDisposedLiteral()
     {
         using var document = JsonDocument.Parse("\"detached\"");

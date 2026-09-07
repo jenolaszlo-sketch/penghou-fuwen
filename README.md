@@ -79,6 +79,9 @@ changes. It is an explanation surface, not permission to reuse runtime artifacts
 into a deterministic, side-effect-free view of the plan, descriptor pins,
 required capabilities, limits, usage, and bounded diagnostics. It cannot issue
 an admission receipt or execute workflow work.
+Trusted catalogue results are also charged cumulatively against the existing
+structural and UTF-8 text budgets, preventing many individually valid descriptor
+payloads from amplifying compiler memory beyond the admitted limits.
 
 See [the roadmap](docs/roadmap.md) and
 [the first implementation batch](docs/first-batch.md).

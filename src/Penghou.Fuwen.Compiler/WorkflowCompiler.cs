@@ -971,8 +971,8 @@ internal static class PlanUsage
     }
 
     internal static CompilationUsageSummary AddCatalogueUsage(CompilationUsageSummary local, CompilationUsageSummary catalogue, long started) => new(
-        local.SourceBytes, local.Tokens, local.AstNodes, local.NestingDepth, local.WorkflowNodes,
-        local.Schemas, local.SchemaDepth, local.SchemaFields, local.Expressions, local.StringBytes,
+        local.SourceBytes, local.Tokens, checked(local.AstNodes + catalogue.AstNodes), local.NestingDepth, local.WorkflowNodes,
+        local.Schemas, local.SchemaDepth, local.SchemaFields, local.Expressions, checked(local.StringBytes + catalogue.StringBytes),
         local.Diagnostics, catalogue.CatalogueLookups, catalogue.CatalogueLookupMilliseconds,
         ElapsedMilliseconds(started));
 

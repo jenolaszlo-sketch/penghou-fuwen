@@ -483,6 +483,11 @@ All unchecked items are proposed work, not implemented guarantees.
   as persisted JSON; reject null entries and excessive depth with bounded stable
   diagnostics. Include unknown enums, delimiter-bearing names, recursive schemas,
   and hostile collection/depth fixtures.
+  Aggregate trusted-catalogue metadata accounting is complete: resolved schema,
+  callable, capability, and descriptor payloads are charged atomically against
+  the existing AST-node and UTF-8 string-byte ceilings, including the combined
+  plan-plus-catalogue compiler budget. Snapshot-boundary text limits, digest
+  validation, delimiter-safe keys, and recursive-schema policy remain.
 - [ ] **Prove numeric and Unicode identity portability before expanding hashing.**
   `CanonicalJson.WriteNumber` selects decimal then double; define accepted numeric
   range/precision and reject unsupported loss rather than accidentally giving
@@ -952,10 +957,10 @@ only after repeated integration demonstrates a real reusable boundary.
 
 Continue with Delivery milestone B:
 
-1. Close aggregate trusted-catalogue metadata budgeting so many individually
-   valid descriptor payloads cannot amplify beyond host limits.
-2. Bound text and literal copying at the programmatic snapshot boundary, then
+1. Bound text and literal copying at the programmatic snapshot boundary, then
    tighten digest identity and delimiter-safe duplicate keys.
+2. Decide and enforce recursive-schema and enum-literal semantics, then tighten
+   context-snapshot output typing.
 3. Extend the initial pure explain projection with trusted callable-effect
    summaries and repair-oriented diagnostics where the compiler retains enough
    evidence to do so safely.

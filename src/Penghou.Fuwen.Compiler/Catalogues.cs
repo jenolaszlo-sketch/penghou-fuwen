@@ -348,6 +348,8 @@ public class TrustedCatalogueResolver
         var deadlineTicks = CreateDeadline(Stopwatch.GetTimestamp(), budget.MaxCatalogueLookupMilliseconds);
         long elapsedTotalStopwatchTicks = 0;
         var timeBudgetExceeded = false;
+        var metadataBudgetExceeded = false;
+        IReadOnlyList<CompilerDiagnostic>? metadataBudgetDiagnostics = null;
         foreach (var descriptor in requests)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -357,6 +359,15 @@ public class TrustedCatalogueResolver
                     descriptor,
                     DescriptorResolutionStatus.BudgetExceeded,
                     diagnostics: [CatalogueDiagnostics.LookupTimeBudgetExceeded(budget.MaxCatalogueLookupMilliseconds)]));
+                continue;
+            }
+
+            if (metadataBudgetExceeded)
+            {
+                results.Add(new DescriptorResolutionResult(
+                    descriptor,
+                    DescriptorResolutionStatus.BudgetExceeded,
+                    diagnostics: metadataBudgetDiagnostics!));
                 continue;
             }
 
@@ -390,6 +401,21 @@ public class TrustedCatalogueResolver
                 CompilationBudgetDimension.CatalogueLookupMilliseconds,
                 StopwatchTicksToMillisecondsCeiling(outcome.ElapsedStopwatchTicks));
             var result = outcome.Result!;
+
+            var metadataClaims = result.Succeeded && result.Descriptor is not null
+                ? CatalogueContractValidation.MetadataBudgetClaims(result.Descriptor)
+                : Array.Empty<(CompilationBudgetDimension Dimension, long Amount)>();
+            if (metadataClaims.Count > 0 && !tracker.TryConsumeBatch(metadataClaims))
+            {
+                metadataBudgetExceeded = true;
+                metadataBudgetDiagnostics = MetadataBudgetDiagnostics(tracker, metadataClaims);
+                results.Add(new DescriptorResolutionResult(
+                    descriptor,
+                    DescriptorResolutionStatus.BudgetExceeded,
+                    diagnostics: metadataBudgetDiagnostics,
+                    usage: Usage(tracker, elapsedTotalStopwatchTicks)));
+                continue;
+            }
 
             results.Add(new DescriptorResolutionResult(
                 result.Requested,
@@ -434,6 +460,19 @@ public class TrustedCatalogueResolver
             CompilationBudgetDimension.CatalogueLookupMilliseconds,
             StopwatchTicksToMillisecondsCeiling(outcome.ElapsedStopwatchTicks));
         var result = outcome.Result!;
+
+        if (result.Succeeded && result.Descriptor is not null)
+        {
+            var metadataClaims = CatalogueContractValidation.MetadataBudgetClaims(result.Descriptor);
+            if (!tracker.TryConsumeBatch(metadataClaims))
+            {
+                return new DescriptorResolutionResult(
+                    descriptor,
+                    DescriptorResolutionStatus.BudgetExceeded,
+                    diagnostics: MetadataBudgetDiagnostics(tracker, metadataClaims),
+                    usage: Usage(tracker, outcome.ElapsedStopwatchTicks));
+            }
+        }
 
         return new DescriptorResolutionResult(
             result.Requested,
@@ -637,6 +676,35 @@ public class TrustedCatalogueResolver
             catalogueLookups: snapshot.CatalogueLookups,
             catalogueLookupMilliseconds: elapsedMilliseconds,
             compilationMilliseconds: snapshot.CompilationMilliseconds);
+    }
+
+    private IReadOnlyList<CompilerDiagnostic> MetadataBudgetDiagnostics(
+        CompilationBudgetTracker tracker,
+        IReadOnlyList<(CompilationBudgetDimension Dimension, long Amount)> claims)
+    {
+        var current = tracker.Snapshot();
+        var astNodes = checked(current.AstNodes + claims
+            .Where(static claim => claim.Dimension == CompilationBudgetDimension.AstNodes)
+            .Sum(static claim => claim.Amount));
+        var stringBytes = checked(current.StringBytes + claims
+            .Where(static claim => claim.Dimension == CompilationBudgetDimension.StringBytes)
+            .Sum(static claim => claim.Amount));
+        var attempted = new CompilationUsageSummary(
+            sourceBytes: current.SourceBytes,
+            tokens: current.Tokens,
+            astNodes: astNodes,
+            nestingDepth: current.NestingDepth,
+            workflowNodes: current.WorkflowNodes,
+            schemas: current.Schemas,
+            schemaDepth: current.SchemaDepth,
+            schemaFields: current.SchemaFields,
+            expressions: current.Expressions,
+            stringBytes: stringBytes,
+            diagnostics: current.Diagnostics,
+            catalogueLookups: current.CatalogueLookups,
+            catalogueLookupMilliseconds: current.CatalogueLookupMilliseconds,
+            compilationMilliseconds: current.CompilationMilliseconds);
+        return CompilationBudgetEvaluator.Evaluate(budget, attempted).Diagnostics;
     }
 
     private sealed record LookupOutcome(
@@ -928,6 +996,37 @@ internal static class CatalogueContractValidation
         }
     }
 
+    internal static IReadOnlyList<(CompilationBudgetDimension Dimension, long Amount)> MetadataBudgetClaims(
+        TrustedCatalogueDescriptor descriptor)
+    {
+        ArgumentNullException.ThrowIfNull(descriptor);
+        var metadata = new CatalogueMetadataClaim(
+            descriptor.Descriptor,
+            descriptor.SchemaDefinition,
+            descriptor.RequiredCapabilities,
+            descriptor.CallableContract);
+        var metadataBytes = CanonicalJson.Serialize(metadata).LongLength;
+        var capabilities = descriptor.RequiredCapabilities.Count;
+        var callableParameters = descriptor.CallableContract?.Signature.Parameters.Count ?? 0;
+        var schemaNodes = 0;
+        if (descriptor.SchemaDefinition is not null)
+            CountMetadataSchemaNodes(descriptor.SchemaDefinition, ref schemaNodes);
+        if (descriptor.CallableContract is not null)
+        {
+            foreach (var parameter in descriptor.CallableContract.Signature.Parameters)
+                CountMetadataTypeNodes(parameter.Type, ref schemaNodes);
+            CountMetadataTypeNodes(descriptor.CallableContract.Signature.OutputType, ref schemaNodes);
+        }
+
+        // Trusted metadata is accounted as additional compiler structure and
+        // canonical text. It is deliberately added to the existing dimensions
+        // so admission receipts and caller budgets retain their meaning.
+        return [
+            (CompilationBudgetDimension.StringBytes, metadataBytes),
+            (CompilationBudgetDimension.AstNodes, checked((long)capabilities + callableParameters + schemaNodes)),
+        ];
+    }
+
     internal static string Display(DescriptorReference descriptor) =>
         $"{descriptor.Kind}:{descriptor.Name}@{descriptor.Version}";
 
@@ -1053,6 +1152,12 @@ internal static class CatalogueContractValidation
             .ThenBy(static capability => capability.ScopeClass, StringComparer.Ordinal)
             .ToArray());
 
+    private sealed record CatalogueMetadataClaim(
+        DescriptorReference Descriptor,
+        ResolvedSchemaDefinition? SchemaDefinition,
+        IReadOnlyList<CapabilityRequirement> RequiredCapabilities,
+        CallableContract? CallableContract);
+
     private static void CountSchemaNodes(FuwenType type, ref int total)
     {
         CountNode(ref total);
@@ -1082,6 +1187,42 @@ internal static class CatalogueContractValidation
             case EnumSchemaDefinition @enum:
                 foreach (var member in @enum.Members)
                     CountNode(ref total);
+                break;
+        }
+    }
+
+    private static void CountMetadataSchemaNodes(
+        ResolvedSchemaDefinition schema,
+        ref int nodes)
+    {
+        nodes = checked(nodes + 1);
+        switch (schema)
+        {
+            case ObjectSchemaDefinition @object:
+                foreach (var field in @object.Fields)
+                {
+                    nodes = checked(nodes + 1);
+                    CountMetadataTypeNodes(field.Type, ref nodes);
+                }
+                break;
+            case EnumSchemaDefinition @enum:
+                nodes = checked(nodes + @enum.Members.Count);
+                break;
+        }
+    }
+
+    private static void CountMetadataTypeNodes(
+        FuwenType type,
+        ref int nodes)
+    {
+        nodes = checked(nodes + 1);
+        switch (type)
+        {
+            case OptionalType optional:
+                CountMetadataTypeNodes(optional.ValueType, ref nodes);
+                break;
+            case ListType list:
+                CountMetadataTypeNodes(list.ItemType, ref nodes);
                 break;
         }
     }

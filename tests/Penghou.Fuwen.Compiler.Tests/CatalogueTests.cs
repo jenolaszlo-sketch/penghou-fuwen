@@ -188,6 +188,59 @@ public sealed class CatalogueTests
     }
 
     [Fact]
+    public async Task Resolver_AccountsAggregateTrustedMetadataAgainstExistingBudgets()
+    {
+        var first = Descriptor(DescriptorKind.Activity, "a.callable", "1", 'a');
+        var second = Descriptor(DescriptorKind.Activity, "b.callable", "1", 'b');
+        var catalogue = new InMemoryTrustedCatalogue(
+        [
+            new TrustedCatalogueDescriptor(first, callableContract: CallableWithParameter()),
+            new TrustedCatalogueDescriptor(second, callableContract: CallableWithParameter()),
+        ]);
+        var resolver = new TrustedCatalogueResolver(
+            catalogue,
+            new CompilationBudget(maxAstNodes: 5, maxStringBytes: 1_000_000));
+
+        var batch = await resolver.ResolveManyAsync([second, first], TestContext.Current.CancellationToken);
+
+        batch.Results.Select(static result => result.Requested.Name)
+            .Should().Equal("a.callable", "b.callable");
+        batch.Results[0].Status.Should().Be(DescriptorResolutionStatus.Resolved);
+        batch.Results[1].Status.Should().Be(DescriptorResolutionStatus.BudgetExceeded);
+        batch.Results[1].Diagnostics.Select(static diagnostic => diagnostic.Code)
+            .Should().ContainSingle().Which.Should().Be(CompilerDiagnosticCodes.BudgetAstNodesExceeded);
+        batch.Usage.AstNodes.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task Resolver_AccountsAggregateTrustedMetadataBytesAcrossDescriptors()
+    {
+        var first = Descriptor(DescriptorKind.Activity, "a." + new string('x', 160), "1", 'a');
+        var second = Descriptor(DescriptorKind.Activity, "b." + new string('x', 160), "1", 'b');
+        var catalogue = new InMemoryTrustedCatalogue(
+        [
+            new TrustedCatalogueDescriptor(first, callableContract: CallableWithParameter()),
+            new TrustedCatalogueDescriptor(second, callableContract: CallableWithParameter()),
+        ]);
+        var individualResolver = new TrustedCatalogueResolver(catalogue);
+        var firstUsage = await individualResolver.ResolveAsync(first, TestContext.Current.CancellationToken);
+        var secondUsage = await individualResolver.ResolveAsync(second, TestContext.Current.CancellationToken);
+        var metadataBytesForBoth = checked(firstUsage.Usage.StringBytes + secondUsage.Usage.StringBytes);
+        var resolver = new TrustedCatalogueResolver(
+            catalogue,
+            new CompilationBudget(maxStringBytes: metadataBytesForBoth - 1, maxAstNodes: 100));
+
+        var batch = await resolver.ResolveManyAsync([first, second], TestContext.Current.CancellationToken);
+
+        firstUsage.Succeeded.Should().BeTrue();
+        secondUsage.Succeeded.Should().BeTrue();
+        batch.Results[0].Succeeded.Should().BeTrue();
+        batch.Results[1].Status.Should().Be(DescriptorResolutionStatus.BudgetExceeded);
+        batch.Results[1].Diagnostics.Select(static diagnostic => diagnostic.Code)
+            .Should().ContainSingle().Which.Should().Be(CompilerDiagnosticCodes.BudgetStringBytesExceeded);
+    }
+
+    [Fact]
     public async Task Resolver_ObservesCancellationBeforeCallingCatalogue()
     {
         var descriptor = Descriptor(DescriptorKind.Activity, "sample.activity", "1", 'a');
@@ -395,6 +448,14 @@ public sealed class CatalogueTests
     private static CallableContract Callable(CallableEffect effect) => new(
         new CallableSignature([], new PrimitiveType(FuwenPrimitiveKind.Boolean)),
         effect,
+        CallableIdempotency.Idempotent,
+        CallableRetrySafety.Safe);
+
+    private static CallableContract CallableWithParameter() => new(
+        new CallableSignature(
+            [new CallableParameter("request", new PrimitiveType(FuwenPrimitiveKind.String))],
+            new PrimitiveType(FuwenPrimitiveKind.Boolean)),
+        CallableEffect.Read,
         CallableIdempotency.Idempotent,
         CallableRetrySafety.Safe);
 

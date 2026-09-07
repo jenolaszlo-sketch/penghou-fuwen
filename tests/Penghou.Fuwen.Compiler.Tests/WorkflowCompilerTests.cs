@@ -388,6 +388,28 @@ public sealed class WorkflowCompilerTests
     }
 
     [Fact]
+    public void Compiler_RejectsCombinedPlanAndTrustedMetadataBudgetBeforeDefinitionCreation()
+    {
+        var plan = Fixture.CreatePlan();
+        var catalogue = Fixture.CreateCatalogue(plan);
+        var baseline = new WorkflowCompiler(catalogue, capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(plan, cancellationToken: TestContext.Current.CancellationToken);
+        var localUsage = PlanUsage.Count(plan);
+        var metadataBytes = baseline.Usage.StringBytes - localUsage.StringBytes;
+        metadataBytes.Should().BePositive();
+        var budget = new CompilationBudget(
+            maxStringBytes: checked(localUsage.StringBytes + metadataBytes - 1));
+
+        var result = new WorkflowCompiler(catalogue, budget, CapabilityGrantPolicy.AllowAll)
+            .Compile(plan, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Definition.Should().BeNull();
+        result.Usage.CatalogueLookups.Should().BePositive();
+        result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.BudgetStringBytesExceeded);
+    }
+
+    [Fact]
     public void Compiler_RequiresTrustedCallableMetadata()
     {
         var plan = Fixture.CreatePlan();

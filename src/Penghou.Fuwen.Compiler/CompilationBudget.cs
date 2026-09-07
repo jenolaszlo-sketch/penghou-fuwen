@@ -323,6 +323,27 @@ public sealed class CompilationBudgetTracker
         return true;
     }
 
+    internal bool TryConsumeBatch(IReadOnlyList<(CompilationBudgetDimension Dimension, long Amount)> values)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        var pending = new long[_usage.Length];
+        foreach (var (dimension, amount) in values)
+        {
+            if (!Enum.IsDefined(dimension))
+                throw new ArgumentOutOfRangeException(nameof(values));
+            if (amount < 0)
+                throw new ArgumentOutOfRangeException(nameof(values));
+            var index = (int)dimension;
+            pending[index] = checked(pending[index] + amount);
+            if (_usage[index] > _budget.Limit(dimension) - pending[index])
+                return false;
+        }
+
+        for (var index = 0; index < pending.Length; index++)
+            _usage[index] += pending[index];
+        return true;
+    }
+
     public bool IsExceeded(CompilationBudgetDimension dimension)
     {
         if (!Enum.IsDefined(dimension))

@@ -4,7 +4,7 @@
 
 **Delivery milestone A complete — Delivery milestone B in progress**
 
-Last reviewed: **2026-09-07**
+Last reviewed: **2026-09-10**
 
 Fuwen is the proposed typed authoring and compilation layer for portable,
 capability-reviewed AI workflows. It produces an immutable executable plan; it
@@ -334,6 +334,11 @@ Progress:
   loading, and an idempotent store that rejects changed reuse of a revision ID.
   Lineage documents remain integrity evidence and never authorize activation,
   precedence, execution, or artifact reuse.
+- [x] Close the first schema/identity portability slice: reject recursive named
+  schema graphs with deterministic bounded diagnostics, count reference depth,
+  validate enum literals against their serialized member values, reject lossy
+  numeric fallback, and prove decimal/Unicode/property-order behavior through
+  matching .NET and independent Python vectors.
 
 ### Marang Gate 0.5 — plan acceptance and supervisory execution
 
@@ -392,11 +397,17 @@ model-mediated source:
   cancellation, duplicate, replay, and late-input semantics. Do not encode
   this as an undocumented Marang graph trick or as a generic activity with
   hidden control-flow meaning.
-- **Typed context requirements and snapshot references.** Add an explicit
-  context requirement/request contract and an immutable typed snapshot
-  reference carrying the provider/request identity, content/revision hash,
-  policy/budget metadata, and provenance needed for retry versus refresh. Bind
-  references to declared context nodes and validate their type and scope.
+- [x] **Provider-neutral runtime values and snapshot references.** Add an
+  immutable runtime-value union limited to detached JSON and artifact
+  identities, plus a bounded context-snapshot reference carrying the exact
+  provider descriptor, request/content digests, source revisions,
+  policy/budget metadata, creation time, and optional opaque provenance receipt.
+  The compiler validates primitive, optional, list, object, enum, and artifact
+  values strictly without coercion. Context payload storage, authorization,
+  and dereferencing remain host responsibilities.
+- [ ] **Typed context requirements.** Add an explicit context
+  requirement/request contract, bind references to declared context nodes, and
+  validate their type and scope.
 
 #### P1 — reusable execution seam for Marang
 
@@ -479,31 +490,33 @@ All unchecked items are proposed work, not implemented guarantees.
   evidence contracts, and `LoadVerified` continues to verify historical bytes
   without semantic admission or reinterpretation. This closes the descriptor
   digest portion of this item. Schema/descriptor consistency is checked against
-  trusted catalogues; the recursive-schema policy and broader hostile-shape
-  fixtures below remain before the item is complete.
+  trusted catalogues. Recursive named schemas now fail closed with stable,
+  bounded cycle diagnostics, schema-reference depth contributes to compiler
+  usage, and enum literals must match resolved serialized member values.
   Bound programmatically constructed trees before recursive traversal, as well
   as persisted JSON; reject null entries and excessive depth with bounded stable
-  diagnostics. Include unknown enums, delimiter-bearing names, recursive schemas,
-  and hostile collection/depth fixtures.
+  diagnostics. Delimiter-bearing identities, recursive schemas, and the current
+  collection/depth surfaces have focused fixtures. Complete the remaining
+  unknown-enum and adversarial entry-point matrix before closing this umbrella.
   Aggregate trusted-catalogue metadata accounting is complete: resolved schema,
   callable, capability, and descriptor payloads are charged atomically against
   the existing AST-node and UTF-8 string-byte ceilings, including the combined
-  plan-plus-catalogue compiler budget. Digest validation and recursive-schema
-  policy remain. Caller-controlled text and JSON
-  literals are now preflighted before snapshot allocation; historical IR v1 is
+  plan-plus-catalogue compiler budget. Caller-controlled text and JSON literals
+  are now preflighted before snapshot allocation; historical IR v1 is
   bound to its exact compiler-semantics contract; descriptor and capability
   duplicate detection now uses typed identities instead of delimiter-built keys;
   and artifact references cannot carry non-artifact descriptors.
-- [ ] **Prove numeric and Unicode identity portability before expanding hashing.**
-  `CanonicalJson.WriteNumber` selects decimal then double; define accepted numeric
-  range/precision and reject unsupported loss rather than accidentally giving
-  distinct numeric literals one identity. Extend the Python/.NET vectors beyond
-  ASCII and small integers: decimal precision boundaries, tiny/huge exponents,
-  negative zero, escaped characters, non-BMP text, and property ordering.
-  The Python fixture currently uses Python's default escaping/ordering, which is
-  not proof of equivalence to .NET for these cases. Compare the existing Siming
-  canonical contract before sharing an implementation; preserve published hash
-  versions and never silently reinterpret historical bytes.
+- [x] **Prove numeric and Unicode identity portability before expanding hashing.**
+  `CanonicalJson.WriteNumber` previously selected decimal and then a lossy
+  `double` fallback. The accepted v1 numeric range and precision are now explicit
+  so distinct numeric literals cannot accidentally acquire the same identity.
+  The v1 contract now accepts exact decimal values only, normalizes equivalent
+  zero spellings, rejects the former lossy `double` fallback, and fixes escaping
+  and ordinal ordering through matching .NET/Python vectors. The independent
+  oracle covers decimal precision/range boundaries, exponents, negative zero,
+  escaped characters, non-BMP text, and property ordering. Compare the existing
+  Siming contract before sharing an implementation; a future expansion requires
+  a new version and must never reinterpret historical bytes.
 
 #### Priority 1 — shorten the path from a valid plan to a useful workflow (B/C)
 
@@ -795,9 +808,10 @@ Penghou.Fuwen.Compiler
   surfaces into one lowest-level transport API.
 - [ ] Define tools with schemas, side effects, idempotency, retry safety,
   capabilities, and host-handle restrictions.
-- [ ] Define `ContextSnapshot`: provider/descriptors, request fingerprint,
-  selected opaque references/content revisions, policy revision,
-  truncation/budget metadata, hash, provenance, and creation time.
+- [x] Define `ContextSnapshotReference`: provider descriptor, request/content
+  digests, selected opaque source revisions, policy revision,
+  truncation/budget metadata, bounded provenance receipt, and creation time.
+  The host-owned store and authorization/dereference contract remain open.
 - [ ] Decide the host-owned snapshot/artifact store contract; Fuwen must not
   become a context-content store.
 - [ ] Treat Nuwa repair and final schema validation as separate typed outcomes.
@@ -963,19 +977,21 @@ only after repeated integration demonstrates a real reusable boundary.
 
 Continue with Delivery milestone B:
 
-1. Decide and enforce recursive-schema and enum-literal semantics, then tighten
-   context-snapshot output typing.
+1. Define the provider-neutral typed context-snapshot contract and runtime value
+   validation seam for activity, context, and inference outputs. The metadata
+   and strict compiler validator are now complete; remaining work is the
+   declared request/input contract and execution-port integration.
 2. Extend the initial pure explain projection with trusted callable-effect
    summaries and repair-oriented diagnostics where the compiler retains enough
    evidence to do so safely.
-3. Then begin Delivery C's typed execution ports and sequential fake-Zhinu
+3. Begin Delivery C's typed execution ports and sequential fake-Zhinu
    adapter slice; plan comparison is ready for later transition analysis.
 4. Keep loops, waits, transition activation, artifact-reuse authorization, and
    the text grammar out of this batch.
 
-Do **not** begin with the text grammar. The next deliverable is programmatic
-safety closure and explanation enrichment, followed by the narrow typed
-execution-port slice. Immutable revision lineage, deterministic plan comparison,
-the first pure explanation projection, and canonical descriptor-digest
-admission are complete. The admission receipt is the authorization seam for a
-later execution port; it is not itself an executor.
+Do **not** begin with the text grammar. Recursive schemas, enum literals,
+numeric/Unicode portability, runtime-value validation, and context-snapshot
+evidence are now closed for the current programmatic surface. The next
+deliverable is the declared context-request contract and explanation enrichment,
+followed by the narrow typed execution-port slice. The admission receipt is the
+authorization seam for a later execution port; it is not itself an executor.

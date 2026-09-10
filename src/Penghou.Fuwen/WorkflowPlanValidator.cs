@@ -447,7 +447,7 @@ public static class WorkflowPlanValidator
     {
         if (returnNode.Value is LiteralBinding literal)
         {
-            if (!LiteralMatchesType(literal.Value, plan.OutputType))
+            if (!LiteralMatchesType(literal.Value, plan.OutputType, plan.Schemas))
                 throw new ArgumentException(
                     $"Return node '{returnNode.StructuralPath}' has a literal value incompatible with the declared output type.",
                     nameof(returnNode.Value));
@@ -508,12 +508,15 @@ public static class WorkflowPlanValidator
         return type;
     }
 
-    private static bool LiteralMatchesType(JsonElement value, FuwenType type)
+    private static bool LiteralMatchesType(
+        JsonElement value,
+        FuwenType type,
+        IReadOnlyList<ResolvedSchemaDefinition> schemas)
     {
         if (value.ValueKind is JsonValueKind.Undefined)
             return false;
         if (type is OptionalType optional)
-            return value.ValueKind is JsonValueKind.Null || LiteralMatchesType(value, optional.ValueType);
+            return value.ValueKind is JsonValueKind.Null || LiteralMatchesType(value, optional.ValueType, schemas);
         if (type is PrimitiveType primitive)
         {
             return primitive.Primitive switch
@@ -527,6 +530,13 @@ public static class WorkflowPlanValidator
                 _ => false,
             };
         }
+        if (type is NamedTypeReference named &&
+            schemas.FirstOrDefault(schema => schema.Descriptor == named.Schema) is EnumSchemaDefinition @enum)
+        {
+            return value.ValueKind is JsonValueKind.String &&
+                @enum.Members.Any(member => string.Equals(member.Value, value.GetString(), StringComparison.Ordinal));
+        }
+
         return false;
     }
 
@@ -596,9 +606,14 @@ public static class WorkflowPlanValidator
 
     private static void ValidateSchemas(IReadOnlyList<ResolvedSchemaDefinition> schemas)
     {
+        ArgumentNullException.ThrowIfNull(schemas);
+        if (schemas.Count > WorkflowPlanSnapshotLimits.MaximumCollectionCount)
+            throw new ArgumentException("schemas collection count exceeds the bounded limit", nameof(schemas));
+
         var descriptors = new HashSet<DescriptorReference>();
         foreach (var schema in schemas)
         {
+            ArgumentNullException.ThrowIfNull(schema);
             RequireKind(schema.Descriptor, DescriptorKind.Schema);
             if (!descriptors.Add(schema.Descriptor))
                 throw new ArgumentException($"Duplicate resolved schema '{schema.Descriptor.Name}@{schema.Descriptor.Version}'.", nameof(schemas));
@@ -606,6 +621,9 @@ public static class WorkflowPlanValidator
             switch (schema)
             {
                 case ObjectSchemaDefinition @object:
+                    ArgumentNullException.ThrowIfNull(@object.Fields);
+                    if (@object.Fields.Count > WorkflowPlanSnapshotLimits.MaximumCollectionCount)
+                        throw new ArgumentException("schema fields collection count exceeds the bounded limit", nameof(schemas));
                     var duplicateField = @object.Fields
                         .GroupBy(field => field.Name, StringComparer.Ordinal)
                         .FirstOrDefault(group => group.Count() > 1);
@@ -613,17 +631,22 @@ public static class WorkflowPlanValidator
                         throw new ArgumentException($"Duplicate field '{duplicateField.Key}' in schema '{@object.Descriptor.Name}'.", nameof(schemas));
                     foreach (var field in @object.Fields)
                     {
+                        ArgumentNullException.ThrowIfNull(field);
                         StructuralNodeIdentity.ValidateSegment(field.Name);
                         ValidateType(field.Type);
                     }
                     break;
                 case EnumSchemaDefinition @enum:
+                    ArgumentNullException.ThrowIfNull(@enum.Members);
+                    if (@enum.Members.Count > WorkflowPlanSnapshotLimits.MaximumCollectionCount)
+                        throw new ArgumentException("enum members collection count exceeds the bounded limit", nameof(schemas));
                     if (@enum.Members.Count == 0)
                         throw new ArgumentException($"Enum schema '{@enum.Descriptor.Name}' must declare at least one member.", nameof(schemas));
                     var names = new HashSet<string>(StringComparer.Ordinal);
                     var values = new HashSet<string>(StringComparer.Ordinal);
                     foreach (var member in @enum.Members)
                     {
+                        ArgumentNullException.ThrowIfNull(member);
                         StructuralNodeIdentity.ValidateSegment(member.Name);
                         RequireText(member.Value, nameof(member.Value));
                         if (!names.Add(member.Name) || !values.Add(member.Value))
@@ -634,7 +657,90 @@ public static class WorkflowPlanValidator
                     throw new NotSupportedException($"Unsupported schema definition type '{schema.GetType().Name}'.");
             }
         }
+
+        ValidateSchemaReferenceGraph(schemas);
     }
+
+    private static void ValidateSchemaReferenceGraph(IReadOnlyList<ResolvedSchemaDefinition> schemas)
+    {
+        var definitions = schemas.ToDictionary(schema => schema.Descriptor);
+        var visited = new HashSet<DescriptorReference>();
+        var active = new HashSet<DescriptorReference>();
+        var stack = new List<DescriptorReference>();
+
+        // Stable root and field ordering keeps malformed-graph diagnostics
+        // deterministic even when source/catalogue enumeration differs.
+        foreach (var descriptor in definitions.Keys.OrderBy(DescribeDescriptor, StringComparer.Ordinal))
+            VisitSchema(descriptor, definitions, visited, active, stack, 0);
+    }
+
+    private static void VisitSchema(
+        DescriptorReference descriptor,
+        IReadOnlyDictionary<DescriptorReference, ResolvedSchemaDefinition> definitions,
+        ISet<DescriptorReference> visited,
+        ISet<DescriptorReference> active,
+        IList<DescriptorReference> stack,
+        int depth)
+    {
+        if (visited.Contains(descriptor))
+            return;
+        if (depth >= WorkflowPlanSnapshotLimits.MaximumNestingDepth)
+            throw new ArgumentException("schema reference depth exceeds the bounded limit");
+        if (!active.Add(descriptor))
+        {
+            var cycleStart = 0;
+            while (cycleStart < stack.Count && stack[cycleStart] != descriptor)
+                cycleStart++;
+            var cycle = stack.Skip(cycleStart).Append(descriptor).Select(DescribeDescriptor);
+            var cycleText = string.Join(" -> ", cycle);
+            const int maximumDiagnosticText = 1024;
+            if (cycleText.Length > maximumDiagnosticText)
+                cycleText = cycleText[..(maximumDiagnosticText - 3)] + "...";
+            throw new ArgumentException($"Recursive schema reference is not supported: {cycleText}.");
+        }
+
+        stack.Add(descriptor);
+        try
+        {
+            if (definitions.TryGetValue(descriptor, out var schema) && schema is ObjectSchemaDefinition @object)
+            {
+                foreach (var reference in @object.Fields
+                    .OrderBy(field => field.Name, StringComparer.Ordinal)
+                    .SelectMany(field => SchemaReferences(field.Type)))
+                {
+                    if (definitions.ContainsKey(reference))
+                        VisitSchema(reference, definitions, visited, active, stack, depth + 1);
+                }
+            }
+            visited.Add(descriptor);
+        }
+        finally
+        {
+            stack.RemoveAt(stack.Count - 1);
+            active.Remove(descriptor);
+        }
+    }
+
+    private static IEnumerable<DescriptorReference> SchemaReferences(FuwenType type)
+    {
+        switch (type)
+        {
+            case NamedTypeReference named:
+                yield return named.Schema;
+                break;
+            case OptionalType optional:
+                foreach (var reference in SchemaReferences(optional.ValueType))
+                    yield return reference;
+                break;
+            case ListType list:
+                foreach (var reference in SchemaReferences(list.ItemType))
+                    yield return reference;
+                break;
+        }
+    }
+
+    private static string DescribeDescriptor(DescriptorReference descriptor) =>
+        $"{descriptor.Kind}:{descriptor.Name}@{descriptor.Version}";
 
     private static void CollectNodeDescriptors(IEnumerable<WorkflowNode> nodes, ISet<DescriptorReference> descriptors)
     {
@@ -726,9 +832,13 @@ public static class WorkflowPlanValidator
         }
     }
 
-    private static void ValidateType(FuwenType type)
+    private static void ValidateType(FuwenType type) => ValidateType(type, 0);
+
+    private static void ValidateType(FuwenType type, int depth)
     {
         ArgumentNullException.ThrowIfNull(type);
+        if (depth >= WorkflowPlanSnapshotLimits.MaximumNestingDepth)
+            throw new ArgumentException("type nesting exceeds the bounded limit", nameof(type));
         switch (type)
         {
             case PrimitiveType primitive when Enum.IsDefined(primitive.Primitive):
@@ -739,12 +849,12 @@ public static class WorkflowPlanValidator
                 RequireKind(named.Schema, DescriptorKind.Schema);
                 break;
             case OptionalType optional:
-                ValidateType(optional.ValueType);
+                ValidateType(optional.ValueType, depth + 1);
                 break;
             case ListType list when list.MaxItems <= 0:
                 throw new ArgumentOutOfRangeException(nameof(type), "List maximum must be positive.");
             case ListType list:
-                ValidateType(list.ItemType);
+                ValidateType(list.ItemType, depth + 1);
                 break;
             case ArtifactType artifact:
                 RequireKind(artifact.ArtifactDescriptor, DescriptorKind.Artifact);

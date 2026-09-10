@@ -6,6 +6,7 @@ numeric suite will be added before the canonical contract is published.
 
 import hashlib
 import json
+import runpy
 from pathlib import Path
 
 source = '{"z":1,"a":{"x":"value"},"items":[3,2,1]}'
@@ -46,3 +47,7 @@ canonical_v2_plan = json.dumps(
 assert canonical_v2_plan == v2_plan_path.read_bytes().rstrip(b"\r\n")
 v2_plan_digest = hashlib.sha256(canonical_v2_plan).hexdigest()
 assert v2_plan_digest == "2bf5c628bcecfdb0970730bc160ee10f2bcbf326875f30430e5b832fafe96571"
+
+# Run the expanded independent numeric and Unicode portability vectors as part
+# of the existing CI golden-vector entry point.
+runpy.run_path(str(Path(__file__).with_name("canonical_json_v1_portability.py")))

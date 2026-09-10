@@ -85,6 +85,16 @@ payloads from amplifying compiler memory beyond the admitted limits.
 Caller-controlled plan text and JSON literals are preflighted before snapshot
 allocation, artifact references enforce artifact descriptor kinds, and every
 supported IR version now requires its exact compiler-semantics contract.
+Recursive named-schema graphs are rejected deterministically, enum literals are
+checked against resolved serialized member values, and the canonical JSON v1
+number domain now rejects lossy floating-point fallback. Matching .NET and
+independent Python vectors cover decimal boundaries, negative zero, Unicode
+escaping, non-BMP text, and ordinal property ordering.
+Provider results can now cross a bounded, provider-neutral runtime boundary as
+detached JSON or artifact identities. Strict runtime validation covers optional,
+list, object, enum, numeric, and nominal artifact types, while immutable context
+snapshot references preserve selection evidence without storing context content
+or granting artifact access. See [runtime evidence](docs/runtime-evidence.md).
 
 See [the roadmap](docs/roadmap.md) and
 [the first implementation batch](docs/first-batch.md).

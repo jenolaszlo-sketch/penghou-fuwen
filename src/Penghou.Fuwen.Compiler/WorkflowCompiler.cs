@@ -766,7 +766,7 @@ internal static class WorkflowBindingValidator
             case LiteralBinding literal:
                 if (literal.Value.ValueKind == JsonValueKind.Undefined)
                     return null;
-                if (expected is not null && !LiteralMatches(literal.Value, expected, exact))
+                if (expected is not null && !LiteralMatches(literal.Value, expected, plan.Schemas, exact))
                     diagnostics.Add(TypeMismatch(expected, consumer.Node.StructuralPath, mismatchCode));
                 return expected ?? InferLiteral(literal.Value);
             case ListBinding list:
@@ -867,10 +867,14 @@ internal static class WorkflowBindingValidator
     private static CompilerDiagnostic TypeMismatch(FuwenType expected, string path, string code) =>
         new(code, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Binding value is incompatible with its expected type.", path: path, expected: Describe(expected));
 
-    private static bool LiteralMatches(JsonElement value, FuwenType type, bool exact) =>
+    private static bool LiteralMatches(
+        JsonElement value,
+        FuwenType type,
+        IReadOnlyList<ResolvedSchemaDefinition> schemas,
+        bool exact) =>
         type switch
         {
-            OptionalType optional => value.ValueKind == JsonValueKind.Null || LiteralMatches(value, optional.ValueType, exact),
+            OptionalType optional => value.ValueKind == JsonValueKind.Null || LiteralMatches(value, optional.ValueType, schemas, exact),
             PrimitiveType primitive => primitive.Primitive switch
             {
                 FuwenPrimitiveKind.String => value.ValueKind == JsonValueKind.String,
@@ -885,6 +889,8 @@ internal static class WorkflowBindingValidator
                 FuwenPrimitiveKind.Json => true,
                 _ => false,
             },
+            NamedTypeReference named when schemas.FirstOrDefault(schema => schema.Descriptor.Equals(named.Schema)) is EnumSchemaDefinition @enum =>
+                value.ValueKind == JsonValueKind.String && @enum.Members.Any(member => string.Equals(member.Value, value.GetString(), StringComparison.Ordinal)),
             _ => false,
         };
 
@@ -952,6 +958,7 @@ internal static class PlanUsage
                 foreach (var field in objectSchema.Fields)
                     schemaDepth = Math.Max(schemaDepth, TypeDepth(field.Type));
             }
+        schemaDepth = Math.Max(schemaDepth, SchemaReferenceDepth(plan.Schemas));
         CountNodes(plan.Nodes, 1, ref nodes, ref expressions, ref depth);
         return new(
             astNodes: nodes + fields + schemas,
@@ -1233,6 +1240,73 @@ internal static class PlanUsage
         ListType list => 1 + TypeDepth(list.ItemType),
         _ => 1,
     };
+
+    private static int SchemaReferenceDepth(IReadOnlyList<ResolvedSchemaDefinition> schemas)
+    {
+        var definitions = schemas
+            .GroupBy(schema => schema.Descriptor)
+            .ToDictionary(group => group.Key, group => group.First());
+        var active = new HashSet<DescriptorReference>();
+        var memoized = new Dictionary<DescriptorReference, int>();
+        var cycleDetected = false;
+        var maximum = 0;
+        foreach (var descriptor in definitions.Keys)
+            maximum = Math.Max(maximum, VisitSchema(descriptor, 1));
+        return cycleDetected ? 0 : maximum;
+
+        int VisitSchema(DescriptorReference descriptor, int traversalDepth)
+        {
+            // Plan usage is measured before semantic validation. Stop at the
+            // trusted-catalogue schema boundary so hostile named-reference
+            // chains cannot exhaust the process stack before being rejected.
+            if (traversalDepth > CatalogueContractValidation.MaximumSchemaDepth)
+                return CatalogueContractValidation.MaximumSchemaDepth + 1;
+            if (memoized.TryGetValue(descriptor, out var known))
+                return known;
+            if (!active.Add(descriptor))
+            {
+                cycleDetected = true;
+                return 1;
+            }
+
+            var result = 1;
+            if (definitions.TryGetValue(descriptor, out var schema) && schema is ObjectSchemaDefinition @object)
+            {
+                foreach (var reference in @object.Fields.SelectMany(field => SchemaReferences(field.Type)))
+                {
+                    if (definitions.ContainsKey(reference))
+                    {
+                        var referencedDepth = VisitSchema(reference, traversalDepth + 1);
+                        result = referencedDepth > CatalogueContractValidation.MaximumSchemaDepth
+                            ? referencedDepth
+                            : Math.Max(result, 1 + referencedDepth);
+                    }
+                }
+            }
+
+            active.Remove(descriptor);
+            memoized[descriptor] = result;
+            return result;
+        }
+
+        static IEnumerable<DescriptorReference> SchemaReferences(FuwenType type)
+        {
+            switch (type)
+            {
+                case NamedTypeReference named:
+                    yield return named.Schema;
+                    break;
+                case OptionalType optional:
+                    foreach (var reference in SchemaReferences(optional.ValueType))
+                        yield return reference;
+                    break;
+                case ListType list:
+                    foreach (var reference in SchemaReferences(list.ItemType))
+                        yield return reference;
+                    break;
+            }
+        }
+    }
 
     private static void AddNodes(IEnumerable<WorkflowNode> values, List<DescriptorReference> result)
     {

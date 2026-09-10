@@ -86,6 +86,47 @@ public sealed class WorkflowCompilerTests
         result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.SemanticValidationFailed);
     }
 
+    [Theory]
+    [InlineData("high", true)]
+    [InlineData("unknown", false)]
+    public void Compiler_ValidatesEnumLiteralValuesAgainstTrustedSchema(string value, bool valid)
+    {
+        var source = Fixture.CreatePlan();
+        var severity = Fixture.Descriptor(DescriptorKind.Schema, "sample.severity");
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(value));
+        var activity = source.Nodes.OfType<ActivityNode>().Single();
+        var plan = source with
+        {
+            Schemas = [
+                .. source.Schemas,
+                new EnumSchemaDefinition(severity, [new EnumMember("High", "high"), new EnumMember("Low", "low")]),
+            ],
+            CatalogueBindings = [.. source.CatalogueBindings, severity],
+            Nodes = source.Nodes.Select(node => node is ActivityNode activityNode
+                ? activityNode with { Arguments = [new ArgumentBinding("answer", new LiteralBinding(document.RootElement.Clone()))] }
+                : node).ToArray(),
+        };
+
+        var result = new WorkflowCompiler(
+            Fixture.CreateCatalogue(
+                plan,
+                transformCallable: (descriptor, contract) => descriptor.Equals(activity.Activity)
+                    ? new CallableContract(
+                        new CallableSignature(
+                            [new CallableParameter("answer", new NamedTypeReference(severity))],
+                            contract!.Signature.OutputType),
+                        contract.Effect,
+                        contract.Idempotency,
+                        contract.RetrySafety)
+                    : contract),
+            capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(plan, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().Be(valid);
+        if (!valid)
+            result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.CallableArgumentTypeMismatch);
+    }
+
     [Fact]
     public void Compiler_AccountsForLiteralStringBytesBeforeCatalogueResolution()
     {
@@ -384,6 +425,35 @@ public sealed class WorkflowCompilerTests
 
         result.Succeeded.Should().BeFalse();
         result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.BudgetWorkflowNodesExceeded);
+        result.Usage.CatalogueLookups.Should().Be(0);
+    }
+
+    [Fact]
+    public void Compiler_BoundsSchemaReferenceTraversalBeforeCatalogueResolution()
+    {
+        var source = Fixture.CreatePlan();
+        var descriptors = Enumerable.Range(0, CatalogueContractValidation.MaximumSchemaDepth + 2)
+            .Select(index => Fixture.Descriptor(DescriptorKind.Schema, $"sample.chain.{index:D3}"))
+            .ToArray();
+        var schemas = descriptors.Select((descriptor, index) =>
+            new ObjectSchemaDefinition(
+                descriptor,
+                index == descriptors.Length - 1
+                    ? [new SchemaField("value", new PrimitiveType(FuwenPrimitiveKind.String))]
+                    : [new SchemaField("next", new NamedTypeReference(descriptors[index + 1]))]))
+            .ToArray();
+        var plan = source with
+        {
+            Schemas = [.. source.Schemas, .. schemas],
+            CatalogueBindings = [.. source.CatalogueBindings, .. descriptors],
+        };
+
+        var result = new WorkflowCompiler(Fixture.CreateCatalogue(), capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(plan, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.BudgetSchemaDepthExceeded);
+        result.Usage.SchemaDepth.Should().Be(CatalogueContractValidation.MaximumSchemaDepth + 1);
         result.Usage.CatalogueLookups.Should().Be(0);
     }
 

@@ -1,4 +1,7 @@
 #nullable enable
+const Penghou.Fuwen.ContextSnapshotReference.MaximumProvenanceReceiptUtf8Bytes = 2048 -> int
+const Penghou.Fuwen.ContextSnapshotReference.MaximumSnapshotIdUtf8Bytes = 512 -> int
+const Penghou.Fuwen.ContextSnapshotReference.MaximumSourceRevisions = 64 -> int
 const Penghou.Fuwen.FuwenContracts.CanonicalJsonVersion = "penghou-canonical-json/v1" -> string!
 const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersion = "compiler-semantics/1" -> string!
 const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersionV1 = "compiler-semantics/1" -> string!
@@ -11,6 +14,9 @@ const Penghou.Fuwen.FuwenContracts.IrVersionV1 = "fuwen-ir/v1" -> string!
 const Penghou.Fuwen.FuwenContracts.IrVersionV2 = "fuwen-ir/v2" -> string!
 const Penghou.Fuwen.FuwenContracts.MaximumCanonicalPlanBytes = 4194304 -> int
 const Penghou.Fuwen.FuwenContracts.SourceFingerprintVersion = "fuwen-source/v1" -> string!
+const Penghou.Fuwen.JsonRuntimeValue.MaximumJsonDepth = 128 -> int
+const Penghou.Fuwen.JsonRuntimeValue.MaximumJsonNodes = 100000 -> int
+const Penghou.Fuwen.JsonRuntimeValue.MaximumJsonUtf8Bytes = 4194304 -> int
 const Penghou.Fuwen.RuntimeNodeIdentity.MaximumKeyUtf8Bytes = 256 -> int
 const Penghou.Fuwen.StructuralNodeIdentity.MaximumPathUtf8Bytes = 1024 -> int
 const Penghou.Fuwen.StructuralNodeIdentity.MaximumSegmentCharacters = 64 -> int
@@ -52,6 +58,9 @@ Penghou.Fuwen.ArtifactReference.LogicalName.get -> string?
 Penghou.Fuwen.ArtifactReference.LogicalName.init -> void
 Penghou.Fuwen.ArtifactReference.Provider.get -> string!
 Penghou.Fuwen.ArtifactReference.Provider.init -> void
+Penghou.Fuwen.ArtifactRuntimeValue
+Penghou.Fuwen.ArtifactRuntimeValue.Artifact.get -> Penghou.Fuwen.ArtifactReference!
+Penghou.Fuwen.ArtifactRuntimeValue.ArtifactRuntimeValue(Penghou.Fuwen.ArtifactReference! artifact) -> void
 Penghou.Fuwen.ArtifactType
 Penghou.Fuwen.ArtifactType.ArtifactDescriptor.get -> Penghou.Fuwen.DescriptorReference!
 Penghou.Fuwen.ArtifactType.ArtifactDescriptor.init -> void
@@ -111,6 +120,37 @@ Penghou.Fuwen.ContextNode.OutputType.get -> Penghou.Fuwen.FuwenType!
 Penghou.Fuwen.ContextNode.OutputType.init -> void
 Penghou.Fuwen.ContextNode.Provider.get -> Penghou.Fuwen.DescriptorReference!
 Penghou.Fuwen.ContextNode.Provider.init -> void
+Penghou.Fuwen.ContextSnapshotBudgetEvidence
+Penghou.Fuwen.ContextSnapshotBudgetEvidence.ContextSnapshotBudgetEvidence(bool WasTruncated, long? MaximumItems, long? MaximumBytes, long? ObservedItems, long? ObservedBytes) -> void
+Penghou.Fuwen.ContextSnapshotBudgetEvidence.MaximumBytes.get -> long?
+Penghou.Fuwen.ContextSnapshotBudgetEvidence.MaximumBytes.init -> void
+Penghou.Fuwen.ContextSnapshotBudgetEvidence.MaximumItems.get -> long?
+Penghou.Fuwen.ContextSnapshotBudgetEvidence.MaximumItems.init -> void
+Penghou.Fuwen.ContextSnapshotBudgetEvidence.ObservedBytes.get -> long?
+Penghou.Fuwen.ContextSnapshotBudgetEvidence.ObservedBytes.init -> void
+Penghou.Fuwen.ContextSnapshotBudgetEvidence.ObservedItems.get -> long?
+Penghou.Fuwen.ContextSnapshotBudgetEvidence.ObservedItems.init -> void
+Penghou.Fuwen.ContextSnapshotBudgetEvidence.WasTruncated.get -> bool
+Penghou.Fuwen.ContextSnapshotBudgetEvidence.WasTruncated.init -> void
+Penghou.Fuwen.ContextSnapshotReference
+Penghou.Fuwen.ContextSnapshotReference.Budget.get -> Penghou.Fuwen.ContextSnapshotBudgetEvidence!
+Penghou.Fuwen.ContextSnapshotReference.ContentDigest.get -> Penghou.Fuwen.ContentDigest!
+Penghou.Fuwen.ContextSnapshotReference.ContextSnapshotReference(Penghou.Fuwen.DescriptorReference! provider, string! snapshotId, Penghou.Fuwen.ContentDigest! requestDigest, Penghou.Fuwen.ContentDigest! contentDigest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ContextSourceRevisionReference!>! sourceRevisions, string! policyRevision, Penghou.Fuwen.ContextSnapshotBudgetEvidence! budget, System.DateTimeOffset createdAt, string? provenanceReceipt = null) -> void
+Penghou.Fuwen.ContextSnapshotReference.CreatedAt.get -> System.DateTimeOffset
+Penghou.Fuwen.ContextSnapshotReference.PolicyRevision.get -> string!
+Penghou.Fuwen.ContextSnapshotReference.ProvenanceReceipt.get -> string?
+Penghou.Fuwen.ContextSnapshotReference.Provider.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.ContextSnapshotReference.RequestDigest.get -> Penghou.Fuwen.ContentDigest!
+Penghou.Fuwen.ContextSnapshotReference.SnapshotId.get -> string!
+Penghou.Fuwen.ContextSnapshotReference.SourceRevisions.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ContextSourceRevisionReference!>!
+Penghou.Fuwen.ContextSourceRevisionReference
+Penghou.Fuwen.ContextSourceRevisionReference.ContentDigest.get -> Penghou.Fuwen.ContentDigest!
+Penghou.Fuwen.ContextSourceRevisionReference.ContentDigest.init -> void
+Penghou.Fuwen.ContextSourceRevisionReference.ContextSourceRevisionReference(string! SourceId, string! Revision, Penghou.Fuwen.ContentDigest! ContentDigest) -> void
+Penghou.Fuwen.ContextSourceRevisionReference.Revision.get -> string!
+Penghou.Fuwen.ContextSourceRevisionReference.Revision.init -> void
+Penghou.Fuwen.ContextSourceRevisionReference.SourceId.get -> string!
+Penghou.Fuwen.ContextSourceRevisionReference.SourceId.init -> void
 Penghou.Fuwen.DescriptorKind
 Penghou.Fuwen.DescriptorKind.Activity = 2 -> Penghou.Fuwen.DescriptorKind
 Penghou.Fuwen.DescriptorKind.Artifact = 1 -> Penghou.Fuwen.DescriptorKind
@@ -181,6 +221,9 @@ Penghou.Fuwen.IntegerRuntimeKey.Value.init -> void
 Penghou.Fuwen.IWorkflowDefinitionStore
 Penghou.Fuwen.IWorkflowDefinitionStore.ReadAsync(string! executionFingerprint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.WorkflowDefinitionDocument?>
 Penghou.Fuwen.IWorkflowDefinitionStore.StoreAsync(Penghou.Fuwen.WorkflowDefinitionDocument! definition, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.WorkflowDefinitionWriteDisposition>
+Penghou.Fuwen.JsonRuntimeValue
+Penghou.Fuwen.JsonRuntimeValue.JsonRuntimeValue(System.Text.Json.JsonElement value) -> void
+Penghou.Fuwen.JsonRuntimeValue.Value.get -> System.Text.Json.JsonElement
 Penghou.Fuwen.ListBinding
 Penghou.Fuwen.ListBinding.Items.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Binding!>!
 Penghou.Fuwen.ListBinding.Items.init -> void
@@ -244,6 +287,7 @@ Penghou.Fuwen.ReturnNode.Value.get -> Penghou.Fuwen.Binding!
 Penghou.Fuwen.ReturnNode.Value.init -> void
 Penghou.Fuwen.RuntimeIdentityKey
 Penghou.Fuwen.RuntimeNodeIdentity
+Penghou.Fuwen.RuntimeValue
 Penghou.Fuwen.SchemaField
 Penghou.Fuwen.SchemaField.Name.get -> string!
 Penghou.Fuwen.SchemaField.Name.init -> void
@@ -372,6 +416,8 @@ static Penghou.Fuwen.RuntimeNodeIdentity.CreateIteration(string! loopStructuralP
 static Penghou.Fuwen.RuntimeNodeIdentity.GetCanonicalKeyBytes(Penghou.Fuwen.RuntimeIdentityKey! key) -> byte[]!
 static Penghou.Fuwen.RuntimeNodeIdentity.GetKeyPathSegment(Penghou.Fuwen.RuntimeIdentityKey! key) -> string!
 static Penghou.Fuwen.RuntimeNodeIdentity.ValidateUniqueKeys(System.Collections.Generic.IEnumerable<Penghou.Fuwen.RuntimeIdentityKey!>! keys) -> void
+static Penghou.Fuwen.RuntimeValue.FromArtifact(Penghou.Fuwen.ArtifactReference! artifact) -> Penghou.Fuwen.RuntimeValue!
+static Penghou.Fuwen.RuntimeValue.FromJson(System.Text.Json.JsonElement value) -> Penghou.Fuwen.RuntimeValue!
 static Penghou.Fuwen.SourceIdentity.ComputeSourceFingerprint(string! formattedSource) -> string!
 static Penghou.Fuwen.SourceIdentity.NormalizeFormattedSource(string! formattedSource) -> string!
 static Penghou.Fuwen.StructuralNodeIdentity.Create(string! workflowName, params string![]! lexicalSegments) -> string!

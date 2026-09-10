@@ -1,7 +1,24 @@
 #nullable enable
 const Penghou.Fuwen.Compiler.CompilationBudget.DefaultMaximumDiagnostics = 100 -> int
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.RuntimeValueArtifactDescriptorMismatch = "FWN-RUNTIME-011" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.RuntimeValueCanonicalJsonInvalid = "FWN-RUNTIME-004" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.RuntimeValueDepthExceeded = "FWN-RUNTIME-009" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.RuntimeValueEnumLiteralInvalid = "FWN-RUNTIME-012" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.RuntimeValueKindMismatch = "FWN-RUNTIME-002" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.RuntimeValueListLimitExceeded = "FWN-RUNTIME-008" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.RuntimeValueMalformed = "FWN-RUNTIME-003" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.RuntimeValueMissing = "FWN-RUNTIME-001" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.RuntimeValueNodeLimitExceeded = "FWN-RUNTIME-010" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.RuntimeValueNumberInvalid = "FWN-RUNTIME-013" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.RuntimeValueRequiredFieldMissing = "FWN-RUNTIME-006" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.RuntimeValueSchemaNotFound = "FWN-RUNTIME-005" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.RuntimeValueUnknownField = "FWN-RUNTIME-007" -> string!
 Penghou.Fuwen.Compiler.CompilationBudget
 Penghou.Fuwen.Compiler.CompilationBudget.CompilationBudget(long maxSourceBytes = 1048576, long maxTokens = 100000, long maxAstNodes = 100000, int maxNestingDepth = 128, int maxWorkflowNodes = 1000, int maxSchemas = 1000, int maxSchemaDepth = 64, int maxSchemaFields = 10000, int maxExpressions = 100000, long maxStringBytes = 1048576, int maxDiagnostics = 100, int maxCatalogueLookups = 10000, long maxCatalogueLookupMilliseconds = 5000, long maxCompilationMilliseconds = 30000) -> void
+Penghou.Fuwen.Compiler.RuntimeValueValidationResult
+Penghou.Fuwen.Compiler.RuntimeValueValidationResult.Diagnostics.get -> Penghou.Fuwen.Compiler.DiagnosticCollection!
+Penghou.Fuwen.Compiler.RuntimeValueValidationResult.Succeeded.get -> bool
+Penghou.Fuwen.Compiler.RuntimeValueValidator
 static Penghou.Fuwen.Compiler.CompilationBudget.Default.get -> Penghou.Fuwen.Compiler.CompilationBudget!
 static Penghou.Fuwen.Compiler.CompilationBudget.HostDefaults.get -> Penghou.Fuwen.Compiler.CompilationBudget!
 Penghou.Fuwen.Compiler.CompilationBudget.MaxAstNodes.get -> long
@@ -269,6 +286,7 @@ Penghou.Fuwen.Compiler.WorkflowAdmissionService
 Penghou.Fuwen.Compiler.WorkflowAdmissionService.AdmitAsync(Penghou.Fuwen.WorkflowPlan! plan, Penghou.Fuwen.Compiler.CompilationBudget? callerBudget = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.WorkflowAdmissionResult!>
 Penghou.Fuwen.Compiler.WorkflowAdmissionService.WorkflowAdmissionService(Penghou.Fuwen.Compiler.WorkflowCompiler! compiler) -> void
 Penghou.Fuwen.Compiler.WorkflowExplanation
+static Penghou.Fuwen.Compiler.RuntimeValueValidator.Validate(Penghou.Fuwen.RuntimeValue? value, Penghou.Fuwen.FuwenType! expectedType, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>! schemas, string! path = "value", int maximumDiagnostics = 100) -> Penghou.Fuwen.Compiler.RuntimeValueValidationResult!
 static Penghou.Fuwen.Compiler.WorkflowExplanation.Create(Penghou.Fuwen.Compiler.CompilationResult! compilation) -> Penghou.Fuwen.Compiler.WorkflowExplanation!
 static Penghou.Fuwen.Compiler.WorkflowExplanation.Create(Penghou.Fuwen.Compiler.WorkflowAdmissionResult! admission) -> Penghou.Fuwen.Compiler.WorkflowExplanation!
 Penghou.Fuwen.Compiler.WorkflowExplanation.AdmissionEvaluated.get -> bool

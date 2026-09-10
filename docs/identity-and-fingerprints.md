@@ -40,12 +40,24 @@ Canonical JSON contract `penghou-canonical-json/v1` is the input to hashes:
 - object properties are ordered by ordinal name;
 - array order is preserved;
 - no insignificant whitespace is emitted;
-- strings use deterministic JSON escaping and UTF-8;
-- integers use their shortest decimal representation;
-- finite non-integers use the shortest round-trippable representation with a
-  lowercase exponent, no exponent plus sign, and no redundant exponent zeroes;
+- strings use deterministic JSON escaping and UTF-8; non-ASCII scalar values
+  are emitted as uppercase `\uXXXX` code units, including surrogate pairs;
+- numbers must be exactly representable by the portable v1 decimal domain:
+  a coefficient no greater than 96 bits and a scale from zero through 28;
+- accepted numbers use the invariant `G29` decimal representation; equivalent
+  zero spellings, including negative zero, canonicalize to `0`;
+- a syntactically valid JSON number that would require a lossy binary floating
+  point fallback is rejected rather than rounded into a different identity;
 - null, booleans, strings, arrays, and objects retain normal JSON meaning;
 - duplicate object properties and non-finite numbers are rejected.
+
+The numeric restriction is intentional. Workflow control values need portable,
+reproducible identity more than an unbounded numeric surface. Larger integers,
+arbitrary-precision decimals, and provider-native floating-point values must be
+carried as typed strings or artifacts until a later version defines their exact
+semantics. Existing v1 outputs for accepted exact decimals are unchanged; the
+former `double` fallback is closed before the first package release because it
+could silently collapse distinct persisted tokens onto rounded CLR values.
 
 IR collections whose order has no semantics are normalized before canonical
 JSON is produced. In particular, nodes are ordered by structural path and
@@ -90,3 +102,6 @@ or fingerprint contracts are rejected rather than reinterpreted.
 - Renaming a node changes its path and plan fingerprint.
 - Source-location-only changes do not change the execution fingerprint.
 - Changing a descriptor hash or routing-policy revision changes it.
+- Decimal precision/range boundaries, negative zero, exponents, escaped text,
+  non-BMP text, and ordinal property ordering match the independent Python
+  golden implementation.

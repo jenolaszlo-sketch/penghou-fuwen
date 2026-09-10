@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Globalization;
+using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -8,6 +9,16 @@ namespace Penghou.Fuwen;
 /// <summary>Portable deterministic JSON used by Fuwen identity contracts.</summary>
 public static class CanonicalJson
 {
+    // v1 historically used decimal first and double as a fallback.  Keep the
+    // resulting bytes for values that were already accepted, but do not let a
+    // fallback silently round a JSON number into a different value.  These
+    // bounds keep the exactness check deterministic and bounded for hostile
+    // input while remaining far above the precision of either supported CLR
+    // numeric representation.
+    private const int MaximumNumberLength = 1_000_000;
+    private const int MaximumExponentDigits = 128;
+    private const int MaximumSignificantDigits = 1_000_000;
+
     private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();
 
     /// <summary>Serializes a CLR value and canonicalizes the resulting JSON tree.</summary>
@@ -28,7 +39,12 @@ public static class CanonicalJson
     public static byte[] Canonicalize(JsonElement element)
     {
         var buffer = new ArrayBufferWriter<byte>();
-        using (var writer = new Utf8JsonWriter(buffer, new JsonWriterOptions { Indented = false, SkipValidation = false }))
+        using (var writer = new Utf8JsonWriter(buffer, new JsonWriterOptions
+        {
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Default,
+            Indented = false,
+            SkipValidation = false,
+        }))
             Write(writer, element);
         return buffer.WrittenSpan.ToArray();
     }
@@ -98,35 +114,125 @@ public static class CanonicalJson
 
     private static void WriteNumber(Utf8JsonWriter writer, JsonElement element)
     {
+        var raw = element.GetRawText();
+        if (raw.Length == 0 || raw.Length > MaximumNumberLength)
+            throw new JsonException($"JSON number length must be between 1 and {MaximumNumberLength} characters.");
+
         if (element.TryGetDecimal(out var decimalValue))
         {
-            writer.WriteRawValue(decimalValue == 0
+            var formatted = decimalValue == 0
                 ? "0"
-                : decimalValue.ToString("G29", CultureInfo.InvariantCulture));
-            return;
+                : decimalValue.ToString("G29", CultureInfo.InvariantCulture);
+            if (NumbersAreEquivalent(raw, formatted))
+            {
+                writer.WriteRawValue(formatted);
+                return;
+            }
         }
 
-        var value = element.GetDouble();
-        if (!double.IsFinite(value))
-            throw new JsonException("Non-finite JSON numbers are unsupported.");
-        if (value == 0)
+        // A number outside decimal's exact range is deliberately not sent
+        // through JsonElement.GetDouble(): the conversion can round a valid
+        // JSON token (or underflow it to zero) and silently change identity.
+        if (IsZeroToken(raw))
         {
             writer.WriteRawValue("0");
             return;
         }
-
-        var formatted = value.ToString("R", CultureInfo.InvariantCulture)
-            .Replace("E+", "e", StringComparison.Ordinal)
-            .Replace("E", "e", StringComparison.Ordinal);
-        var exponent = formatted.IndexOf('e');
-        if (exponent >= 0)
-        {
-            var prefix = formatted[..(exponent + 1)];
-            var suffix = formatted[(exponent + 1)..];
-            var negative = suffix.StartsWith("-", StringComparison.Ordinal);
-            suffix = suffix.TrimStart('+', '-').TrimStart('0');
-            formatted = prefix + (negative ? "-" : string.Empty) + (suffix.Length == 0 ? "0" : suffix);
-        }
-        writer.WriteRawValue(formatted);
+        throw new JsonException("JSON number cannot be represented without precision loss.");
     }
+
+    private static bool IsZeroToken(string raw)
+    {
+        var end = raw.IndexOfAny(['e', 'E']);
+        if (end < 0) end = raw.Length;
+        foreach (var character in raw.AsSpan(0, end))
+        {
+            if (character is '-' or '+' or '.') continue;
+            if (character != '0') return false;
+        }
+        return true;
+    }
+
+    private static bool NumbersAreEquivalent(string left, string right)
+    {
+        if (!TryParseExactNumber(left, out var leftNumber) ||
+            !TryParseExactNumber(right, out var rightNumber))
+            return false;
+
+        return leftNumber.Sign == rightNumber.Sign &&
+            leftNumber.Digits == rightNumber.Digits &&
+            leftNumber.DecimalExponent == rightNumber.DecimalExponent;
+    }
+
+    private static bool TryParseExactNumber(string raw, out ExactNumber number)
+    {
+        number = default;
+        if (raw.Length == 0 || raw.Length > MaximumNumberLength)
+            return false;
+
+        var cursor = 0;
+        var sign = 1;
+        if (raw[cursor] == '-')
+        {
+            sign = -1;
+            cursor++;
+        }
+        else if (raw[cursor] == '+')
+        {
+            cursor++;
+        }
+
+        var exponentMarker = raw.IndexOfAny(['e', 'E'], cursor);
+        if (exponentMarker < 0) exponentMarker = raw.Length;
+
+        var exponent = BigInteger.Zero;
+        if (exponentMarker < raw.Length)
+        {
+            var exponentText = raw[(exponentMarker + 1)..];
+            if (exponentText.Length == 0 ||
+                exponentText.TrimStart('+', '-').Length > MaximumExponentDigits ||
+                !BigInteger.TryParse(exponentText, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out exponent))
+                return false;
+        }
+
+        var mantissa = raw[cursor..exponentMarker];
+        var point = mantissa.IndexOf('.');
+        var fractionalDigits = point < 0 ? 0 : mantissa.Length - point - 1;
+        var digitsText = point < 0
+            ? mantissa
+            : string.Concat(mantissa.AsSpan(0, point), mantissa.AsSpan(point + 1));
+        if (digitsText.Length == 0)
+            return false;
+
+        var first = 0;
+        while (first < digitsText.Length && digitsText[first] == '0') first++;
+        if (first == digitsText.Length)
+        {
+            number = new ExactNumber(0, BigInteger.Zero, BigInteger.Zero);
+            return true;
+        }
+
+        var digits = digitsText[first..];
+        var last = digits.Length;
+        while (last > 1 && digits[last - 1] == '0') last--;
+        var trailingZeroes = digits.Length - last;
+        digits = digits[..last];
+        if (digits.Length > MaximumSignificantDigits)
+            return false;
+
+        if (!BigInteger.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out var coefficient))
+            return false;
+
+        var decimalExponent = exponent - fractionalDigits + trailingZeroes;
+        while (coefficient % 10 == 0)
+        {
+            coefficient /= 10;
+            decimalExponent++;
+        }
+
+        number = new ExactNumber(sign, coefficient, decimalExponent);
+        return true;
+    }
+
+    private readonly record struct ExactNumber(int Sign, BigInteger Digits, BigInteger DecimalExponent);
 }

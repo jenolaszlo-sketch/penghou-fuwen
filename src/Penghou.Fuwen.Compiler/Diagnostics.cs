@@ -68,6 +68,19 @@ public static class CompilerDiagnosticCodes
     public const string CallableOutputTypeMismatch = "FWN-SIGNATURE-004";
     public const string CallableEffectRejected = "FWN-EFFECT-001";
     public const string CallableRetryRejected = "FWN-EFFECT-002";
+    public const string RuntimeValueMissing = "FWN-RUNTIME-001";
+    public const string RuntimeValueKindMismatch = "FWN-RUNTIME-002";
+    public const string RuntimeValueMalformed = "FWN-RUNTIME-003";
+    public const string RuntimeValueCanonicalJsonInvalid = "FWN-RUNTIME-004";
+    public const string RuntimeValueSchemaNotFound = "FWN-RUNTIME-005";
+    public const string RuntimeValueRequiredFieldMissing = "FWN-RUNTIME-006";
+    public const string RuntimeValueUnknownField = "FWN-RUNTIME-007";
+    public const string RuntimeValueListLimitExceeded = "FWN-RUNTIME-008";
+    public const string RuntimeValueDepthExceeded = "FWN-RUNTIME-009";
+    public const string RuntimeValueNodeLimitExceeded = "FWN-RUNTIME-010";
+    public const string RuntimeValueArtifactDescriptorMismatch = "FWN-RUNTIME-011";
+    public const string RuntimeValueEnumLiteralInvalid = "FWN-RUNTIME-012";
+    public const string RuntimeValueNumberInvalid = "FWN-RUNTIME-013";
 }
 
 /// <summary>An immutable compiler diagnostic suitable for machine and human consumption.</summary>

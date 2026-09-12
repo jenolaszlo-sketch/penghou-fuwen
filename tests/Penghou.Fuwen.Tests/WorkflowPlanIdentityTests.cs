@@ -97,6 +97,22 @@ public sealed class WorkflowPlanIdentityTests
     }
 
     [Fact]
+    public void V3_plan_has_typed_context_requirements_and_stable_golden_fingerprint()
+    {
+        var plan = PlanFixture.CreateV3();
+        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
+        var goldenPath = Path.Combine(AppContext.BaseDirectory, "golden", "workflow_plan_v3.json");
+        var goldenFile = File.ReadAllBytes(goldenPath);
+        var goldenLength = goldenFile.Length;
+        while (goldenLength > 0 && goldenFile[goldenLength - 1] is (byte)'\r' or (byte)'\n')
+            goldenLength--;
+
+        canonicalBytes.Should().Equal(goldenFile.AsSpan(0, goldenLength).ToArray());
+        WorkflowPlanIdentity.ComputeExecutionFingerprint(plan)
+            .Should().Be("sha256:fuwen-execution/v3:53134b2d7566a22889e5a751b27a6367f8159b1686baf4e6d6260e99acfd0c33");
+    }
+
+    [Fact]
     public void V2_phase_order_cannot_move_a_data_dependency_forward()
     {
         var plan = PlanFixture.CreateV2();
@@ -375,6 +391,58 @@ internal static class PlanFixture
                             new WorkflowExecutionPhase(new[] { "answer/return_result" }),
                         }),
                 }),
+        };
+    }
+
+    internal static WorkflowPlan CreateV3()
+    {
+        var v2 = CreateV2();
+        var context = v2.Nodes.OfType<ContextNode>().Single();
+        var inference = v2.Nodes.OfType<InferenceNode>().Single();
+        var requirement = new ContextRequirement(
+            "answer_context",
+            new NodeOutputBinding(context.StructuralPath, []),
+            context.OutputType);
+        return v2 with
+        {
+            IrVersion = FuwenContracts.IrVersionV3,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV3,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV3,
+            Nodes = v2.Nodes.Select(node => node == inference
+                ? inference with { ContextSnapshots = [], ContextRequirements = [requirement] }
+                : node).ToArray(),
+        };
+    }
+
+    internal static WorkflowPlan CreateV3WithTwoContexts()
+    {
+        var source = CreateV3();
+        var context = source.Nodes.OfType<ContextNode>().Single();
+        var secondPath = StructuralNodeIdentity.Create(source.Name, "context2");
+        var second = context with { Name = "context2", StructuralPath = secondPath };
+        var inference = source.Nodes.OfType<InferenceNode>().Single();
+        var requirements = new[]
+        {
+            inference.ContextRequirements![0],
+            new ContextRequirement("second_context", new NodeOutputBinding(secondPath, []), second.OutputType),
+        };
+        var phases = source.ExecutionOrder!.Regions[0].Phases;
+        return source with
+        {
+            Nodes = source.Nodes.Select(node => node switch
+            {
+                ContextNode value when value.StructuralPath == context.StructuralPath => value,
+                InferenceNode value => value with
+                {
+                    ContextRequirements = requirements,
+                    ContextSnapshots = [],
+                },
+                _ => node,
+            }).Prepend(second).ToArray(),
+            ExecutionOrder = source.ExecutionOrder with
+            {
+                Regions = [source.ExecutionOrder.Regions[0] with { Phases = [new WorkflowExecutionPhase([context.StructuralPath, secondPath]), .. phases.Skip(1)] }],
+            },
         };
     }
 

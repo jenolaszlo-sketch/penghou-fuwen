@@ -91,6 +91,28 @@ public static class RuntimeValueValidator
                 return;
             }
 
+            if (value is ListRuntimeValue list)
+            {
+                if (expected is OptionalType optional)
+                    Validate(value, optional.ValueType, path, depth + 1);
+                else if (expected is ListType listType)
+                    ValidateList(list, listType, path, depth);
+                else
+                    Add(CompilerDiagnosticCodes.RuntimeValueKindMismatch, path, "Expected a detached JSON runtime value of the requested type.");
+                return;
+            }
+
+            if (value is ObjectRuntimeValue @object)
+            {
+                if (expected is OptionalType optional)
+                    Validate(value, optional.ValueType, path, depth + 1);
+                else if (expected is NamedTypeReference named)
+                    ValidateNamed(@object, named.Schema, path, depth);
+                else
+                    Add(CompilerDiagnosticCodes.RuntimeValueKindMismatch, path, "Expected a detached JSON runtime value of the requested type.");
+                return;
+            }
+
             switch (expected)
             {
                 case OptionalType optional:
@@ -174,6 +196,22 @@ public static class RuntimeValueValidator
             }
         }
 
+        private void ValidateList(ListRuntimeValue value, ListType list, string path, int depth)
+        {
+            if (list.MaxItems <= 0)
+            {
+                Add(CompilerDiagnosticCodes.RuntimeValueMalformed, path, "List type must have a positive maximum item count.");
+                return;
+            }
+            if (value.Items.Count > list.MaxItems)
+            {
+                Add(CompilerDiagnosticCodes.RuntimeValueListLimitExceeded, path, $"List contains more than its maximum of {list.MaxItems} items.");
+                return;
+            }
+            for (var index = 0; index < value.Items.Count; index++)
+                Validate(value.Items[index], list.ItemType, IndexPath(path, index), depth + 1);
+        }
+
         private void ValidateNamed(JsonElement element, DescriptorReference schema, string path, int depth)
         {
             if (schema is null || schema.Kind != DescriptorKind.Schema)
@@ -199,6 +237,38 @@ public static class RuntimeValueValidator
                     break;
                 case EnumSchemaDefinition @enum:
                     ValidateEnum(element, @enum, path);
+                    break;
+                default:
+                    Add(CompilerDiagnosticCodes.RuntimeValueMalformed, path, "The named schema definition is unsupported.");
+                    break;
+            }
+        }
+
+        private void ValidateNamed(ObjectRuntimeValue value, DescriptorReference schema, string path, int depth)
+        {
+            if (schema is null || schema.Kind != DescriptorKind.Schema)
+            {
+                Add(CompilerDiagnosticCodes.RuntimeValueMalformed, path, "Named runtime values require a schema descriptor.");
+                return;
+            }
+            var matches = schemas.Where(item => item is not null && DescriptorEqual(item.Descriptor, schema)).ToArray();
+            if (matches.Length == 0)
+            {
+                Add(CompilerDiagnosticCodes.RuntimeValueSchemaNotFound, path, "The exact named schema descriptor was not supplied.");
+                return;
+            }
+            if (matches.Length > 1)
+            {
+                Add(CompilerDiagnosticCodes.RuntimeValueMalformed, path, "The schema set contains duplicate exact descriptors.");
+                return;
+            }
+            switch (matches[0])
+            {
+                case ObjectSchemaDefinition @object:
+                    ValidateObject(value, @object, path, depth);
+                    break;
+                case EnumSchemaDefinition:
+                    Add(CompilerDiagnosticCodes.RuntimeValueKindMismatch, path, "Expected a detached JSON string enum value.");
                     break;
                 default:
                     Add(CompilerDiagnosticCodes.RuntimeValueMalformed, path, "The named schema definition is unsupported.");
@@ -246,6 +316,45 @@ public static class RuntimeValueValidator
             foreach (var field in schema.Fields)
             {
                 if (!element.TryGetProperty(field.Name, out _) && field.Type is not OptionalType)
+                    Add(CompilerDiagnosticCodes.RuntimeValueRequiredFieldMissing, PropertyPath(path, field.Name), "Required object field is missing.");
+            }
+        }
+
+        private void ValidateObject(ObjectRuntimeValue value, ObjectSchemaDefinition schema, string path, int depth)
+        {
+            if (schema.Fields is null)
+            {
+                Add(CompilerDiagnosticCodes.RuntimeValueMalformed, path, "The object schema has no field collection.");
+                return;
+            }
+            if (schema.Fields.Count > MaximumSchemaFields ||
+                schema.Fields.Any(field => field is null || string.IsNullOrWhiteSpace(field.Name) || field.Type is null))
+            {
+                Add(CompilerDiagnosticCodes.RuntimeValueMalformed, path, "The object schema contains invalid or excessive fields.");
+                return;
+            }
+            Dictionary<string, SchemaField> fields;
+            try
+            {
+                fields = schema.Fields.ToDictionary(field => field.Name, StringComparer.Ordinal);
+            }
+            catch (ArgumentException)
+            {
+                Add(CompilerDiagnosticCodes.RuntimeValueMalformed, path, "The object schema contains duplicate field names.");
+                return;
+            }
+            foreach (var property in value.Properties)
+            {
+                if (!fields.TryGetValue(property.Key, out var field))
+                {
+                    Add(CompilerDiagnosticCodes.RuntimeValueUnknownField, PropertyPath(path, property.Key), "Object contains an unknown field.");
+                    continue;
+                }
+                Validate(property.Value, field.Type, PropertyPath(path, property.Key), depth + 1);
+            }
+            foreach (var field in schema.Fields)
+            {
+                if (!value.Properties.ContainsKey(field.Name) && field.Type is not OptionalType)
                     Add(CompilerDiagnosticCodes.RuntimeValueRequiredFieldMissing, PropertyPath(path, field.Name), "Required object field is missing.");
             }
         }

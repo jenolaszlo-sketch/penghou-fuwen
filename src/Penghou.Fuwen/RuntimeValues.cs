@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -6,15 +7,22 @@ namespace Penghou.Fuwen;
 
 /// <summary>A provider-neutral runtime value owned by the Fuwen boundary.</summary>
 /// <remarks>
-/// Runtime values deliberately contain either a detached JSON value or an
-/// immutable artifact identity. They do not contain CLR objects, provider
-/// handles, credentials, paths, or dereferenced artifact content.
+/// Runtime values contain detached JSON, immutable artifact identities, or
+/// bounded composites of those values. They do not contain CLR objects,
+/// provider handles, credentials, paths, or dereferenced artifact content.
 /// </remarks>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$kind")]
 [JsonDerivedType(typeof(JsonRuntimeValue), "json")]
 [JsonDerivedType(typeof(ArtifactRuntimeValue), "artifact")]
+[JsonDerivedType(typeof(ListRuntimeValue), "list")]
+[JsonDerivedType(typeof(ObjectRuntimeValue), "object")]
 public abstract class RuntimeValue
 {
+    /// <summary>The maximum nesting depth of a composite runtime value.</summary>
+    public const int MaximumCompositeDepth = 128;
+    /// <summary>The maximum number of nodes in one composite runtime value.</summary>
+    public const int MaximumCompositeNodes = 100_000;
+
     /// <summary>Initializes the provider-neutral runtime-value contract.</summary>
     private protected RuntimeValue() { }
 
@@ -23,6 +31,12 @@ public abstract class RuntimeValue
 
     /// <summary>Creates an owned artifact-reference runtime value.</summary>
     public static RuntimeValue FromArtifact(ArtifactReference artifact) => new ArtifactRuntimeValue(artifact);
+
+    /// <summary>Creates an immutable bounded list runtime value.</summary>
+    public static RuntimeValue FromList(IReadOnlyList<RuntimeValue> items) => new ListRuntimeValue(items);
+
+    /// <summary>Creates an immutable bounded object runtime value.</summary>
+    public static RuntimeValue FromObject(IReadOnlyDictionary<string, RuntimeValue> properties) => new ObjectRuntimeValue(properties);
 }
 
 /// <summary>A detached JSON runtime value.</summary>
@@ -98,6 +112,73 @@ public sealed class ArtifactRuntimeValue : RuntimeValue
 
     /// <summary>Returns a detached copy of the artifact identity.</summary>
     public ArtifactReference Artifact => RuntimeValueSnapshot.CloneArtifact(artifact);
+
+    internal ArtifactReference BorrowedArtifact => artifact;
+
+    internal ArtifactRuntimeValue(ArtifactReference artifact, bool alreadySnapshotted)
+    {
+        this.artifact = alreadySnapshotted
+            ? artifact ?? throw new ArgumentNullException(nameof(artifact))
+            : RuntimeValueSnapshot.CloneArtifact(artifact);
+    }
+}
+
+/// <summary>A bounded immutable list of provider-neutral runtime values.</summary>
+public sealed class ListRuntimeValue : RuntimeValue
+{
+    /// <summary>The maximum number of items in one runtime list.</summary>
+    public const int MaximumItems = 100_000;
+
+    private readonly IReadOnlyList<RuntimeValue> items;
+
+    /// <summary>Creates a list by deeply snapshotting each child value.</summary>
+    [JsonConstructor]
+    public ListRuntimeValue(IReadOnlyList<RuntimeValue> items)
+    {
+        this.items = RuntimeValueSnapshot.CloneList(items);
+    }
+
+    /// <summary>The deeply snapshotted list items.</summary>
+    public IReadOnlyList<RuntimeValue> Items => items;
+
+    internal IReadOnlyList<RuntimeValue> BorrowedItems => items;
+
+    internal ListRuntimeValue(IReadOnlyList<RuntimeValue> items, bool alreadySnapshotted)
+    {
+        this.items = alreadySnapshotted
+            ? items ?? throw new ArgumentNullException(nameof(items))
+            : RuntimeValueSnapshot.CloneList(items);
+    }
+}
+
+/// <summary>A bounded immutable object/record of named runtime values.</summary>
+public sealed class ObjectRuntimeValue : RuntimeValue
+{
+    /// <summary>The maximum number of properties in one runtime object.</summary>
+    public const int MaximumProperties = 10_000;
+    /// <summary>The maximum UTF-8 length of one property name.</summary>
+    public const int MaximumPropertyNameUtf8Bytes = 512;
+
+    private readonly IReadOnlyDictionary<string, RuntimeValue> properties;
+
+    /// <summary>Creates an object by deeply snapshotting each named child value.</summary>
+    [JsonConstructor]
+    public ObjectRuntimeValue(IReadOnlyDictionary<string, RuntimeValue> properties)
+    {
+        this.properties = RuntimeValueSnapshot.CloneProperties(properties);
+    }
+
+    /// <summary>The exact, deeply snapshotted object properties.</summary>
+    public IReadOnlyDictionary<string, RuntimeValue> Properties => properties;
+
+    internal IReadOnlyDictionary<string, RuntimeValue> BorrowedProperties => properties;
+
+    internal ObjectRuntimeValue(IReadOnlyDictionary<string, RuntimeValue> properties, bool alreadySnapshotted)
+    {
+        this.properties = alreadySnapshotted
+            ? properties ?? throw new ArgumentNullException(nameof(properties))
+            : RuntimeValueSnapshot.CloneProperties(properties);
+    }
 }
 
 /// <summary>A bounded immutable source revision used by a context snapshot.</summary>
@@ -183,6 +264,96 @@ public sealed class ContextSnapshotReference
 
 internal static class RuntimeValueSnapshot
 {
+    internal static ContextSnapshotReference CloneContextSnapshot(ContextSnapshotReference snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        return new ContextSnapshotReference(
+            CloneDescriptor(snapshot.Provider),
+            snapshot.SnapshotId,
+            CloneDigest(snapshot.RequestDigest, nameof(snapshot.RequestDigest)),
+            CloneDigest(snapshot.ContentDigest, nameof(snapshot.ContentDigest)),
+            snapshot.SourceRevisions.Select(CloneSourceRevision).ToArray(),
+            snapshot.PolicyRevision,
+            CloneBudget(snapshot.Budget),
+            snapshot.CreatedAt,
+            snapshot.ProvenanceReceipt);
+    }
+
+    internal static RuntimeValue CloneRuntimeValue(RuntimeValue value, string parameterName) =>
+        CloneValue(value ?? throw new ArgumentNullException(parameterName), new SnapshotState(), 0);
+
+    internal static IReadOnlyList<RuntimeValue> CloneList(IReadOnlyList<RuntimeValue> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        if (items.Count < 0 || items.Count > ListRuntimeValue.MaximumItems)
+            throw new ArgumentOutOfRangeException(nameof(items), $"A runtime list supports at most {ListRuntimeValue.MaximumItems} items.");
+
+        var state = new SnapshotState();
+        state.Visit(0);
+        return Array.AsReadOnly(CloneItems(items, state, 1));
+    }
+
+    internal static IReadOnlyDictionary<string, RuntimeValue> CloneProperties(IReadOnlyDictionary<string, RuntimeValue> properties)
+    {
+        ArgumentNullException.ThrowIfNull(properties);
+        if (properties.Count < 0 || properties.Count > ObjectRuntimeValue.MaximumProperties)
+            throw new ArgumentOutOfRangeException(nameof(properties), $"A runtime object supports at most {ObjectRuntimeValue.MaximumProperties} properties.");
+
+        var state = new SnapshotState();
+        state.Visit(0);
+        var snapshot = new Dictionary<string, RuntimeValue>(properties.Count, StringComparer.Ordinal);
+        foreach (var property in properties)
+        {
+            if (snapshot.Count >= ObjectRuntimeValue.MaximumProperties)
+                throw new ArgumentOutOfRangeException(nameof(properties), $"A runtime object supports at most {ObjectRuntimeValue.MaximumProperties} properties.");
+            var name = Text(property.Key, nameof(properties), ObjectRuntimeValue.MaximumPropertyNameUtf8Bytes);
+            if (!snapshot.TryAdd(name, CloneValue(property.Value, state, 1)))
+                throw new ArgumentException("A runtime object cannot contain duplicate property names.", nameof(properties));
+        }
+        return new ReadOnlyDictionary<string, RuntimeValue>(snapshot);
+    }
+
+    private static RuntimeValue[] CloneItems(IReadOnlyList<RuntimeValue> items, SnapshotState state, int depth)
+    {
+        var snapshot = new RuntimeValue[items.Count];
+        for (var index = 0; index < items.Count; index++)
+            snapshot[index] = CloneValue(items[index], state, depth);
+        return snapshot;
+    }
+
+    private static RuntimeValue CloneValue(RuntimeValue value, SnapshotState state, int depth)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        switch (value)
+        {
+            case JsonRuntimeValue json:
+                state.VisitJson(json.BorrowedValue, depth);
+                return new JsonRuntimeValue(json.BorrowedValue);
+            case ArtifactRuntimeValue artifact:
+                state.Visit(depth);
+                return new ArtifactRuntimeValue(CloneArtifact(artifact.BorrowedArtifact), alreadySnapshotted: true);
+            case ListRuntimeValue list:
+                if (list.BorrowedItems.Count > ListRuntimeValue.MaximumItems)
+                    throw new ArgumentOutOfRangeException(nameof(value), "The runtime list exceeds its item bound.");
+                state.Visit(depth);
+                return new ListRuntimeValue(Array.AsReadOnly(CloneItems(list.BorrowedItems, state, depth + 1)), alreadySnapshotted: true);
+            case ObjectRuntimeValue @object:
+                if (@object.BorrowedProperties.Count > ObjectRuntimeValue.MaximumProperties)
+                    throw new ArgumentOutOfRangeException(nameof(value), "The runtime object exceeds its property bound.");
+                state.Visit(depth);
+                var properties = new Dictionary<string, RuntimeValue>(@object.BorrowedProperties.Count, StringComparer.Ordinal);
+                foreach (var property in @object.BorrowedProperties)
+                {
+                    var name = Text(property.Key, nameof(value), ObjectRuntimeValue.MaximumPropertyNameUtf8Bytes);
+                    if (!properties.TryAdd(name, CloneValue(property.Value, state, depth + 1)))
+                        throw new ArgumentException("A runtime object cannot contain duplicate property names.", nameof(value));
+                }
+                return new ObjectRuntimeValue(new ReadOnlyDictionary<string, RuntimeValue>(properties), alreadySnapshotted: true);
+            default:
+                throw new ArgumentException("The runtime value kind is unsupported.", nameof(value));
+        }
+    }
+
     internal static ArtifactReference CloneArtifact(ArtifactReference artifact)
     {
         ArgumentNullException.ThrowIfNull(artifact);
@@ -260,5 +431,34 @@ internal static class RuntimeValueSnapshot
     private static void ValidateCount(long? value, string parameterName)
     {
         if (value is < 0) throw new ArgumentOutOfRangeException(parameterName);
+    }
+
+    private sealed class SnapshotState
+    {
+        private int nodes;
+
+        internal void Visit(int depth)
+        {
+            if (depth > RuntimeValue.MaximumCompositeDepth)
+                throw new ArgumentException($"Composite runtime value exceeds the maximum depth of {RuntimeValue.MaximumCompositeDepth}.");
+            if (++nodes > RuntimeValue.MaximumCompositeNodes)
+                throw new ArgumentException($"Composite runtime value exceeds the maximum of {RuntimeValue.MaximumCompositeNodes} nodes.");
+        }
+
+        internal void VisitJson(JsonElement element, int depth)
+        {
+            Visit(depth);
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    foreach (var property in element.EnumerateObject())
+                        VisitJson(property.Value, depth + 1);
+                    break;
+                case JsonValueKind.Array:
+                    foreach (var item in element.EnumerateArray())
+                        VisitJson(item, depth + 1);
+                    break;
+            }
+        }
     }
 }

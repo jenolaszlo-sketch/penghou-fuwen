@@ -10,6 +10,7 @@ namespace Penghou.Fuwen;
 [JsonDerivedType(typeof(LiteralBinding), "literal")]
 [JsonDerivedType(typeof(ListBinding), "list")]
 [JsonDerivedType(typeof(ObjectBinding), "object")]
+[JsonDerivedType(typeof(FanOutItemValueBinding), "fan-out-item")]
 public abstract record Binding;
 
 /// <summary>A workflow input with an optional field projection.</summary>

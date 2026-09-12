@@ -1,0 +1,31 @@
+{
+  "contractVersion": "descriptor/v1",
+  "descriptor": {
+    "kind": ["schema", "artifact", "activity", "contextProvider", "inferenceProfile", "promptTemplate", "tool"],
+    "name": "stable ordinal catalogue name",
+    "version": "non-empty semantic revision string",
+    "contentDigest": {
+      "algorithm": "sha256",
+      "contract": "descriptor/v1",
+      "value": "64 lowercase hexadecimal characters"
+    }
+  },
+  "sourcePin": "<name>@<version>#<sha256-value>",
+  "schema": {
+    "definition": "ObjectSchemaDefinition or EnumSchemaDefinition",
+    "fields": "bounded named fields with FuwenType values",
+    "authority": "resolved trusted metadata is used for type checking"
+  },
+  "callable": {
+    "signature": "parameter names/types and one output FuwenType",
+    "effect": ["none", "read", "write", "external", "destructive"],
+    "idempotency": ["idempotent", "idempotentWithKey", "nonIdempotent", "unknown"],
+    "retrySafety": ["safe", "unsafe", "hostControlled", "unknown"],
+    "requiredCapabilities": "host-owned capability requirements; source cannot grant them"
+  },
+  "diagnosticRepair": {
+    "unresolvedDescriptor": "add an exact trusted source pin",
+    "catalogueMismatch": "refresh the pin from the trusted snapshot; do not edit the digest",
+    "contractMismatch": "declare a type compatible with the resolved callable signature"
+  }
+}

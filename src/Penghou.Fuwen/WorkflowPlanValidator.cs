@@ -31,7 +31,9 @@ public static class WorkflowPlanValidator
             nodes);
         ValidateCatalogueClosure(plan);
 
-        if (string.Equals(plan.IrVersion, FuwenContracts.IrVersionV2, StringComparison.Ordinal))
+        if (string.Equals(plan.IrVersion, FuwenContracts.IrVersionV2, StringComparison.Ordinal) ||
+            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) ||
+            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal))
             ValidateExecutionOrder(plan, nodes);
     }
 
@@ -44,27 +46,61 @@ public static class WorkflowPlanValidator
         ArgumentNullException.ThrowIfNull(plan);
         var isV1 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV1, StringComparison.Ordinal);
         var isV2 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV2, StringComparison.Ordinal);
-        if (!isV1 && !isV2)
+        var isV3 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal);
+        var isV4 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal);
+        if (!isV1 && !isV2 && !isV3 && !isV4)
             throw new NotSupportedException(
-                $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'. Expected '{FuwenContracts.IrVersionV1}' or '{FuwenContracts.IrVersionV2}'.");
+                $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'. Expected '{FuwenContracts.IrVersionV1}', '{FuwenContracts.IrVersionV2}', '{FuwenContracts.IrVersionV3}', or '{FuwenContracts.IrVersionV4}'.");
 
         RequireVersion(plan.CanonicalJsonVersion, FuwenContracts.CanonicalJsonVersion, nameof(plan.CanonicalJsonVersion));
         var expectedFingerprint = isV1
             ? FuwenContracts.ExecutionFingerprintVersionV1
-            : FuwenContracts.ExecutionFingerprintVersionV2;
+            : isV2 ? FuwenContracts.ExecutionFingerprintVersionV2 : isV3 ? FuwenContracts.ExecutionFingerprintVersionV3 : FuwenContracts.ExecutionFingerprintVersionV4;
         RequireVersion(plan.FingerprintVersion, expectedFingerprint, nameof(plan.FingerprintVersion));
         var expectedCompilerSemantics = isV1
             ? FuwenContracts.CompilerSemanticVersionV1
-            : FuwenContracts.CompilerSemanticVersionV2;
+            : isV2 ? FuwenContracts.CompilerSemanticVersionV2 : isV3 ? FuwenContracts.CompilerSemanticVersionV3 : FuwenContracts.CompilerSemanticVersionV4;
         RequireVersion(plan.CompilerSemanticVersion, expectedCompilerSemantics, nameof(plan.CompilerSemanticVersion));
         if (isV1 && plan.ExecutionOrder is not null)
             throw new ArgumentException(
                 "IR v1 does not contain an execution order; historical v1 plans are never silently upgraded.",
                 nameof(plan.ExecutionOrder));
-        if (isV2 && plan.ExecutionOrder is null)
+        if ((isV2 || isV3 || isV4) && plan.ExecutionOrder is null)
             throw new ArgumentException(
-                "IR v2 requires an explicit execution order.",
+                $"{plan.IrVersion} requires an explicit execution order.",
                 nameof(plan.ExecutionOrder));
+        if (!isV3 && !isV4 && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextRequirements is not null))
+            throw new ArgumentException(
+                "Typed context requirements are only supported by IR v3; historical v1/v2 plans are never silently upgraded.",
+                nameof(plan.Nodes));
+        if ((isV3 || isV4) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextSnapshots.Count != 0))
+            throw new ArgumentException(
+                "IR v3 uses typed context requirements and does not accept legacy context snapshots.",
+                nameof(plan.Nodes));
+        if ((isV3 || isV4) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextRequirements is null))
+            throw new ArgumentException(
+                "IR v3 requires a non-null ContextRequirements collection on every inference node.",
+                nameof(plan.Nodes));
+    }
+
+    private static IEnumerable<WorkflowNode> FlattenNodes(IEnumerable<WorkflowNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            yield return node;
+            if (node is ConditionalNode conditional)
+            {
+                foreach (var child in FlattenNodes(conditional.Then))
+                    yield return child;
+                foreach (var child in FlattenNodes(conditional.Else))
+                    yield return child;
+            }
+            else if (node is FanOutNode fanOut)
+            {
+                foreach (var child in FlattenNodes(fanOut.Body))
+                    yield return child;
+            }
+        }
     }
 
     private static void ValidateNodes(
@@ -99,6 +135,7 @@ public static class WorkflowPlanValidator
                     RequireKind(inference.PromptTemplate, DescriptorKind.PromptTemplate);
                     ValidateArguments(inference.Arguments);
                     ValidateType(inference.OutputType);
+                    ValidateContextRequirementsShape(inference.ContextRequirements);
                     break;
                 case ActivityNode activity:
                     RequireKind(activity.Activity, DescriptorKind.Activity);
@@ -117,6 +154,15 @@ public static class WorkflowPlanValidator
                         $"{conditional.StructuralPath}/$else",
                         conditional.Else,
                         $"{conditional.StructuralPath}/$else",
+                        paths,
+                        locations);
+                    break;
+                case FanOutNode fanOut:
+                    ValidateFanOutShape(fanOut);
+                    ValidateNodes(
+                        $"{fanOut.StructuralPath}/$body",
+                        fanOut.Body,
+                        $"{fanOut.StructuralPath}/$body",
                         paths,
                         locations);
                     break;
@@ -282,7 +328,11 @@ public static class WorkflowPlanValidator
             ArgumentNullException.ThrowIfNull(node);
             paths.Add(node.StructuralPath);
             if (node is not ConditionalNode conditional)
+            {
+                if (node is FanOutNode fanOut)
+                    CollectExpectedRegions($"{fanOut.StructuralPath}/$body", fanOut.Body, expected);
                 continue;
+            }
 
             CollectExpectedRegions($"{conditional.StructuralPath}/$then", conditional.Then, expected);
             CollectExpectedRegions($"{conditional.StructuralPath}/$else", conditional.Else, expected);
@@ -338,8 +388,12 @@ public static class WorkflowPlanValidator
                     break;
                 case InferenceNode inference:
                     ValidateArgumentsForExecution(inference.Arguments, location, locations, phasesByRegion);
-                    foreach (var snapshot in inference.ContextSnapshots)
-                        ValidateNodeOutputBinding(snapshot, location, locations, phasesByRegion);
+                    if (string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) ||
+                        string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal))
+                        ValidateContextRequirements(inference, location, locations, phasesByRegion);
+                    else
+                        foreach (var snapshot in inference.ContextSnapshots)
+                            ValidateNodeOutputBinding(snapshot, location, locations, phasesByRegion);
                     break;
                 case ActivityNode activity:
                     ValidateArgumentsForExecution(activity.Arguments, location, locations, phasesByRegion);
@@ -353,7 +407,54 @@ public static class WorkflowPlanValidator
                     ValidateBindingForExecution(@return.Value, location, locations, phasesByRegion);
                     ValidateReturnValue(plan, @return, locations);
                     break;
+                case FanOutNode fanOut:
+                    ValidateBindingForExecution(fanOut.Source, location, locations, phasesByRegion);
+                    ValidateFanOutKeyBinding(fanOut.Key);
+                    ValidateFanOutBinding(fanOut.Yield, new NodeLocation(fanOut, $"{fanOut.StructuralPath}/$body"), locations, phasesByRegion);
+                    ValidateFanOutTypes(plan, fanOut, locations);
+                    break;
             }
+        }
+    }
+
+    private static void ValidateContextRequirementsShape(IReadOnlyList<ContextRequirement>? requirements)
+    {
+        if (requirements is null)
+            return;
+        if (requirements.Count > WorkflowPlanSnapshotLimits.MaximumExecutionEntries)
+            throw new ArgumentException("Context requirement count exceeds the bounded limit.", nameof(requirements));
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        var sources = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var requirement in requirements)
+        {
+            ArgumentNullException.ThrowIfNull(requirement);
+            StructuralNodeIdentity.ValidateSegment(requirement.Name);
+            if (!names.Add(requirement.Name))
+                throw new ArgumentException($"Duplicate context requirement '{requirement.Name}'.", nameof(requirements));
+            ArgumentNullException.ThrowIfNull(requirement.Source);
+            RequireText(requirement.Source.NodePath, nameof(requirement.Source.NodePath));
+            if (requirement.Source.Projection.Count != 0)
+                throw new ArgumentException($"Context requirement '{requirement.Name}' must use a direct, unprojected context output.", nameof(requirements));
+            if (!sources.Add(requirement.Source.NodePath))
+                throw new ArgumentException($"Context requirement source '{requirement.Source.NodePath}' is repeated.", nameof(requirements));
+            ValidateType(requirement.ExpectedType);
+        }
+    }
+
+    private static void ValidateContextRequirements(
+        InferenceNode inference,
+        NodeLocation consumer,
+        IReadOnlyDictionary<string, NodeLocation> locations,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> phasesByRegion)
+    {
+        foreach (var requirement in inference.ContextRequirements ?? [])
+        {
+            var source = requirement.Source;
+            if (!locations.TryGetValue(source.NodePath, out var sourceLocation) || sourceLocation.Node is not ContextNode context)
+                throw new ArgumentException($"Context requirement '{requirement.Name}' must reference a ContextNode.", nameof(inference.ContextRequirements));
+            if (!TypesEquivalent(context.OutputType, requirement.ExpectedType))
+                throw new ArgumentException($"Context requirement '{requirement.Name}' expects '{DescribeType(requirement.ExpectedType)}', but source '{source.NodePath}' produces '{DescribeType(context.OutputType)}'.", nameof(inference.ContextRequirements));
+            ValidateNodeOutputBinding(source, consumer, locations, phasesByRegion);
         }
     }
 
@@ -398,9 +499,140 @@ public static class WorkflowPlanValidator
                 foreach (var property in @object.Properties)
                     ValidateBindingForExecution(property.Value, consumer, locations, phasesByRegion);
                 break;
+            case FanOutItemValueBinding item:
+                ValidateProjection(item.Projection);
+                if (!consumer.RegionPath.Contains("/$body", StringComparison.Ordinal))
+                    throw new ArgumentException("Fan-out item binding is only valid inside its closed body region.", nameof(binding));
+                break;
             default:
                 throw new NotSupportedException($"Unsupported binding type '{binding.GetType().Name}'.");
         }
+    }
+
+    private static void ValidateFanOutBinding(
+        Binding binding,
+        NodeLocation consumer,
+        IReadOnlyDictionary<string, NodeLocation> locations,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> phasesByRegion)
+    {
+        switch (binding)
+        {
+            case FanOutItemValueBinding item:
+                ValidateProjection(item.Projection);
+                break;
+            case NodeOutputBinding output:
+                ValidateProjection(output.Projection);
+                if (!locations.TryGetValue(output.NodePath, out var source) ||
+                    !string.Equals(source.RegionPath, consumer.RegionPath, StringComparison.Ordinal) ||
+                    source.Node is ReturnNode or ConditionalNode)
+                    throw new ArgumentException("A fan-out yield may reference only an earlier body output within its closed body region.", nameof(binding));
+                break;
+            case ListBinding list:
+                foreach (var item in list.Items)
+                    ValidateFanOutBinding(item, consumer, locations, phasesByRegion);
+                break;
+            case ObjectBinding @object:
+                foreach (var item in @object.Properties.Values)
+                    ValidateFanOutBinding(item, consumer, locations, phasesByRegion);
+                break;
+            default:
+                ValidateBindingForExecution(binding, consumer, locations, phasesByRegion);
+                break;
+        }
+    }
+
+    private static void ValidateFanOutKeyBinding(Binding binding)
+    {
+        if (binding is not FanOutItemValueBinding item)
+            throw new ArgumentException(
+                "A fan-out key must be a projection of the current item so it can be validated before child work starts.",
+                nameof(binding));
+        ValidateProjection(item.Projection);
+    }
+
+    private static void ValidateFanOutShape(FanOutNode fanOut)
+    {
+        ArgumentNullException.ThrowIfNull(fanOut.Source);
+        ArgumentNullException.ThrowIfNull(fanOut.Item);
+        ArgumentNullException.ThrowIfNull(fanOut.Item.Type);
+        ArgumentNullException.ThrowIfNull(fanOut.Key);
+        ArgumentNullException.ThrowIfNull(fanOut.Body);
+        ArgumentNullException.ThrowIfNull(fanOut.Yield);
+        ArgumentNullException.ThrowIfNull(fanOut.ResultType);
+        StructuralNodeIdentity.ValidateSegment(fanOut.Item.Name);
+        if (fanOut.MaximumItems <= 0 || fanOut.MaximumItems > WorkflowPlanSnapshotLimits.MaximumCollectionCount)
+            throw new ArgumentOutOfRangeException(nameof(fanOut.MaximumItems), "Fan-out maximum item count must be positive and bounded.");
+        if (fanOut.MaximumConcurrency <= 0 || fanOut.MaximumConcurrency > WorkflowPlanSnapshotLimits.MaximumCollectionCount)
+            throw new ArgumentOutOfRangeException(nameof(fanOut.MaximumConcurrency), "Fan-out maximum concurrency must be positive and bounded.");
+        ValidateType(fanOut.Item.Type);
+        ValidateType(fanOut.ResultType);
+        if (fanOut.ResultType is not ListType)
+            throw new ArgumentException("A keyed fan-out result must be a bounded list type.", nameof(fanOut.ResultType));
+    }
+
+    private static void ValidateFanOutTypes(
+        WorkflowPlan plan,
+        FanOutNode fanOut,
+        IReadOnlyDictionary<string, NodeLocation> locations)
+    {
+        var sourceType = ResolveBindingType(fanOut.Source, plan, locations, fanOut.StructuralPath);
+        if (sourceType is not ListType sourceList ||
+            !TypesEquivalent(sourceList.ItemType, fanOut.Item.Type) ||
+            sourceList.MaxItems > fanOut.MaximumItems)
+            throw new ArgumentException(
+                $"Fan-out source for '{fanOut.StructuralPath}' must be a bounded list of the declared item type within the region maximum.",
+                nameof(fanOut.Source));
+
+        var keyType = ResolveBindingType(
+            fanOut.Key,
+            plan,
+            locations,
+            $"{fanOut.StructuralPath}/$body",
+            fanOut.Item.Type);
+        if (!IsFanOutKeyType(keyType, plan.Schemas))
+            throw new ArgumentException(
+                $"Fan-out key for '{fanOut.StructuralPath}' must be a non-null string, signed integer, or nominal enum value.",
+                nameof(fanOut.Key));
+
+        var yieldType = ResolveBindingType(fanOut.Yield, plan, locations, $"{fanOut.StructuralPath}/$body", fanOut.Item.Type);
+        if (fanOut.ResultType is not ListType result ||
+            result.MaxItems < sourceList.MaxItems ||
+            yieldType is null ||
+            !TypesEquivalent(result.ItemType, yieldType))
+            throw new ArgumentException(
+                $"Fan-out yield for '{fanOut.StructuralPath}' must exactly match its declared result item type and the result bound must contain every possible source item.",
+                nameof(fanOut.Yield));
+    }
+
+    private static bool IsFanOutKeyType(FuwenType? type, IReadOnlyList<ResolvedSchemaDefinition> schemas) =>
+        type is PrimitiveType { Primitive: FuwenPrimitiveKind.String or FuwenPrimitiveKind.Integer } ||
+        type is NamedTypeReference named && schemas.Any(
+            schema => schema is EnumSchemaDefinition && Equals(schema.Descriptor, named.Schema));
+
+    private static FuwenType? ResolveBindingType(
+        Binding binding,
+        WorkflowPlan plan,
+        IReadOnlyDictionary<string, NodeLocation> locations,
+        string regionPath,
+        FuwenType? fanOutItemType = null)
+    {
+        return binding switch
+        {
+            InputBinding input => ResolveProjectionType(plan.InputType, input.Projection, plan.Schemas),
+            FanOutItemValueBinding item => fanOutItemType is null ? null : ResolveProjectionType(fanOutItemType, item.Projection, plan.Schemas),
+            NodeOutputBinding output when locations.TryGetValue(output.NodePath, out var source) =>
+                ResolveProjectionType(GetNodeOutputType(source.Node), output.Projection, plan.Schemas),
+            LiteralBinding literal => literal.Value.ValueKind switch
+            {
+                JsonValueKind.String => new PrimitiveType(FuwenPrimitiveKind.String),
+                JsonValueKind.True or JsonValueKind.False => new PrimitiveType(FuwenPrimitiveKind.Boolean),
+                JsonValueKind.Number when literal.Value.TryGetInt64(out _) => new PrimitiveType(FuwenPrimitiveKind.Integer),
+                JsonValueKind.Number => new PrimitiveType(FuwenPrimitiveKind.Number),
+                _ => new PrimitiveType(FuwenPrimitiveKind.Json),
+            },
+            ListBinding list when list.Items.Count == 0 => null,
+            _ => null,
+        };
     }
 
     private static void ValidateNodeOutputBinding(
@@ -481,6 +713,7 @@ public static class WorkflowPlanValidator
         ContextNode context => context.OutputType,
         InferenceNode inference => inference.OutputType,
         ActivityNode activity => activity.OutputType,
+        FanOutNode fanOut => fanOut.ResultType,
         _ => null,
     };
 
@@ -756,6 +989,9 @@ public static class WorkflowPlanValidator
                     descriptors.Add(inference.Profile);
                     descriptors.Add(inference.PromptTemplate);
                     CollectTypeDescriptors(inference.OutputType, descriptors);
+                    if (inference.ContextRequirements is not null)
+                        foreach (var requirement in inference.ContextRequirements)
+                            CollectTypeDescriptors(requirement.ExpectedType, descriptors);
                     break;
                 case ActivityNode activity:
                     descriptors.Add(activity.Activity);
@@ -764,6 +1000,11 @@ public static class WorkflowPlanValidator
                 case ConditionalNode conditional:
                     CollectNodeDescriptors(conditional.Then, descriptors);
                     CollectNodeDescriptors(conditional.Else, descriptors);
+                    break;
+                case FanOutNode fanOut:
+                    CollectTypeDescriptors(fanOut.Item.Type, descriptors);
+                    CollectTypeDescriptors(fanOut.ResultType, descriptors);
+                    CollectNodeDescriptors(fanOut.Body, descriptors);
                     break;
             }
         }

@@ -35,7 +35,9 @@ jobs:
           fi
           for csproj in \
             src/Penghou.Fuwen/Penghou.Fuwen.csproj \
-            src/Penghou.Fuwen.Compiler/Penghou.Fuwen.Compiler.csproj; do
+            src/Penghou.Fuwen.Compiler/Penghou.Fuwen.Compiler.csproj \
+            src/Penghou.Fuwen.Zhinu/Penghou.Fuwen.Zhinu.csproj \
+            src/Penghou.Fuwen.Baize/Penghou.Fuwen.Baize.csproj; do
             dotnet pack "$csproj" \
               --configuration Release \
               --output ./artifacts \

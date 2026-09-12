@@ -2,9 +2,13 @@
   <Folder Name="/src/">
     <Project Path="src/Penghou.Fuwen/Penghou.Fuwen.csproj" />
     <Project Path="src/Penghou.Fuwen.Compiler/Penghou.Fuwen.Compiler.csproj" />
+    <Project Path="src/Penghou.Fuwen.Zhinu/Penghou.Fuwen.Zhinu.csproj" />
+    <Project Path="src/Penghou.Fuwen.Baize/Penghou.Fuwen.Baize.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Penghou.Fuwen.Tests/Penghou.Fuwen.Tests.csproj" />
     <Project Path="tests/Penghou.Fuwen.Compiler.Tests/Penghou.Fuwen.Compiler.Tests.csproj" />
+    <Project Path="tests/Penghou.Fuwen.Zhinu.Tests/Penghou.Fuwen.Zhinu.Tests.csproj" />
+    <Project Path="tests/Penghou.Fuwen.Baize.Tests/Penghou.Fuwen.Baize.Tests.csproj" />
   </Folder>
 </Solution>

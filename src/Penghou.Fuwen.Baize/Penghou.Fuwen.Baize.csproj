@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <PackageId>Penghou.Fuwen.Baize</PackageId>
+    <Title>Penghou Fuwen Baize Adapter</Title>
+    <Description>Admission-bound structured inference adapter from Penghou Fuwen to Penghou Baize.</Description>
+    <PackageTags>workflow;inference;baize;structured-output;fuwen</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>true</IsPackable>
+    <PublicApiAnalyzerEnabled>true</PublicApiAnalyzerEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Penghou.Baize" Version="0.3.0-preview.5" />
+    <PackageReference Include="Penghou.Baize.Tools" Version="0.3.0-preview.5" />
+    <PackageReference Include="Penghou.Nuwa" Version="0.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Penghou.Fuwen\Penghou.Fuwen.csproj" />
+    <ProjectReference Include="..\Penghou.Fuwen.Compiler\Penghou.Fuwen.Compiler.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -173,12 +173,14 @@ public sealed class WorkflowCompiler
 
         // v1 remains loadable as historical integrity-checked content, but it
         // is never silently upgraded or accepted by the current compiler.
-        if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV2, StringComparison.Ordinal))
+        if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV2, StringComparison.Ordinal) &&
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) &&
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal))
         {
             diagnostics.Add(Diagnostic(
                 CompilerDiagnosticCodes.SemanticValidationFailed,
                 DiagnosticPhase.Validation,
-                "Historical IR v1 is integrity-loadable but is not accepted by the v2 compiler.",
+                "Historical IR v1 is integrity-loadable but is not accepted by the current compiler.",
                 plan.IrVersion));
             return Failure(diagnostics, localUsage, budget);
         }
@@ -286,7 +288,16 @@ public sealed class WorkflowCompiler
             capabilityPolicy.PolicyRevision,
             capabilityPolicy.GrantSetFingerprint,
             capabilityPolicy.CanIssueAdmissionReceipt);
-        return new CompilationResult(definition, diagnostics, finalUsage, budget, admissionEvidence);
+        var callableEffectSummaries = WorkflowExplanationEnrichment.CreateCallableEffectSummaries(
+            trustedPlan,
+            trustedDescriptors);
+        return new CompilationResult(
+            definition,
+            diagnostics,
+            finalUsage,
+            budget,
+            admissionEvidence,
+            callableEffectSummaries);
     }
 
     private WorkflowPlan? CreateResolvedPlan(
@@ -538,28 +549,70 @@ internal static class WorkflowBindingValidator
                     break;
                 case InferenceNode inference:
                     ValidateCallableNode(inference.Profile, DescriptorKind.InferenceProfile, inference.Arguments, inference.OutputType, location, plan, locations, descriptors, diagnostics);
-                    var contextSources = new HashSet<string>(StringComparer.Ordinal);
-                    foreach (var snapshot in inference.ContextSnapshots)
+                    if (string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) ||
+                        string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal))
                     {
-                        if (!contextSources.Add(snapshot.NodePath))
+                        var contextNames = new HashSet<string>(StringComparer.Ordinal);
+                        var contextSources = new HashSet<string>(StringComparer.Ordinal);
+                        foreach (var requirement in inference.ContextRequirements ?? [])
                         {
-                            diagnostics.Add(new CompilerDiagnostic(
-                                CompilerDiagnosticCodes.ContextSnapshotDuplicate,
-                                DiagnosticSeverity.Error,
-                                DiagnosticPhase.Binding,
-                                $"Inference node '{inference.StructuralPath}' repeats context snapshot '{snapshot.NodePath}'.",
-                                path: inference.StructuralPath));
+                            if (!contextNames.Add(requirement.Name) || !contextSources.Add(requirement.Source.NodePath))
+                                diagnostics.Add(new CompilerDiagnostic(
+                                    CompilerDiagnosticCodes.ContextRequirementInvalid,
+                                    DiagnosticSeverity.Error,
+                                    DiagnosticPhase.Binding,
+                                    $"Inference node '{inference.StructuralPath}' repeats a context requirement name or source.",
+                                    path: inference.StructuralPath));
+                            if (requirement.Source.Projection.Count != 0 ||
+                                !locations.TryGetValue(requirement.Source.NodePath, out var source) ||
+                                source.Node is not ContextNode context)
+                            {
+                                diagnostics.Add(new CompilerDiagnostic(
+                                    CompilerDiagnosticCodes.ContextRequirementSourceInvalid,
+                                    DiagnosticSeverity.Error,
+                                    DiagnosticPhase.Binding,
+                                    $"Context requirement '{requirement.Name}' must reference a direct ContextNode output.",
+                                    path: inference.StructuralPath));
+                            }
+                            else if (!EquivalentExact(requirement.ExpectedType, context.OutputType))
+                            {
+                                diagnostics.Add(new CompilerDiagnostic(
+                                    CompilerDiagnosticCodes.ContextRequirementTypeMismatch,
+                                    DiagnosticSeverity.Error,
+                                    DiagnosticPhase.Typing,
+                                    $"Context requirement '{requirement.Name}' does not match its ContextNode output type.",
+                                    path: inference.StructuralPath,
+                                    expected: Describe(context.OutputType),
+                                    actual: Describe(requirement.ExpectedType)));
+                            }
+                            ValidateBinding(requirement.Source, requirement.ExpectedType, location, plan, locations, diagnostics, CompilerDiagnosticCodes.ContextRequirementTypeMismatch, exact: true);
                         }
-                        else if (!locations.TryGetValue(snapshot.NodePath, out var source) || source.Node is not ContextNode)
+                    }
+                    else
+                    {
+                        var contextSources = new HashSet<string>(StringComparer.Ordinal);
+                        foreach (var snapshot in inference.ContextSnapshots)
                         {
-                            diagnostics.Add(new CompilerDiagnostic(
-                                CompilerDiagnosticCodes.ContextSnapshotInvalid,
-                                DiagnosticSeverity.Error,
-                                DiagnosticPhase.Binding,
-                                $"Inference context snapshot '{snapshot.NodePath}' must reference a ContextNode.",
-                                path: inference.StructuralPath));
+                            if (!contextSources.Add(snapshot.NodePath))
+                            {
+                                diagnostics.Add(new CompilerDiagnostic(
+                                    CompilerDiagnosticCodes.ContextSnapshotDuplicate,
+                                    DiagnosticSeverity.Error,
+                                    DiagnosticPhase.Binding,
+                                    $"Inference node '{inference.StructuralPath}' repeats context snapshot '{snapshot.NodePath}'.",
+                                    path: inference.StructuralPath));
+                            }
+                            else if (!locations.TryGetValue(snapshot.NodePath, out var source) || source.Node is not ContextNode)
+                            {
+                                diagnostics.Add(new CompilerDiagnostic(
+                                    CompilerDiagnosticCodes.ContextSnapshotInvalid,
+                                    DiagnosticSeverity.Error,
+                                    DiagnosticPhase.Binding,
+                                    $"Inference context snapshot '{snapshot.NodePath}' must reference a ContextNode.",
+                                    path: inference.StructuralPath));
+                            }
+                            ValidateBinding(snapshot, null, location, plan, locations, diagnostics);
                         }
-                        ValidateBinding(snapshot, null, location, plan, locations, diagnostics);
                     }
                     break;
                 case ActivityNode activity:
@@ -570,6 +623,45 @@ internal static class WorkflowBindingValidator
                     break;
                 case ReturnNode @return:
                     ValidateBinding(@return.Value, plan.OutputType, location, plan, locations, diagnostics);
+                    break;
+                case FanOutNode fanOut:
+                    var sourceType = ValidateBinding(fanOut.Source, null, location, plan, locations, diagnostics);
+                    if (sourceType is not ListType sourceList || !EquivalentExact(sourceList.ItemType, fanOut.Item.Type) || sourceList.MaxItems > fanOut.MaximumItems)
+                        diagnostics.Add(new CompilerDiagnostic(
+                            CompilerDiagnosticCodes.BindingTypeMismatch,
+                            DiagnosticSeverity.Error,
+                            DiagnosticPhase.Typing,
+                            "Fan-out source must be a bounded list of the declared item type and fit the region maximum.",
+                            path: fanOut.StructuralPath));
+                    if (fanOut.Key is not FanOutItemValueBinding)
+                        diagnostics.Add(new CompilerDiagnostic(
+                            CompilerDiagnosticCodes.BindingTypeMismatch,
+                            DiagnosticSeverity.Error,
+                            DiagnosticPhase.Typing,
+                            "A fan-out key must be a projection of the current item so all keys can be validated before child work starts.",
+                            path: fanOut.StructuralPath));
+                    var keyType = ValidateBinding(fanOut.Key, null, location with { Region = $"{fanOut.StructuralPath}/$body", FanOutItemType = fanOut.Item.Type }, plan, locations, diagnostics);
+                    if (keyType is not PrimitiveType { Primitive: FuwenPrimitiveKind.String or FuwenPrimitiveKind.Integer } &&
+                        (keyType is not NamedTypeReference namedKey ||
+                         !plan.Schemas.Any(schema => schema is EnumSchemaDefinition && Equals(schema.Descriptor, namedKey.Schema))))
+                        diagnostics.Add(new CompilerDiagnostic(
+                            CompilerDiagnosticCodes.BindingTypeMismatch,
+                            DiagnosticSeverity.Error,
+                            DiagnosticPhase.Typing,
+                            "Fan-out keys must be non-null string, integer, or nominal enum values.",
+                            path: fanOut.StructuralPath));
+                    var bodyLocation = location with { Region = $"{fanOut.StructuralPath}/$body", FanOutItemType = fanOut.Item.Type };
+                    var yieldType = ValidateBinding(fanOut.Yield, null, bodyLocation, plan, locations, diagnostics);
+                    if (fanOut.ResultType is not ListType resultList ||
+                        sourceType is ListType boundedSource && resultList.MaxItems < boundedSource.MaxItems ||
+                        yieldType is null ||
+                        !EquivalentExact(resultList.ItemType, yieldType))
+                        diagnostics.Add(new CompilerDiagnostic(
+                            CompilerDiagnosticCodes.BindingTypeMismatch,
+                            DiagnosticSeverity.Error,
+                            DiagnosticPhase.Typing,
+                            "Fan-out yield type must exactly match the declared result item type and its bound must contain every possible source item.",
+                            path: fanOut.StructuralPath));
                     break;
             }
         }
@@ -678,15 +770,20 @@ internal static class WorkflowBindingValidator
         string parentPath,
         IEnumerable<WorkflowNode> nodes,
         string region,
-        IDictionary<string, NodeLocation> locations)
+        IDictionary<string, NodeLocation> locations,
+        FuwenType? fanOutItemType = null)
     {
         foreach (var node in nodes)
         {
-            locations[node.StructuralPath] = new NodeLocation(node, region);
+            locations[node.StructuralPath] = new NodeLocation(node, region, fanOutItemType);
             if (node is ConditionalNode conditional)
             {
-                CollectLocations($"{conditional.StructuralPath}/$then", conditional.Then, $"{conditional.StructuralPath}/$then", locations);
-                CollectLocations($"{conditional.StructuralPath}/$else", conditional.Else, $"{conditional.StructuralPath}/$else", locations);
+                CollectLocations($"{conditional.StructuralPath}/$then", conditional.Then, $"{conditional.StructuralPath}/$then", locations, fanOutItemType);
+                CollectLocations($"{conditional.StructuralPath}/$else", conditional.Else, $"{conditional.StructuralPath}/$else", locations, fanOutItemType);
+            }
+            else if (node is FanOutNode fanOut)
+            {
+                CollectLocations($"{fanOut.StructuralPath}/$body", fanOut.Body, $"{fanOut.StructuralPath}/$body", locations, fanOut.Item.Type);
             }
         }
     }
@@ -744,6 +841,14 @@ internal static class WorkflowBindingValidator
         {
             case InputBinding input:
                 return CheckExpected(ResolveProjection(plan.InputType, input.Projection, plan.Schemas, diagnostics, consumer.Node.StructuralPath), expected, consumer, diagnostics, mismatchCode, exact);
+            case FanOutItemValueBinding item:
+                return CheckExpected(
+                    ResolveProjection(consumer.FanOutItemType, item.Projection, plan.Schemas, diagnostics, consumer.Node.StructuralPath),
+                    expected,
+                    consumer,
+                    diagnostics,
+                    mismatchCode,
+                    exact);
             case NodeOutputBinding output:
                 if (!locations.TryGetValue(output.NodePath, out var source))
                 {
@@ -760,6 +865,7 @@ internal static class WorkflowBindingValidator
                     ContextNode context => context.OutputType,
                     InferenceNode inference => inference.OutputType,
                     ActivityNode activity => activity.OutputType,
+                    FanOutNode fanOut => fanOut.ResultType,
                     _ => null,
                 };
                 return CheckExpected(ResolveProjection(sourceType, output.Projection, plan.Schemas, diagnostics, consumer.Node.StructuralPath), expected, consumer, diagnostics, mismatchCode, exact);
@@ -938,7 +1044,7 @@ internal static class WorkflowBindingValidator
         _ => false,
     };
     private static string Describe(FuwenType type) => type.GetType().Name;
-    private sealed record NodeLocation(WorkflowNode Node, string Region);
+    private sealed record NodeLocation(WorkflowNode Node, string Region, FuwenType? FanOutItemType = null);
 }
 
 internal static class PlanUsage
@@ -1014,7 +1120,7 @@ internal static class PlanUsage
                     break;
                 case InferenceNode inference:
                     CountArguments(inference.Arguments, ref expressions);
-                    expressions += inference.ContextSnapshots.Count;
+                    expressions += inference.ContextRequirements?.Count ?? inference.ContextSnapshots.Count;
                     break;
                 case ActivityNode activity:
                     CountArguments(activity.Arguments, ref expressions);
@@ -1029,6 +1135,12 @@ internal static class PlanUsage
                     break;
                 case ReturnNode @return:
                     CountBinding(@return.Value, currentDepth, ref expressions, ref depth);
+                    break;
+                case FanOutNode fanOut:
+                    CountBinding(fanOut.Source, currentDepth, ref expressions, ref depth);
+                    CountBinding(fanOut.Key, currentDepth + 1, ref expressions, ref depth);
+                    CountBinding(fanOut.Yield, currentDepth + 1, ref expressions, ref depth);
+                    CountNodes(fanOut.Body, currentDepth + 1, ref nodes, ref expressions, ref depth);
                     break;
             }
         }
@@ -1137,6 +1249,13 @@ internal static class PlanUsage
                     AddArgumentsText(inference.Arguments, ref bytes);
                     foreach (var snapshot in inference.ContextSnapshots)
                         AddBindingText(snapshot, ref bytes);
+                    if (inference.ContextRequirements is not null)
+                        foreach (var requirement in inference.ContextRequirements)
+                        {
+                            AddText(requirement.Name, ref bytes);
+                            AddBindingText(requirement.Source, ref bytes);
+                            AddTypeText(requirement.ExpectedType, ref bytes);
+                        }
                     break;
                 case ActivityNode activity:
                     AddDescriptorText(activity.Activity, ref bytes);
@@ -1152,6 +1271,15 @@ internal static class PlanUsage
                     break;
                 case ReturnNode @return:
                     AddBindingText(@return.Value, ref bytes);
+                    break;
+                case FanOutNode fanOut:
+                    AddBindingText(fanOut.Source, ref bytes);
+                    AddText(fanOut.Item.Name, ref bytes);
+                    AddTypeText(fanOut.Item.Type, ref bytes);
+                    AddBindingText(fanOut.Key, ref bytes);
+                    AddBindingText(fanOut.Yield, ref bytes);
+                    AddTypeText(fanOut.ResultType, ref bytes);
+                    AddNodeText(fanOut.Body, ref bytes);
                     break;
             }
         }
@@ -1176,6 +1304,9 @@ internal static class PlanUsage
             case NodeOutputBinding output:
                 AddText(output.NodePath, ref bytes);
                 AddProjectionText(output.Projection, ref bytes);
+                break;
+            case FanOutItemValueBinding item:
+                AddProjectionText(item.Projection, ref bytes);
                 break;
             case LiteralBinding literal:
                 AddText(literal.Value.GetRawText(), ref bytes);
@@ -1322,6 +1453,9 @@ internal static class PlanUsage
                     result.Add(inference.Profile);
                     result.Add(inference.PromptTemplate);
                     AddType(inference.OutputType, result);
+                    if (inference.ContextRequirements is not null)
+                        foreach (var requirement in inference.ContextRequirements)
+                            AddType(requirement.ExpectedType, result);
                     break;
                 case ActivityNode activity:
                     result.Add(activity.Activity);
@@ -1330,6 +1464,11 @@ internal static class PlanUsage
                 case ConditionalNode conditional:
                     AddNodes(conditional.Then, result);
                     AddNodes(conditional.Else, result);
+                    break;
+                case FanOutNode fanOut:
+                    AddType(fanOut.Item.Type, result);
+                    AddType(fanOut.ResultType, result);
+                    AddNodes(fanOut.Body, result);
                     break;
             }
         }

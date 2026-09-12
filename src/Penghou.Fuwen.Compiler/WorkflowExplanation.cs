@@ -17,6 +17,8 @@ public sealed class WorkflowExplanation
     private readonly WorkflowDefinitionDocument? definition;
     private readonly IReadOnlyList<DescriptorReference> resolvedDescriptorPins;
     private readonly IReadOnlyList<CapabilityRequirement> requiredCapabilities;
+    private readonly IReadOnlyList<CallableEffectSummary> callableEffectSummaries;
+    private readonly IReadOnlyList<DiagnosticRepairGuidance> repairGuidance;
 
     private WorkflowExplanation(
         CompilationResult compilation,
@@ -32,6 +34,16 @@ public sealed class WorkflowExplanation
         definition = compilation.Definition;
         EffectiveBudget = compilation.Budget;
         Usage = compilation.Usage;
+        callableEffectSummaries = Array.AsReadOnly(
+            compilation.CallableEffectSummaries
+                .Select(static summary => new CallableEffectSummary(
+                    summary.Descriptor,
+                    summary.Effect,
+                    summary.Idempotency,
+                    summary.RetrySafety,
+                    summary.NodePaths))
+                .ToArray());
+        repairGuidance = WorkflowExplanationEnrichment.CreateRepairGuidance(diagnostics);
 
         if (definition is null)
         {
@@ -119,6 +131,19 @@ public sealed class WorkflowExplanation
 
     /// <summary>Compiler-inferred capabilities in deterministic ordinal order.</summary>
     public IReadOnlyList<CapabilityRequirement> RequiredCapabilities => requiredCapabilities;
+
+    /// <summary>
+    /// Trusted callable side-effect summaries in deterministic descriptor order.
+    /// These summaries describe compiler evidence only and do not authorize
+    /// invocation or grant capabilities.
+    /// </summary>
+    public IReadOnlyList<CallableEffectSummary> CallableEffectSummaries => callableEffectSummaries;
+
+    /// <summary>
+    /// Deterministic correction suggestions for diagnostics with known repair
+    /// actions. The original diagnostic remains available through each item.
+    /// </summary>
+    public IReadOnlyList<DiagnosticRepairGuidance> RepairGuidance => repairGuidance;
 
     /// <summary>The effective compilation budget used by the compiler.</summary>
     public CompilationBudget EffectiveBudget { get; }

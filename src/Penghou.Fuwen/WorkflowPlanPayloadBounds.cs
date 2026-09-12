@@ -185,6 +185,8 @@ internal sealed class WorkflowPlanPayloadBounds
                     Descriptor(value.PromptTemplate);
                     Arguments(value.Arguments);
                     List(value.ContextSnapshots, NodeOutput, "context snapshots");
+                    if (value.ContextRequirements is not null)
+                        List(value.ContextRequirements, ContextRequirement, "context requirements");
                     Type(value.OutputType);
                     break;
                 case ActivityNode value:
@@ -200,11 +202,40 @@ internal sealed class WorkflowPlanPayloadBounds
                 case ReturnNode value:
                     Binding(value.Value);
                     break;
+                case FanOutNode value:
+                    Binding(value.Source);
+                    if (value.Item is not null)
+                    {
+                        Text(value.Item.Name, "fan-out item name");
+                        Type(value.Item.Type);
+                    }
+                    Binding(value.Key);
+                    List(value.Body, Node, "fan-out body nodes");
+                    Binding(value.Yield);
+                    Type(value.ResultType);
+                    break;
             }
         }
         finally
         {
             Exit(node);
+        }
+    }
+
+    private void ContextRequirement(ContextRequirement requirement)
+    {
+        if (requirement is null)
+            return;
+        Enter(requirement);
+        try
+        {
+            Text(requirement.Name, "context requirement name");
+            NodeOutput(requirement.Source);
+            Type(requirement.ExpectedType);
+        }
+        finally
+        {
+            Exit(requirement);
         }
     }
 
@@ -279,6 +310,9 @@ internal sealed class WorkflowPlanPayloadBounds
                     break;
                 case NodeOutputBinding output:
                     NodeOutputBody(output);
+                    break;
+                case FanOutItemValueBinding item:
+                    List(item.Projection, path => Text(path, "binding projection"));
                     break;
                 case LiteralBinding literal:
                     Json(literal.Value);

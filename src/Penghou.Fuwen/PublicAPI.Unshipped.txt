@@ -1,4 +1,32 @@
 #nullable enable
+Penghou.Fuwen.FanOutItemBinding
+Penghou.Fuwen.FanOutItemBinding.FanOutItemBinding(string! Name, Penghou.Fuwen.FuwenType! Type) -> void
+Penghou.Fuwen.FanOutItemBinding.Name.get -> string!
+Penghou.Fuwen.FanOutItemBinding.Name.init -> void
+Penghou.Fuwen.FanOutItemBinding.Type.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.FanOutItemBinding.Type.init -> void
+Penghou.Fuwen.FanOutItemValueBinding
+Penghou.Fuwen.FanOutItemValueBinding.FanOutItemValueBinding(System.Collections.Generic.IReadOnlyList<string!>! Projection) -> void
+Penghou.Fuwen.FanOutItemValueBinding.Projection.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Fuwen.FanOutItemValueBinding.Projection.init -> void
+Penghou.Fuwen.FanOutNode
+Penghou.Fuwen.FanOutNode.FanOutNode(string! Name, string! StructuralPath, Penghou.Fuwen.Binding! Source, Penghou.Fuwen.FanOutItemBinding! Item, Penghou.Fuwen.Binding! Key, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Body, Penghou.Fuwen.Binding! Yield, Penghou.Fuwen.FuwenType! ResultType, int MaximumItems, int MaximumConcurrency) -> void
+Penghou.Fuwen.FanOutNode.Body.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>!
+Penghou.Fuwen.FanOutNode.Body.init -> void
+Penghou.Fuwen.FanOutNode.Item.get -> Penghou.Fuwen.FanOutItemBinding!
+Penghou.Fuwen.FanOutNode.Item.init -> void
+Penghou.Fuwen.FanOutNode.Key.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.FanOutNode.Key.init -> void
+Penghou.Fuwen.FanOutNode.MaximumConcurrency.get -> int
+Penghou.Fuwen.FanOutNode.MaximumConcurrency.init -> void
+Penghou.Fuwen.FanOutNode.MaximumItems.get -> int
+Penghou.Fuwen.FanOutNode.MaximumItems.init -> void
+Penghou.Fuwen.FanOutNode.ResultType.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.FanOutNode.ResultType.init -> void
+Penghou.Fuwen.FanOutNode.Source.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.FanOutNode.Source.init -> void
+Penghou.Fuwen.FanOutNode.Yield.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.FanOutNode.Yield.init -> void
 const Penghou.Fuwen.ContextSnapshotReference.MaximumProvenanceReceiptUtf8Bytes = 2048 -> int
 const Penghou.Fuwen.ContextSnapshotReference.MaximumSnapshotIdUtf8Bytes = 512 -> int
 const Penghou.Fuwen.ContextSnapshotReference.MaximumSourceRevisions = 64 -> int
@@ -6,20 +34,32 @@ const Penghou.Fuwen.FuwenContracts.CanonicalJsonVersion = "penghou-canonical-jso
 const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersion = "compiler-semantics/1" -> string!
 const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersionV1 = "compiler-semantics/1" -> string!
 const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersionV2 = "compiler-semantics/2" -> string!
+const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersionV3 = "compiler-semantics/3" -> string!
+const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersionV4 = "compiler-semantics/4" -> string!
 const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersion = "fuwen-execution/v1" -> string!
 const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersionV1 = "fuwen-execution/v1" -> string!
 const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersionV2 = "fuwen-execution/v2" -> string!
+const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersionV3 = "fuwen-execution/v3" -> string!
+const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersionV4 = "fuwen-execution/v4" -> string!
 const Penghou.Fuwen.FuwenContracts.IrVersion = "fuwen-ir/v1" -> string!
 const Penghou.Fuwen.FuwenContracts.IrVersionV1 = "fuwen-ir/v1" -> string!
 const Penghou.Fuwen.FuwenContracts.IrVersionV2 = "fuwen-ir/v2" -> string!
+const Penghou.Fuwen.FuwenContracts.IrVersionV3 = "fuwen-ir/v3" -> string!
+const Penghou.Fuwen.FuwenContracts.IrVersionV4 = "fuwen-ir/v4" -> string!
 const Penghou.Fuwen.FuwenContracts.MaximumCanonicalPlanBytes = 4194304 -> int
 const Penghou.Fuwen.FuwenContracts.SourceFingerprintVersion = "fuwen-source/v1" -> string!
 const Penghou.Fuwen.JsonRuntimeValue.MaximumJsonDepth = 128 -> int
 const Penghou.Fuwen.JsonRuntimeValue.MaximumJsonNodes = 100000 -> int
 const Penghou.Fuwen.JsonRuntimeValue.MaximumJsonUtf8Bytes = 4194304 -> int
+const Penghou.Fuwen.ListRuntimeValue.MaximumItems = 100000 -> int
+const Penghou.Fuwen.ObjectRuntimeValue.MaximumProperties = 10000 -> int
+const Penghou.Fuwen.ObjectRuntimeValue.MaximumPropertyNameUtf8Bytes = 512 -> int
+const Penghou.Fuwen.RuntimeValue.MaximumCompositeDepth = 128 -> int
+const Penghou.Fuwen.RuntimeValue.MaximumCompositeNodes = 100000 -> int
 const Penghou.Fuwen.RuntimeNodeIdentity.MaximumKeyUtf8Bytes = 256 -> int
 const Penghou.Fuwen.StructuralNodeIdentity.MaximumPathUtf8Bytes = 1024 -> int
 const Penghou.Fuwen.StructuralNodeIdentity.MaximumSegmentCharacters = 64 -> int
+Penghou.Fuwen.ActivityExecutionRequest.ActivityExecutionRequest(Penghou.Fuwen.ExecutionInvocation! invocation, Penghou.Fuwen.DescriptorReference! activity, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.RuntimeArgument!>! arguments, Penghou.Fuwen.FuwenType! outputType) -> void
 Penghou.Fuwen.ActivityNode
 Penghou.Fuwen.ActivityNode.Activity.get -> Penghou.Fuwen.DescriptorReference!
 Penghou.Fuwen.ActivityNode.Activity.init -> void
@@ -112,6 +152,8 @@ Penghou.Fuwen.ContentDigest.Contract.get -> string!
 Penghou.Fuwen.ContentDigest.Contract.init -> void
 Penghou.Fuwen.ContentDigest.Value.get -> string!
 Penghou.Fuwen.ContentDigest.Value.init -> void
+Penghou.Fuwen.ContextExecutionRequest.ContextExecutionRequest(Penghou.Fuwen.ExecutionInvocation! invocation, Penghou.Fuwen.DescriptorReference! provider, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.RuntimeArgument!>! arguments, Penghou.Fuwen.FuwenType! outputType) -> void
+Penghou.Fuwen.ContextExecutionResult.ContextExecutionResult(Penghou.Fuwen.RuntimeValue! output, Penghou.Fuwen.ContextSnapshotReference! contextSnapshot) -> void
 Penghou.Fuwen.ContextNode
 Penghou.Fuwen.ContextNode.Arguments.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArgumentBinding!>!
 Penghou.Fuwen.ContextNode.Arguments.init -> void
@@ -120,6 +162,14 @@ Penghou.Fuwen.ContextNode.OutputType.get -> Penghou.Fuwen.FuwenType!
 Penghou.Fuwen.ContextNode.OutputType.init -> void
 Penghou.Fuwen.ContextNode.Provider.get -> Penghou.Fuwen.DescriptorReference!
 Penghou.Fuwen.ContextNode.Provider.init -> void
+Penghou.Fuwen.ContextRequirement
+Penghou.Fuwen.ContextRequirement.ContextRequirement(string! Name, Penghou.Fuwen.NodeOutputBinding! Source, Penghou.Fuwen.FuwenType! ExpectedType) -> void
+Penghou.Fuwen.ContextRequirement.ExpectedType.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.ContextRequirement.ExpectedType.init -> void
+Penghou.Fuwen.ContextRequirement.Name.get -> string!
+Penghou.Fuwen.ContextRequirement.Name.init -> void
+Penghou.Fuwen.ContextRequirement.Source.get -> Penghou.Fuwen.NodeOutputBinding!
+Penghou.Fuwen.ContextRequirement.Source.init -> void
 Penghou.Fuwen.ContextSnapshotBudgetEvidence
 Penghou.Fuwen.ContextSnapshotBudgetEvidence.ContextSnapshotBudgetEvidence(bool WasTruncated, long? MaximumItems, long? MaximumBytes, long? ObservedItems, long? ObservedBytes) -> void
 Penghou.Fuwen.ContextSnapshotBudgetEvidence.MaximumBytes.get -> long?
@@ -185,6 +235,42 @@ Penghou.Fuwen.EnumSchemaDefinition
 Penghou.Fuwen.EnumSchemaDefinition.EnumSchemaDefinition(Penghou.Fuwen.DescriptorReference! Descriptor, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.EnumMember!>! Members) -> void
 Penghou.Fuwen.EnumSchemaDefinition.Members.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.EnumMember!>!
 Penghou.Fuwen.EnumSchemaDefinition.Members.init -> void
+Penghou.Fuwen.ExecutionFailure.Code.get -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailure.ExecutionFailure(Penghou.Fuwen.ExecutionFailureKind kind, Penghou.Fuwen.ExecutionFailureCode code, string! message, Penghou.Fuwen.ExecutionRetryDisposition retryDisposition = Penghou.Fuwen.ExecutionRetryDisposition.Never, bool mayHaveCommittedEffect = false, string? providerCode = null) -> void
+Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.BindingFailure = 4 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.Cancelled = 16 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.ContextSnapshotMismatch = 6 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.DescriptorUnavailable = 1 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.FencingLost = 15 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.InvalidInput = 3 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.MalformedOutput = 7 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.NotAdmitted = 0 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.ObserverFailure = 18 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.OutputTypeMismatch = 5 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.PolicyRejected = 2 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.ProviderError = 12 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.PublicationRejected = 17 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.RepairedOutputSchemaInvalid = 8 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.SchemaMismatch = 9 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.Timeout = 14 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.ToolMappingFailure = 10 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.TransientInfrastructureFailure = 13 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.TruncatedOutput = 11 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.Unknown = 19 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureKind.Admission = 0 -> Penghou.Fuwen.ExecutionFailureKind
+Penghou.Fuwen.ExecutionFailureKind.Cancelled = 6 -> Penghou.Fuwen.ExecutionFailureKind
+Penghou.Fuwen.ExecutionFailureKind.Contract = 1 -> Penghou.Fuwen.ExecutionFailureKind
+Penghou.Fuwen.ExecutionFailureKind.Infrastructure = 4 -> Penghou.Fuwen.ExecutionFailureKind
+Penghou.Fuwen.ExecutionFailureKind.Observation = 7 -> Penghou.Fuwen.ExecutionFailureKind
+Penghou.Fuwen.ExecutionFailureKind.Provider = 3 -> Penghou.Fuwen.ExecutionFailureKind
+Penghou.Fuwen.ExecutionFailureKind.ProviderOutput = 2 -> Penghou.Fuwen.ExecutionFailureKind
+Penghou.Fuwen.ExecutionFailureKind.Timeout = 5 -> Penghou.Fuwen.ExecutionFailureKind
+Penghou.Fuwen.ExecutionFailureKind.Unknown = 8 -> Penghou.Fuwen.ExecutionFailureKind
+Penghou.Fuwen.ExecutionInvocation.ExecutionInvocation(string! executionFingerprint, string! structuralPath, string! runtimePath, long stepRevision, string! effectiveRequestFingerprint) -> void
+Penghou.Fuwen.ExecutionInvocation.ExecutionInvocation(string! executionFingerprint, string! structuralPath, string! runtimePath, string! stepRevision, string! effectiveRequestFingerprint) -> void
+Penghou.Fuwen.ExecutionRequest.ExecutionRequest(Penghou.Fuwen.ExecutionInvocation! invocation, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.RuntimeArgument!>! arguments, Penghou.Fuwen.FuwenType! outputType) -> void
+Penghou.Fuwen.ExecutionRequest.OutputType.get -> Penghou.Fuwen.FuwenType!
 Penghou.Fuwen.FuwenContracts
 Penghou.Fuwen.FuwenPrimitiveKind
 Penghou.Fuwen.FuwenPrimitiveKind.Boolean = 1 -> Penghou.Fuwen.FuwenPrimitiveKind
@@ -194,12 +280,17 @@ Penghou.Fuwen.FuwenPrimitiveKind.Json = 5 -> Penghou.Fuwen.FuwenPrimitiveKind
 Penghou.Fuwen.FuwenPrimitiveKind.Number = 3 -> Penghou.Fuwen.FuwenPrimitiveKind
 Penghou.Fuwen.FuwenPrimitiveKind.String = 0 -> Penghou.Fuwen.FuwenPrimitiveKind
 Penghou.Fuwen.FuwenType
+Penghou.Fuwen.InferenceContextInput.ExpectedType.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.InferenceContextInput.InferenceContextInput(string! name, Penghou.Fuwen.FuwenType! expectedType, Penghou.Fuwen.RuntimeValue! value, Penghou.Fuwen.ContextSnapshotReference! contextSnapshot) -> void
+Penghou.Fuwen.InferenceExecutionRequest.InferenceExecutionRequest(Penghou.Fuwen.ExecutionInvocation! invocation, Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference! promptTemplate, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.RuntimeArgument!>! arguments, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceContextInput!>! contextInputs, Penghou.Fuwen.FuwenType! outputType) -> void
 Penghou.Fuwen.InferenceNode
 Penghou.Fuwen.InferenceNode.Arguments.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArgumentBinding!>!
 Penghou.Fuwen.InferenceNode.Arguments.init -> void
 Penghou.Fuwen.InferenceNode.ContextSnapshots.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.NodeOutputBinding!>!
 Penghou.Fuwen.InferenceNode.ContextSnapshots.init -> void
-Penghou.Fuwen.InferenceNode.InferenceNode(string! Name, string! StructuralPath, Penghou.Fuwen.DescriptorReference! Profile, Penghou.Fuwen.DescriptorReference! PromptTemplate, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArgumentBinding!>! Arguments, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.NodeOutputBinding!>! ContextSnapshots, Penghou.Fuwen.FuwenType! OutputType) -> void
+Penghou.Fuwen.InferenceNode.ContextRequirements.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ContextRequirement!>?
+Penghou.Fuwen.InferenceNode.ContextRequirements.init -> void
+Penghou.Fuwen.InferenceNode.InferenceNode(string! Name, string! StructuralPath, Penghou.Fuwen.DescriptorReference! Profile, Penghou.Fuwen.DescriptorReference! PromptTemplate, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArgumentBinding!>! Arguments, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.NodeOutputBinding!>! ContextSnapshots, Penghou.Fuwen.FuwenType! OutputType, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ContextRequirement!>? ContextRequirements = null) -> void
 Penghou.Fuwen.InferenceNode.OutputType.get -> Penghou.Fuwen.FuwenType!
 Penghou.Fuwen.InferenceNode.OutputType.init -> void
 Penghou.Fuwen.InferenceNode.Profile.get -> Penghou.Fuwen.DescriptorReference!
@@ -224,6 +315,9 @@ Penghou.Fuwen.IWorkflowDefinitionStore.StoreAsync(Penghou.Fuwen.WorkflowDefiniti
 Penghou.Fuwen.JsonRuntimeValue
 Penghou.Fuwen.JsonRuntimeValue.JsonRuntimeValue(System.Text.Json.JsonElement value) -> void
 Penghou.Fuwen.JsonRuntimeValue.Value.get -> System.Text.Json.JsonElement
+Penghou.Fuwen.ListRuntimeValue
+Penghou.Fuwen.ListRuntimeValue.Items.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.RuntimeValue!>!
+Penghou.Fuwen.ListRuntimeValue.ListRuntimeValue(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.RuntimeValue!>! items) -> void
 Penghou.Fuwen.ListBinding
 Penghou.Fuwen.ListBinding.Items.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Binding!>!
 Penghou.Fuwen.ListBinding.Items.init -> void
@@ -288,6 +382,13 @@ Penghou.Fuwen.ReturnNode.Value.init -> void
 Penghou.Fuwen.RuntimeIdentityKey
 Penghou.Fuwen.RuntimeNodeIdentity
 Penghou.Fuwen.RuntimeValue
+static Penghou.Fuwen.ContextExecutionResult.Succeeded(Penghou.Fuwen.RuntimeValue! output, Penghou.Fuwen.ContextSnapshotReference! contextSnapshot) -> Penghou.Fuwen.ContextExecutionResult!
+static Penghou.Fuwen.ExecutionInvocation.ComputeOperationKey(string! executionFingerprint, string! structuralPath, string! runtimePath, string! stepRevision, string! effectiveRequestFingerprint) -> string!
+static Penghou.Fuwen.RuntimeValue.FromList(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.RuntimeValue!>! items) -> Penghou.Fuwen.RuntimeValue!
+static Penghou.Fuwen.RuntimeValue.FromObject(System.Collections.Generic.IReadOnlyDictionary<string!, Penghou.Fuwen.RuntimeValue!>! properties) -> Penghou.Fuwen.RuntimeValue!
+Penghou.Fuwen.ObjectRuntimeValue
+Penghou.Fuwen.ObjectRuntimeValue.ObjectRuntimeValue(System.Collections.Generic.IReadOnlyDictionary<string!, Penghou.Fuwen.RuntimeValue!>! properties) -> void
+Penghou.Fuwen.ObjectRuntimeValue.Properties.get -> System.Collections.Generic.IReadOnlyDictionary<string!, Penghou.Fuwen.RuntimeValue!>!
 Penghou.Fuwen.SchemaField
 Penghou.Fuwen.SchemaField.Name.get -> string!
 Penghou.Fuwen.SchemaField.Name.init -> void
@@ -507,3 +608,112 @@ Penghou.Fuwen.PlanRevisionComparison.Changes.get -> System.Collections.Generic.I
 Penghou.Fuwen.PlanRevisionComparison.ExecutionFingerprintEqual.get -> bool
 Penghou.Fuwen.PlanRevisionComparison.PlanRevisionComparison(bool executionFingerprintEqual, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PlanChange!>! changes) -> void
 static Penghou.Fuwen.PlanRevisionComparer.Compare(Penghou.Fuwen.PlanRevisionDocument! beforeRevision, Penghou.Fuwen.WorkflowDefinitionDocument! beforeDefinition, Penghou.Fuwen.PlanRevisionDocument! afterRevision, Penghou.Fuwen.WorkflowDefinitionDocument! afterDefinition) -> Penghou.Fuwen.PlanRevisionComparison!
+Penghou.Fuwen.ExecutionInvocation
+const Penghou.Fuwen.ExecutionInvocation.MaximumPathUtf8Bytes = 1024 -> int
+const Penghou.Fuwen.ExecutionInvocation.MaximumStepRevisionUtf8Bytes = 512 -> int
+const Penghou.Fuwen.ExecutionInvocation.OperationKeyVersion = "fuwen-operation/v1" -> string!
+Penghou.Fuwen.ExecutionInvocation.EffectiveRequestFingerprint.get -> string!
+Penghou.Fuwen.ExecutionInvocation.ExecutionFingerprint.get -> string!
+Penghou.Fuwen.ExecutionInvocation.OperationKey.get -> string!
+Penghou.Fuwen.ExecutionInvocation.RuntimePath.get -> string!
+Penghou.Fuwen.ExecutionInvocation.StepRevision.get -> string!
+Penghou.Fuwen.ExecutionInvocation.StructuralPath.get -> string!
+Penghou.Fuwen.RuntimeArgument
+const Penghou.Fuwen.RuntimeArgument.MaximumNameUtf8Bytes = 256 -> int
+Penghou.Fuwen.RuntimeArgument.RuntimeArgument(string! name, Penghou.Fuwen.RuntimeValue! value) -> void
+Penghou.Fuwen.RuntimeArgument.Name.get -> string!
+Penghou.Fuwen.RuntimeArgument.Value.get -> Penghou.Fuwen.RuntimeValue!
+Penghou.Fuwen.ExecutionRequest
+const Penghou.Fuwen.ExecutionRequest.MaximumArguments = 256 -> int
+Penghou.Fuwen.ExecutionRequest.Arguments.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.RuntimeArgument!>!
+Penghou.Fuwen.ExecutionRequest.Invocation.get -> Penghou.Fuwen.ExecutionInvocation!
+Penghou.Fuwen.ActivityExecutionRequest
+Penghou.Fuwen.ActivityExecutionRequest.Activity.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.ContextExecutionRequest
+Penghou.Fuwen.ContextExecutionRequest.Provider.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.InferenceContextInput
+const Penghou.Fuwen.InferenceContextInput.MaximumNameUtf8Bytes = 256 -> int
+Penghou.Fuwen.InferenceContextInput.ContextSnapshot.get -> Penghou.Fuwen.ContextSnapshotReference!
+Penghou.Fuwen.InferenceContextInput.Name.get -> string!
+Penghou.Fuwen.InferenceContextInput.SnapshotReference.get -> Penghou.Fuwen.ContextSnapshotReference!
+Penghou.Fuwen.InferenceContextInput.Value.get -> Penghou.Fuwen.RuntimeValue!
+Penghou.Fuwen.InferenceExecutionRequest
+const Penghou.Fuwen.InferenceExecutionRequest.MaximumContextInputs = 256 -> int
+Penghou.Fuwen.InferenceExecutionRequest.Context.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceContextInput!>!
+Penghou.Fuwen.InferenceExecutionRequest.ContextInputs.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceContextInput!>!
+Penghou.Fuwen.InferenceExecutionRequest.Profile.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.InferenceExecutionRequest.PromptTemplate.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.ExecutionFailureKind
+Penghou.Fuwen.ExecutionRetryDisposition
+Penghou.Fuwen.ExecutionRetryDisposition.InfrastructureOnly = 1 -> Penghou.Fuwen.ExecutionRetryDisposition
+Penghou.Fuwen.ExecutionRetryDisposition.Never = 0 -> Penghou.Fuwen.ExecutionRetryDisposition
+Penghou.Fuwen.ExecutionFailure
+const Penghou.Fuwen.ExecutionFailure.MaximumMessageUtf8Bytes = 4096 -> int
+const Penghou.Fuwen.ExecutionFailure.MaximumProviderCodeUtf8Bytes = 256 -> int
+Penghou.Fuwen.ExecutionFailure.Kind.get -> Penghou.Fuwen.ExecutionFailureKind
+Penghou.Fuwen.ExecutionFailure.MayHaveCommittedEffect.get -> bool
+Penghou.Fuwen.ExecutionFailure.Message.get -> string!
+Penghou.Fuwen.ExecutionFailure.ProviderCode.get -> string?
+Penghou.Fuwen.ExecutionFailure.RetryDisposition.get -> Penghou.Fuwen.ExecutionRetryDisposition
+Penghou.Fuwen.ExecutionObservationKind
+Penghou.Fuwen.ExecutionObservationKind.Failed = 2 -> Penghou.Fuwen.ExecutionObservationKind
+Penghou.Fuwen.ExecutionObservationKind.Requested = 0 -> Penghou.Fuwen.ExecutionObservationKind
+Penghou.Fuwen.ExecutionObservationKind.Succeeded = 1 -> Penghou.Fuwen.ExecutionObservationKind
+Penghou.Fuwen.ExecutionObservation
+Penghou.Fuwen.ExecutionObservation.ExecutionObservation(Penghou.Fuwen.ExecutionInvocation! invocation, Penghou.Fuwen.ExecutionObservationKind kind) -> void
+Penghou.Fuwen.ExecutionObservation.Invocation.get -> Penghou.Fuwen.ExecutionInvocation!
+Penghou.Fuwen.ExecutionObservation.Kind.get -> Penghou.Fuwen.ExecutionObservationKind
+Penghou.Fuwen.ExecutionResult
+Penghou.Fuwen.ExecutionResult.Failure.get -> Penghou.Fuwen.ExecutionFailure?
+Penghou.Fuwen.ExecutionResult.IsSuccess.get -> bool
+Penghou.Fuwen.ExecutionResult.Output.get -> Penghou.Fuwen.RuntimeValue?
+Penghou.Fuwen.ExecutionResult.Publications.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArtifactPublicationReceipt!>!
+Penghou.Fuwen.ActivityExecutionResult
+Penghou.Fuwen.ActivityExecutionResult.ActivityExecutionResult(Penghou.Fuwen.ExecutionFailure! failure) -> void
+Penghou.Fuwen.ActivityExecutionResult.ActivityExecutionResult(Penghou.Fuwen.RuntimeValue! output, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArtifactPublicationReceipt!>? publications = null) -> void
+static Penghou.Fuwen.ActivityExecutionResult.Failed(Penghou.Fuwen.ExecutionFailure! failure) -> Penghou.Fuwen.ActivityExecutionResult!
+static Penghou.Fuwen.ActivityExecutionResult.Succeeded(Penghou.Fuwen.RuntimeValue! output, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArtifactPublicationReceipt!>? publications = null) -> Penghou.Fuwen.ActivityExecutionResult!
+Penghou.Fuwen.ContextExecutionResult
+Penghou.Fuwen.ContextExecutionResult.ContextExecutionResult(Penghou.Fuwen.ExecutionFailure! failure) -> void
+Penghou.Fuwen.ContextExecutionResult.ContextSnapshot.get -> Penghou.Fuwen.ContextSnapshotReference?
+static Penghou.Fuwen.ContextExecutionResult.Failed(Penghou.Fuwen.ExecutionFailure! failure) -> Penghou.Fuwen.ContextExecutionResult!
+Penghou.Fuwen.InferenceExecutionResult
+Penghou.Fuwen.IActivityExecutor
+Penghou.Fuwen.IActivityExecutor.ExecuteAsync(Penghou.Fuwen.ActivityExecutionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.ActivityExecutionResult!>
+Penghou.Fuwen.IContextProvider
+Penghou.Fuwen.IContextProvider.ExecuteAsync(Penghou.Fuwen.ContextExecutionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.ContextExecutionResult!>
+Penghou.Fuwen.IInferenceExecutor
+Penghou.Fuwen.IInferenceExecutor.ExecuteAsync(Penghou.Fuwen.InferenceExecutionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceExecutionResult!>
+Penghou.Fuwen.InferenceExecutionEvidence
+const Penghou.Fuwen.InferenceExecutionEvidence.MaximumAttempts = 32 -> int
+const Penghou.Fuwen.InferenceExecutionEvidence.MaximumDiagnosticUtf8Bytes = 1024 -> int
+const Penghou.Fuwen.InferenceExecutionEvidence.MaximumIdentityUtf8Bytes = 256 -> int
+Penghou.Fuwen.InferenceExecutionEvidence.InferenceExecutionEvidence(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference! promptTemplate, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceAttemptEvidence!>! attempts, int? promptTokens = null, int? completionTokens = null, int? totalTokens = null, bool wasRepaired = false, int repairAttempts = 0, string? repairStrategy = null, string? policyRevision = null, string? routingPolicyRevision = null, long? durationMilliseconds = null) -> void
+Penghou.Fuwen.InferenceExecutionEvidence.Attempts.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceAttemptEvidence!>!
+Penghou.Fuwen.InferenceExecutionEvidence.CompletionTokens.get -> int?
+Penghou.Fuwen.InferenceExecutionEvidence.DurationMilliseconds.get -> long?
+Penghou.Fuwen.InferenceExecutionEvidence.PolicyRevision.get -> string?
+Penghou.Fuwen.InferenceExecutionEvidence.PromptTemplate.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.InferenceExecutionEvidence.PromptTokens.get -> int?
+Penghou.Fuwen.InferenceExecutionEvidence.Profile.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.InferenceExecutionEvidence.RepairAttempts.get -> int
+Penghou.Fuwen.InferenceExecutionEvidence.RepairStrategy.get -> string?
+Penghou.Fuwen.InferenceExecutionEvidence.RoutingPolicyRevision.get -> string?
+Penghou.Fuwen.InferenceExecutionEvidence.TotalTokens.get -> int?
+Penghou.Fuwen.InferenceExecutionEvidence.WasRepaired.get -> bool
+Penghou.Fuwen.InferenceAttemptEvidence
+Penghou.Fuwen.InferenceAttemptEvidence.InferenceAttemptEvidence(int attempt, string! provider, string! model, string? endpointId, bool succeeded, string? failureCode = null, string? failureMessage = null) -> void
+Penghou.Fuwen.InferenceAttemptEvidence.Attempt.get -> int
+Penghou.Fuwen.InferenceAttemptEvidence.EndpointId.get -> string?
+Penghou.Fuwen.InferenceAttemptEvidence.FailureCode.get -> string?
+Penghou.Fuwen.InferenceAttemptEvidence.FailureMessage.get -> string?
+Penghou.Fuwen.InferenceAttemptEvidence.Model.get -> string!
+Penghou.Fuwen.InferenceAttemptEvidence.Provider.get -> string!
+Penghou.Fuwen.InferenceAttemptEvidence.Succeeded.get -> bool
+Penghou.Fuwen.InferenceExecutionResult.InferenceExecutionResult(Penghou.Fuwen.ExecutionFailure! failure, Penghou.Fuwen.InferenceExecutionEvidence? evidence = null) -> void
+Penghou.Fuwen.InferenceExecutionResult.InferenceExecutionResult(Penghou.Fuwen.RuntimeValue! output, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArtifactPublicationReceipt!>? publications = null, Penghou.Fuwen.InferenceExecutionEvidence? evidence = null) -> void
+Penghou.Fuwen.InferenceExecutionResult.Evidence.get -> Penghou.Fuwen.InferenceExecutionEvidence?
+static Penghou.Fuwen.InferenceExecutionResult.Failed(Penghou.Fuwen.ExecutionFailure! failure, Penghou.Fuwen.InferenceExecutionEvidence? evidence = null) -> Penghou.Fuwen.InferenceExecutionResult!
+static Penghou.Fuwen.InferenceExecutionResult.Succeeded(Penghou.Fuwen.RuntimeValue! output, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArtifactPublicationReceipt!>? publications = null, Penghou.Fuwen.InferenceExecutionEvidence? evidence = null) -> Penghou.Fuwen.InferenceExecutionResult!
+Penghou.Fuwen.IExecutionObserver
+Penghou.Fuwen.IExecutionObserver.ObserveAsync(Penghou.Fuwen.ExecutionObservation! observation, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask

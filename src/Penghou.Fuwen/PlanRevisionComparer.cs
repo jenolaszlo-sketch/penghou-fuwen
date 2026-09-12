@@ -143,6 +143,9 @@ public static class PlanRevisionComparer
             if (node is ConditionalNode conditional)
                 foreach (var child in Flatten(conditional.Then.Concat(conditional.Else)))
                     yield return child;
+            else if (node is FanOutNode fanOut)
+                foreach (var child in Flatten(fanOut.Body))
+                    yield return child;
         }
     }
 
@@ -169,6 +172,7 @@ public static class PlanRevisionComparer
         InferenceNode value => new { Kind = "inference", value.Profile, value.PromptTemplate, value.OutputType },
         ActivityNode value => new { Kind = "activity", value.Activity, value.OutputType },
         ConditionalNode value => new { Kind = "conditional", value.Condition.Operator },
+        FanOutNode value => new { Kind = "fan-out", value.Item.Type, value.ResultType, value.MaximumItems, value.MaximumConcurrency },
         ReturnNode => new { Kind = "return" },
         _ => throw new NotSupportedException($"Unsupported workflow node '{node.GetType().Name}'."),
     };
@@ -176,7 +180,7 @@ public static class PlanRevisionComparer
     private static object NodeDependencies(WorkflowNode node) => node switch
     {
         ContextNode value => new { value.Arguments },
-        InferenceNode value => new { value.Arguments, value.ContextSnapshots },
+        InferenceNode value => new { value.Arguments, value.ContextSnapshots, value.ContextRequirements },
         ActivityNode value => new { value.Arguments },
         ConditionalNode value => new
         {
@@ -185,6 +189,7 @@ public static class PlanRevisionComparer
             Then = value.Then.Select(static child => child.StructuralPath).ToArray(),
             Else = value.Else.Select(static child => child.StructuralPath).ToArray(),
         },
+        FanOutNode value => new { value.Source, value.Item, value.Key, value.Body, value.Yield },
         ReturnNode value => new { value.Value },
         _ => throw new NotSupportedException($"Unsupported workflow node '{node.GetType().Name}'."),
     };

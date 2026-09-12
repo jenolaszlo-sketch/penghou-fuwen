@@ -48,6 +48,23 @@ assert canonical_v2_plan == v2_plan_path.read_bytes().rstrip(b"\r\n")
 v2_plan_digest = hashlib.sha256(canonical_v2_plan).hexdigest()
 assert v2_plan_digest == "2bf5c628bcecfdb0970730bc160ee10f2bcbf326875f30430e5b832fafe96571"
 
+# V3 is a separate pre-release executable contract. Context dependencies are
+# named, typed requirements and legacy contextSnapshots remain empty.
+v3_plan_path = Path(__file__).with_name("workflow_plan_v3.json")
+v3_plan = json.loads(v3_plan_path.read_text(encoding="utf-8"))
+assert v3_plan["irVersion"] == "fuwen-ir/v3"
+assert v3_plan["compilerSemanticVersion"] == "compiler-semantics/3"
+assert v3_plan["fingerprintVersion"] == "fuwen-execution/v3"
+inference = next(node for node in v3_plan["nodes"] if node["$kind"] == "inference")
+assert inference["contextSnapshots"] == []
+assert inference["contextRequirements"][0]["name"] == "answer_context"
+canonical_v3_plan = json.dumps(
+    v3_plan, ensure_ascii=True, separators=(",", ":"), sort_keys=True
+).encode("utf-8")
+assert canonical_v3_plan == v3_plan_path.read_bytes().rstrip(b"\r\n")
+v3_plan_digest = hashlib.sha256(canonical_v3_plan).hexdigest()
+assert v3_plan_digest == "53134b2d7566a22889e5a751b27a6367f8159b1686baf4e6d6260e99acfd0c33"
+
 # Run the expanded independent numeric and Unicode portability vectors as part
 # of the existing CI golden-vector entry point.
 runpy.run_path(str(Path(__file__).with_name("canonical_json_v1_portability.py")))

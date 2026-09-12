@@ -1,4 +1,5 @@
 #pragma warning disable CS1591
+#pragma warning disable RS0016
 using Penghou.Fuwen;
 
 namespace Penghou.Fuwen.Compiler;
@@ -27,6 +28,16 @@ public enum DiagnosticPhase
 /// <summary>Stable identifiers for diagnostics emitted by the compiler.</summary>
 public static class CompilerDiagnosticCodes
 {
+    public const string LexUnexpectedCharacter = "FWN-LEX-001";
+    public const string LexUnterminatedString = "FWN-LEX-002";
+    public const string LexInvalidEscape = "FWN-LEX-003";
+    public const string LexUnterminatedComment = "FWN-LEX-004";
+    public const string LexInvalidUnicode = "FWN-LEX-005";
+    public const string ParseUnexpectedToken = "FWN-PARSE-001";
+    public const string ParseExpectedToken = "FWN-PARSE-002";
+    public const string ParseUnsupportedConstruct = "FWN-PARSE-003";
+    public const string ConditionalBranchValueUnsupported = "FWN-CONTROL-001";
+    public const string SourceDescriptorUnresolved = "FWN-BINDING-004";
     public const string DiagnosticsTruncated = "FWN-BUDGET-002";
     public const string InvalidBudget = "FWN-BUDGET-003";
     public const string BudgetSourceBytesExceeded = "FWN-BUDGET-101";
@@ -62,6 +73,9 @@ public static class CompilerDiagnosticCodes
     public const string AdmissionPolicyRevisionUnavailable = "FWN-ADMISSION-004";
     public const string ContextSnapshotInvalid = "FWN-BINDING-002";
     public const string ContextSnapshotDuplicate = "FWN-BINDING-003";
+    public const string ContextRequirementInvalid = "FWN-CONTEXT-001";
+    public const string ContextRequirementSourceInvalid = "FWN-CONTEXT-002";
+    public const string ContextRequirementTypeMismatch = "FWN-CONTEXT-003";
     public const string CallableArgumentMissing = "FWN-SIGNATURE-001";
     public const string CallableArgumentUnknown = "FWN-SIGNATURE-002";
     public const string CallableArgumentTypeMismatch = "FWN-SIGNATURE-003";
@@ -239,6 +253,7 @@ public sealed class CompilationResult
 {
     private readonly WorkflowDefinitionDocument? _definition;
     private readonly CompilationAdmissionEvidence? admissionEvidence;
+    private readonly IReadOnlyList<CallableEffectSummary> callableEffectSummaries;
 
     public CompilationResult(
         WorkflowPlan? plan,
@@ -251,6 +266,7 @@ public sealed class CompilationResult
         Budget = budget ?? throw new ArgumentNullException(nameof(budget));
         Diagnostics = new DiagnosticCollection(diagnostics, budget.MaxDiagnostics);
         _definition = plan is null || Diagnostics.HasErrors ? null : WorkflowDefinitionDocument.Create(plan);
+        callableEffectSummaries = Array.AsReadOnly(Array.Empty<CallableEffectSummary>());
     }
 
     internal CompilationResult(
@@ -258,7 +274,8 @@ public sealed class CompilationResult
         IEnumerable<CompilerDiagnostic> diagnostics,
         CompilationUsageSummary usage,
         CompilationBudget budget,
-        CompilationAdmissionEvidence? admissionEvidence = null)
+        CompilationAdmissionEvidence? admissionEvidence = null,
+        IEnumerable<CallableEffectSummary>? callableEffectSummaries = null)
     {
         ArgumentNullException.ThrowIfNull(diagnostics);
         Usage = usage ?? throw new ArgumentNullException(nameof(usage));
@@ -266,6 +283,9 @@ public sealed class CompilationResult
         Diagnostics = new DiagnosticCollection(diagnostics, budget.MaxDiagnostics);
         _definition = definition is null || Diagnostics.HasErrors ? null : definition;
         this.admissionEvidence = _definition is null ? null : admissionEvidence;
+        this.callableEffectSummaries = _definition is null || callableEffectSummaries is null
+            ? Array.AsReadOnly(Array.Empty<CallableEffectSummary>())
+            : Array.AsReadOnly(callableEffectSummaries.ToArray());
     }
 
     public WorkflowPlan? Plan => _definition?.ReadPlan();
@@ -277,6 +297,8 @@ public sealed class CompilationResult
     public bool Succeeded => Plan is not null && !Diagnostics.HasErrors;
 
     internal CompilationAdmissionEvidence? AdmissionEvidence => admissionEvidence;
+
+    internal IReadOnlyList<CallableEffectSummary> CallableEffectSummaries => callableEffectSummaries;
 }
 
 internal static class CompilerContractValidation

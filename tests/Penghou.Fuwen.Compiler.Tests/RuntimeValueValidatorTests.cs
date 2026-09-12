@@ -83,6 +83,52 @@ public sealed class RuntimeValueValidatorTests
     }
 
     [Fact]
+    public void Validator_accepts_artifact_runtime_values_inside_lists()
+    {
+        var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "image/png", 'a');
+        var artifact = new ArtifactReference("store", "image/1", artifactDescriptor, Digest("artifact/v1", 'x'));
+        var value = new ListRuntimeValue([new ArtifactRuntimeValue(artifact)]);
+
+        var result = RuntimeValueValidator.Validate(
+            value,
+            new ListType(new ArtifactType(artifactDescriptor), 2),
+            []);
+
+        result.Succeeded.Should().BeTrue();
+
+        using var json = JsonDocument.Parse("[{\"provider\":\"store\"}]");
+        RuntimeValueValidator.Validate(
+                new JsonRuntimeValue(json.RootElement),
+                new ListType(new ArtifactType(artifactDescriptor), 2),
+                [])
+            .Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.RuntimeValueKindMismatch);
+    }
+
+    [Fact]
+    public void Validator_accepts_artifact_fields_inside_object_runtime_values_and_rejects_json_masquerade()
+    {
+        var schemaDescriptor = Descriptor(DescriptorKind.Schema, "sample.asset", 's');
+        var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "image/png", 'a');
+        var schema = new ObjectSchemaDefinition(schemaDescriptor, [
+            new SchemaField("asset", new ArtifactType(artifactDescriptor)),
+            new SchemaField("alternates", new OptionalType(new ListType(new ArtifactType(artifactDescriptor), 2))),
+        ]);
+        var artifact = new ArtifactReference("store", "image/1", artifactDescriptor, Digest("artifact/v1", 'x'));
+        var value = new ObjectRuntimeValue(new Dictionary<string, RuntimeValue>
+        {
+            ["asset"] = new ArtifactRuntimeValue(artifact),
+            ["alternates"] = new ListRuntimeValue([new ArtifactRuntimeValue(artifact)]),
+        });
+
+        RuntimeValueValidator.Validate(value, new NamedTypeReference(schemaDescriptor), [schema]).Succeeded.Should().BeTrue();
+
+        using var json = JsonDocument.Parse("{\"asset\":{\"provider\":\"store\"}}");
+        var masquerade = RuntimeValueValidator.Validate(new JsonRuntimeValue(json.RootElement), new NamedTypeReference(schemaDescriptor), [schema]);
+        masquerade.Succeeded.Should().BeFalse();
+        masquerade.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.RuntimeValueKindMismatch);
+    }
+
+    [Fact]
     public void Validator_rejects_noncanonical_or_oversized_numeric_values()
     {
         using var document = JsonDocument.Parse("1e1000");

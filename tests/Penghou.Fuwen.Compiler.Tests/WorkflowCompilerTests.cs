@@ -24,6 +24,116 @@ public sealed class WorkflowCompilerTests
     }
 
     [Fact]
+    public void Builder_BuildV3_authors_typed_context_requirements_without_duplicating_provider_arguments()
+    {
+        var source = Fixture.CreatePlan();
+        var context = source.Nodes.OfType<ContextNode>().Single();
+        var inference = source.Nodes.OfType<InferenceNode>().Single();
+        var nodes = source.Nodes.Select(node => node == inference
+            ? inference with
+            {
+                ContextSnapshots = [],
+                ContextRequirements = [new ContextRequirement("context", new NodeOutputBinding(context.StructuralPath, []), context.OutputType)],
+            }
+            : node).ToArray();
+        var builder = new WorkflowPlanBuilder(
+            source.Name,
+            source.Revision,
+            source.InputType,
+            source.OutputType,
+            source.RoutingPolicyRevision)
+            .SetExecutionOrder(source.ExecutionOrder!);
+        foreach (var schema in source.Schemas)
+            builder.AddSchema(schema);
+        foreach (var node in nodes)
+            builder.AddNode(node);
+
+        var plan = builder.BuildV3();
+
+        plan.IrVersion.Should().Be(FuwenContracts.IrVersionV3);
+        plan.Nodes.OfType<InferenceNode>().Single().ContextRequirements.Should().ContainSingle();
+        WorkflowPlanIdentity.GetCanonicalBytes(plan).Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Compiler_accepts_v3_typed_context_requirement()
+    {
+        var source = Fixture.CreatePlan();
+        var context = source.Nodes.OfType<ContextNode>().Single();
+        var inference = source.Nodes.OfType<InferenceNode>().Single();
+        var plan = source with
+        {
+            IrVersion = FuwenContracts.IrVersionV3,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV3,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV3,
+            Nodes = source.Nodes.Select(node => node == inference
+                ? inference with
+                {
+                    ContextSnapshots = [],
+                    ContextRequirements = [new ContextRequirement("context", new NodeOutputBinding(context.StructuralPath, []), context.OutputType)],
+                }
+                : node).ToArray(),
+        };
+
+        var result = new WorkflowCompiler(Fixture.CreateCatalogue(plan), capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(plan, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeTrue();
+        result.Definition.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Binding_validator_reports_context_requirement_duplicate_diagnostic()
+    {
+        var plan = CreateV3BindingPlan(requirements => [requirements[0], requirements[0] with { Source = new NodeOutputBinding("answer/context", []) }]);
+        var diagnostics = ValidateV3Bindings(plan);
+
+        diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.ContextRequirementInvalid);
+    }
+
+    [Fact]
+    public void Binding_validator_reports_context_requirement_source_diagnostic()
+    {
+        var plan = CreateV3BindingPlan(requirements => [requirements[0] with { Source = new NodeOutputBinding("answer/validate", []) }]);
+        var diagnostics = ValidateV3Bindings(plan);
+
+        diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.ContextRequirementSourceInvalid);
+    }
+
+    [Fact]
+    public void Binding_validator_reports_context_requirement_type_diagnostic()
+    {
+        var plan = CreateV3BindingPlan(requirements => [requirements[0] with { ExpectedType = new PrimitiveType(FuwenPrimitiveKind.Boolean) }]);
+        var diagnostics = ValidateV3Bindings(plan);
+
+        diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.ContextRequirementTypeMismatch);
+    }
+
+    private static IReadOnlyList<CompilerDiagnostic> ValidateV3Bindings(WorkflowPlan plan)
+    {
+        var catalogue = Fixture.CreateCatalogue(plan);
+        var descriptors = catalogue.Descriptors.ToDictionary(static descriptor => descriptor.Descriptor);
+        return WorkflowBindingValidator.Validate(plan, descriptors);
+    }
+
+    private static WorkflowPlan CreateV3BindingPlan(Func<IReadOnlyList<ContextRequirement>, IReadOnlyList<ContextRequirement>> transform)
+    {
+        var source = Fixture.CreatePlan();
+        var context = source.Nodes.OfType<ContextNode>().Single();
+        var inference = source.Nodes.OfType<InferenceNode>().Single();
+        var requirements = new[] { new ContextRequirement("context", new NodeOutputBinding(context.StructuralPath, []), context.OutputType) };
+        return source with
+        {
+            IrVersion = FuwenContracts.IrVersionV3,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV3,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV3,
+            Nodes = source.Nodes.Select(node => node == inference
+                ? inference with { ContextSnapshots = [], ContextRequirements = transform(requirements) }
+                : node).ToArray(),
+        };
+    }
+
+    [Fact]
     public void CoreValidation_RejectsUndefinedPrimitiveKind()
     {
         var plan = Fixture.CreatePlan() with

@@ -2,9 +2,9 @@
 
 ## Status
 
-**Delivery milestone A complete — Delivery milestone B in progress**
+**Delivery milestones A–D complete — Delivery milestone E is next**
 
-Last reviewed: **2026-09-10**
+Last reviewed: **2026-09-11**
 
 Fuwen is the proposed typed authoring and compilation layer for portable,
 capability-reviewed AI workflows. It produces an immutable executable plan; it
@@ -339,6 +339,14 @@ Progress:
   validate enum literals against their serialized member values, reject lossy
   numeric fallback, and prove decimal/Unicode/property-order behavior through
   matching .NET and independent Python vectors.
+- [x] Define the provider-neutral runtime-value boundary as detached JSON,
+  immutable artifact references, and bounded list/object composites; validate
+  these values strictly against primitive, optional, list, object, enum, and
+  nominal artifact types without coercion or implicit authorization.
+- [x] Introduce pre-release IR/fingerprint v3 typed context requirements. Bind
+  each inference requirement directly to an earlier same-region context-node
+  output with an exact declared type, preserve historical v1/v2 bytes, and keep
+  runtime context-snapshot evidence outside the compiled request contract.
 
 ### Marang Gate 0.5 — plan acceptance and supervisory execution
 
@@ -398,16 +406,19 @@ model-mediated source:
   this as an undocumented Marang graph trick or as a generic activity with
   hidden control-flow meaning.
 - [x] **Provider-neutral runtime values and snapshot references.** Add an
-  immutable runtime-value union limited to detached JSON and artifact
-  identities, plus a bounded context-snapshot reference carrying the exact
-  provider descriptor, request/content digests, source revisions,
-  policy/budget metadata, creation time, and optional opaque provenance receipt.
-  The compiler validates primitive, optional, list, object, enum, and artifact
-  values strictly without coercion. Context payload storage, authorization,
-  and dereferencing remain host responsibilities.
-- [ ] **Typed context requirements.** Add an explicit context
-  requirement/request contract, bind references to declared context nodes, and
-  validate their type and scope.
+  immutable runtime-value union for detached JSON, artifact identities, and
+  bounded list/object composites, plus a bounded context-snapshot reference
+  carrying the exact provider descriptor, request/content digests, source
+  revisions, policy/budget metadata, creation time, and optional opaque
+  provenance receipt. Composite construction recursively snapshots children;
+  the compiler validates primitive, optional, list, object, enum, and artifact
+  values strictly without coercion, including artifact fields nested in
+  composites. Context payload storage, authorization, and dereferencing remain
+  host responsibilities.
+- [x] **Typed context requirements.** IR v3 adds explicit named context
+  requirements, binds each requirement to a direct earlier same-region
+  `ContextNode` output, and validates exact type and scope without conflating
+  the compiled dependency with runtime snapshot evidence.
 
 #### P1 — reusable execution seam for Marang
 
@@ -530,8 +541,9 @@ All unchecked items are proposed work, not implemented guarantees.
   The first pure `WorkflowExplanation` projection is complete: it distinguishes
   compilation from admission and exposes detached plan, descriptor pins,
   inferred requirements, effective limits, usage, and bounded diagnostics.
-  Trusted callable-effect summaries, repair-oriented diagnostic enrichment,
-  and CLI/consumer presentation remain.
+  Trusted callable-effect summaries and repair-oriented diagnostic enrichment
+  are now projected from compiler-retained trusted evidence; CLI/consumer
+  presentation remains.
 - [ ] **Make restart impact inspectable.** Expose a plan comparison that explains
   changed descriptors, inputs, context snapshots, and affected dependents while
   distinguishing structural identity from permission to reuse a result. Zhinu
@@ -587,7 +599,7 @@ All unchecked items are proposed work, not implemented guarantees.
   tests. Test counts demonstrate coverage only for exercised behavior, not a
   percentage of product completion.
 
-### Delivery milestone C — Prove durable execution with fakes
+### Delivery milestone C — Prove durable execution with fakes (complete)
 
 Scope: a deliberately narrow subset of Milestones 4 and 5.
 
@@ -611,12 +623,52 @@ Exit: a typed
 `request -> context snapshot -> infer -> conditional activity -> artifacts/result`
 plan survives process restart and selective restart with deterministic evidence.
 
+Progress:
+
+- [x] Define bounded provider-neutral activity, context, inference, result,
+  failure, publication-receipt, observation, and invocation contracts.
+- [x] Keep the stable downstream operation key independent of Zhinu lease
+  generation. Lease generation is changing fencing evidence across claims;
+  structural/runtime path, durable step revision, admitted execution identity,
+  and effective request identity define idempotency.
+- [x] Add `Penghou.Fuwen.Zhinu` and prove the admission/registration boundary:
+  exact definition fingerprint, provider-runtime identity, immutable-store
+  round trip, and Zhinu `IWorkflowFingerprint` binding. The checkpoint refuses
+  node execution explicitly rather than presenting registration as a runtime.
+- [x] Interpret the IR v3 sequential context, inference, activity, conditional,
+  and return subset as stable Zhinu steps over deterministic fake providers.
+  Unordered phase members are serialized in ordinal structural-path order for
+  this first adapter; parallel execution remains deferred.
+- [x] Bind node inputs, context snapshot evidence, and dependency edges, then
+  validate workflow input and every provider or persisted output with Fuwen's
+  authoritative runtime validator before downstream use.
+- [x] Prove crash recovery, replay, selective restart, retry-safe restart
+  receipts, run-scoped operation-key reuse, changed-definition rejection,
+  cancellation, malformed persisted evidence, and best-effort observer behavior
+  against the real SQLite Zhinu store.
+- [x] Bridge admitted, operation-bound provider publication receipts into
+  step-owned Zhinu artifact references. Prove the crash window after artifact
+  publication but before step completion remains idempotent and produces one
+  durable artifact revision.
+- [x] Complete the deterministic fake vertical slice from request through
+  context snapshot, inference, conditional selection, selected activity,
+  artifact evidence, and typed return. Unselected branches do not execute and
+  replay does not repeat provider calls.
+
+The current conditional is deliberately control-only. Branch-local values may
+not escape their closed execution region. Before the source language exposes
+value-producing conditionals, add an explicit typed branch-result/merge
+contract in a versioned IR rather than weakening cross-region reference rules.
+
 ### Delivery milestone D — Add the minimal Fuwen source language
 
 Scope: Milestone 3 compiled to the already-proven IR.
 
 Activities:
 
+- Define an explicit typed conditional result/merge contract, or keep the first
+  source conditional control-only with diagnostics that make the limitation
+  unmistakable. Do not permit raw cross-region output references.
 - Add schemas, enums, typed workflow input/output, immutable bindings, named
   context/activity/inference nodes, restricted expressions, `if/else`, and
   complete typed returns.
@@ -627,6 +679,25 @@ Activities:
 
 Exit: handwritten and model-produced source compile to byte-identical IR when
 they express the same semantics; formatting is idempotent.
+
+Progress:
+
+- [x] Keep conditionals control-only in the first source surface. Branch-local
+  values cannot escape their closed region, and branch-local returns receive a
+  stable `FWN-CONTROL-001` diagnostic.
+- [x] Add typed schemas, enums, workflow input/output, immutable named-node
+  bindings, context/activity/inference nodes, restricted literals and
+  projections, type-safe conditions, complete root returns, and explicit typed
+  context requirements.
+- [x] Implement bounded UTF-8-aware lexing/parsing, canonical idempotent
+  formatting, authored-document source maps, stable diagnostics, malformed
+  input and fuzz tests, and parser recursion guards for composite bindings.
+- [x] Publish the machine-readable grammar, trusted catalogue description, and
+  concise authoring/diagnostic guidance for model-produced source.
+
+Delivery D is complete for this deliberately small language. Value-producing
+conditionals, loops, fan-out, waits, imports, and richer expression syntax
+remain later milestones.
 
 ### Delivery milestone E — Integrate Baize and structured inference policy
 
@@ -649,6 +720,15 @@ Activities:
 Exit: recorded malformed, missing-tool, schema-mismatch, and truncated-response
 cases produce deterministic typed outcomes and policy-driven retry behavior.
 
+Progress: the first structured-text Baize adapter slice is implemented behind
+`IInferenceExecutor`. Exact host-owned profile/template bindings, deterministic
+endpoint fallback, bounded trusted-profile retries, Nuwa syntax repair followed
+by authoritative Fuwen runtime-value validation, typed policy/provider/output
+failures, and detached provider-neutral inference evidence are covered by
+recorded fake-client tests. Generation/media surfaces, cost and artifact
+publication receipts, and the durable context-provider/activity vertical remain
+open for the remainder of this milestone.
+
 ### Delivery milestone F — Add keyed fan-out and pilot in Guyabano
 
 Scope: the minimum of Milestone 8 needed by task decomposition.
@@ -667,6 +747,15 @@ Activities:
   token use, provenance, restart scope, and successful-sibling reuse.
 - Remove the old Guyabano implementation only after behavioral parity and a
   successful focused-restart dogfood run.
+
+Progress (2026-09-11): The first F batch adds the versioned IR v4 structured
+keyed fan-out contract, bounded programmatic builder/compiler validation, and a
+Zhinu adapter mapping that composes durable `StepAsync` primitives because the
+preview `FanOutAsync` API derives positional index keys. Item keys are
+canonicalized and checked for null/duplicates before child work; outcomes are
+persisted independently and aggregates retain source order with a host
+concurrency ceiling. The Guyabano decomposition, corpus comparison, and live
+dogfood pilot remain open.
 
 Exit: Fuwen replaces one bounded Guyabano phase without weakening audit,
 recovery, typed failure reporting, or selective restart.
@@ -779,20 +868,20 @@ Penghou.Fuwen.Compiler
 - [ ] Return stable diagnostics for limit failures rather than exhausting host
   resources.
 
-## Milestone 3 — Minimal source language
+## Milestone 3 — Minimal source language (complete)
 
-- [ ] Brace-delimited `schema` and `enum`.
-- [ ] Typed `workflow` input/output and immutable `into` bindings.
-- [ ] Restricted literals, records/lists, field access, boolean conditions,
+- [x] Brace-delimited `schema` and `enum`.
+- [x] Typed `workflow` input/output and immutable named-node bindings.
+- [x] Restricted literals, records/lists, field access, boolean conditions,
   equality/ordering, `and`, `or`, `not`, and `exists` where type-safe.
-- [ ] Named `activity` resolved from trusted descriptors.
-- [ ] Named `infer` using registered template and profile descriptors.
-- [ ] Declarative context requests lowered to explicit context dependencies.
-- [ ] `if / else` with branch typing and definite-assignment analysis.
-- [ ] `return` with complete result-path analysis.
-- [ ] Canonical idempotent formatter and golden tests.
-- [ ] Stable human/machine diagnostics designed for LLM repair.
-- [ ] Parser/compiler malformed-input, fuzz, and resource-budget tests.
+- [x] Named `activity` resolved from trusted descriptors.
+- [x] Named `infer` using registered template and profile descriptors.
+- [x] Declarative context requests lowered to explicit context dependencies.
+- [x] `if / else` with branch typing and definite-assignment analysis.
+- [x] `return` with complete result-path analysis.
+- [x] Canonical idempotent formatter and golden tests.
+- [x] Stable human/machine diagnostics designed for LLM repair.
+- [x] Parser/compiler malformed-input, fuzz, and resource-budget tests.
 
 ## Milestone 4 — Execution descriptors and safety
 
@@ -801,8 +890,12 @@ Penghou.Fuwen.Compiler
   timeout defaults, and resource-scoped capabilities.
 - [ ] Side effects: `none`, `read`, `write`, `external`, `destructive`.
 - [ ] Idempotency: `idempotent`, `idempotentWithKey`, `nonIdempotent`, `unknown`.
-- [ ] Define provider-neutral typed activity handlers and
-  `IInferenceExecutor` requests/results.
+- [x] Define provider-neutral typed activity, context, inference, and
+  execution-observer ports. Requests preserve exact descriptor identity,
+  declared output types, bounded detached arguments, typed context values plus
+  snapshot evidence, and canonical operation identity. Results use a closed
+  failure taxonomy and permit only unambiguous same-operation infrastructure
+  retry; the ports perform no retry or authorization themselves.
 - [ ] Define registered typed prompt-template descriptors; defer DSL templates.
 - [ ] Preserve resolved inference modality without forcing Baize text/media
   surfaces into one lowest-level transport API.
@@ -824,15 +917,21 @@ selective restart or changed input. Bind at least:
 ```text
 execution fingerprint
 structural/runtime node identity
-Zhinu step revision or fencing generation
+Zhinu step revision
 canonical effective request/input fingerprint
 ```
+
+Worker lease/fencing generation is deliberately excluded from this hash. A
+lease can change during recovery of the same logical step revision, while the
+downstream idempotency key must remain stable. Fencing remains orthogonal
+authority metadata for an adapter/runtime that can expose and verify it.
 
 Infrastructure retry reuses the key; restart or changed input gets a new key.
 Execution fingerprint plus node identity alone would incorrectly deduplicate a
 legitimate regeneration.
 
-- [ ] Specify/test this contract before write or external activities.
+- [x] Specify/test the canonical operation-key identity before write or
+  external activities. Provider-neutral typed executor contracts are complete.
 - [ ] Reject unsafe automatic retry for `nonIdempotent` or `unknown`; a warning
   is insufficient for durable side effects.
 - [ ] Decide whether the initial executable slice allows only `none`, `read`,
@@ -862,13 +961,13 @@ Package: `Penghou.Fuwen.Zhinu`.
 
 Package: `Penghou.Fuwen.Baize`.
 
-- [ ] Implement `IInferenceExecutor` using Baize text and generation surfaces.
-- [ ] Translate host profiles to normalized Baize requirements; keep application
+- [x] Implement the structured-text `IInferenceExecutor` slice; generation and
+  media surfaces remain open.
+- [x] Translate host profiles to normalized Baize requirements; keep application
   profile names out of Baize.
-- [ ] Record actual model/provider, fallbacks, tools/filtered arguments,
-  repair/validation diagnostics, artifacts, usage, cost, timing, attempts, and
-  errors as provenance.
-- [ ] Prove permitted fallback does not alter execution fingerprint.
+- [x] Record actual model/provider, fallbacks, tools, repair/validation
+  diagnostics, usage, timing, attempts, and errors as detached evidence.
+- [x] Prove bounded fallback reuses the same invocation identity.
 - [ ] Implement one durable context provider, one read-only activity, and one
   safely idempotent side-effecting activity with provider receipt verification.
 - [ ] Complete end to end:
@@ -877,7 +976,7 @@ Package: `Penghou.Fuwen.Baize`.
   Request -> context -> infer -> conditional activity -> Answer
   ```
 
-- [ ] Provide deterministic fake inference so CI needs no network credentials.
+- [x] Provide deterministic fake inference so CI needs no network credentials.
 
 ## Milestone 7 — AI authoring reliability
 
@@ -962,36 +1061,37 @@ only after repeated integration demonstrates a real reusable boundary.
 ## Open decisions
 
 - Exact schema dialect and nominal/structural assignability.
-- Canonical formatter rules for comments and source-level whitespace once the
-  parser exists; transport normalization and Unicode preservation are frozen.
+- Formatter rules are now frozen for the bounded source surface; transport
+  normalization and Unicode preservation remain frozen.
 - Routing-policy revision versus deployment/runtime provenance.
 - Minimum artifact-reference contract and its owning package.
 - Context-snapshot storage/publication ownership.
 - Typed activity and inference failure taxonomy.
-- Parser implementation after IR stabilizes; ANTLR is not yet mandated.
+- Whether a future grammar revision needs a parser generator; the bounded
+  Delivery D parser is intentionally hand-written.
 - Whether repeated use eventually justifies `Penghou.Fuwen.Hongxian`.
 - The minimum semantic node digest and comparison categories needed by Zhinu to
   evaluate reuse without making Fuwen responsible for runtime artifacts.
 
 ## Resume point
 
-Continue with Delivery milestone B:
+Continue with Delivery milestone E:
 
-1. Define the provider-neutral typed context-snapshot contract and runtime value
-   validation seam for activity, context, and inference outputs. The metadata
-   and strict compiler validator are now complete; remaining work is the
-   declared request/input contract and execution-port integration.
-2. Extend the initial pure explain projection with trusted callable-effect
-   summaries and repair-oriented diagnostics where the compiler retains enough
-   evidence to do so safely.
-3. Begin Delivery C's typed execution ports and sequential fake-Zhinu
-   adapter slice; plan comparison is ready for later transition analysis.
-4. Keep loops, waits, transition activation, artifact-reuse authorization, and
-   the text grammar out of this batch.
+1. Integrate the trusted Baize inference adapter and structured inference
+   policy over the now-available source compiler and IR.
+2. Preserve the source/plan boundary while adding typed failure, repair,
+   retry, and provider evidence contracts.
+3. Keep value-producing conditionals, loops, fan-out, waits, imports, and
+   artifact-reuse authorization outside this milestone.
 
-Do **not** begin with the text grammar. Recursive schemas, enum literals,
+The minimal text grammar is now implemented. Recursive schemas, enum literals,
 numeric/Unicode portability, runtime-value validation, and context-snapshot
-evidence are now closed for the current programmatic surface. The next
-deliverable is the declared context-request contract and explanation enrichment,
-followed by the narrow typed execution-port slice. The admission receipt is the
-authorization seam for a later execution port; it is not itself an executor.
+evidence are now closed for the current programmatic surface. IR v3's declared,
+typed context requirements, callable-effect/repair explanations, and canonical
+execution invocation identity are also complete. The provider-neutral typed
+execution ports and Delivery C's SQLite-backed Zhinu adapter are complete. The
+adapter now proves recovery, selective restart, idempotent operation and artifact
+publication identity, cancellation, corruption rejection, observations, and a
+full fake vertical slice. The admission receipt remains its authorization seam;
+it is not itself an executor. Loops, fan-out, waits, transition activation, and
+artifact-reuse authorization remain outside this milestone.

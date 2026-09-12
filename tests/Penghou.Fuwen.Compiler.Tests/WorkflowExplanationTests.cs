@@ -43,6 +43,55 @@ public sealed class WorkflowExplanationTests
     }
 
     [Fact]
+    public void FromCompilation_ExposesTrustedCallableEffectsAndInvocationPaths()
+    {
+        var plan = WorkflowCompilerTests.Fixture.CreatePlan();
+        var result = new WorkflowCompiler(
+                WorkflowCompilerTests.Fixture.CreateCatalogue(plan),
+                capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(plan, cancellationToken: TestContext.Current.CancellationToken);
+
+        var explanation = WorkflowExplanation.Create(result);
+
+        explanation.CallableEffectSummaries.Should().HaveCount(3);
+        explanation.CallableEffectSummaries.Should().BeInAscendingOrder(
+            static summary => summary.Descriptor,
+            DescriptorReferenceComparer.Instance);
+        explanation.CallableEffectSummaries.Should().OnlyContain(summary =>
+            summary.Effect == CallableEffect.Read &&
+            summary.Idempotency == CallableIdempotency.Idempotent &&
+            summary.RetrySafety == CallableRetrySafety.Safe &&
+            summary.InvocationCount == 1);
+        explanation.CallableEffectSummaries
+            .Single(summary => summary.Descriptor.Kind == DescriptorKind.Activity)
+            .NodePaths.Should().ContainSingle().Which.Should().Be("answer/validate");
+
+        var addPath = () => ((IList<string>)explanation.CallableEffectSummaries[0].NodePaths).Add("mutated");
+        addPath.Should().Throw<NotSupportedException>();
+    }
+
+    [Fact]
+    public void FromCompilation_ProvidesDeterministicRepairGuidanceWithoutChangingDiagnostics()
+    {
+        var source = WorkflowCompilerTests.Fixture.CreatePlan();
+        var invalid = source with
+        {
+            OutputType = new PrimitiveType(FuwenPrimitiveKind.Boolean),
+        };
+        var result = new WorkflowCompiler(WorkflowCompilerTests.Fixture.CreateCatalogue(source))
+            .Compile(invalid, cancellationToken: TestContext.Current.CancellationToken);
+
+        var explanation = WorkflowExplanation.Create(result);
+
+        explanation.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.SemanticValidationFailed);
+        explanation.RepairGuidance.Should().ContainSingle(guidance =>
+            guidance.Code == CompilerDiagnosticCodes.SemanticValidationFailed &&
+            guidance.Guidance.Contains("structural invariant", StringComparison.Ordinal));
+        explanation.RepairGuidance[0].Diagnostic.Should().BeSameAs(
+            explanation.Diagnostics[explanation.RepairGuidance[0].DiagnosticIndex]);
+    }
+
+    [Fact]
     public void FromCompilation_FailedCompilationHasNoExecutablePlanOrFingerprint()
     {
         var source = WorkflowCompilerTests.Fixture.CreatePlan();

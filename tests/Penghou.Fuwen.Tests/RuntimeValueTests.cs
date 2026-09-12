@@ -19,6 +19,41 @@ public sealed class RuntimeValueTests
     }
 
     [Fact]
+    public void CompositeRuntimeValues_deeply_snapshot_children_and_round_trip()
+    {
+        using var document = JsonDocument.Parse("\"before\"");
+        var items = new List<RuntimeValue> { new JsonRuntimeValue(document.RootElement) };
+        var list = new ListRuntimeValue(items);
+        var value = new ObjectRuntimeValue(new Dictionary<string, RuntimeValue>
+        {
+            ["items"] = list,
+        });
+        items.Clear();
+
+        list.Items.Should().ContainSingle();
+        value.Properties.Should().ContainKey("items");
+        var serialized = CanonicalJson.Serialize<RuntimeValue>(value);
+        var restored = CanonicalJson.Deserialize<RuntimeValue>(serialized).Should().BeOfType<ObjectRuntimeValue>().Subject;
+        restored.Properties["items"].Should().BeOfType<ListRuntimeValue>();
+        ((JsonRuntimeValue)((ListRuntimeValue)restored.Properties["items"]).Items[0]).Value.GetString().Should().Be("before");
+    }
+
+    [Fact]
+    public void CompositeRuntimeValues_enforce_property_and_node_bounds()
+    {
+        using var document = JsonDocument.Parse("true");
+        var runtime = RuntimeValue.FromJson(document.RootElement);
+        var tooManyProperties = Enumerable.Range(0, ObjectRuntimeValue.MaximumProperties + 1)
+            .ToDictionary(index => $"p{index}", _ => runtime);
+        ((Action)(() => new ObjectRuntimeValue(tooManyProperties)))
+            .Should().Throw<ArgumentOutOfRangeException>().WithMessage("*properties*");
+
+        var tooManyItems = Enumerable.Repeat(runtime, ListRuntimeValue.MaximumItems + 1).ToArray();
+        ((Action)(() => new ListRuntimeValue(tooManyItems)))
+            .Should().Throw<ArgumentOutOfRangeException>().WithMessage("*items*");
+    }
+
+    [Fact]
     public void JsonRuntimeValue_enforces_size_node_and_depth_bounds_before_ownership()
     {
         using var largeDocument = JsonDocument.Parse(JsonSerializer.Serialize(new string('x', JsonRuntimeValue.MaximumJsonUtf8Bytes)));

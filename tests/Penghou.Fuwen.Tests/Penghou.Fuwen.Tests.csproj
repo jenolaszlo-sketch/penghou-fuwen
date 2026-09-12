@@ -25,6 +25,7 @@
   <ItemGroup>
     <None Include="..\golden\workflow_plan_v1.json" Link="golden\workflow_plan_v1.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\golden\workflow_plan_v2.json" Link="golden\workflow_plan_v2.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\golden\workflow_plan_v3.json" Link="golden\workflow_plan_v3.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

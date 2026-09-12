@@ -7,6 +7,8 @@ public static class WorkflowPlanIdentity
 {
     private const string ExecutionFingerprintPrefixV1 = "sha256:fuwen-execution/v1:";
     private const string ExecutionFingerprintPrefixV2 = "sha256:fuwen-execution/v2:";
+    private const string ExecutionFingerprintPrefixV3 = "sha256:fuwen-execution/v3:";
+    private const string ExecutionFingerprintPrefixV4 = "sha256:fuwen-execution/v4:";
 
     /// <summary>Produces canonical resolved IR bytes after normalizing unordered collections.</summary>
     public static byte[] GetCanonicalBytes(WorkflowPlan plan)
@@ -47,7 +49,9 @@ public static class WorkflowPlanIdentity
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(fingerprintVersion);
         if (!string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV1, StringComparison.Ordinal) &&
-            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV2, StringComparison.Ordinal))
+            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV2, StringComparison.Ordinal) &&
+            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV3, StringComparison.Ordinal) &&
+            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV4, StringComparison.Ordinal))
             throw new NotSupportedException($"Unsupported fingerprint version '{fingerprintVersion}'.");
         var hash = SHA256.HashData(canonicalBytes);
         return $"sha256:{fingerprintVersion}:{Convert.ToHexString(hash).ToLowerInvariant()}";
@@ -61,12 +65,16 @@ public static class WorkflowPlanIdentity
             ? ExecutionFingerprintPrefixV1
             : executionFingerprint.StartsWith(ExecutionFingerprintPrefixV2, StringComparison.Ordinal)
                 ? ExecutionFingerprintPrefixV2
+                : executionFingerprint.StartsWith(ExecutionFingerprintPrefixV3, StringComparison.Ordinal)
+                ? ExecutionFingerprintPrefixV3
+                    : executionFingerprint.StartsWith(ExecutionFingerprintPrefixV4, StringComparison.Ordinal)
+                        ? ExecutionFingerprintPrefixV4
                 : string.Empty;
         if (prefix.Length == 0 || executionFingerprint.Length != prefix.Length + 64)
-            throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1 or fuwen-execution/v2 lowercase hexadecimal form.", nameof(executionFingerprint));
+            throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1, v2, v3, or v4 lowercase hexadecimal form.", nameof(executionFingerprint));
         foreach (var character in executionFingerprint.AsSpan(prefix.Length))
             if (character is not (>= '0' and <= '9') and not (>= 'a' and <= 'f'))
-                throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1 or fuwen-execution/v2 lowercase hexadecimal form.", nameof(executionFingerprint));
+                throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1, v2, v3, or v4 lowercase hexadecimal form.", nameof(executionFingerprint));
     }
 
     private static WorkflowPlan Normalize(WorkflowPlan plan) => plan with
@@ -122,7 +130,16 @@ public static class WorkflowPlanIdentity
     private static WorkflowNode NormalizeNode(WorkflowNode node) => node switch
     {
         ContextNode context => context with { Arguments = NormalizeArguments(context.Arguments) },
-        InferenceNode inference => inference with { Arguments = NormalizeArguments(inference.Arguments) },
+        InferenceNode inference => inference with
+        {
+            Arguments = NormalizeArguments(inference.Arguments),
+            ContextRequirements = inference.ContextRequirements is null
+                ? null
+                : inference.ContextRequirements
+                    .OrderBy(requirement => requirement.Name, StringComparer.Ordinal)
+                    .ThenBy(requirement => requirement.Source.NodePath, StringComparer.Ordinal)
+                    .ToArray(),
+        },
         ActivityNode activity => activity with { Arguments = NormalizeArguments(activity.Arguments) },
         ConditionalNode conditional => conditional with
         {
@@ -130,6 +147,10 @@ public static class WorkflowPlanIdentity
             Else = NormalizeNodes(conditional.Else),
         },
         ReturnNode @return => @return,
+        FanOutNode fanOut => fanOut with
+        {
+            Body = NormalizeNodes(fanOut.Body),
+        },
         _ => throw new NotSupportedException($"Unsupported workflow node type '{node.GetType().Name}'."),
     };
 

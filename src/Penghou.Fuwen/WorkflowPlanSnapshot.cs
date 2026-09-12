@@ -5,6 +5,12 @@ namespace Penghou.Fuwen;
 /// <summary>Creates a detached, deeply copied snapshot of a caller-owned plan.</summary>
 internal static class WorkflowPlanSnapshot
 {
+    internal static FuwenType CreateType(FuwenType type)
+    {
+        var state = new SnapshotState();
+        return CloneType(type, state);
+    }
+
     internal static WorkflowPlan Create(WorkflowPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -194,7 +200,10 @@ internal static class WorkflowPlanSnapshot
                     CloneDescriptor(value.PromptTemplate, state),
                     SnapshotList(value.Arguments, "inference arguments", CloneArgument, state),
                     SnapshotList(value.ContextSnapshots, "context snapshots", CloneNodeOutput, state),
-                    CloneType(value.OutputType, state)),
+                    CloneType(value.OutputType, state),
+                    value.ContextRequirements is null
+                        ? null
+                        : SnapshotList(value.ContextRequirements, "context requirements", CloneContextRequirement, state)),
                 ActivityNode value => new ActivityNode(
                     value.Name,
                     value.StructuralPath,
@@ -208,6 +217,17 @@ internal static class WorkflowPlanSnapshot
                     SnapshotList(value.Then, "then branch nodes", CloneNode, state),
                     SnapshotList(value.Else, "else branch nodes", CloneNode, state)),
                 ReturnNode value => new ReturnNode(value.Name, value.StructuralPath, CloneBinding(value.Value, state)),
+                FanOutNode value => new FanOutNode(
+                    value.Name,
+                    value.StructuralPath,
+                    CloneBinding(value.Source, state),
+                    new FanOutItemBinding(value.Item.Name, CloneType(value.Item.Type, state)),
+                    CloneBinding(value.Key, state),
+                    SnapshotList(value.Body, "fan-out body nodes", CloneNode, state),
+                    CloneBinding(value.Yield, state),
+                    CloneType(value.ResultType, state),
+                    value.MaximumItems,
+                    value.MaximumConcurrency),
                 _ => throw new NotSupportedException($"Unsupported workflow node type '{node.GetType().Name}'."),
             };
         }
@@ -264,6 +284,23 @@ internal static class WorkflowPlanSnapshot
         }
     }
 
+    private static ContextRequirement CloneContextRequirement(ContextRequirement requirement, SnapshotState state)
+    {
+        ArgumentNullException.ThrowIfNull(requirement);
+        state.Enter(requirement);
+        try
+        {
+            return new(
+                requirement.Name,
+                CloneNodeOutput(requirement.Source, state),
+                CloneType(requirement.ExpectedType, state));
+        }
+        finally
+        {
+            state.Exit(requirement);
+        }
+    }
+
     private static Binding CloneBinding(Binding binding, SnapshotState state)
     {
         ArgumentNullException.ThrowIfNull(binding);
@@ -275,6 +312,7 @@ internal static class WorkflowPlanSnapshot
             {
                 InputBinding value => new InputBinding(SnapshotProjection(value.Projection, state)),
                 NodeOutputBinding value => new NodeOutputBinding(value.NodePath, SnapshotProjection(value.Projection, state)),
+                FanOutItemValueBinding value => new FanOutItemValueBinding(SnapshotProjection(value.Projection, state)),
                 LiteralBinding value when value.Value.ValueKind is not JsonValueKind.Undefined => new LiteralBinding(value.Value.Clone()),
                 ListBinding value => new ListBinding(SnapshotList(value.Items, "list literal items", CloneBinding, state)),
                 ObjectBinding value => new ObjectBinding(SnapshotProperties(value.Properties, state)),

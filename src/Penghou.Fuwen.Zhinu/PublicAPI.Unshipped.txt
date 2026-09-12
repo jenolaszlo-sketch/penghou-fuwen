@@ -1,0 +1,42 @@
+#nullable enable
+Penghou.Fuwen.Zhinu.FuwenZhinuAdapterException
+Penghou.Fuwen.Zhinu.FuwenZhinuAdapterException.FuwenZhinuAdapterException(string! message) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionException
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionException.Failure.get -> Penghou.Fuwen.ExecutionFailure?
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionException.FuwenZhinuExecutionException(Penghou.Fuwen.ExecutionFailure! failure) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionException.FuwenZhinuExecutionException(string! message) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuAdmissionException
+Penghou.Fuwen.Zhinu.FuwenZhinuAdmissionException.FuwenZhinuAdmissionException(string! message) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuProviderRuntimeIdentity
+Penghou.Fuwen.Zhinu.FuwenZhinuProviderRuntimeIdentity.CatalogueSnapshotRevision.get -> string!
+Penghou.Fuwen.Zhinu.FuwenZhinuProviderRuntimeIdentity.FuwenZhinuProviderRuntimeIdentity(string! catalogueSnapshotRevision, string! resolvedDescriptorSetFingerprint) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuProviderRuntimeIdentity.ResolvedDescriptorSetFingerprint.get -> string!
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.ActivityExecutor.get -> Penghou.Fuwen.IActivityExecutor!
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.ContextProvider.get -> Penghou.Fuwen.IContextProvider!
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.FuwenZhinuExecutionPorts(Penghou.Fuwen.IActivityExecutor! activityExecutor, Penghou.Fuwen.IContextProvider! contextProvider, Penghou.Fuwen.IInferenceExecutor! inferenceExecutor) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.FuwenZhinuExecutionPorts(Penghou.Fuwen.IActivityExecutor! activityExecutor, Penghou.Fuwen.IContextProvider! contextProvider, Penghou.Fuwen.IInferenceExecutor! inferenceExecutor, Penghou.Fuwen.IExecutionObserver? observer) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.InferenceExecutor.get -> Penghou.Fuwen.IInferenceExecutor!
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Observer.get -> Penghou.Fuwen.IExecutionObserver?
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.ExecutionOptions.get -> Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options!
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.FuwenZhinuExecutionPorts(Penghou.Fuwen.IActivityExecutor! activityExecutor, Penghou.Fuwen.IContextProvider! contextProvider, Penghou.Fuwen.IInferenceExecutor! inferenceExecutor, Penghou.Fuwen.IExecutionObserver? observer, Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options! options) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options
+const Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options.MaximumAllowedInfrastructureAttempts = 8 -> int
+const Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options.MaximumAllowedFanOutConcurrency = 256 -> int
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options.Options(int maximumInfrastructureAttempts = 1, int maximumFanOutConcurrency = 32) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options.MaximumInfrastructureAttempts.get -> int
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options.MaximumFanOutConcurrency.get -> int
+Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowFactory
+Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowFactory.CreateAsync(string! name, string! version, Penghou.Fuwen.Compiler.WorkflowAdmissionResult! admission, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowRegistration!>
+Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowFactory.FuwenZhinuWorkflowFactory(Penghou.Fuwen.IWorkflowDefinitionStore! definitionStore, Penghou.Fuwen.Zhinu.IFuwenZhinuProviderRuntimeIdentity! providerRuntimeIdentity) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowFactory.FuwenZhinuWorkflowFactory(Penghou.Fuwen.IWorkflowDefinitionStore! definitionStore, Penghou.Fuwen.Zhinu.IFuwenZhinuProviderRuntimeIdentity! providerRuntimeIdentity, Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts! executionPorts) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowRegistration
+Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowRegistration.Definition.get -> Penghou.Fuwen.WorkflowDefinitionDocument!
+Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowRegistration.ExecutionPorts.get -> Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts?
+Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowRegistration.Name.get -> string!
+Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowRegistration.Register(Penghou.Zhinu.WorkflowRegistry! registry) -> Penghou.Zhinu.WorkflowRegistry!
+Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowRegistration.Version.get -> string!
+Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowRegistration.ZhinuRegistration.get -> Penghou.Zhinu.WorkflowRegistration<System.Text.Json.JsonElement, System.Text.Json.JsonElement>!
+Penghou.Fuwen.Zhinu.IFuwenZhinuProviderRuntimeIdentity
+Penghou.Fuwen.Zhinu.IFuwenZhinuProviderRuntimeIdentity.CatalogueSnapshotRevision.get -> string!
+Penghou.Fuwen.Zhinu.IFuwenZhinuProviderRuntimeIdentity.ResolvedDescriptorSetFingerprint.get -> string!

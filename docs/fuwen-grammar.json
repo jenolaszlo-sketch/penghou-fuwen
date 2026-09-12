@@ -1,0 +1,39 @@
+{
+  "languageVersion": "fuwen-language/v1",
+  "sourceExtension": ".fuwen",
+  "lexical": {
+    "identifier": "[A-Za-z_$][A-Za-z0-9_$-]*",
+    "number": "-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?",
+    "string": "JSON string literal",
+    "comments": ["// to end of line", "/* ... */"],
+    "coordinates": "zero-based UTF-8 byte offsets plus zero-based UTF-16 columns"
+  },
+  "productions": {
+    "source": "declaration*",
+    "declaration": "schema | enum | capability | workflow",
+    "schema": "schema identifier descriptor? '{' field* '}'",
+    "enum": "enum identifier descriptor? '{' enumMember* '}'",
+    "capability": "capability string (':' string)? ';'?",
+    "workflow": "workflow identifier ('@' string)? ('version'|'revision')? '(' (identifier ':' type)? ')' (('->'|'returns'|'output') ':'? type)? ('routing' ':' string)? '{' node* '}'",
+    "field": "identifier ':' type (','|';')",
+    "enumMember": "identifier ('=' string)? (','|';')",
+    "node": "contextNode | activityNode | inferenceNode | conditional | return",
+    "contextNode": "context identifier ('=' context)? descriptor arguments ('->'|':')? type? ';'?",
+    "activityNode": "activity identifier ('=' activity)? descriptor arguments ('->'|':')? type? ';'?",
+    "inferenceNode": "infer identifier ('=' infer)? descriptor ('using'|',') descriptor arguments? ('with'|'context') identifier (',' identifier)* ('->'|':')? type? ';'?",
+    "conditional": "if identifier? condition '{' node* '}' 'else' '{' node* '}'",
+    "return": "return binding ';'?",
+    "descriptor": "string | identifier ('@' (string|identifier))? ('#' (string|identifier))?",
+    "type": "string | bool | boolean | int | integer | number | duration | json | identifier | list '<' type '>' ('[' number ']')? | artifact '<' descriptor '>'",
+    "arguments": "'(' (identifier (':'|'=') binding (','|';'))* ')'",
+    "condition": "'not' binding | binding (('=='|'!='|'<'|'<='|'>'|'>='|'and'|'or') binding) | binding 'exists'",
+    "binding": "JSON literal | identifier ('.' identifier)* | '[' (binding ',')* ']' | '{' (string ':' binding ',')* '}'"
+  },
+  "semanticRules": [
+    "Descriptor pins are exact kind, name, version, and sha256 descriptor/v1 digest identities.",
+    "Conditional branches are control-only; branch-local return values cannot escape the branch.",
+    "A workflow has one complete return and no cross-region output references.",
+    "The trusted catalogue, not source text, is authoritative for schemas and callable contracts.",
+    "All parser dimensions are bounded by CompilationBudget; diagnostic codes are stable API values."
+  ]
+}

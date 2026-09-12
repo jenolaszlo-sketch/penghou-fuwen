@@ -89,6 +89,13 @@ sha256:fuwen-execution/v1:<lowercase-hex>
 sha256:fuwen-source/v1:<lowercase-hex>
 ```
 
+The pre-release IR v3 contract uses the separate envelope
+`sha256:fuwen-execution/v3:<lowercase-hex>`. Inference nodes declare named,
+typed `contextRequirements` that reference direct context-node outputs; the
+legacy `contextSnapshots` collection must remain empty. Runtime
+`ContextSnapshotReference` values are produced later by an executor and are
+not part of the plan identity.
+
 The definition store binds that value to byte-identical canonical IR. A hash
 match with different bytes is an integrity failure. Unknown IR, canonical JSON,
 or fingerprint contracts are rejected rather than reinterpreted.

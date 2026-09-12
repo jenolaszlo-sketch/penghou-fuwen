@@ -1,0 +1,40 @@
+#nullable enable
+Penghou.Fuwen.Baize.BaizeInferenceOutputMode
+Penghou.Fuwen.Baize.BaizeInferenceOutputMode.StructuredContent = 0 -> Penghou.Fuwen.Baize.BaizeInferenceOutputMode
+Penghou.Fuwen.Baize.BaizeInferenceOutputMode.ToolCall = 1 -> Penghou.Fuwen.Baize.BaizeInferenceOutputMode
+Penghou.Fuwen.Baize.BaizeEndpointBinding
+Penghou.Fuwen.Baize.BaizeEndpointBinding.BaizeEndpointBinding(string! endpointId, string! provider, string! model, Penghou.Baize.ILlmClient! client) -> void
+Penghou.Fuwen.Baize.BaizeEndpointBinding.Client.get -> Penghou.Baize.ILlmClient!
+Penghou.Fuwen.Baize.BaizeEndpointBinding.EndpointId.get -> string!
+Penghou.Fuwen.Baize.BaizeEndpointBinding.Model.get -> string!
+Penghou.Fuwen.Baize.BaizeEndpointBinding.Provider.get -> string!
+Penghou.Fuwen.Baize.BaizeToolBinding
+Penghou.Fuwen.Baize.BaizeToolBinding.BaizeToolBinding(Penghou.Fuwen.DescriptorReference! descriptor, Penghou.Baize.LlmTool! tool) -> void
+Penghou.Fuwen.Baize.BaizeToolBinding.Descriptor.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.Baize.BaizeToolBinding.Tool.get -> Penghou.Baize.LlmTool!
+Penghou.Fuwen.Baize.BaizeInferencePolicy
+const Penghou.Fuwen.Baize.BaizeInferencePolicy.MaximumAllowedAttempts = 8 -> int
+Penghou.Fuwen.Baize.BaizeInferencePolicy.BaizeInferencePolicy(int maximumAttempts = 1, int? maximumTokens = null, bool retryRepresentationFailures = false, string? policyRevision = null, string? routingPolicyRevision = null, System.Func<Penghou.Fuwen.InferenceExecutionRequest!, string?>? rejection = null) -> void
+Penghou.Fuwen.Baize.BaizeInferencePolicy.MaximumAttempts.get -> int
+Penghou.Fuwen.Baize.BaizeInferencePolicy.MaximumTokens.get -> int?
+Penghou.Fuwen.Baize.BaizeInferencePolicy.PolicyRevision.get -> string?
+Penghou.Fuwen.Baize.BaizeInferencePolicy.Rejection.get -> System.Func<Penghou.Fuwen.InferenceExecutionRequest!, string?>?
+Penghou.Fuwen.Baize.BaizeInferencePolicy.RetryRepresentationFailures.get -> bool
+Penghou.Fuwen.Baize.BaizeInferencePolicy.RoutingPolicyRevision.get -> string?
+Penghou.Fuwen.Baize.BaizeInferenceBinding
+Penghou.Fuwen.Baize.BaizeInferenceBinding.BaizeInferenceBinding(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference! promptTemplate, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeEndpointBinding!>! endpoints, string! userPromptTemplate = "{arguments}", string? systemPrompt = null, Penghou.Fuwen.Baize.BaizeInferenceOutputMode outputMode = Penghou.Fuwen.Baize.BaizeInferenceOutputMode.StructuredContent, string? expectedToolName = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeToolBinding!>? tools = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>? schemas = null, Penghou.Fuwen.Baize.BaizeInferencePolicy? policy = null) -> void
+Penghou.Fuwen.Baize.BaizeInferenceBinding.Endpoints.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeEndpointBinding!>!
+Penghou.Fuwen.Baize.BaizeInferenceBinding.ExpectedToolName.get -> string?
+Penghou.Fuwen.Baize.BaizeInferenceBinding.OutputMode.get -> Penghou.Fuwen.Baize.BaizeInferenceOutputMode
+Penghou.Fuwen.Baize.BaizeInferenceBinding.Policy.get -> Penghou.Fuwen.Baize.BaizeInferencePolicy!
+Penghou.Fuwen.Baize.BaizeInferenceBinding.Profile.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.Baize.BaizeInferenceBinding.PromptTemplate.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.Baize.BaizeInferenceBinding.Schemas.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>!
+Penghou.Fuwen.Baize.BaizeInferenceBinding.SystemPrompt.get -> string?
+Penghou.Fuwen.Baize.BaizeInferenceBinding.Tools.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeToolBinding!>!
+Penghou.Fuwen.Baize.BaizeInferenceBinding.UserPromptTemplate.get -> string!
+Penghou.Fuwen.Baize.IBaizeInferenceProvenanceSink
+Penghou.Fuwen.Baize.IBaizeInferenceProvenanceSink.RecordAsync(Penghou.Fuwen.InferenceExecutionEvidence! evidence, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Fuwen.Baize.BaizeInferenceExecutor
+Penghou.Fuwen.Baize.BaizeInferenceExecutor.BaizeInferenceExecutor(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeInferenceBinding!>! bindings, Penghou.Nuwa.IJsonRepairPipeline? repairPipeline = null, Penghou.Fuwen.Baize.IBaizeInferenceProvenanceSink? provenanceSink = null) -> void
+Penghou.Fuwen.Baize.BaizeInferenceExecutor.ExecuteAsync(Penghou.Fuwen.InferenceExecutionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceExecutionResult!>

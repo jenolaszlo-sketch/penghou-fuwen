@@ -88,7 +88,12 @@ public static class WorkflowSourceMapValidator
         {
             yield return node;
             if (node is not ConditionalNode conditional)
+            {
+                if (node is FanOutNode fanOut)
+                    foreach (var child in EnumerateNodes(fanOut.Body))
+                        yield return child;
                 continue;
+            }
             foreach (var child in EnumerateNodes(conditional.Then.Concat(conditional.Else)))
                 yield return child;
         }

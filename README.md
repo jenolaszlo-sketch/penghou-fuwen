@@ -47,18 +47,26 @@ workflow runs:
   descriptor, capability, and diagnostic contracts.
 - `Penghou.Fuwen.Compiler` — bounded validation and compilation into canonical
   Fuwen IR.
-
-`Penghou.Fuwen.Zhinu` and `Penghou.Fuwen.Baize` will be added only after the IR
-and identity design gate closes.
+- `Penghou.Fuwen.Zhinu` — admission-bound registration and, incrementally,
+  durable interpretation of immutable Fuwen plans on Zhinu.
+- `Penghou.Fuwen.Baize` — exact descriptor-bound structured inference through
+  Baize, with bounded trusted retries, Nuwa repair, final type validation, and
+  provider-neutral provenance.
 
 ## Current status
 
 The executable-plan identity and storage foundation is complete. Fuwen now has
-an IR v2 structured execution schedule, immutable canonical definitions,
+an IR v2 structured execution schedule, a pre-release IR v3 typed context-request
+contract, immutable canonical definitions,
 trusted catalogue resolution, and a constrained programmatic builder/compiler
 that rejects invalid references, projections, return types, untrusted schema
 changes, capability mismatches, missing host grants, callable signature
 mismatches, and unsafe callable retry/effect combinations.
+
+The bounded `.fuwen` source compiler now covers the minimal Delivery D
+language: schemas, enums, typed workflows, named context/activity/inference
+nodes, restricted bindings and conditions, control-only `if/else`, complete
+typed returns, canonical formatting, source maps, and stable diagnostics.
 
 The compiler deliberately separates three boundaries: canonical-definition
 integrity, semantic compilation, and host admission. Trusted callable signatures
@@ -67,8 +75,7 @@ and conservative side-effect/idempotency/retry checks are implemented.
 the exact execution fingerprint, immutable catalogue snapshot, resolved trusted
 metadata, finite capability grants, policy revision, and effective limits.
 Unversioned catalogues and policies—and the test-only `AllowAll` policy—cannot
-issue a receipt. Parser work remains deferred while the programmatic compiler
-is hardened for its first execution adapter. Immutable plan-revision documents
+issue a receipt. Immutable plan-revision documents
 now bind host-issued lineage IDs and parentage to one verified definition plus
 content-addressed objective, acceptance, validation, and supporting artifact
 evidence. Their fingerprints prove integrity only; they do not authorize or
@@ -77,8 +84,10 @@ dependency, descriptor, execution-order, objective, acceptance, and validation
 changes. It is an explanation surface, not permission to reuse runtime artifacts.
 `WorkflowExplanation` now projects completed compilation or admission results
 into a deterministic, side-effect-free view of the plan, descriptor pins,
-required capabilities, limits, usage, and bounded diagnostics. It cannot issue
-an admission receipt or execute workflow work.
+required capabilities, trusted callable effect summaries, repair-oriented
+guidance, limits, usage, and bounded diagnostics. Effect summaries and repair
+guidance are descriptive evidence only: the projection cannot issue an
+admission receipt, grant capabilities, or execute workflow work.
 Trusted catalogue results are also charged cumulatively against the existing
 structural and UTF-8 text budgets, preventing many individually valid descriptor
 payloads from amplifying compiler memory beyond the admitted limits.
@@ -91,10 +100,39 @@ number domain now rejects lossy floating-point fallback. Matching .NET and
 independent Python vectors cover decimal boundaries, negative zero, Unicode
 escaping, non-BMP text, and ordinal property ordering.
 Provider results can now cross a bounded, provider-neutral runtime boundary as
-detached JSON or artifact identities. Strict runtime validation covers optional,
-list, object, enum, numeric, and nominal artifact types, while immutable context
+detached JSON, artifact identities, and bounded list/object composites. Strict
+runtime validation covers optional, list, object, enum, numeric, and nominal
+artifact types, while immutable context
 snapshot references preserve selection evidence without storing context content
-or granting artifact access. See [runtime evidence](docs/runtime-evidence.md).
+or granting artifact access. IR v3 inference nodes declare exactly which typed
+context-node outputs they consume; runtime snapshot evidence remains separate
+from that compiled request. See [runtime evidence](docs/runtime-evidence.md).
+Provider-neutral execution ports now carry these values, exact descriptor
+identities, declared output types, canonical operation keys, typed failures,
+and non-authoritative observations without taking ownership of admission,
+retry, scheduling, credentials, or artifact access. See
+[execution ports](docs/execution-ports.md).
+`Penghou.Fuwen.Zhinu` now verifies admission, provider-runtime identity,
+immutable definition storage, and exact Zhinu workflow fingerprinting before
+registration. Its first executable slice interprets IR v3 context, inference,
+activity, conditional, and return nodes through stable durable Zhinu steps,
+validates provider outputs at their declared Fuwen types, and preserves context
+snapshot evidence. SQLite-backed tests prove crash recovery, selective restart,
+run-scoped operation keys, definition-drift rejection, cancellation, corrupt
+evidence rejection, and idempotent step-owned artifact publication. See
+[the Zhinu adapter boundary](docs/zhinu-adapter.md).
+`Penghou.Fuwen.Baize` now maps exact host-owned logical profile/template
+bindings to Baize endpoints without leaking application profile names into the
+provider layer. Recorded tests distinguish malformed, repaired-but-invalid,
+schema-mismatched, truncated, tool-mapping, policy, and provider failures;
+only explicitly classified fallback or representation-retry cases may cause
+another model call.
+
+IR v4 also contains the first programmatic keyed fan-out contract. It validates
+all stable item keys before child work, persists one durable item outcome per
+key, aggregates in source order, and supports focused item restart without
+repeating successful siblings. The `.fuwen` source syntax and Guyabano pilot
+for fan-out remain roadmap work, so this surface should be treated as preview.
 
 See [the roadmap](docs/roadmap.md) and
 [the first implementation batch](docs/first-batch.md).

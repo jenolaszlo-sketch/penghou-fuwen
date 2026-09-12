@@ -71,6 +71,9 @@ public sealed class WorkflowPlanBuilder
         return this;
     }
 
+    /// <summary>Adds one bounded keyed fan-out region to the programmatic plan.</summary>
+    public WorkflowPlanBuilder AddFanOut(FanOutNode node) => AddNode(node);
+
     /// <summary>Sets the explicit v2 completion schedule.</summary>
     public WorkflowPlanBuilder SetExecutionOrder(WorkflowExecutionOrder order)
     {
@@ -81,13 +84,24 @@ public sealed class WorkflowPlanBuilder
 
     /// <summary>Returns a detached plan snapshot. Semantic validation occurs in <see cref="WorkflowCompiler"/>.</summary>
     public WorkflowPlan Build()
+        => BuildVersioned(FuwenContracts.IrVersionV2, FuwenContracts.CompilerSemanticVersionV2, FuwenContracts.ExecutionFingerprintVersionV2);
+
+    /// <summary>Builds a pre-release v3 plan using typed context requirements.</summary>
+    public WorkflowPlan BuildV3()
+        => BuildVersioned(FuwenContracts.IrVersionV3, FuwenContracts.CompilerSemanticVersionV3, FuwenContracts.ExecutionFingerprintVersionV3);
+
+    /// <summary>Builds a pre-release v4 plan containing bounded keyed fan-out regions.</summary>
+    public WorkflowPlan BuildV4()
+        => BuildVersioned(FuwenContracts.IrVersionV4, FuwenContracts.CompilerSemanticVersionV4, FuwenContracts.ExecutionFingerprintVersionV4);
+
+    private WorkflowPlan BuildVersioned(string irVersion, string compilerSemanticVersion, string fingerprintVersion)
     {
         var plan = new WorkflowPlan(
-            FuwenContracts.IrVersionV2,
+            irVersion,
             languageVersion,
-            FuwenContracts.CompilerSemanticVersionV2,
+            compilerSemanticVersion,
             FuwenContracts.CanonicalJsonVersion,
-            FuwenContracts.ExecutionFingerprintVersionV2,
+            fingerprintVersion,
             name,
             revision,
             inputType,
@@ -98,7 +112,7 @@ public sealed class WorkflowPlanBuilder
             new CapabilityManifest(capabilities.ToArray()),
             nodes.ToArray(),
             executionOrder ?? throw new InvalidOperationException(
-                "IR v2 requires an explicit execution order; use SetExecutionOrder before Build()."));
+                $"{irVersion} requires an explicit execution order; use SetExecutionOrder before building the plan."));
 
         // The core snapshot is intentionally the only place that freezes the
         // recursive plan graph. This keeps builder and future parser paths
@@ -138,6 +152,9 @@ public sealed class WorkflowPlanBuilder
                     AddDescriptor(bindings, inference.Profile);
                     AddDescriptor(bindings, inference.PromptTemplate);
                     CollectType(inference.OutputType, bindings);
+                    if (inference.ContextRequirements is not null)
+                        foreach (var requirement in inference.ContextRequirements)
+                            CollectType(requirement.ExpectedType, bindings);
                     break;
                 case ActivityNode activity:
                     AddDescriptor(bindings, activity.Activity);
@@ -147,7 +164,28 @@ public sealed class WorkflowPlanBuilder
                     CollectNodes(conditional.Then, bindings);
                     CollectNodes(conditional.Else, bindings);
                     break;
+                case FanOutNode fanOut:
+                    CollectBindingDescriptors(fanOut.Source, bindings);
+                    CollectBindingDescriptors(fanOut.Key, bindings);
+                    CollectBindingDescriptors(fanOut.Yield, bindings);
+                    CollectType(fanOut.Item.Type, bindings);
+                    CollectType(fanOut.ResultType, bindings);
+                    CollectNodes(fanOut.Body, bindings);
+                    break;
             }
+        }
+    }
+
+    private static void CollectBindingDescriptors(Binding binding, List<DescriptorReference> bindings)
+    {
+        switch (binding)
+        {
+            case ListBinding list:
+                foreach (var item in list.Items) CollectBindingDescriptors(item, bindings);
+                break;
+            case ObjectBinding @object:
+                foreach (var item in @object.Properties.Values) CollectBindingDescriptors(item, bindings);
+                break;
         }
     }
 

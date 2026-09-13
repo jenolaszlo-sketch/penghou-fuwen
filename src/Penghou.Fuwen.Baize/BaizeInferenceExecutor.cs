@@ -44,9 +44,14 @@ public sealed class BaizeTokenPricing
     /// <summary>The host pricing-table revision.</summary>
     public string? PricingRevision { get; }
 
+    /// <summary>
+    /// Calculates cost only when both billable token dimensions are reported.
+    /// A missing prompt or completion count is unknown cost, not zero usage:
+    /// treating it as zero could authorize a retry beyond a configured ceiling.
+    /// </summary>
     internal InferenceCostEvidence? Calculate(LlmUsage? usage)
     {
-        if (usage is null || (usage.PromptTokens is null && usage.CompletionTokens is null))
+        if (usage?.PromptTokens is null || usage.CompletionTokens is null)
             return null;
 
         var prompt = Math.Max(0, usage.PromptTokens ?? 0);
@@ -126,6 +131,8 @@ public sealed class BaizeInferencePolicy
 {
     /// <summary>The largest total number of adapter attempts permitted.</summary>
     public const int MaximumAllowedAttempts = 8;
+    /// <summary>The largest raw or repaired structured response accepted by the adapter.</summary>
+    public const int MaximumAllowedResponseUtf8Bytes = JsonRuntimeValue.MaximumJsonUtf8Bytes;
 
     /// <summary>Creates a bounded trusted policy.</summary>
     public BaizeInferencePolicy(
@@ -135,7 +142,8 @@ public sealed class BaizeInferencePolicy
         string? policyRevision = null,
         string? routingPolicyRevision = null,
         Func<InferenceExecutionRequest, string?>? rejection = null,
-        long? maximumCostMicrounits = null)
+        long? maximumCostMicrounits = null,
+        int maximumResponseUtf8Bytes = MaximumAllowedResponseUtf8Bytes)
     {
         if (maximumAttempts < 1 || maximumAttempts > MaximumAllowedAttempts)
             throw new ArgumentOutOfRangeException(nameof(maximumAttempts));
@@ -143,6 +151,8 @@ public sealed class BaizeInferencePolicy
             throw new ArgumentOutOfRangeException(nameof(maximumTokens));
         if (maximumCostMicrounits is <= 0)
             throw new ArgumentOutOfRangeException(nameof(maximumCostMicrounits));
+        if (maximumResponseUtf8Bytes < 1 || maximumResponseUtf8Bytes > MaximumAllowedResponseUtf8Bytes)
+            throw new ArgumentOutOfRangeException(nameof(maximumResponseUtf8Bytes));
         MaximumAttempts = maximumAttempts;
         MaximumTokens = maximumTokens;
         RetryRepresentationFailures = retryRepresentationFailures;
@@ -150,6 +160,7 @@ public sealed class BaizeInferencePolicy
         RoutingPolicyRevision = BaizeBindingValidation.OptionalText(routingPolicyRevision, nameof(routingPolicyRevision), InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
         Rejection = rejection;
         MaximumCostMicrounits = maximumCostMicrounits;
+        MaximumResponseUtf8Bytes = maximumResponseUtf8Bytes;
     }
 
     /// <summary>Maximum total calls across all trusted fallbacks.</summary>
@@ -164,8 +175,17 @@ public sealed class BaizeInferencePolicy
     public string? RoutingPolicyRevision { get; }
     /// <summary>Optional host admission predicate; a non-null message rejects.</summary>
     public Func<InferenceExecutionRequest, string?>? Rejection { get; }
-    /// <summary>Maximum cumulative cost before another adapter attempt is forbidden.</summary>
+    /// <summary>
+    /// Maximum cumulative cost before another adapter attempt is forbidden.
+    /// When set, an attempt with missing or partial billable usage is treated
+    /// as unknown cost and no further provider attempt is made.
+    /// </summary>
     public long? MaximumCostMicrounits { get; }
+    /// <summary>
+    /// Trusted UTF-8 byte ceiling applied before parsing or repairing provider
+    /// output and again to repaired output.
+    /// </summary>
+    public int MaximumResponseUtf8Bytes { get; }
 
 }
 
@@ -330,6 +350,7 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
         string? costCurrency = null;
         string? pricingRevision = null;
         var hasCost = false;
+        var hasUnknownCost = false;
         for (var attempt = 1; attempt <= binding.Policy.MaximumAttempts; attempt++)
         {
             var endpoint = binding.Endpoints[(attempt - 1) % binding.Endpoints.Count];
@@ -352,7 +373,10 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
                 AddUsage(lastResponse.Usage?.CompletionTokens, ref completionTokens, ref hasCompletionTokens);
                 AddUsage(lastResponse.Usage?.TotalTokens, ref totalTokens, ref hasTotalTokens);
                 var attemptCost = endpoint.Pricing?.Calculate(lastResponse.Usage);
-                AddCost(attemptCost, ref costMicrounits, ref costCurrency, ref pricingRevision, ref hasCost);
+                if (endpoint.Pricing is not null && attemptCost is null)
+                    hasUnknownCost = true;
+                if (!hasUnknownCost)
+                    AddCost(attemptCost, ref costMicrounits, ref costCurrency, ref pricingRevision, ref hasCost);
                 var extracted = await ExtractOutputAsync(lastResponse, request.OutputType, binding, schemaJson, cancellationToken).ConfigureAwait(false);
                 anyWasRepaired |= extracted.WasRepaired;
                 repairAttempts = Math.Min(InferenceExecutionEvidence.MaximumAttempts, repairAttempts + extracted.RepairAttempts);
@@ -362,7 +386,7 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
                     lastFailure = extracted.Failure!;
                     attempts.Add(FailedAttempt(attempt, metadata, endpoint, lastFailure.Code.ToString(), lastFailure.Message,
                         lastResponse.Usage, Stopwatch.GetElapsedTime(attemptStarted), attemptCost));
-                    if (!ShouldRetry(lastFailure.Code, binding.Policy, attempt, costMicrounits)) break;
+                    if (!ShouldRetry(lastFailure.Code, binding.Policy, attempt, costMicrounits, hasUnknownCost)) break;
                     continue;
                 }
 
@@ -370,7 +394,7 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
                     lastResponse.Usage, Stopwatch.GetElapsedTime(attemptStarted), attemptCost));
                 var evidence = BuildEvidence(request, binding, attempts, lastResponse, anyWasRepaired, repairAttempts, repairStrategy, started,
                     hasPromptTokens ? promptTokens : null, hasCompletionTokens ? completionTokens : null, hasTotalTokens ? totalTokens : null,
-                    hasCost ? new InferenceCostEvidence(costCurrency!, costMicrounits, isEstimated: true, pricingRevision) : null);
+                    hasCost && !hasUnknownCost ? new InferenceCostEvidence(costCurrency!, costMicrounits, isEstimated: true, pricingRevision) : null);
                 await RecordAsync(evidence, cancellationToken).ConfigureAwait(false);
                 return InferenceExecutionResult.Succeeded(extracted.Output!, evidence: evidence);
             }
@@ -385,7 +409,12 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
                 lastFailure = new ExecutionFailure(ExecutionFailureKind.Provider, ExecutionFailureCode.ProviderError, message, providerCode: exception.FailureKind.ToString());
                 attempts.Add(FailedAttempt(attempt, metadata, endpoint, exception.FailureKind.ToString(), message,
                     duration: Stopwatch.GetElapsedTime(attemptStarted)));
-                if (!exception.CanFallback || attempt == binding.Policy.MaximumAttempts) break;
+                // A typed fallback signal does not include billable usage. With
+                // an enforced ceiling, conservatively treat a priced call that
+                // raised after submission as unknown cost and stop here.
+                if (binding.Policy.MaximumCostMicrounits is not null && endpoint.Pricing is not null)
+                    hasUnknownCost = true;
+                if (!exception.CanFallback || attempt == binding.Policy.MaximumAttempts || hasUnknownCost) break;
             }
             catch (Exception exception)
             {
@@ -403,7 +432,7 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
 
         var failureEvidence = BuildEvidence(request, binding, attempts, lastResponse, anyWasRepaired, repairAttempts, repairStrategy, started,
             hasPromptTokens ? promptTokens : null, hasCompletionTokens ? completionTokens : null, hasTotalTokens ? totalTokens : null,
-            hasCost ? new InferenceCostEvidence(costCurrency!, costMicrounits, isEstimated: true, pricingRevision) : null);
+            hasCost && !hasUnknownCost ? new InferenceCostEvidence(costCurrency!, costMicrounits, isEstimated: true, pricingRevision) : null);
         await RecordAsync(failureEvidence, cancellationToken).ConfigureAwait(false);
         return InferenceExecutionResult.Failed(lastFailure ?? new ExecutionFailure(ExecutionFailureKind.Provider, ExecutionFailureCode.ProviderError, "Baize inference did not produce a result."), failureEvidence);
     }
@@ -428,9 +457,14 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
         return new LlmClientMetadata(endpoint.Provider, endpoint.Model, EndpointId: endpoint.EndpointId);
     }
 
-    private static bool ShouldRetry(ExecutionFailureCode code, BaizeInferencePolicy policy, int attempt, long costMicrounits) =>
+    private static bool ShouldRetry(
+        ExecutionFailureCode code,
+        BaizeInferencePolicy policy,
+        int attempt,
+        long costMicrounits,
+        bool hasUnknownCost) =>
         policy.RetryRepresentationFailures && attempt < policy.MaximumAttempts &&
-        (policy.MaximumCostMicrounits is null || costMicrounits < policy.MaximumCostMicrounits) && code is
+        (policy.MaximumCostMicrounits is null || (!hasUnknownCost && costMicrounits < policy.MaximumCostMicrounits)) && code is
             ExecutionFailureCode.MalformedOutput or
             ExecutionFailureCode.RepairedOutputSchemaInvalid or
             ExecutionFailureCode.SchemaMismatch or
@@ -446,9 +480,7 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
         if (!string.IsNullOrWhiteSpace(binding.SystemPrompt)) messages.Add(LlmMessage.Text("system", binding.SystemPrompt));
         var arguments = ToJsonObject(request.Arguments.ToDictionary(argument => argument.Name, argument => ToJsonNode(argument.Value), StringComparer.Ordinal));
         var context = ToJsonObject(request.ContextInputs.ToDictionary(input => input.Name, input => ToJsonNode(input.Value), StringComparer.Ordinal));
-        var prompt = binding.UserPromptTemplate.Replace("{arguments}", arguments.ToJsonString(), StringComparison.Ordinal)
-            .Replace("{context}", context.ToJsonString(), StringComparison.Ordinal);
-        if (binding.UserPromptTemplate == "{arguments}") prompt = arguments.ToJsonString();
+        var prompt = RenderUserPrompt(binding.UserPromptTemplate, arguments.ToJsonString(), context.ToJsonString());
         messages.Add(LlmMessage.Text("user", prompt));
         var tools = binding.Tools.Select(tool => tool.Tool).ToList();
         var responseFormat = binding.OutputMode == BaizeInferenceOutputMode.StructuredContent
@@ -456,6 +488,49 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
             : null;
         var metadata = new Dictionary<string, object?>(StringComparer.Ordinal) { ["fuwen.operation.key"] = request.Invocation.OperationKey };
         return new LlmRequest(messages, maxTokens: binding.Policy.MaximumTokens, tools: tools, responseFormat: responseFormat, metadata: metadata);
+    }
+
+    /// <summary>
+    /// Expands the two admitted placeholders in one pass over the template.
+    /// Replacement text is appended directly and is never scanned for another
+    /// placeholder, so literal placeholder-like data supplied by a caller is
+    /// preserved byte-for-byte.
+    /// </summary>
+    private static string RenderUserPrompt(string template, string argumentsJson, string contextJson)
+    {
+        const string argumentsPlaceholder = "{arguments}";
+        const string contextPlaceholder = "{context}";
+        var builder = new StringBuilder(template.Length + argumentsJson.Length + contextJson.Length);
+        var offset = 0;
+        while (offset < template.Length)
+        {
+            var argumentsIndex = template.IndexOf(argumentsPlaceholder, offset, StringComparison.Ordinal);
+            var contextIndex = template.IndexOf(contextPlaceholder, offset, StringComparison.Ordinal);
+            var nextIndex = argumentsIndex < 0
+                ? contextIndex
+                : contextIndex < 0
+                    ? argumentsIndex
+                    : Math.Min(argumentsIndex, contextIndex);
+            if (nextIndex < 0)
+            {
+                builder.Append(template, offset, template.Length - offset);
+                break;
+            }
+
+            builder.Append(template, offset, nextIndex - offset);
+            if (nextIndex == argumentsIndex)
+            {
+                builder.Append(argumentsJson);
+                offset = nextIndex + argumentsPlaceholder.Length;
+            }
+            else
+            {
+                builder.Append(contextJson);
+                offset = nextIndex + contextPlaceholder.Length;
+            }
+        }
+
+        return builder.ToString();
     }
 
     private async ValueTask<ExtractedOutput> ExtractOutputAsync(LlmResponse response, FuwenType outputType, BaizeInferenceBinding binding, string? schemaJson, CancellationToken cancellationToken)
@@ -490,23 +565,87 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
 
         if (string.IsNullOrWhiteSpace(text))
             return ExtractedOutput.Failed(new ExecutionFailure(ExecutionFailureKind.ProviderOutput, ExecutionFailureCode.MalformedOutput, "The Baize response contained no structured JSON output."));
+        if (ExceedsResponseBudget(text, binding.Policy))
+            return ExtractedOutput.Failed(new ExecutionFailure(
+                ExecutionFailureKind.ProviderOutput,
+                ExecutionFailureCode.MalformedOutput,
+                $"The Baize response exceeded the trusted {binding.Policy.MaximumResponseUtf8Bytes}-byte structured-output limit."),
+                wasRepaired,
+                repairAttempts,
+                repairStrategy);
 
         JsonDocument? document = null;
         try { document = JsonDocument.Parse(text); }
         catch (JsonException) { }
         if (document is null)
         {
-            var repaired = await TryRepairAsync(text, schemaJson, cancellationToken).ConfigureAwait(false);
-            if (!repaired.Succeeded)
+            JsonRepairResult repaired;
+            try
+            {
+                repaired = await TryRepairAsync(text, schemaJson, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                return ExtractedOutput.Failed(new ExecutionFailure(
+                    ExecutionFailureKind.ProviderOutput,
+                    ExecutionFailureCode.MalformedOutput,
+                    BoundMessage($"The deterministic JSON repair pipeline failed its contract: {exception.GetType().Name}.")),
+                    wasRepaired,
+                    repairAttempts,
+                    repairStrategy);
+            }
+
+            if (!repaired.Succeeded || repaired.Document is null)
             {
                 document?.Dispose();
                 return ExtractedOutput.Failed(new ExecutionFailure(ExecutionFailureKind.ProviderOutput, ExecutionFailureCode.MalformedOutput, "The Baize response was not valid JSON after deterministic repair."));
             }
+
             document?.Dispose();
-            document = JsonDocument.Parse(repaired.Document!.RootElement.GetRawText());
             wasRepaired |= repaired.WasRepaired;
             repairAttempts = Math.Min(InferenceExecutionEvidence.MaximumAttempts, repairAttempts + repaired.TextRepairs.Count + repaired.NodeRepairs.Count);
             repairStrategy ??= repaired.SucceededBy?.Name;
+            string repairedText;
+            try
+            {
+                repairedText = repaired.Document.RootElement.GetRawText();
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or ObjectDisposedException)
+            {
+                return ExtractedOutput.Failed(new ExecutionFailure(
+                    ExecutionFailureKind.ProviderOutput,
+                    ExecutionFailureCode.MalformedOutput,
+                    "The deterministic JSON repair pipeline returned an unreadable document."),
+                    wasRepaired,
+                    repairAttempts,
+                    repairStrategy);
+            }
+            if (ExceedsResponseBudget(repairedText, binding.Policy))
+                return ExtractedOutput.Failed(new ExecutionFailure(
+                    ExecutionFailureKind.ProviderOutput,
+                    ExecutionFailureCode.MalformedOutput,
+                    $"The repaired Baize response exceeded the trusted {binding.Policy.MaximumResponseUtf8Bytes}-byte structured-output limit."),
+                    wasRepaired,
+                    repairAttempts,
+                    repairStrategy);
+            try
+            {
+                document = JsonDocument.Parse(repairedText);
+            }
+            catch (JsonException)
+            {
+                return ExtractedOutput.Failed(new ExecutionFailure(
+                    ExecutionFailureKind.ProviderOutput,
+                    ExecutionFailureCode.MalformedOutput,
+                    "The deterministic JSON repair pipeline returned an invalid JSON document."),
+                    wasRepaired,
+                    repairAttempts,
+                    repairStrategy);
+            }
         }
 
         RuntimeValue value;
@@ -550,6 +689,9 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
             expectation = JsonSchemaExpectation.FromSchemaNode(JsonNode.Parse(schemaJson)!);
         return await repairPipeline.RepairAsync(text, expectation, cancellationToken).ConfigureAwait(false);
     }
+
+    private static bool ExceedsResponseBudget(string value, BaizeInferencePolicy policy) =>
+        Encoding.UTF8.GetByteCount(value) > policy.MaximumResponseUtf8Bytes;
 
     private static InferenceExecutionEvidence BuildEvidence(
         InferenceExecutionRequest request,

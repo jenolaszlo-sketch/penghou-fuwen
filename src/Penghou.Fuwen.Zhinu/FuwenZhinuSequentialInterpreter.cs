@@ -353,7 +353,16 @@ internal static class FuwenZhinuSequentialInterpreter
         CancellationToken cancellationToken)
     {
         var source = EvaluateBinding(node.Source, plan, state);
-        if (source is not ListRuntimeValue list || list.Items.Count > node.MaximumItems)
+        // Provider adapters are allowed to return any representation that
+        // validates against the admitted type. In particular, Baize returns
+        // structured JSON as JsonRuntimeValue, while the interpreter's
+        // composite execution uses ListRuntimeValue. Normalize at this
+        // typed control-flow boundary so fan-out does not depend on the
+        // provider's in-memory representation. The conversion also walks
+        // nested values and reconstructs nominal artifacts from their wire
+        // form, preserving artifact values during normalization.
+        var list = RuntimeValueWire.NormalizeList(source, node.Item.Type, node.MaximumItems, plan.Schemas);
+        if (list.Items.Count > node.MaximumItems)
             throw new FuwenZhinuExecutionException($"Fan-out source '{node.StructuralPath}' exceeded its declared bounded collection.");
 
         var keyed = new List<(RuntimeIdentityKey Key, RuntimeValue Item, string RuntimePath)>();
@@ -915,7 +924,10 @@ internal static class FuwenZhinuSequentialInterpreter
                     $"Provider '{nodePath}' returned a successful result without output.",
                     mayHaveCommittedEffect: true);
                 await ObserveAsync(ports, invocation, ExecutionObservationKind.Failed, cancellationToken).ConfigureAwait(false);
-                return NodeExecutionEnvelope.Failed(invocation, failure);
+                return NodeExecutionEnvelope.Failed(
+                    invocation,
+                    failure,
+                    result is InferenceExecutionResult missingOutputInference ? missingOutputInference.Evidence : null);
             }
 
             try
@@ -932,7 +944,10 @@ internal static class FuwenZhinuSequentialInterpreter
             {
                 var failure = ProviderFailure(exception, nodePath);
                 await ObserveAsync(ports, invocation, ExecutionObservationKind.Failed, cancellationToken).ConfigureAwait(false);
-                return NodeExecutionEnvelope.Failed(invocation, failure);
+                return NodeExecutionEnvelope.Failed(
+                    invocation,
+                    failure,
+                    result is InferenceExecutionResult failedProcessingInference ? failedProcessingInference.Evidence : null);
             }
         }
     }
@@ -1230,6 +1245,30 @@ internal static class RuntimeValueWire
             return RuntimeValue.FromArtifact(artifact);
         }
         return RuntimeValue.FromJson(value);
+    }
+
+    internal static ListRuntimeValue NormalizeList(
+        RuntimeValue value,
+        FuwenType itemType,
+        int maximumItems,
+        IReadOnlyList<ResolvedSchemaDefinition> schemas)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        ArgumentNullException.ThrowIfNull(itemType);
+        ArgumentNullException.ThrowIfNull(schemas);
+        if (maximumItems <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maximumItems));
+
+        // Re-interpret the detached wire value through the declared list
+        // type. This is intentionally representation-neutral: both a typed
+        // ListRuntimeValue and a provider-produced JsonRuntimeValue array
+        // follow the same path, including nested objects/lists/artifacts.
+        var normalized = FromJson(
+            ToJson(value),
+            new ListType(itemType, maximumItems),
+            schemas);
+        return normalized as ListRuntimeValue
+            ?? throw new FuwenZhinuExecutionException("Fan-out source was not a JSON list after typed normalization.");
     }
 
     internal static JsonElement ToJson(RuntimeValue value)

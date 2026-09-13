@@ -140,4 +140,6 @@ repeating successful siblings. The `.fuwen` source syntax and Guyabano pilot
 for fan-out remain roadmap work, so this surface should be treated as preview.
 
 See [the roadmap](docs/roadmap.md) and
-[the first implementation batch](docs/first-batch.md).
+[the first implementation batch](docs/first-batch.md). Adapter authors should
+also follow the [execution-port conformance matrix](docs/execution-conformance.md)
+and the [generated-asset publisher contract](docs/generated-asset-publisher.md).

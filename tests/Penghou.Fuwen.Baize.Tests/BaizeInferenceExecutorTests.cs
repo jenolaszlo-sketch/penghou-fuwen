@@ -39,6 +39,37 @@ public sealed class BaizeInferenceExecutorTests
     }
 
     [Fact]
+    public async Task Prompt_placeholders_are_expanded_once_without_rescanning_argument_or_context_json()
+    {
+        var (profile, prompt) = Descriptors();
+        var client = new FakeClient(new LlmResponse("\"answer\""));
+        var contextProvider = Descriptor(DescriptorKind.ContextProvider, "context-provider");
+        var binding = new BaizeInferenceBinding(
+            profile,
+            prompt,
+            [new BaizeEndpointBinding("primary", "provider", "model", client)],
+            userPromptTemplate: "A {arguments} B {context} C {context}");
+        var request = Request(
+            profile,
+            prompt,
+            new PrimitiveType(FuwenPrimitiveKind.String),
+            [new RuntimeArgument("arg", RuntimeValue.FromJson(JsonSerializer.SerializeToElement("literal {context}")))],
+            [new InferenceContextInput(
+                "ctx",
+                new PrimitiveType(FuwenPrimitiveKind.String),
+                RuntimeValue.FromJson(JsonSerializer.SerializeToElement("literal {arguments}")),
+                Snapshot(contextProvider))]);
+
+        var result = await new BaizeInferenceExecutor([binding]).ExecuteAsync(request, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        client.LastRequest!.Messages.Should().ContainSingle();
+        client.LastRequest.Messages[0].Parts.Should().ContainSingle();
+        client.LastRequest.Messages[0].Parts[0].Should().BeOfType<LlmTextContent>().Which.Text.Should()
+            .Be("A {\"arg\":\"literal {context}\"} B {\"ctx\":\"literal {arguments}\"} C {\"ctx\":\"literal {arguments}\"}");
+    }
+
+    [Fact]
     public async Task Malformed_output_is_typed_and_repair_success_does_not_skip_final_schema_validation()
     {
         var (profile, prompt) = Descriptors();
@@ -226,6 +257,62 @@ public sealed class BaizeInferenceExecutorTests
     }
 
     [Fact]
+    public async Task Raw_output_budget_is_enforced_before_parsing_or_repair()
+    {
+        var (profile, prompt) = Descriptors();
+        var repair = new CountingRepairPipeline();
+        var policy = new BaizeInferencePolicy(maximumResponseUtf8Bytes: 32);
+        var executor = new BaizeInferenceExecutor([
+            Binding(profile, prompt, new FakeClient(JsonSerializer.Serialize(new string('x', 64))), policy),
+        ], repair);
+
+        var result = await executor.ExecuteAsync(
+            Request(profile, prompt, new PrimitiveType(FuwenPrimitiveKind.String)),
+            TestContext.Current.CancellationToken);
+
+        result.Failure!.Kind.Should().Be(ExecutionFailureKind.ProviderOutput);
+        result.Failure.Code.Should().Be(ExecutionFailureCode.MalformedOutput);
+        result.Failure.Message.Should().Contain("32-byte");
+        repair.Calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Repaired_output_budget_is_enforced_before_runtime_value_creation()
+    {
+        var (profile, prompt) = Descriptors();
+        var policy = new BaizeInferencePolicy(maximumResponseUtf8Bytes: 32);
+        var executor = new BaizeInferenceExecutor([
+            Binding(profile, prompt, new FakeClient("not-json"), policy),
+        ], new RepairingPipeline(JsonSerializer.Serialize(new string('x', 64))));
+
+        var result = await executor.ExecuteAsync(
+            Request(profile, prompt, new PrimitiveType(FuwenPrimitiveKind.String)),
+            TestContext.Current.CancellationToken);
+
+        result.Failure!.Kind.Should().Be(ExecutionFailureKind.ProviderOutput);
+        result.Failure.Code.Should().Be(ExecutionFailureCode.MalformedOutput);
+        result.Failure.Message.Should().Contain("repaired Baize response");
+        result.Evidence!.WasRepaired.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Repair_pipeline_contract_failure_is_typed_as_provider_output()
+    {
+        var (profile, prompt) = Descriptors();
+        var executor = new BaizeInferenceExecutor([
+            Binding(profile, prompt, new FakeClient("not-json")),
+        ], new ThrowingRepairPipeline());
+
+        var result = await executor.ExecuteAsync(
+            Request(profile, prompt, new PrimitiveType(FuwenPrimitiveKind.String)),
+            TestContext.Current.CancellationToken);
+
+        result.Failure!.Kind.Should().Be(ExecutionFailureKind.ProviderOutput);
+        result.Failure.Code.Should().Be(ExecutionFailureCode.MalformedOutput);
+        result.Failure.Message.Should().Contain("repair pipeline failed its contract");
+    }
+
+    [Fact]
     public async Task Structured_success_records_host_priced_cost_without_floating_point_money()
     {
         var (profile, prompt) = Descriptors();
@@ -265,7 +352,10 @@ public sealed class BaizeInferenceExecutorTests
                 2,
                 null,
                 new Dictionary<string, object?>())],
-            new Dictionary<string, object?>()));
+            new Dictionary<string, object?>()),
+            provider: "provider-images",
+            endpointId: "images-primary",
+            model: "image-model");
         var publisher = new FakeGeneratedAssetPublisher();
         var binding = new BaizeGenerationBinding(
             profile,
@@ -300,6 +390,73 @@ public sealed class BaizeInferenceExecutorTests
         generation.Requests.Should().ContainSingle()
             .Which.IdempotencyKey.Should().Be(Invocation().OperationKey);
         publisher.Calls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Generation_preserves_asset_order_in_receipts_and_list_output()
+    {
+        var (profile, prompt) = Descriptors();
+        var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "generated-image");
+        var generation = new FakeGenerationClient(new GenerationResult(
+            [
+                new GeneratedAsset(new ProviderGeneratedAssetSource("first", "provider"), "image/png", "first.png"),
+                new GeneratedAsset(new ProviderGeneratedAssetSource("second", "provider"), "image/png", "second.png"),
+            ]));
+        var binding = new BaizeGenerationBinding(
+            profile, prompt, artifactDescriptor, BaizeGenerationModality.Image,
+            "endpoint", "provider", "model", generation,
+            request => new ImageGenerationRequest
+            {
+                Prompt = "draw two",
+                Count = 2,
+                IdempotencyKey = request.Invocation.OperationKey,
+            },
+            new FakeGeneratedAssetPublisher(),
+            new BaizeGenerationPolicy(maximumAssets: 2));
+
+        var result = await new BaizeGenerationInferenceExecutor([binding]).ExecuteAsync(
+            Request(profile, prompt, new ListType(new ArtifactType(artifactDescriptor), 2)),
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Publications.Select(item => item.Artifact.ArtifactId)
+            .Should().Equal("image-0", "image-1");
+        result.Output.Should().BeOfType<ListRuntimeValue>().Which.Items
+            .Select(item => ((ArtifactRuntimeValue)item).Artifact.ArtifactId)
+            .Should().Equal("image-0", "image-1");
+    }
+
+    [Fact]
+    public async Task Generation_can_resume_a_partial_publication_with_the_same_operation_identity()
+    {
+        var (profile, prompt) = Descriptors();
+        var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "generated-image");
+        var generation = new FakeGenerationClient(new GenerationResult(
+            [new GeneratedAsset(new ProviderGeneratedAssetSource("asset-1", "provider"), "image/png")]));
+        var publisher = new ResumeAfterPartialPublisher();
+        var binding = new BaizeGenerationBinding(
+            profile, prompt, artifactDescriptor, BaizeGenerationModality.Image,
+            "endpoint", "provider", "model", generation,
+            request => new ImageGenerationRequest
+            {
+                Prompt = "draw",
+                IdempotencyKey = request.Invocation.OperationKey,
+            },
+            publisher);
+        var executor = new BaizeGenerationInferenceExecutor([binding]);
+        var request = Request(profile, prompt, new ArtifactType(artifactDescriptor));
+
+        var interrupted = await executor.ExecuteAsync(request, TestContext.Current.CancellationToken);
+        var resumed = await executor.ExecuteAsync(request, TestContext.Current.CancellationToken);
+
+        interrupted.Failure!.Code.Should().Be(ExecutionFailureCode.PublicationRejected);
+        interrupted.Failure.MayHaveCommittedEffect.Should().BeTrue();
+        resumed.IsSuccess.Should().BeTrue();
+        resumed.Publications.Should().ContainSingle()
+            .Which.Disposition.Should().Be(PublicationDisposition.Replayed);
+        publisher.OperationKeys.Should().Equal(
+            request.Invocation.OperationKey,
+            request.Invocation.OperationKey);
     }
 
     [Fact]
@@ -358,6 +515,68 @@ public sealed class BaizeInferenceExecutorTests
     }
 
     [Fact]
+    public async Task Generation_rejects_a_polled_handle_with_different_operation_identity()
+    {
+        var (profile, prompt) = Descriptors();
+        var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "generated-image");
+        var result = new GenerationResult(
+            [new GeneratedAsset(new ProviderGeneratedAssetSource("asset-1", "provider"), "image/png")]);
+        var generation = new RedirectedGenerationClient(result);
+        var publisher = new FakeGeneratedAssetPublisher();
+        var binding = new BaizeGenerationBinding(
+            profile, prompt, artifactDescriptor, BaizeGenerationModality.Image,
+            "endpoint", "provider", "model", generation,
+            request => new ImageGenerationRequest
+            {
+                Prompt = "draw",
+                IdempotencyKey = request.Invocation.OperationKey,
+            },
+            publisher,
+            new BaizeGenerationPolicy(pollingInterval: TimeSpan.FromMilliseconds(1)));
+
+        var execution = await new BaizeGenerationInferenceExecutor([binding]).ExecuteAsync(
+            Request(profile, prompt, new ArtifactType(artifactDescriptor)),
+            TestContext.Current.CancellationToken);
+
+        execution.Failure!.Code.Should().Be(ExecutionFailureCode.ProviderError);
+        execution.Failure.MayHaveCommittedEffect.Should().BeTrue();
+        execution.Evidence!.Attempts.Should().ContainSingle()
+            .Which.Succeeded.Should().BeFalse();
+        generation.PolledHandles.Should().ContainSingle();
+        publisher.Calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Generation_rejects_a_submission_handle_outside_the_configured_route()
+    {
+        var (profile, prompt) = Descriptors();
+        var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "generated-image");
+        var result = new GenerationResult(
+            [new GeneratedAsset(new ProviderGeneratedAssetSource("asset-1", "provider"), "image/png")]);
+        var generation = new RedirectedGenerationClient(result, redirectSubmission: true);
+        var publisher = new FakeGeneratedAssetPublisher();
+        var binding = new BaizeGenerationBinding(
+            profile, prompt, artifactDescriptor, BaizeGenerationModality.Image,
+            "endpoint", "provider", "model", generation,
+            request => new ImageGenerationRequest
+            {
+                Prompt = "draw",
+                IdempotencyKey = request.Invocation.OperationKey,
+            },
+            publisher,
+            new BaizeGenerationPolicy(pollingInterval: TimeSpan.FromMilliseconds(1)));
+
+        var execution = await new BaizeGenerationInferenceExecutor([binding]).ExecuteAsync(
+            Request(profile, prompt, new ArtifactType(artifactDescriptor)),
+            TestContext.Current.CancellationToken);
+
+        execution.Failure!.Code.Should().Be(ExecutionFailureCode.ProviderError);
+        execution.Failure.MayHaveCommittedEffect.Should().BeTrue();
+        generation.PolledHandles.Should().BeEmpty();
+        publisher.Calls.Should().Be(0);
+    }
+
+    [Fact]
     public async Task Cost_ceiling_stops_representation_retry_and_retains_attempt_cost()
     {
         var (profile, prompt) = Descriptors();
@@ -384,6 +603,67 @@ public sealed class BaizeInferenceExecutorTests
         result.Evidence.Attempts[0].PromptTokens.Should().Be(1);
         result.Evidence.Attempts[0].Cost!.AmountMicrounits.Should().Be(2);
         result.Evidence.Cost!.PricingRevision.Should().Be("prices/7");
+    }
+
+    [Theory]
+    [InlineData(null, null, null)]
+    [InlineData(1, null, null)]
+    [InlineData(null, 1, null)]
+    public async Task Cost_ceiling_stops_representation_retry_when_billable_usage_is_missing_or_partial(
+        int? promptTokens,
+        int? completionTokens,
+        int? totalTokens)
+    {
+        var (profile, prompt) = Descriptors();
+        var client = new FakeClient(
+            new LlmResponse("not-json", Usage: new LlmUsage(promptTokens, completionTokens, totalTokens)),
+            new LlmResponse("\"must-not-run\"", Usage: new LlmUsage(1, 1, 2)));
+        var endpoint = new BaizeEndpointBinding(
+            "primary", "provider", "model", client,
+            new BaizeTokenPricing("USD", 1_000_000, 1_000_000));
+        var binding = new BaizeInferenceBinding(
+            profile,
+            prompt,
+            [endpoint],
+            policy: new BaizeInferencePolicy(
+                maximumAttempts: 2,
+                retryRepresentationFailures: true,
+                maximumCostMicrounits: 2));
+
+        var result = await new BaizeInferenceExecutor([binding], new FailingRepairPipeline()).ExecuteAsync(
+            Request(profile, prompt, new PrimitiveType(FuwenPrimitiveKind.String)),
+            TestContext.Current.CancellationToken);
+
+        result.Failure!.Code.Should().Be(ExecutionFailureCode.MalformedOutput);
+        client.Calls.Should().Be(1);
+        result.Evidence!.Attempts.Should().ContainSingle();
+        result.Evidence.Cost.Should().BeNull();
+        result.Evidence.Attempts[0].Cost.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Cost_ceiling_does_not_fallback_after_a_priced_call_with_unavailable_usage()
+    {
+        var (profile, prompt) = Descriptors();
+        var client = new FakeClient(
+            new LlmClientException("busy", LlmClientFailureKind.Availability),
+            new LlmResponse("\"must-not-run\"", Usage: new LlmUsage(1, 1, 2)));
+        var endpoint = new BaizeEndpointBinding(
+            "primary", "provider", "model", client,
+            new BaizeTokenPricing("USD", 1_000_000, 1_000_000));
+        var binding = new BaizeInferenceBinding(
+            profile,
+            prompt,
+            [endpoint],
+            policy: new BaizeInferencePolicy(maximumAttempts: 2, maximumCostMicrounits: 2));
+
+        var result = await new BaizeInferenceExecutor([binding]).ExecuteAsync(
+            Request(profile, prompt, new PrimitiveType(FuwenPrimitiveKind.String)),
+            TestContext.Current.CancellationToken);
+
+        result.Failure!.Code.Should().Be(ExecutionFailureCode.ProviderError);
+        client.Calls.Should().Be(1);
+        result.Evidence!.Cost.Should().BeNull();
     }
 
     [Fact]
@@ -455,6 +735,25 @@ public sealed class BaizeInferenceExecutorTests
     private static InferenceExecutionRequest Request(DescriptorReference profile, DescriptorReference prompt, FuwenType output) =>
         new(Invocation(), profile, prompt, [], [], output);
 
+    private static InferenceExecutionRequest Request(
+        DescriptorReference profile,
+        DescriptorReference prompt,
+        FuwenType output,
+        IReadOnlyList<RuntimeArgument> arguments,
+        IReadOnlyList<InferenceContextInput> contextInputs) =>
+        new(Invocation(), profile, prompt, arguments, contextInputs, output);
+
+    private static ContextSnapshotReference Snapshot(DescriptorReference provider) =>
+        new(
+            provider,
+            "snapshot-1",
+            new ContentDigest("sha256", "request/v1", new string('c', 64)),
+            new ContentDigest("sha256", "content/v1", new string('d', 64)),
+            [],
+            "policy/1",
+            new ContextSnapshotBudgetEvidence(false, null, null, null, null),
+            DateTimeOffset.UtcNow);
+
     private static (DescriptorReference Profile, DescriptorReference Prompt) Descriptors() =>
         (Descriptor(DescriptorKind.InferenceProfile, "profile"), Descriptor(DescriptorKind.PromptTemplate, "prompt"));
 
@@ -500,6 +799,15 @@ public sealed class BaizeInferenceExecutorTests
             ValueTask.FromResult(JsonRepairResult.Success(JsonNode.Parse(repairedText)!, input, repairedText, true, [], []));
     }
 
+    private sealed class ThrowingRepairPipeline : IJsonRepairPipeline
+    {
+        public ValueTask<JsonRepairResult> RepairAsync(
+            string input,
+            JsonSchemaExpectation? expectation = null,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("broken repair adapter");
+    }
+
     private sealed class FakeClient : ILlmClient, ILlmCompletionClient
     {
         private readonly Queue<object> responses;
@@ -535,10 +843,13 @@ public sealed class BaizeInferenceExecutorTests
 
         public FakeGenerationClient(
             GenerationResult result,
-            GenerationFeature features = GenerationFeature.IdempotentSubmission | GenerationFeature.OperationRetrieval)
+            GenerationFeature features = GenerationFeature.IdempotentSubmission | GenerationFeature.OperationRetrieval,
+            string provider = "provider",
+            string endpointId = "endpoint",
+            string model = "model")
         {
             var handle = new GenerationOperationHandle(
-                "provider", "endpoint", "operation", "model", new Dictionary<string, string>());
+                provider, endpointId, "operation", model, new Dictionary<string, string>());
             completed = new GenerationOperation(
                 handle,
                 GenerationOperationState.Succeeded,
@@ -596,10 +907,46 @@ public sealed class BaizeInferenceExecutorTests
         }
     }
 
+    private sealed class ResumeAfterPartialPublisher : IBaizeGeneratedAssetPublisher
+    {
+        public List<string> OperationKeys { get; } = [];
+
+        public ValueTask<IReadOnlyList<ArtifactPublicationReceipt>> PublishAsync(
+            InferenceExecutionRequest request,
+            IReadOnlyList<GeneratedAsset> assets,
+            DescriptorReference artifactDescriptor,
+            CancellationToken cancellationToken = default)
+        {
+            OperationKeys.Add(request.Invocation.OperationKey);
+            if (OperationKeys.Count == 1)
+                throw new InvalidOperationException("interrupted after durable write");
+
+            IReadOnlyList<ArtifactPublicationReceipt> receipts =
+            [
+                new ArtifactPublicationReceipt(
+                    request.Invocation.OperationKey,
+                    new ArtifactReference(
+                        "generated-store",
+                        "image-0",
+                        artifactDescriptor,
+                        new ContentDigest("sha256", "content/v1", new string('b', 64)),
+                        assets[0].Size,
+                        assets[0].FileName),
+                    "receipt-0",
+                    PublicationDisposition.Replayed),
+            ];
+            return ValueTask.FromResult(receipts);
+        }
+    }
+
     private sealed class QueuedGenerationClient(GenerationResult result) : IGenerationClient
     {
-        private readonly GenerationOperationHandle handle = new(
-            "provider", "endpoint", "operation-1", "model", new Dictionary<string, string>());
+        private readonly GenerationOperationHandle submittedHandle = new(
+            "provider", "endpoint", "operation-1", "model",
+            new Dictionary<string, string> { ["continuation"] = "initial" });
+        private readonly GenerationOperationHandle completedHandle = new(
+            "provider", "endpoint", "operation-1", "model",
+            new Dictionary<string, string> { ["continuation"] = "refreshed" });
 
         public List<string?> SubmittedKeys { get; } = [];
         public List<GenerationOperationHandle> PolledHandles { get; } = [];
@@ -614,7 +961,7 @@ public sealed class BaizeInferenceExecutorTests
         {
             SubmittedKeys.Add(request.IdempotencyKey);
             return Task.FromResult(new GenerationOperation(
-                handle, GenerationOperationState.Queued, ProviderMetadata: new Dictionary<string, object?>()));
+                submittedHandle, GenerationOperationState.Queued, ProviderMetadata: new Dictionary<string, object?>()));
         }
 
         public Task<GenerationOperation> GetAsync(
@@ -623,14 +970,58 @@ public sealed class BaizeInferenceExecutorTests
         {
             PolledHandles.Add(operationHandle);
             return Task.FromResult(new GenerationOperation(
-                handle, GenerationOperationState.Succeeded, result,
+                completedHandle, GenerationOperationState.Succeeded, result,
                 ProviderMetadata: new Dictionary<string, object?>()));
         }
 
         public Task<GenerationOperation> CancelAsync(
             GenerationOperationHandle operationHandle,
             CancellationToken cancellationToken = default) => Task.FromResult(new GenerationOperation(
-                handle,
+                submittedHandle,
+                GenerationOperationState.Canceled,
+                Error: new GenerationError(GenerationErrorKind.Canceled, "cancelled"),
+                ProviderMetadata: new Dictionary<string, object?>()));
+    }
+
+    private sealed class RedirectedGenerationClient(
+        GenerationResult result,
+        bool redirectSubmission = false) : IGenerationClient
+    {
+        private readonly GenerationOperationHandle submittedHandle = new(
+            "provider", redirectSubmission ? "other-endpoint" : "endpoint", "operation-1", "model", new Dictionary<string, string>());
+        private readonly GenerationOperationHandle redirectedHandle = new(
+            "provider", "endpoint", "operation-2", "model", new Dictionary<string, string>());
+
+        public List<GenerationOperationHandle> PolledHandles { get; } = [];
+        public GenerationCapabilities Capabilities { get; } = new()
+        {
+            Features = GenerationFeature.IdempotentSubmission | GenerationFeature.OperationRetrieval,
+        };
+
+        public Task<GenerationOperation> SubmitAsync(
+            GenerationRequest request,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new GenerationOperation(
+                submittedHandle,
+                GenerationOperationState.Queued,
+                ProviderMetadata: new Dictionary<string, object?>()));
+
+        public Task<GenerationOperation> GetAsync(
+            GenerationOperationHandle operationHandle,
+            CancellationToken cancellationToken = default)
+        {
+            PolledHandles.Add(operationHandle);
+            return Task.FromResult(new GenerationOperation(
+                redirectedHandle,
+                GenerationOperationState.Succeeded,
+                result,
+                ProviderMetadata: new Dictionary<string, object?>()));
+        }
+
+        public Task<GenerationOperation> CancelAsync(
+            GenerationOperationHandle operationHandle,
+            CancellationToken cancellationToken = default) => Task.FromResult(new GenerationOperation(
+                submittedHandle,
                 GenerationOperationState.Canceled,
                 Error: new GenerationError(GenerationErrorKind.Canceled, "cancelled"),
                 ProviderMetadata: new Dictionary<string, object?>()));

@@ -2,7 +2,7 @@
 
 ## Status
 
-**Delivery milestones A–E complete — Delivery milestone F consumer pilot is next**
+**Delivery milestones A–E complete — bootstrap preview and Delivery F consumer pilot are next**
 
 Last reviewed: **2026-09-13**
 
@@ -734,6 +734,14 @@ executor composes structured and media profiles. SQLite tests now exercise the
 actual Baize adapter through a durable context-provider, inference, conditional,
 and read-only activity/artifact-publication vertical.
 
+Release hardening (2026-09-13): provider-produced JSON list values are
+normalized at the typed Zhinu fan-out boundary and covered by a durable
+Baize-to-fan-out replay regression. Prompt rendering is single-pass. Unknown or
+partial usage prevents further priced attempts under a cost ceiling. Durable
+failure envelopes retain inference evidence after post-provider validation or
+publication failures, and generation polling rejects changes to the submitted
+provider, endpoint, operation, or model identity.
+
 ### Delivery milestone F — Add keyed fan-out and pilot in Guyabano
 
 Scope: the minimum of Milestone 8 needed by task decomposition.
@@ -776,8 +784,18 @@ Activities:
   same IR and runtime contracts before publishing.
 - Stabilize diagnostic codes, canonical IR versioning, and provider conformance
   fixtures before promising compatibility.
-- Publish preview packages only after the fake vertical and Guyabano pilot pass
-  in CI.
+- Publish `0.1.0-preview.1` as an explicitly unstable bootstrap preview after
+  the fake and non-code verticals pass CI, so Guyabano can consume the same
+  public artifacts users will receive. Do not declare Delivery F complete or
+  make compatibility promises until the Guyabano pilot passes. Later preview
+  releases must include that consumer evidence.
+
+Progress (2026-09-13): a recorded SQLite media vertical now executes an image
+generation node through Baize, verifies immutable bytes in the host publisher,
+publishes the non-code artifact through Zhinu, and returns its typed artifact
+identity. `0.1.0-preview.1` is the bootstrap artifact needed by the
+consumer-level Guyabano pilot; that pilot remains the gate for completing
+Delivery F and for any subsequent compatibility-bearing preview.
 
 Exit: another application can author and execute the minimal vertical without
 referencing Guyabano or internal test infrastructure.
@@ -1088,6 +1106,14 @@ Continue with Delivery milestone F:
    outputs, diagnostics, repair/retry rate, cost, provenance, and restart scope.
 3. Complete one live dogfood run and remove the old path only after behavioral
    parity and focused-restart reuse are demonstrated.
+
+Release hardening also closes the bounded raw and repaired provider-response
+budget (review R09), publishes a compact cross-adapter conformance matrix
+(R11), and documents/tests the trusted generated-asset publisher contract for
+ordered, exact-byte-verified, atomic-or-resumable idempotent batches (R12).
+Interpreter decomposition, richer setup diagnostics, and broader accounting
+and recovery refinements (R06-R08 and R10) remain post-preview improvements
+unless the consumer pilot exposes them as correctness blockers.
 
 The minimal text grammar is now implemented. Recursive schemas, enum literals,
 numeric/Unicode portability, runtime-value validation, and context-snapshot

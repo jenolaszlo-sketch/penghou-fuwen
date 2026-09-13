@@ -19,6 +19,14 @@ contract versions.
 - Add `Penghou.Fuwen.Baize` for descriptor-bound structured and media
   inference, crash-safe generated-asset publication, typed cost evidence, and
   trusted retry cost ceilings.
+- Add preview IR v4 bounded keyed fan-out with stable item identities,
+  deterministic aggregation, durable replay, and focused item restart.
+- Harden Baize interoperability with representation-neutral list normalization,
+  single-pass prompt rendering, conservative unknown-cost handling, bounded raw
+  and repaired output, pinned generation identities, and complete failure-path
+  evidence.
+- Specify and test the execution-port conformance and generated-asset publisher
+  contracts, including a durable non-code media fixture.
 
 This is the first preview. No compatibility with an earlier public Fuwen
 package is implied.

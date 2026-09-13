@@ -15,12 +15,30 @@ public enum BaizeGenerationModality
     Audio,
 }
 
-/// <summary>Publishes a generated asset batch and returns verified durable receipts.</summary>
+/// <summary>
+/// Trusted host boundary that materializes generated assets and returns
+/// verified, durable artifact receipts.
+/// </summary>
+/// <remarks>
+/// Implementations must treat <see cref="ExecutionInvocation.OperationKey"/>
+/// as the idempotency identity for the complete ordered batch. Repeating a
+/// call with the same request and equivalent assets must return the same
+/// ordered artifact identities without creating duplicate publications.
+/// Implementations must either publish atomically or resume a partially
+/// published batch by that identity. They must read or retrieve each asset,
+/// verify its exact immutable bytes, compute the returned content digest and
+/// byte length from those bytes, persist them durably, and return receipts in
+/// the same order as the supplied assets. Remote retrieval, credentials,
+/// storage selection, and byte verification remain host responsibilities;
+/// Fuwen validates receipt identity and nominal type but never dereferences
+/// provider content.
+/// </remarks>
 public interface IBaizeGeneratedAssetPublisher
 {
     /// <summary>
     /// Publishes the complete batch under the Fuwen operation identity. The
-    /// implementation must be idempotent for repeated calls with that identity.
+    /// implementation must satisfy the ordering, verification, durability,
+    /// and idempotency contract described by this interface.
     /// </summary>
     ValueTask<IReadOnlyList<ArtifactPublicationReceipt>> PublishAsync(
         InferenceExecutionRequest request,
@@ -434,8 +452,14 @@ public sealed class BaizeGenerationInferenceExecutor : IInferenceExecutor
         try
         {
             var operation = await binding.Client.SubmitAsync(request, timeout.Token).ConfigureAwait(false);
+            var submittedHandle = operation?.Handle ?? throw new InvalidOperationException(
+                "Baize generation submission did not include an operation handle.");
+            EnsureSubmittedOperationIdentity(binding, submittedHandle);
             while (true)
             {
+                var currentHandle = operation.Handle ?? throw new InvalidOperationException(
+                    "Baize generation polling returned an operation without a handle.");
+                EnsureStableOperationIdentity(submittedHandle, currentHandle);
                 switch (operation.State)
                 {
                     case GenerationOperationState.Succeeded:
@@ -450,16 +474,37 @@ public sealed class BaizeGenerationInferenceExecutor : IInferenceExecutor
                             $"Baize generation ended in state '{operation.State}'."));
                 }
 
-                if (operation.Handle is null)
-                    throw new InvalidOperationException("A non-terminal Baize generation operation did not include a handle.");
                 await Task.Delay(binding.Policy.PollingInterval, timeout.Token).ConfigureAwait(false);
-                operation = await binding.Client.GetAsync(operation.Handle, timeout.Token).ConfigureAwait(false);
+                operation = await binding.Client.GetAsync(currentHandle, timeout.Token).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && timeout.IsCancellationRequested)
         {
             throw new GenerationPollingTimeoutException();
         }
+    }
+
+    private static void EnsureStableOperationIdentity(
+        GenerationOperationHandle submittedHandle,
+        GenerationOperationHandle currentHandle)
+    {
+        if (!string.Equals(submittedHandle.Provider, currentHandle.Provider, StringComparison.Ordinal) ||
+            !string.Equals(submittedHandle.EndpointId, currentHandle.EndpointId, StringComparison.Ordinal) ||
+            !string.Equals(submittedHandle.Id, currentHandle.Id, StringComparison.Ordinal) ||
+            !string.Equals(submittedHandle.Model, currentHandle.Model, StringComparison.Ordinal))
+            throw new InvalidOperationException(
+                "Baize generation polling returned a handle with a different provider, endpoint, operation, or model identity.");
+    }
+
+    private static void EnsureSubmittedOperationIdentity(
+        BaizeGenerationBinding binding,
+        GenerationOperationHandle submittedHandle)
+    {
+        if (!string.Equals(binding.Provider, submittedHandle.Provider, StringComparison.Ordinal) ||
+            !string.Equals(binding.EndpointId, submittedHandle.EndpointId, StringComparison.Ordinal) ||
+            !string.Equals(binding.Model, submittedHandle.Model, StringComparison.Ordinal))
+            throw new InvalidOperationException(
+                "Baize generation submission returned a handle outside the configured provider, endpoint, or model route.");
     }
 
     private static InferenceModality ToInferenceModality(BaizeGenerationModality modality) => modality switch

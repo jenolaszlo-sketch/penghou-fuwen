@@ -36,8 +36,10 @@ not satisfy a semantic release gate.
   changed plan, cancellation, and corrupted evidence tests pass.
 - [ ] No sample, fixture, package, log, source map, or provenance record contains
   secrets or machine-specific absolute paths.
-- [ ] A non-code artifact fixture and the bounded Guyabano pilot are recorded,
-  or the release is explicitly held until they are.
+- [ ] A non-code artifact fixture and the bounded Guyabano pilot are recorded.
+  Exception: the first explicitly unstable bootstrap preview may precede the
+  Guyabano pilot solely so that the pilot consumes public NuGet artifacts; the
+  next preview must close that evidence gap.
 
 ## Publication
 

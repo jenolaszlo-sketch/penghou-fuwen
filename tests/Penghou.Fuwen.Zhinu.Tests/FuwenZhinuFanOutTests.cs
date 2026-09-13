@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using FluentAssertions;
+using Penghou.Baize;
+using Penghou.Fuwen.Baize;
 using Penghou.Fuwen.Compiler;
 using Penghou.Zhinu;
 using Penghou.Zhinu.Sqlite;
@@ -9,6 +11,73 @@ namespace Penghou.Fuwen.Zhinu.Tests;
 
 public sealed partial class FuwenZhinuSequentialInterpreterTests
 {
+    [Fact]
+    public async Task Baize_json_list_inference_feeds_fan_out_and_replays_without_reinvoking_provider()
+    {
+        var fixture = await AdmitBaizeListFanOutAsync();
+        var client = new SingleListClient("[1,2,3]");
+        var inference = new BaizeInferenceExecutor([
+            new BaizeInferenceBinding(
+                fixture.Profile,
+                fixture.PromptTemplate,
+                [new BaizeEndpointBinding("primary", "provider", "model", client)]),
+        ]);
+        var activity = new ListItemActivity();
+        var registration = await new FuwenZhinuWorkflowFactory(
+                new InMemoryWorkflowDefinitionStore(),
+                IdentityFor(fixture.Admission),
+                new FuwenZhinuExecutionPorts(activity, new UnusedContext(), inference))
+            .CreateAsync("fuwen.baize-fanout", "1", fixture.Admission, TestContext.Current.CancellationToken);
+        var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            var store = new SqliteWorkflowStore(new ZhinuSqliteOptions
+            {
+                DatabasePath = Path.Combine(root, "workflow.db"),
+                Pooling = false,
+            });
+            await using var engine = new WorkflowEngine(
+                store,
+                registration.Register(new WorkflowRegistry()),
+                new ZhinuOptions { PollInterval = TimeSpan.FromMilliseconds(5) });
+            using var input = JsonDocument.Parse("\"ignored\"");
+            var runId = await engine.StartAsync(
+                "fuwen.baize-fanout",
+                "1",
+                input.RootElement.Clone(),
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            await engine.ExecuteAsync(runId, TestContext.Current.CancellationToken);
+            (await engine.WaitForCompletionAsync<JsonElement>(
+                runId,
+                cancellationToken: TestContext.Current.CancellationToken))
+                .EnumerateArray().Select(item => item.GetInt32()).Should().Equal(2, 4, 6);
+            client.Calls.Should().Be(1);
+            activity.Calls.Should().Be(3);
+
+            // The fan-out and its descendants can be replayed from the
+            // durable inference envelope. The provider result must remain
+            // reusable even though Baize supplied it as JSON.
+            await engine.RestartStepAsync(
+                runId,
+                fixture.FanOutPath,
+                TestContext.Current.CancellationToken);
+            await engine.ExecuteAsync(runId, TestContext.Current.CancellationToken);
+            (await engine.WaitForCompletionAsync<JsonElement>(
+                runId,
+                cancellationToken: TestContext.Current.CancellationToken))
+                .EnumerateArray().Select(item => item.GetInt32()).Should().Equal(2, 4, 6);
+            client.Calls.Should().Be(1);
+            activity.Calls.Should().Be(3);
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
     [Fact]
     public async Task Keyed_fan_out_preserves_source_order_and_restarts_only_one_item()
     {
@@ -208,6 +277,79 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         return new FanOutFixture(admission, fanOutPath);
     }
 
+    private static async Task<BaizeListFanOutFixture> AdmitBaizeListFanOutAsync()
+    {
+        static ContentDigest Digest(char value) => new("sha256", "descriptor/v1", new string(value, 64));
+        var integer = new PrimitiveType(FuwenPrimitiveKind.Integer);
+        var inputType = new PrimitiveType(FuwenPrimitiveKind.String);
+        var list = new ListType(integer, 3);
+        var profile = new DescriptorReference(DescriptorKind.InferenceProfile, "sample.profile", "1", Digest('a'));
+        var prompt = new DescriptorReference(DescriptorKind.PromptTemplate, "sample.prompt", "1", Digest('b'));
+        var activity = new DescriptorReference(DescriptorKind.Activity, "sample.double", "1", Digest('c'));
+        var inferencePath = StructuralNodeIdentity.Create("batch", "infer");
+        var fanOutPath = StructuralNodeIdentity.Create("batch", "process");
+        var bodyPath = $"{fanOutPath}/$body/double";
+        var returnPath = StructuralNodeIdentity.Create("batch", "return_result");
+        var inference = new InferenceNode(
+            "infer", inferencePath, profile, prompt, [], [], list, ContextRequirements: []);
+        var fanOut = new FanOutNode(
+            "process", fanOutPath,
+            new NodeOutputBinding(inferencePath, []),
+            new FanOutItemBinding("item", integer),
+            new FanOutItemValueBinding([]),
+            [new ActivityNode(
+                "double", bodyPath, activity,
+                [new ArgumentBinding("value", new FanOutItemValueBinding([]))], integer)],
+            new NodeOutputBinding(bodyPath, []),
+            list,
+            MaximumItems: 3,
+            MaximumConcurrency: 2);
+        var plan = new WorkflowPlan(
+            FuwenContracts.IrVersionV4,
+            "fuwen-language/v1",
+            FuwenContracts.CompilerSemanticVersionV4,
+            FuwenContracts.CanonicalJsonVersion,
+            FuwenContracts.ExecutionFingerprintVersionV4,
+            "batch", "1", inputType, list, "routing/1", [],
+            [profile, prompt, activity],
+            new CapabilityManifest([]),
+            [inference, fanOut, new ReturnNode("return_result", returnPath, new NodeOutputBinding(fanOutPath, []))],
+            new WorkflowExecutionOrder([
+                new WorkflowExecutionRegion("batch", [
+                    new WorkflowExecutionPhase([inferencePath]),
+                    new WorkflowExecutionPhase([fanOutPath]),
+                    new WorkflowExecutionPhase([returnPath]),
+                ]),
+                new WorkflowExecutionRegion($"{fanOutPath}/$body", [
+                    new WorkflowExecutionPhase([bodyPath]),
+                ]),
+            ]));
+        var catalogue = new InMemoryTrustedCatalogue([
+            new TrustedCatalogueDescriptor(
+                profile,
+                callableContract: new CallableContract(
+                    new CallableSignature([], list),
+                    CallableEffect.Read,
+                    CallableIdempotency.Idempotent,
+                    CallableRetrySafety.Safe)),
+            new TrustedCatalogueDescriptor(prompt),
+            new TrustedCatalogueDescriptor(
+                activity,
+                callableContract: new CallableContract(
+                    new CallableSignature(
+                        [new CallableParameter("value", integer)], integer),
+                    CallableEffect.Read,
+                    CallableIdempotency.Idempotent,
+                    CallableRetrySafety.Safe)),
+        ]);
+        var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
+                catalogue,
+                capabilityPolicy: new CapabilityGrantPolicy("policy/1", [])))
+            .AdmitAsync(plan, cancellationToken: TestContext.Current.CancellationToken);
+        admission.Succeeded.Should().BeTrue(string.Join("; ", admission.Diagnostics.Select(item => $"{item.Code}: {item.Message} path={item.Path} expected={item.Expected} actual={item.Actual}")));
+        return new BaizeListFanOutFixture(admission, profile, prompt, fanOutPath);
+    }
+
     private sealed class UppercaseActivity : IActivityExecutor
     {
         public ConcurrentBag<(string Activity, string Value)> Calls { get; } = [];
@@ -229,5 +371,57 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         }
     }
 
+    private sealed class ListItemActivity : IActivityExecutor
+    {
+        public int Calls { get; private set; }
+
+        public ValueTask<ActivityExecutionResult> ExecuteAsync(
+            ActivityExecutionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            var value = request.Arguments.Single().Value;
+            var integer = ((JsonRuntimeValue)value).Value.GetInt32();
+            return ValueTask.FromResult(ActivityExecutionResult.Succeeded(
+                RuntimeValue.FromJson(JsonSerializer.SerializeToElement(integer * 2))));
+        }
+    }
+
+    private sealed class SingleListClient(string content) : ILlmClient, ILlmCompletionClient
+    {
+        public int Calls { get; private set; }
+
+        public LlmEndpointCapabilities Capabilities { get; } = new()
+        {
+            NativeStructuredOutput = true,
+            StructuredOutputViaTool = true,
+            NativeToolCalling = true,
+            ToolsWithStructuredOutput = true,
+            StrictToolArguments = true,
+        };
+
+        public Task<LlmResponse> CompleteAsync(
+            LlmRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            return Task.FromResult(new LlmResponse(content));
+        }
+
+        public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+            LlmRequest request,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            yield return new LlmStreamEvent(string.Empty);
+            await Task.CompletedTask;
+        }
+    }
+
     private sealed record FanOutFixture(WorkflowAdmissionResult Admission, string FanOutPath);
+
+    private sealed record BaizeListFanOutFixture(
+        WorkflowAdmissionResult Admission,
+        DescriptorReference Profile,
+        DescriptorReference PromptTemplate,
+        string FanOutPath);
 }

@@ -37,6 +37,18 @@ optional cost. Cost uses integer microunits plus a currency and pricing revision
 The host remains authoritative for price tables, budgets, invoices, and artifact
 verification.
 
+The Baize adapter derives priced inference cost only when both prompt and
+completion token counts are reported. Missing or partial billable usage remains
+unknown rather than being treated as zero. When a host configures a cost ceiling,
+unknown cost stops further representation retries or endpoint fallbacks so the
+adapter cannot authorize another call from an undercounted accumulator.
+
+Structured responses are subject to the trusted profile's UTF-8 byte ceiling
+before JSON parsing or repair. Repaired JSON is checked against the same ceiling
+before Fuwen creates a runtime value. An oversized response or a repair-pipeline
+contract failure is a typed provider-output failure rather than an unclassified
+provider exception.
+
 When `Budget.WasTruncated` is true, observed item/byte counts may exceed the
 configured maxima: the excess is evidence that the host had to truncate or
 discard context. Untruncated evidence must remain within its declared maxima.

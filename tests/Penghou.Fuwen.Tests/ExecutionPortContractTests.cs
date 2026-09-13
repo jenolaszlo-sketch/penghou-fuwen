@@ -169,6 +169,42 @@ public sealed class ExecutionPortContractTests
             1, "provider", "model", null, true, promptTokens: -1))).Should().Throw<ArgumentOutOfRangeException>();
     }
 
+    [Fact]
+    public void Successful_execution_results_preserve_every_supported_runtime_value_shape()
+    {
+        var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "asset");
+        var artifact = new ArtifactReference(
+            "store", "asset-1", artifactDescriptor, Digest("content"), 3, "asset.bin");
+        RuntimeValue[] values =
+        [
+            Json("\"primitive\""),
+            RuntimeValue.FromObject(new Dictionary<string, RuntimeValue>(StringComparer.Ordinal)
+            {
+                ["answer"] = Json("42"),
+            }),
+            RuntimeValue.FromList([Json("1"), Json("2")]),
+            Json("null"),
+            RuntimeValue.FromArtifact(artifact),
+        ];
+
+        foreach (var value in values)
+        {
+            ExecutionResult[] results =
+            [
+                ActivityExecutionResult.Succeeded(value),
+                ContextExecutionResult.Succeeded(value, Snapshot()),
+                InferenceExecutionResult.Succeeded(value),
+            ];
+
+            foreach (var result in results)
+            {
+                result.IsSuccess.Should().BeTrue();
+                result.Output.Should().NotBeSameAs(value);
+                CanonicalJson.Serialize(result.Output).Should().Equal(CanonicalJson.Serialize(value));
+            }
+        }
+    }
+
     private static RuntimeValue Json(string json)
     {
         using var document = JsonDocument.Parse(json);

@@ -59,9 +59,11 @@ Penghou.Fuwen.Baize.BaizeToolBinding.Descriptor.get -> Penghou.Fuwen.DescriptorR
 Penghou.Fuwen.Baize.BaizeToolBinding.Tool.get -> Penghou.Baize.LlmTool!
 Penghou.Fuwen.Baize.BaizeInferencePolicy
 const Penghou.Fuwen.Baize.BaizeInferencePolicy.MaximumAllowedAttempts = 8 -> int
-Penghou.Fuwen.Baize.BaizeInferencePolicy.BaizeInferencePolicy(int maximumAttempts = 1, int? maximumTokens = null, bool retryRepresentationFailures = false, string? policyRevision = null, string? routingPolicyRevision = null, System.Func<Penghou.Fuwen.InferenceExecutionRequest!, string?>? rejection = null, long? maximumCostMicrounits = null) -> void
+const Penghou.Fuwen.Baize.BaizeInferencePolicy.MaximumAllowedResponseUtf8Bytes = 4194304 -> int
+Penghou.Fuwen.Baize.BaizeInferencePolicy.BaizeInferencePolicy(int maximumAttempts = 1, int? maximumTokens = null, bool retryRepresentationFailures = false, string? policyRevision = null, string? routingPolicyRevision = null, System.Func<Penghou.Fuwen.InferenceExecutionRequest!, string?>? rejection = null, long? maximumCostMicrounits = null, int maximumResponseUtf8Bytes = 4194304) -> void
 Penghou.Fuwen.Baize.BaizeInferencePolicy.MaximumAttempts.get -> int
 Penghou.Fuwen.Baize.BaizeInferencePolicy.MaximumCostMicrounits.get -> long?
+Penghou.Fuwen.Baize.BaizeInferencePolicy.MaximumResponseUtf8Bytes.get -> int
 Penghou.Fuwen.Baize.BaizeInferencePolicy.MaximumTokens.get -> int?
 Penghou.Fuwen.Baize.BaizeInferencePolicy.PolicyRevision.get -> string?
 Penghou.Fuwen.Baize.BaizeInferencePolicy.Rejection.get -> System.Func<Penghou.Fuwen.InferenceExecutionRequest!, string?>?

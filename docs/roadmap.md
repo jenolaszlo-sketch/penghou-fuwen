@@ -2,9 +2,9 @@
 
 ## Status
 
-**Delivery milestones A–D complete — Delivery milestone E is next**
+**Delivery milestones A–E complete — Delivery milestone F consumer pilot is next**
 
-Last reviewed: **2026-09-11**
+Last reviewed: **2026-09-13**
 
 Fuwen is the proposed typed authoring and compilation layer for portable,
 capability-reviewed AI workflows. It produces an immutable executable plan; it
@@ -720,14 +720,19 @@ Activities:
 Exit: recorded malformed, missing-tool, schema-mismatch, and truncated-response
 cases produce deterministic typed outcomes and policy-driven retry behavior.
 
-Progress: the first structured-text Baize adapter slice is implemented behind
-`IInferenceExecutor`. Exact host-owned profile/template bindings, deterministic
-endpoint fallback, bounded trusted-profile retries, Nuwa syntax repair followed
-by authoritative Fuwen runtime-value validation, typed policy/provider/output
-failures, and detached provider-neutral inference evidence are covered by
-recorded fake-client tests. Generation/media surfaces, cost and artifact
-publication receipts, and the durable context-provider/activity vertical remain
-open for the remainder of this milestone.
+Complete: the structured-text adapter uses exact host-owned profile/template
+bindings, deterministic endpoint fallback, bounded trusted-profile retries,
+Nuwa syntax repair followed by authoritative runtime-value validation, and typed
+policy/provider/output failures. Evidence records modality, aggregate and
+per-attempt tokens, duration, host-priced monetary cost, and pricing revision;
+trusted cost ceilings stop further representation retries. Image, video, and
+audio generation map through descriptor-bound Baize clients to host-verified
+artifact publication receipts. Generation requires endpoints that advertise
+idempotent submission and operation retrieval, reuses the Fuwen operation key,
+and resumes provider work without duplicating a billable submission. A routed
+executor composes structured and media profiles. SQLite tests now exercise the
+actual Baize adapter through a durable context-provider, inference, conditional,
+and read-only activity/artifact-publication vertical.
 
 ### Delivery milestone F — Add keyed fan-out and pilot in Guyabano
 
@@ -897,7 +902,7 @@ Penghou.Fuwen.Compiler
   failure taxonomy and permit only unambiguous same-operation infrastructure
   retry; the ports perform no retry or authorization themselves.
 - [ ] Define registered typed prompt-template descriptors; defer DSL templates.
-- [ ] Preserve resolved inference modality without forcing Baize text/media
+- [x] Preserve resolved inference modality without forcing Baize text/media
   surfaces into one lowest-level transport API.
 - [ ] Define tools with schemas, side effects, idempotency, retry safety,
   capabilities, and host-handle restrictions.
@@ -907,7 +912,7 @@ Penghou.Fuwen.Compiler
   The host-owned store and authorization/dereference contract remain open.
 - [ ] Decide the host-owned snapshot/artifact store contract; Fuwen must not
   become a context-content store.
-- [ ] Treat Nuwa repair and final schema validation as separate typed outcomes.
+- [x] Treat Nuwa repair and final schema validation as separate typed outcomes.
 
 ### Idempotency correction required
 
@@ -961,16 +966,17 @@ Package: `Penghou.Fuwen.Zhinu`.
 
 Package: `Penghou.Fuwen.Baize`.
 
-- [x] Implement the structured-text `IInferenceExecutor` slice; generation and
-  media surfaces remain open.
+- [x] Implement structured-text plus image, video, and audio generation behind
+  provider-neutral `IInferenceExecutor` contracts and exact descriptor routing.
 - [x] Translate host profiles to normalized Baize requirements; keep application
   profile names out of Baize.
-- [x] Record actual model/provider, fallbacks, tools, repair/validation
-  diagnostics, usage, timing, attempts, and errors as detached evidence.
+- [x] Record actual model/provider, modality, fallbacks, tools,
+  repair/validation diagnostics, per-attempt and aggregate usage, timing, cost,
+  pricing revision, attempts, and errors as detached evidence.
 - [x] Prove bounded fallback reuses the same invocation identity.
-- [ ] Implement one durable context provider, one read-only activity, and one
+- [x] Implement one durable context provider, one read-only activity, and one
   safely idempotent side-effecting activity with provider receipt verification.
-- [ ] Complete end to end:
+- [x] Complete end to end:
 
   ```text
   Request -> context -> infer -> conditional activity -> Answer
@@ -1075,23 +1081,23 @@ only after repeated integration demonstrates a real reusable boundary.
 
 ## Resume point
 
-Continue with Delivery milestone E:
+Continue with Delivery milestone F:
 
-1. Integrate the trusted Baize inference adapter and structured inference
-   policy over the now-available source compiler and IR.
-2. Preserve the source/plan boundary while adding typed failure, repair,
-   retry, and provider evidence contracts.
-3. Keep value-producing conditionals, loops, fan-out, waits, imports, and
-   artifact-reuse authorization outside this milestone.
+1. Express one bounded Guyabano decomposition phase through IR v4 keyed fan-out.
+2. Run the recorded failure corpus and compare the old and Fuwen paths for
+   outputs, diagnostics, repair/retry rate, cost, provenance, and restart scope.
+3. Complete one live dogfood run and remove the old path only after behavioral
+   parity and focused-restart reuse are demonstrated.
 
 The minimal text grammar is now implemented. Recursive schemas, enum literals,
 numeric/Unicode portability, runtime-value validation, and context-snapshot
 evidence are now closed for the current programmatic surface. IR v3's declared,
 typed context requirements, callable-effect/repair explanations, and canonical
 execution invocation identity are also complete. The provider-neutral typed
-execution ports and Delivery C's SQLite-backed Zhinu adapter are complete. The
-adapter now proves recovery, selective restart, idempotent operation and artifact
-publication identity, cancellation, corruption rejection, observations, and a
-full fake vertical slice. The admission receipt remains its authorization seam;
-it is not itself an executor. Loops, fan-out, waits, transition activation, and
-artifact-reuse authorization remain outside this milestone.
+execution ports, Delivery C's SQLite-backed Zhinu adapter, and Delivery E's
+Baize structured/media adapters are complete. The durable vertical proves
+context snapshots, real adapter execution, typed cost and provider evidence,
+recovery, selective restart, idempotent operation and artifact publication
+identity, cancellation, and corruption rejection. The admission receipt remains
+its authorization seam; it is not itself an executor. Loops, waits, transition
+activation, and artifact-reuse authorization remain outside the first preview.

@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Penghou.Fuwen.Baize\Penghou.Fuwen.Baize.csproj" />
     <ProjectReference Include="..\..\src\Penghou.Fuwen.Zhinu\Penghou.Fuwen.Zhinu.csproj" />
   </ItemGroup>
 

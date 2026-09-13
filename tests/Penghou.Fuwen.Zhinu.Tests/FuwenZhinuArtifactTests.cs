@@ -2,6 +2,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
+using Penghou.Baize;
+using Penghou.Fuwen.Baize;
 using Penghou.Fuwen.Compiler;
 using Penghou.Zhinu;
 using Penghou.Zhinu.Sqlite;
@@ -16,7 +18,23 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         var fixture = await AdmitVerticalAsync();
         var activity = new VerticalActivity(fixture.SelectedActivity, fixture.UnselectedActivity, fixture.ArtifactDescriptor);
         var context = new RecordingContextProvider(fixture.ContextDescriptor, fixture.ArtifactDescriptor);
-        var inference = new VerticalInference();
+        var baizeClient = new VerticalBaizeClient();
+        var provenance = new VerticalProvenanceSink();
+        var inference = new BaizeInferenceExecutor([
+            new BaizeInferenceBinding(
+                fixture.Profile,
+                fixture.PromptTemplate,
+                [new BaizeEndpointBinding(
+                    "primary",
+                    "recorded-provider",
+                    "recorded-model",
+                    baizeClient,
+                    new BaizeTokenPricing("USD", 1_000_000, 2_000_000, "prices/1"))],
+                userPromptTemplate: "{arguments}\n{context}",
+                policy: new BaizeInferencePolicy(
+                    policyRevision: "inference/1",
+                    routingPolicyRevision: "routing/1")),
+        ], provenanceSink: provenance);
         var registration = await new FuwenZhinuWorkflowFactory(
                 new InMemoryWorkflowDefinitionStore(),
                 IdentityFor(fixture.Admission),
@@ -38,7 +56,12 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
 
             output.GetString().Should().Be("selected");
             context.Requests.Should().ContainSingle();
-            inference.Requests.Should().ContainSingle();
+            baizeClient.Requests.Should().ContainSingle();
+            provenance.Items.Should().ContainSingle();
+            provenance.Items[0].Modality.Should().Be(InferenceModality.StructuredText);
+            provenance.Items[0].Cost!.AmountMicrounits.Should().Be(5);
+            provenance.Items[0].Attempts.Should().ContainSingle()
+                .Which.Cost!.PricingRevision.Should().Be("prices/1");
             activity.SelectedCalls.Should().Be(1);
             activity.UnselectedCalls.Should().Be(0);
 
@@ -65,7 +88,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             activity.SelectedCalls.Should().Be(1);
             activity.UnselectedCalls.Should().Be(0);
             context.Requests.Should().ContainSingle();
-            inference.Requests.Should().ContainSingle();
+            baizeClient.Requests.Should().ContainSingle();
+            provenance.Items.Should().ContainSingle();
         }
         finally
         {
@@ -300,7 +324,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             .AdmitAsync(plan, cancellationToken: TestContext.Current.CancellationToken);
         admission.Succeeded.Should().BeTrue(string.Join("; ", admission.Diagnostics.Select(item => $"{item.Code}: {item.Message} path={item.Path} expected={item.Expected} actual={item.Actual}")));
         return new VerticalFixture(
-            admission, contextDescriptor, artifactDescriptor, selectedActivity, unselectedActivity);
+            admission, contextDescriptor, artifactDescriptor, profile, prompt,
+            selectedActivity, unselectedActivity);
 
         static TrustedCatalogueDescriptor Callable(
             DescriptorReference descriptor,
@@ -321,6 +346,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         WorkflowAdmissionResult Admission,
         DescriptorReference ContextDescriptor,
         DescriptorReference ArtifactDescriptor,
+        DescriptorReference Profile,
+        DescriptorReference PromptTemplate,
         DescriptorReference SelectedActivity,
         DescriptorReference UnselectedActivity);
 
@@ -405,6 +432,45 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             Requests.Add(request);
             return ValueTask.FromResult(InferenceExecutionResult.Succeeded(
                 RuntimeValue.FromJson(JsonSerializer.SerializeToElement(true))));
+        }
+    }
+
+    private sealed class VerticalBaizeClient : ILlmClient, ILlmCompletionClient
+    {
+        public List<LlmRequest> Requests { get; } = [];
+        public LlmEndpointCapabilities Capabilities { get; } = new()
+        {
+            NativeStructuredOutput = true,
+            StructuredOutputViaTool = true,
+        };
+
+        public Task<LlmResponse> CompleteAsync(
+            LlmRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            return Task.FromResult(new LlmResponse("true", Usage: new LlmUsage(1, 2, 3)));
+        }
+
+        public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+            LlmRequest request,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            yield return new LlmStreamEvent("");
+            await Task.CompletedTask;
+        }
+    }
+
+    private sealed class VerticalProvenanceSink : IBaizeInferenceProvenanceSink
+    {
+        public List<InferenceExecutionEvidence> Items { get; } = [];
+
+        public ValueTask RecordAsync(
+            InferenceExecutionEvidence evidence,
+            CancellationToken cancellationToken = default)
+        {
+            Items.Add(evidence);
+            return ValueTask.CompletedTask;
         }
     }
 }

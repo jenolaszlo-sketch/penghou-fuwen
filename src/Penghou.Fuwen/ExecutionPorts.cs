@@ -434,6 +434,54 @@ public sealed class InferenceExecutionResult : ExecutionResult
     public static InferenceExecutionResult Failed(ExecutionFailure failure, InferenceExecutionEvidence? evidence = null) => new(failure, evidence);
 }
 
+/// <summary>The provider-neutral modality selected by trusted inference policy.</summary>
+public enum InferenceModality
+{
+    /// <summary>Structured text or tool-call inference.</summary>
+    StructuredText,
+    /// <summary>Image generation or transformation.</summary>
+    Image,
+    /// <summary>Video generation or transformation.</summary>
+    Video,
+    /// <summary>Audio generation or transformation.</summary>
+    Audio,
+}
+
+/// <summary>A bounded monetary amount recorded in millionths of one currency unit.</summary>
+public sealed class InferenceCostEvidence
+{
+    /// <summary>Creates provider-neutral cost evidence without floating-point currency arithmetic.</summary>
+    public InferenceCostEvidence(
+        string currencyCode,
+        long amountMicrounits,
+        bool isEstimated,
+        string? pricingRevision = null)
+    {
+        if (currencyCode is null || currencyCode.Length != 3 ||
+            currencyCode.Any(static character => character is < 'A' or > 'Z'))
+            throw new ArgumentException("Currency code must contain exactly three uppercase ASCII letters.", nameof(currencyCode));
+        if (amountMicrounits < 0)
+            throw new ArgumentOutOfRangeException(nameof(amountMicrounits));
+
+        CurrencyCode = currencyCode;
+        AmountMicrounits = amountMicrounits;
+        IsEstimated = isEstimated;
+        PricingRevision = RuntimeValueSnapshot.OptionalText(
+            pricingRevision,
+            nameof(pricingRevision),
+            InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
+    }
+
+    /// <summary>The ISO-style uppercase currency code used by host pricing policy.</summary>
+    public string CurrencyCode { get; }
+    /// <summary>The amount in millionths of one currency unit.</summary>
+    public long AmountMicrounits { get; }
+    /// <summary>Whether host pricing derived the amount rather than receiving a provider charge.</summary>
+    public bool IsEstimated { get; }
+    /// <summary>The host pricing revision used to derive the amount, when applicable.</summary>
+    public string? PricingRevision { get; }
+}
+
 /// <summary>A bounded, detached provider-neutral inference provenance record.</summary>
 public sealed class InferenceExecutionEvidence
 {
@@ -457,7 +505,9 @@ public sealed class InferenceExecutionEvidence
         string? repairStrategy = null,
         string? policyRevision = null,
         string? routingPolicyRevision = null,
-        long? durationMilliseconds = null)
+        long? durationMilliseconds = null,
+        InferenceModality modality = InferenceModality.StructuredText,
+        InferenceCostEvidence? cost = null)
     {
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(promptTemplate);
@@ -474,6 +524,8 @@ public sealed class InferenceExecutionEvidence
             throw new ArgumentOutOfRangeException(nameof(totalTokens));
         if (durationMilliseconds is < 0)
             throw new ArgumentOutOfRangeException(nameof(durationMilliseconds));
+        if (!Enum.IsDefined(modality))
+            throw new ArgumentOutOfRangeException(nameof(modality));
 
         for (var index = 0; index < attempts.Count; index++)
         {
@@ -498,7 +550,12 @@ public sealed class InferenceExecutionEvidence
             attempt.EndpointId,
             attempt.Succeeded,
             attempt.FailureCode,
-            attempt.FailureMessage)).ToArray());
+            attempt.FailureMessage,
+            attempt.PromptTokens,
+            attempt.CompletionTokens,
+            attempt.TotalTokens,
+            attempt.DurationMilliseconds,
+            attempt.Cost)).ToArray());
         PromptTokens = promptTokens;
         CompletionTokens = completionTokens;
         TotalTokens = totalTokens;
@@ -508,6 +565,9 @@ public sealed class InferenceExecutionEvidence
         PolicyRevision = RuntimeValueSnapshot.OptionalText(policyRevision, nameof(policyRevision), MaximumIdentityUtf8Bytes);
         RoutingPolicyRevision = RuntimeValueSnapshot.OptionalText(routingPolicyRevision, nameof(routingPolicyRevision), MaximumIdentityUtf8Bytes);
         DurationMilliseconds = durationMilliseconds;
+        Modality = modality;
+        Cost = cost is null ? null : new InferenceCostEvidence(
+            cost.CurrencyCode, cost.AmountMicrounits, cost.IsEstimated, cost.PricingRevision);
     }
 
     /// <summary>The exact admitted logical profile descriptor.</summary>
@@ -534,6 +594,10 @@ public sealed class InferenceExecutionEvidence
     public string? RoutingPolicyRevision { get; }
     /// <summary>Elapsed provider/adapter time in milliseconds, when available.</summary>
     public long? DurationMilliseconds { get; }
+    /// <summary>The modality selected by trusted host policy.</summary>
+    public InferenceModality Modality { get; }
+    /// <summary>Provider-reported or host-derived monetary cost, when available.</summary>
+    public InferenceCostEvidence? Cost { get; }
 }
 
 /// <summary>One bounded provider-neutral attempt in inference evidence.</summary>
@@ -547,10 +611,19 @@ public sealed class InferenceAttemptEvidence
         string? endpointId,
         bool succeeded,
         string? failureCode = null,
-        string? failureMessage = null)
+        string? failureMessage = null,
+        int? promptTokens = null,
+        int? completionTokens = null,
+        int? totalTokens = null,
+        long? durationMilliseconds = null,
+        InferenceCostEvidence? cost = null)
     {
         if (attempt < 1 || attempt > InferenceExecutionEvidence.MaximumAttempts)
             throw new ArgumentOutOfRangeException(nameof(attempt));
+        if (promptTokens is < 0 || completionTokens is < 0 || totalTokens is < 0)
+            throw new ArgumentOutOfRangeException(nameof(totalTokens));
+        if (durationMilliseconds is < 0)
+            throw new ArgumentOutOfRangeException(nameof(durationMilliseconds));
         Attempt = attempt;
         Provider = RuntimeValueSnapshot.Text(provider, nameof(provider), InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
         Model = RuntimeValueSnapshot.Text(model, nameof(model), InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
@@ -558,6 +631,12 @@ public sealed class InferenceAttemptEvidence
         Succeeded = succeeded;
         FailureCode = RuntimeValueSnapshot.OptionalText(failureCode, nameof(failureCode), InferenceExecutionEvidence.MaximumDiagnosticUtf8Bytes);
         FailureMessage = RuntimeValueSnapshot.OptionalText(failureMessage, nameof(failureMessage), InferenceExecutionEvidence.MaximumDiagnosticUtf8Bytes);
+        PromptTokens = promptTokens;
+        CompletionTokens = completionTokens;
+        TotalTokens = totalTokens;
+        DurationMilliseconds = durationMilliseconds;
+        Cost = cost is null ? null : new InferenceCostEvidence(
+            cost.CurrencyCode, cost.AmountMicrounits, cost.IsEstimated, cost.PricingRevision);
     }
 
     /// <summary>One-based attempt number.</summary>
@@ -574,6 +653,16 @@ public sealed class InferenceAttemptEvidence
     public string? FailureCode { get; }
     /// <summary>Bounded failure detail, when the attempt failed.</summary>
     public string? FailureMessage { get; }
+    /// <summary>Input tokens charged to this attempt, when reported.</summary>
+    public int? PromptTokens { get; }
+    /// <summary>Output tokens charged to this attempt, when reported.</summary>
+    public int? CompletionTokens { get; }
+    /// <summary>Total tokens charged to this attempt, when reported.</summary>
+    public int? TotalTokens { get; }
+    /// <summary>Elapsed provider time for this attempt, when available.</summary>
+    public long? DurationMilliseconds { get; }
+    /// <summary>Cost attributed to this attempt, when available.</summary>
+    public InferenceCostEvidence? Cost { get; }
 }
 
 /// <summary>Executes one admitted activity request.</summary>

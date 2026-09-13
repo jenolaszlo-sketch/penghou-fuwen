@@ -138,6 +138,37 @@ public sealed class ExecutionPortContractTests
             .Should().Throw<ArgumentException>().WithMessage("*final inference attempt*");
     }
 
+    [Fact]
+    public void Inference_cost_and_attempt_usage_are_bounded_and_snapshotted()
+    {
+        var profile = Descriptor(DescriptorKind.InferenceProfile, "profile");
+        var prompt = Descriptor(DescriptorKind.PromptTemplate, "prompt");
+        var cost = new InferenceCostEvidence("USD", 125, isEstimated: true, "prices/1");
+        var evidence = new InferenceExecutionEvidence(
+            profile,
+            prompt,
+            [new InferenceAttemptEvidence(
+                1, "provider", "model", "endpoint", true,
+                promptTokens: 2, completionTokens: 3, totalTokens: 5,
+                durationMilliseconds: 7, cost: cost)],
+            promptTokens: 2,
+            completionTokens: 3,
+            totalTokens: 5,
+            durationMilliseconds: 8,
+            modality: InferenceModality.StructuredText,
+            cost: cost);
+
+        evidence.Cost.Should().NotBeSameAs(cost);
+        evidence.Cost!.PricingRevision.Should().Be("prices/1");
+        evidence.Attempts[0].Cost.Should().NotBeSameAs(cost);
+        evidence.Attempts[0].PromptTokens.Should().Be(2);
+        evidence.Attempts[0].DurationMilliseconds.Should().Be(7);
+        ((Action)(() => new InferenceCostEvidence("usd", 1, false))).Should().Throw<ArgumentException>();
+        ((Action)(() => new InferenceCostEvidence("USD", -1, false))).Should().Throw<ArgumentOutOfRangeException>();
+        ((Action)(() => new InferenceAttemptEvidence(
+            1, "provider", "model", null, true, promptTokens: -1))).Should().Throw<ArgumentOutOfRangeException>();
+    }
+
     private static RuntimeValue Json(string json)
     {
         using var document = JsonDocument.Parse(json);

@@ -16,7 +16,9 @@ contract versions.
   evidence, context snapshots, and provider-neutral execution failures.
 - Add the SQLite-tested `Penghou.Fuwen.Zhinu` durable execution adapter.
 - Add the bounded minimal Fuwen source language and canonical formatter.
-- Add `Penghou.Fuwen.Baize` for descriptor-bound structured inference.
+- Add `Penghou.Fuwen.Baize` for descriptor-bound structured and media
+  inference, crash-safe generated-asset publication, typed cost evidence, and
+  trusted retry cost ceilings.
 
 This is the first preview. No compatibility with an earlier public Fuwen
 package is implied.

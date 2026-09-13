@@ -688,10 +688,12 @@ Penghou.Fuwen.InferenceExecutionEvidence
 const Penghou.Fuwen.InferenceExecutionEvidence.MaximumAttempts = 32 -> int
 const Penghou.Fuwen.InferenceExecutionEvidence.MaximumDiagnosticUtf8Bytes = 1024 -> int
 const Penghou.Fuwen.InferenceExecutionEvidence.MaximumIdentityUtf8Bytes = 256 -> int
-Penghou.Fuwen.InferenceExecutionEvidence.InferenceExecutionEvidence(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference! promptTemplate, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceAttemptEvidence!>! attempts, int? promptTokens = null, int? completionTokens = null, int? totalTokens = null, bool wasRepaired = false, int repairAttempts = 0, string? repairStrategy = null, string? policyRevision = null, string? routingPolicyRevision = null, long? durationMilliseconds = null) -> void
+Penghou.Fuwen.InferenceExecutionEvidence.InferenceExecutionEvidence(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference! promptTemplate, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceAttemptEvidence!>! attempts, int? promptTokens = null, int? completionTokens = null, int? totalTokens = null, bool wasRepaired = false, int repairAttempts = 0, string? repairStrategy = null, string? policyRevision = null, string? routingPolicyRevision = null, long? durationMilliseconds = null, Penghou.Fuwen.InferenceModality modality = Penghou.Fuwen.InferenceModality.StructuredText, Penghou.Fuwen.InferenceCostEvidence? cost = null) -> void
 Penghou.Fuwen.InferenceExecutionEvidence.Attempts.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceAttemptEvidence!>!
 Penghou.Fuwen.InferenceExecutionEvidence.CompletionTokens.get -> int?
+Penghou.Fuwen.InferenceExecutionEvidence.Cost.get -> Penghou.Fuwen.InferenceCostEvidence?
 Penghou.Fuwen.InferenceExecutionEvidence.DurationMilliseconds.get -> long?
+Penghou.Fuwen.InferenceExecutionEvidence.Modality.get -> Penghou.Fuwen.InferenceModality
 Penghou.Fuwen.InferenceExecutionEvidence.PolicyRevision.get -> string?
 Penghou.Fuwen.InferenceExecutionEvidence.PromptTemplate.get -> Penghou.Fuwen.DescriptorReference!
 Penghou.Fuwen.InferenceExecutionEvidence.PromptTokens.get -> int?
@@ -701,15 +703,31 @@ Penghou.Fuwen.InferenceExecutionEvidence.RepairStrategy.get -> string?
 Penghou.Fuwen.InferenceExecutionEvidence.RoutingPolicyRevision.get -> string?
 Penghou.Fuwen.InferenceExecutionEvidence.TotalTokens.get -> int?
 Penghou.Fuwen.InferenceExecutionEvidence.WasRepaired.get -> bool
+Penghou.Fuwen.InferenceModality
+Penghou.Fuwen.InferenceModality.Audio = 3 -> Penghou.Fuwen.InferenceModality
+Penghou.Fuwen.InferenceModality.Image = 1 -> Penghou.Fuwen.InferenceModality
+Penghou.Fuwen.InferenceModality.StructuredText = 0 -> Penghou.Fuwen.InferenceModality
+Penghou.Fuwen.InferenceModality.Video = 2 -> Penghou.Fuwen.InferenceModality
+Penghou.Fuwen.InferenceCostEvidence
+Penghou.Fuwen.InferenceCostEvidence.InferenceCostEvidence(string! currencyCode, long amountMicrounits, bool isEstimated, string? pricingRevision = null) -> void
+Penghou.Fuwen.InferenceCostEvidence.AmountMicrounits.get -> long
+Penghou.Fuwen.InferenceCostEvidence.CurrencyCode.get -> string!
+Penghou.Fuwen.InferenceCostEvidence.IsEstimated.get -> bool
+Penghou.Fuwen.InferenceCostEvidence.PricingRevision.get -> string?
 Penghou.Fuwen.InferenceAttemptEvidence
-Penghou.Fuwen.InferenceAttemptEvidence.InferenceAttemptEvidence(int attempt, string! provider, string! model, string? endpointId, bool succeeded, string? failureCode = null, string? failureMessage = null) -> void
+Penghou.Fuwen.InferenceAttemptEvidence.InferenceAttemptEvidence(int attempt, string! provider, string! model, string? endpointId, bool succeeded, string? failureCode = null, string? failureMessage = null, int? promptTokens = null, int? completionTokens = null, int? totalTokens = null, long? durationMilliseconds = null, Penghou.Fuwen.InferenceCostEvidence? cost = null) -> void
 Penghou.Fuwen.InferenceAttemptEvidence.Attempt.get -> int
 Penghou.Fuwen.InferenceAttemptEvidence.EndpointId.get -> string?
 Penghou.Fuwen.InferenceAttemptEvidence.FailureCode.get -> string?
 Penghou.Fuwen.InferenceAttemptEvidence.FailureMessage.get -> string?
+Penghou.Fuwen.InferenceAttemptEvidence.CompletionTokens.get -> int?
+Penghou.Fuwen.InferenceAttemptEvidence.Cost.get -> Penghou.Fuwen.InferenceCostEvidence?
+Penghou.Fuwen.InferenceAttemptEvidence.DurationMilliseconds.get -> long?
 Penghou.Fuwen.InferenceAttemptEvidence.Model.get -> string!
 Penghou.Fuwen.InferenceAttemptEvidence.Provider.get -> string!
+Penghou.Fuwen.InferenceAttemptEvidence.PromptTokens.get -> int?
 Penghou.Fuwen.InferenceAttemptEvidence.Succeeded.get -> bool
+Penghou.Fuwen.InferenceAttemptEvidence.TotalTokens.get -> int?
 Penghou.Fuwen.InferenceExecutionResult.InferenceExecutionResult(Penghou.Fuwen.ExecutionFailure! failure, Penghou.Fuwen.InferenceExecutionEvidence? evidence = null) -> void
 Penghou.Fuwen.InferenceExecutionResult.InferenceExecutionResult(Penghou.Fuwen.RuntimeValue! output, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArtifactPublicationReceipt!>? publications = null, Penghou.Fuwen.InferenceExecutionEvidence? evidence = null) -> void
 Penghou.Fuwen.InferenceExecutionResult.Evidence.get -> Penghou.Fuwen.InferenceExecutionEvidence?

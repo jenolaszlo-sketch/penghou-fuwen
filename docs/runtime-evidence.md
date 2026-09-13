@@ -30,6 +30,13 @@ context, resolve provider handles, fetch artifacts, or authorize access. A host
 verifier must perform those operations and may reject a reference even when
 its shape is valid.
 
+`InferenceExecutionEvidence` is likewise detached evidence rather than billing
+authority. It records the resolved structured-text, image, video, or audio
+modality; each provider attempt; token usage; elapsed time; repair state; and
+optional cost. Cost uses integer microunits plus a currency and pricing revision.
+The host remains authoritative for price tables, budgets, invoices, and artifact
+verification.
+
 When `Budget.WasTruncated` is true, observed item/byte counts may exceed the
 configured maxima: the excess is evidence that the host had to truncate or
 discard context. Untruncated evidence must remain within its declared maxima.

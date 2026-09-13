@@ -1,21 +1,67 @@
 #nullable enable
+Penghou.Fuwen.Baize.BaizeInferenceRoute
+Penghou.Fuwen.Baize.BaizeInferenceRoute.BaizeInferenceRoute(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference! promptTemplate, Penghou.Fuwen.IInferenceExecutor! executor) -> void
+Penghou.Fuwen.Baize.BaizeInferenceRoute.Executor.get -> Penghou.Fuwen.IInferenceExecutor!
+Penghou.Fuwen.Baize.BaizeInferenceRoute.Profile.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.Baize.BaizeInferenceRoute.PromptTemplate.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.Baize.BaizeRoutedInferenceExecutor
+Penghou.Fuwen.Baize.BaizeRoutedInferenceExecutor.BaizeRoutedInferenceExecutor(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeInferenceRoute!>! routes) -> void
+Penghou.Fuwen.Baize.BaizeRoutedInferenceExecutor.ExecuteAsync(Penghou.Fuwen.InferenceExecutionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceExecutionResult!>
+Penghou.Fuwen.Baize.BaizeEndpointBinding.BaizeEndpointBinding(string! endpointId, string! provider, string! model, Penghou.Baize.ILlmClient! client, Penghou.Fuwen.Baize.BaizeTokenPricing? pricing = null) -> void
+Penghou.Fuwen.Baize.BaizeEndpointBinding.Pricing.get -> Penghou.Fuwen.Baize.BaizeTokenPricing?
+Penghou.Fuwen.Baize.BaizeGenerationBinding
+Penghou.Fuwen.Baize.BaizeGenerationBinding.ArtifactDescriptor.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.Baize.BaizeGenerationBinding.BaizeGenerationBinding(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference! promptTemplate, Penghou.Fuwen.DescriptorReference! artifactDescriptor, Penghou.Fuwen.Baize.BaizeGenerationModality modality, string! endpointId, string! provider, string! model, Penghou.Baize.Generation.IGenerationClient! client, System.Func<Penghou.Fuwen.InferenceExecutionRequest!, Penghou.Baize.Generation.GenerationRequest!>! requestFactory, Penghou.Fuwen.Baize.IBaizeGeneratedAssetPublisher! publisher, Penghou.Fuwen.Baize.BaizeGenerationPolicy? policy = null, System.Func<Penghou.Baize.Generation.GenerationResult!, Penghou.Fuwen.InferenceCostEvidence?>? costResolver = null) -> void
+Penghou.Fuwen.Baize.BaizeGenerationBinding.CostResolver.get -> System.Func<Penghou.Baize.Generation.GenerationResult!, Penghou.Fuwen.InferenceCostEvidence?>?
+Penghou.Fuwen.Baize.BaizeGenerationBinding.EndpointId.get -> string!
+Penghou.Fuwen.Baize.BaizeGenerationBinding.Client.get -> Penghou.Baize.Generation.IGenerationClient!
+Penghou.Fuwen.Baize.BaizeGenerationBinding.Modality.get -> Penghou.Fuwen.Baize.BaizeGenerationModality
+Penghou.Fuwen.Baize.BaizeGenerationBinding.Model.get -> string!
+Penghou.Fuwen.Baize.BaizeGenerationBinding.Policy.get -> Penghou.Fuwen.Baize.BaizeGenerationPolicy!
+Penghou.Fuwen.Baize.BaizeGenerationBinding.Profile.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.Baize.BaizeGenerationBinding.PromptTemplate.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.Baize.BaizeGenerationBinding.Provider.get -> string!
+Penghou.Fuwen.Baize.BaizeGenerationBinding.Publisher.get -> Penghou.Fuwen.Baize.IBaizeGeneratedAssetPublisher!
+Penghou.Fuwen.Baize.BaizeGenerationBinding.RequestFactory.get -> System.Func<Penghou.Fuwen.InferenceExecutionRequest!, Penghou.Baize.Generation.GenerationRequest!>!
+Penghou.Fuwen.Baize.BaizeGenerationInferenceExecutor
+Penghou.Fuwen.Baize.BaizeGenerationInferenceExecutor.BaizeGenerationInferenceExecutor(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeGenerationBinding!>! bindings, Penghou.Fuwen.Baize.IBaizeInferenceProvenanceSink? provenanceSink = null) -> void
+Penghou.Fuwen.Baize.BaizeGenerationInferenceExecutor.ExecuteAsync(Penghou.Fuwen.InferenceExecutionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceExecutionResult!>
+Penghou.Fuwen.Baize.BaizeGenerationModality
+Penghou.Fuwen.Baize.BaizeGenerationModality.Audio = 2 -> Penghou.Fuwen.Baize.BaizeGenerationModality
+Penghou.Fuwen.Baize.BaizeGenerationModality.Image = 0 -> Penghou.Fuwen.Baize.BaizeGenerationModality
+Penghou.Fuwen.Baize.BaizeGenerationModality.Video = 1 -> Penghou.Fuwen.Baize.BaizeGenerationModality
+Penghou.Fuwen.Baize.BaizeGenerationPolicy
+const Penghou.Fuwen.Baize.BaizeGenerationPolicy.MaximumGeneratedAssets = 256 -> int
+Penghou.Fuwen.Baize.BaizeGenerationPolicy.BaizeGenerationPolicy(int maximumAssets = 1, string? policyRevision = null, string? routingPolicyRevision = null, System.Func<Penghou.Fuwen.InferenceExecutionRequest!, string?>? rejection = null, System.TimeSpan? timeout = null, System.TimeSpan? pollingInterval = null) -> void
+Penghou.Fuwen.Baize.BaizeGenerationPolicy.MaximumAssets.get -> int
+Penghou.Fuwen.Baize.BaizeGenerationPolicy.PolicyRevision.get -> string?
+Penghou.Fuwen.Baize.BaizeGenerationPolicy.PollingInterval.get -> System.TimeSpan
+Penghou.Fuwen.Baize.BaizeGenerationPolicy.Rejection.get -> System.Func<Penghou.Fuwen.InferenceExecutionRequest!, string?>?
+Penghou.Fuwen.Baize.BaizeGenerationPolicy.RoutingPolicyRevision.get -> string?
+Penghou.Fuwen.Baize.BaizeGenerationPolicy.Timeout.get -> System.TimeSpan
 Penghou.Fuwen.Baize.BaizeInferenceOutputMode
 Penghou.Fuwen.Baize.BaizeInferenceOutputMode.StructuredContent = 0 -> Penghou.Fuwen.Baize.BaizeInferenceOutputMode
 Penghou.Fuwen.Baize.BaizeInferenceOutputMode.ToolCall = 1 -> Penghou.Fuwen.Baize.BaizeInferenceOutputMode
 Penghou.Fuwen.Baize.BaizeEndpointBinding
-Penghou.Fuwen.Baize.BaizeEndpointBinding.BaizeEndpointBinding(string! endpointId, string! provider, string! model, Penghou.Baize.ILlmClient! client) -> void
 Penghou.Fuwen.Baize.BaizeEndpointBinding.Client.get -> Penghou.Baize.ILlmClient!
 Penghou.Fuwen.Baize.BaizeEndpointBinding.EndpointId.get -> string!
 Penghou.Fuwen.Baize.BaizeEndpointBinding.Model.get -> string!
 Penghou.Fuwen.Baize.BaizeEndpointBinding.Provider.get -> string!
+Penghou.Fuwen.Baize.BaizeTokenPricing
+Penghou.Fuwen.Baize.BaizeTokenPricing.BaizeTokenPricing(string! currencyCode, long promptMicrounitsPerMillionTokens, long completionMicrounitsPerMillionTokens, string? pricingRevision = null) -> void
+Penghou.Fuwen.Baize.BaizeTokenPricing.CompletionMicrounitsPerMillionTokens.get -> long
+Penghou.Fuwen.Baize.BaizeTokenPricing.CurrencyCode.get -> string!
+Penghou.Fuwen.Baize.BaizeTokenPricing.PromptMicrounitsPerMillionTokens.get -> long
+Penghou.Fuwen.Baize.BaizeTokenPricing.PricingRevision.get -> string?
 Penghou.Fuwen.Baize.BaizeToolBinding
 Penghou.Fuwen.Baize.BaizeToolBinding.BaizeToolBinding(Penghou.Fuwen.DescriptorReference! descriptor, Penghou.Baize.LlmTool! tool) -> void
 Penghou.Fuwen.Baize.BaizeToolBinding.Descriptor.get -> Penghou.Fuwen.DescriptorReference!
 Penghou.Fuwen.Baize.BaizeToolBinding.Tool.get -> Penghou.Baize.LlmTool!
 Penghou.Fuwen.Baize.BaizeInferencePolicy
 const Penghou.Fuwen.Baize.BaizeInferencePolicy.MaximumAllowedAttempts = 8 -> int
-Penghou.Fuwen.Baize.BaizeInferencePolicy.BaizeInferencePolicy(int maximumAttempts = 1, int? maximumTokens = null, bool retryRepresentationFailures = false, string? policyRevision = null, string? routingPolicyRevision = null, System.Func<Penghou.Fuwen.InferenceExecutionRequest!, string?>? rejection = null) -> void
+Penghou.Fuwen.Baize.BaizeInferencePolicy.BaizeInferencePolicy(int maximumAttempts = 1, int? maximumTokens = null, bool retryRepresentationFailures = false, string? policyRevision = null, string? routingPolicyRevision = null, System.Func<Penghou.Fuwen.InferenceExecutionRequest!, string?>? rejection = null, long? maximumCostMicrounits = null) -> void
 Penghou.Fuwen.Baize.BaizeInferencePolicy.MaximumAttempts.get -> int
+Penghou.Fuwen.Baize.BaizeInferencePolicy.MaximumCostMicrounits.get -> long?
 Penghou.Fuwen.Baize.BaizeInferencePolicy.MaximumTokens.get -> int?
 Penghou.Fuwen.Baize.BaizeInferencePolicy.PolicyRevision.get -> string?
 Penghou.Fuwen.Baize.BaizeInferencePolicy.Rejection.get -> System.Func<Penghou.Fuwen.InferenceExecutionRequest!, string?>?
@@ -33,6 +79,8 @@ Penghou.Fuwen.Baize.BaizeInferenceBinding.Schemas.get -> System.Collections.Gene
 Penghou.Fuwen.Baize.BaizeInferenceBinding.SystemPrompt.get -> string?
 Penghou.Fuwen.Baize.BaizeInferenceBinding.Tools.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeToolBinding!>!
 Penghou.Fuwen.Baize.BaizeInferenceBinding.UserPromptTemplate.get -> string!
+Penghou.Fuwen.Baize.IBaizeGeneratedAssetPublisher
+Penghou.Fuwen.Baize.IBaizeGeneratedAssetPublisher.PublishAsync(Penghou.Fuwen.InferenceExecutionRequest! request, System.Collections.Generic.IReadOnlyList<Penghou.Baize.Generation.GeneratedAsset!>! assets, Penghou.Fuwen.DescriptorReference! artifactDescriptor, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArtifactPublicationReceipt!>!>
 Penghou.Fuwen.Baize.IBaizeInferenceProvenanceSink
 Penghou.Fuwen.Baize.IBaizeInferenceProvenanceSink.RecordAsync(Penghou.Fuwen.InferenceExecutionEvidence! evidence, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Penghou.Fuwen.Baize.BaizeInferenceExecutor

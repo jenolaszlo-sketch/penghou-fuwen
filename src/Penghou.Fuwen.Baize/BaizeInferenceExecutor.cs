@@ -8,6 +8,58 @@ using Penghou.Nuwa;
 
 namespace Penghou.Fuwen.Baize;
 
+/// <summary>Host-owned token pricing used to derive deterministic cost evidence.</summary>
+public sealed class BaizeTokenPricing
+{
+    /// <summary>Creates pricing in currency microunits per one million tokens.</summary>
+    public BaizeTokenPricing(
+        string currencyCode,
+        long promptMicrounitsPerMillionTokens,
+        long completionMicrounitsPerMillionTokens,
+        string? pricingRevision = null)
+    {
+        if (currencyCode is null || currencyCode.Length != 3 ||
+            currencyCode.Any(static character => character is < 'A' or > 'Z'))
+            throw new ArgumentException("Currency code must contain exactly three uppercase ASCII letters.", nameof(currencyCode));
+        if (promptMicrounitsPerMillionTokens < 0)
+            throw new ArgumentOutOfRangeException(nameof(promptMicrounitsPerMillionTokens));
+        if (completionMicrounitsPerMillionTokens < 0)
+            throw new ArgumentOutOfRangeException(nameof(completionMicrounitsPerMillionTokens));
+
+        CurrencyCode = currencyCode;
+        PromptMicrounitsPerMillionTokens = promptMicrounitsPerMillionTokens;
+        CompletionMicrounitsPerMillionTokens = completionMicrounitsPerMillionTokens;
+        PricingRevision = BaizeBindingValidation.OptionalText(
+            pricingRevision,
+            nameof(pricingRevision),
+            InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
+    }
+
+    /// <summary>The uppercase currency code used by this pricing revision.</summary>
+    public string CurrencyCode { get; }
+    /// <summary>Prompt-token price in microunits per one million tokens.</summary>
+    public long PromptMicrounitsPerMillionTokens { get; }
+    /// <summary>Completion-token price in microunits per one million tokens.</summary>
+    public long CompletionMicrounitsPerMillionTokens { get; }
+    /// <summary>The host pricing-table revision.</summary>
+    public string? PricingRevision { get; }
+
+    internal InferenceCostEvidence? Calculate(LlmUsage? usage)
+    {
+        if (usage is null || (usage.PromptTokens is null && usage.CompletionTokens is null))
+            return null;
+
+        var prompt = Math.Max(0, usage.PromptTokens ?? 0);
+        var completion = Math.Max(0, usage.CompletionTokens ?? 0);
+        var rawMicrounits =
+            ((decimal)prompt * PromptMicrounitsPerMillionTokens +
+             (decimal)completion * CompletionMicrounitsPerMillionTokens) / 1_000_000m;
+        var rounded = decimal.Ceiling(rawMicrounits);
+        var amount = rounded >= long.MaxValue ? long.MaxValue : (long)rounded;
+        return new InferenceCostEvidence(CurrencyCode, amount, isEstimated: true, PricingRevision);
+    }
+}
+
 /// <summary>Selects how an admitted inference output is obtained from Baize.</summary>
 public enum BaizeInferenceOutputMode
 {
@@ -21,12 +73,18 @@ public enum BaizeInferenceOutputMode
 public sealed class BaizeEndpointBinding
 {
     /// <summary>Creates an exact endpoint binding for a configured Baize client.</summary>
-    public BaizeEndpointBinding(string endpointId, string provider, string model, ILlmClient client)
+    public BaizeEndpointBinding(
+        string endpointId,
+        string provider,
+        string model,
+        ILlmClient client,
+        BaizeTokenPricing? pricing = null)
     {
         EndpointId = BaizeBindingValidation.Text(endpointId, nameof(endpointId), InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
         Provider = BaizeBindingValidation.Text(provider, nameof(provider), InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
         Model = BaizeBindingValidation.Text(model, nameof(model), InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
         Client = client ?? throw new ArgumentNullException(nameof(client));
+        Pricing = pricing;
     }
 
     /// <summary>Host-assigned endpoint identity.</summary>
@@ -37,6 +95,8 @@ public sealed class BaizeEndpointBinding
     public string Model { get; }
     /// <summary>The provider-neutral Baize client.</summary>
     public ILlmClient Client { get; }
+    /// <summary>Optional host-owned pricing used to derive cost evidence.</summary>
+    public BaizeTokenPricing? Pricing { get; }
 
 }
 
@@ -74,18 +134,22 @@ public sealed class BaizeInferencePolicy
         bool retryRepresentationFailures = false,
         string? policyRevision = null,
         string? routingPolicyRevision = null,
-        Func<InferenceExecutionRequest, string?>? rejection = null)
+        Func<InferenceExecutionRequest, string?>? rejection = null,
+        long? maximumCostMicrounits = null)
     {
         if (maximumAttempts < 1 || maximumAttempts > MaximumAllowedAttempts)
             throw new ArgumentOutOfRangeException(nameof(maximumAttempts));
         if (maximumTokens is <= 0)
             throw new ArgumentOutOfRangeException(nameof(maximumTokens));
+        if (maximumCostMicrounits is <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maximumCostMicrounits));
         MaximumAttempts = maximumAttempts;
         MaximumTokens = maximumTokens;
         RetryRepresentationFailures = retryRepresentationFailures;
         PolicyRevision = BaizeBindingValidation.OptionalText(policyRevision, nameof(policyRevision), InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
         RoutingPolicyRevision = BaizeBindingValidation.OptionalText(routingPolicyRevision, nameof(routingPolicyRevision), InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
         Rejection = rejection;
+        MaximumCostMicrounits = maximumCostMicrounits;
     }
 
     /// <summary>Maximum total calls across all trusted fallbacks.</summary>
@@ -100,6 +164,8 @@ public sealed class BaizeInferencePolicy
     public string? RoutingPolicyRevision { get; }
     /// <summary>Optional host admission predicate; a non-null message rejects.</summary>
     public Func<InferenceExecutionRequest, string?>? Rejection { get; }
+    /// <summary>Maximum cumulative cost before another adapter attempt is forbidden.</summary>
+    public long? MaximumCostMicrounits { get; }
 
 }
 
@@ -134,6 +200,16 @@ public sealed class BaizeInferenceBinding
         var endpointCopy = endpoints.Select(endpoint => endpoint ?? throw new ArgumentException("Endpoint bindings cannot be null.", nameof(endpoints))).ToArray();
         if (endpointCopy.Select(endpoint => endpoint.EndpointId).Distinct(StringComparer.Ordinal).Count() != endpointCopy.Length)
             throw new ArgumentException("Endpoint ids must be unique within a binding.", nameof(endpoints));
+        if (endpointCopy.Where(endpoint => endpoint.Pricing is not null)
+            .Select(endpoint => endpoint.Pricing!.CurrencyCode)
+            .Distinct(StringComparer.Ordinal).Skip(1).Any())
+            throw new ArgumentException("All priced endpoints in one binding must use the same currency.", nameof(endpoints));
+        if (endpointCopy.Where(endpoint => endpoint.Pricing?.PricingRevision is not null)
+            .Select(endpoint => endpoint.Pricing!.PricingRevision)
+            .Distinct(StringComparer.Ordinal).Skip(1).Any())
+            throw new ArgumentException("All priced endpoints in one binding must use the same pricing revision.", nameof(endpoints));
+        if ((policy?.MaximumCostMicrounits) is not null && endpointCopy.Any(endpoint => endpoint.Pricing is null))
+            throw new ArgumentException("Every endpoint must have trusted pricing when policy sets a cost ceiling.", nameof(endpoints));
         if (!Enum.IsDefined(outputMode)) throw new ArgumentOutOfRangeException(nameof(outputMode));
         if (outputMode == BaizeInferenceOutputMode.ToolCall && string.IsNullOrWhiteSpace(expectedToolName))
             throw new ArgumentException("Tool-call output requires an expected tool name.", nameof(expectedToolName));
@@ -233,7 +309,7 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
         {
             var failure = new ExecutionFailure(ExecutionFailureKind.Admission, ExecutionFailureCode.PolicyRejected, BoundMessage(policyMessage));
             var evidence = BuildEvidence(request, binding, [], null, wasRepaired: false, repairAttempts: 0, repairStrategy: null, started,
-                promptTokens: null, completionTokens: null, totalTokens: null);
+                promptTokens: null, completionTokens: null, totalTokens: null, cost: null);
             await RecordAsync(evidence, cancellationToken).ConfigureAwait(false);
             return InferenceExecutionResult.Failed(failure, evidence);
         }
@@ -250,9 +326,14 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
         var hasPromptTokens = false;
         var hasCompletionTokens = false;
         var hasTotalTokens = false;
+        long costMicrounits = 0;
+        string? costCurrency = null;
+        string? pricingRevision = null;
+        var hasCost = false;
         for (var attempt = 1; attempt <= binding.Policy.MaximumAttempts; attempt++)
         {
             var endpoint = binding.Endpoints[(attempt - 1) % binding.Endpoints.Count];
+            var attemptStarted = Stopwatch.GetTimestamp();
             try
             {
                 var metadata = Metadata(endpoint);
@@ -270,6 +351,8 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
                 AddUsage(lastResponse.Usage?.PromptTokens, ref promptTokens, ref hasPromptTokens);
                 AddUsage(lastResponse.Usage?.CompletionTokens, ref completionTokens, ref hasCompletionTokens);
                 AddUsage(lastResponse.Usage?.TotalTokens, ref totalTokens, ref hasTotalTokens);
+                var attemptCost = endpoint.Pricing?.Calculate(lastResponse.Usage);
+                AddCost(attemptCost, ref costMicrounits, ref costCurrency, ref pricingRevision, ref hasCost);
                 var extracted = await ExtractOutputAsync(lastResponse, request.OutputType, binding, schemaJson, cancellationToken).ConfigureAwait(false);
                 anyWasRepaired |= extracted.WasRepaired;
                 repairAttempts = Math.Min(InferenceExecutionEvidence.MaximumAttempts, repairAttempts + extracted.RepairAttempts);
@@ -277,14 +360,17 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
                 if (!extracted.Succeeded)
                 {
                     lastFailure = extracted.Failure!;
-                    attempts.Add(FailedAttempt(attempt, metadata, endpoint, lastFailure.Code.ToString(), lastFailure.Message));
-                    if (!ShouldRetry(lastFailure.Code, binding.Policy, attempt)) break;
+                    attempts.Add(FailedAttempt(attempt, metadata, endpoint, lastFailure.Code.ToString(), lastFailure.Message,
+                        lastResponse.Usage, Stopwatch.GetElapsedTime(attemptStarted), attemptCost));
+                    if (!ShouldRetry(lastFailure.Code, binding.Policy, attempt, costMicrounits)) break;
                     continue;
                 }
 
-                attempts.Add(new InferenceAttemptEvidence(attempt, metadata.Provider, metadata.Model, endpoint.EndpointId, true));
+                attempts.Add(Attempt(attempt, metadata, endpoint, true, null, null,
+                    lastResponse.Usage, Stopwatch.GetElapsedTime(attemptStarted), attemptCost));
                 var evidence = BuildEvidence(request, binding, attempts, lastResponse, anyWasRepaired, repairAttempts, repairStrategy, started,
-                    hasPromptTokens ? promptTokens : null, hasCompletionTokens ? completionTokens : null, hasTotalTokens ? totalTokens : null);
+                    hasPromptTokens ? promptTokens : null, hasCompletionTokens ? completionTokens : null, hasTotalTokens ? totalTokens : null,
+                    hasCost ? new InferenceCostEvidence(costCurrency!, costMicrounits, isEstimated: true, pricingRevision) : null);
                 await RecordAsync(evidence, cancellationToken).ConfigureAwait(false);
                 return InferenceExecutionResult.Succeeded(extracted.Output!, evidence: evidence);
             }
@@ -297,14 +383,16 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
                 var metadata = Metadata(endpoint);
                 var message = BoundMessage(exception.Message);
                 lastFailure = new ExecutionFailure(ExecutionFailureKind.Provider, ExecutionFailureCode.ProviderError, message, providerCode: exception.FailureKind.ToString());
-                attempts.Add(FailedAttempt(attempt, metadata, endpoint, exception.FailureKind.ToString(), message));
+                attempts.Add(FailedAttempt(attempt, metadata, endpoint, exception.FailureKind.ToString(), message,
+                    duration: Stopwatch.GetElapsedTime(attemptStarted)));
                 if (!exception.CanFallback || attempt == binding.Policy.MaximumAttempts) break;
             }
             catch (Exception exception)
             {
                 var metadata = Metadata(endpoint);
                 lastFailure = new ExecutionFailure(ExecutionFailureKind.Provider, ExecutionFailureCode.ProviderError, "Baize provider execution failed.", providerCode: exception.GetType().Name);
-                attempts.Add(FailedAttempt(attempt, metadata, endpoint, exception.GetType().Name, exception.Message));
+                attempts.Add(FailedAttempt(attempt, metadata, endpoint, exception.GetType().Name, exception.Message,
+                    duration: Stopwatch.GetElapsedTime(attemptStarted)));
                 // Only Baize's typed client exception can assert that a call is
                 // safe and useful to repeat or route elsewhere. An arbitrary
                 // exception may be a host/programming defect, so repeating it
@@ -314,7 +402,8 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
         }
 
         var failureEvidence = BuildEvidence(request, binding, attempts, lastResponse, anyWasRepaired, repairAttempts, repairStrategy, started,
-            hasPromptTokens ? promptTokens : null, hasCompletionTokens ? completionTokens : null, hasTotalTokens ? totalTokens : null);
+            hasPromptTokens ? promptTokens : null, hasCompletionTokens ? completionTokens : null, hasTotalTokens ? totalTokens : null,
+            hasCost ? new InferenceCostEvidence(costCurrency!, costMicrounits, isEstimated: true, pricingRevision) : null);
         await RecordAsync(failureEvidence, cancellationToken).ConfigureAwait(false);
         return InferenceExecutionResult.Failed(lastFailure ?? new ExecutionFailure(ExecutionFailureKind.Provider, ExecutionFailureCode.ProviderError, "Baize inference did not produce a result."), failureEvidence);
     }
@@ -339,8 +428,9 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
         return new LlmClientMetadata(endpoint.Provider, endpoint.Model, EndpointId: endpoint.EndpointId);
     }
 
-    private static bool ShouldRetry(ExecutionFailureCode code, BaizeInferencePolicy policy, int attempt) =>
-        policy.RetryRepresentationFailures && attempt < policy.MaximumAttempts && code is
+    private static bool ShouldRetry(ExecutionFailureCode code, BaizeInferencePolicy policy, int attempt, long costMicrounits) =>
+        policy.RetryRepresentationFailures && attempt < policy.MaximumAttempts &&
+        (policy.MaximumCostMicrounits is null || costMicrounits < policy.MaximumCostMicrounits) && code is
             ExecutionFailureCode.MalformedOutput or
             ExecutionFailureCode.RepairedOutputSchemaInvalid or
             ExecutionFailureCode.SchemaMismatch or
@@ -472,14 +562,17 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
         long started,
         int? promptTokens,
         int? completionTokens,
-        int? totalTokens)
+        int? totalTokens,
+        InferenceCostEvidence? cost)
     {
         return new InferenceExecutionEvidence(request.Profile, request.PromptTemplate, attempts,
             promptTokens, completionTokens, totalTokens,
             wasRepaired, Math.Min(InferenceExecutionEvidence.MaximumAttempts, repairAttempts),
             BoundOptionalText(repairStrategy, InferenceExecutionEvidence.MaximumDiagnosticUtf8Bytes),
             binding.Policy.PolicyRevision, binding.Policy.RoutingPolicyRevision,
-            (long)(Stopwatch.GetElapsedTime(started).TotalMilliseconds));
+            (long)(Stopwatch.GetElapsedTime(started).TotalMilliseconds),
+            InferenceModality.StructuredText,
+            cost);
     }
 
     private static string BoundMessage(string? message)
@@ -493,10 +586,30 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
         LlmClientMetadata metadata,
         BaizeEndpointBinding endpoint,
         string code,
-        string message) =>
-        new(attempt, metadata.Provider, metadata.Model, endpoint.EndpointId, false,
-            BoundText(code, InferenceExecutionEvidence.MaximumDiagnosticUtf8Bytes),
-            BoundText(message, InferenceExecutionEvidence.MaximumDiagnosticUtf8Bytes));
+        string message,
+        LlmUsage? usage = null,
+        TimeSpan? duration = null,
+        InferenceCostEvidence? cost = null) =>
+        Attempt(attempt, metadata, endpoint, false, code, message, usage, duration, cost);
+
+    private static InferenceAttemptEvidence Attempt(
+        int attempt,
+        LlmClientMetadata metadata,
+        BaizeEndpointBinding endpoint,
+        bool succeeded,
+        string? code,
+        string? message,
+        LlmUsage? usage,
+        TimeSpan? duration,
+        InferenceCostEvidence? cost) =>
+        new(attempt, metadata.Provider, metadata.Model, endpoint.EndpointId, succeeded,
+            BoundOptionalText(code, InferenceExecutionEvidence.MaximumDiagnosticUtf8Bytes),
+            BoundOptionalText(message, InferenceExecutionEvidence.MaximumDiagnosticUtf8Bytes),
+            NonNegative(usage?.PromptTokens), NonNegative(usage?.CompletionTokens), NonNegative(usage?.TotalTokens),
+            duration is null ? null : (long)duration.Value.TotalMilliseconds,
+            cost);
+
+    private static int? NonNegative(int? value) => value is >= 0 ? value : null;
 
     private static bool IsBoundIdentity(string? value) =>
         !string.IsNullOrWhiteSpace(value) &&
@@ -507,6 +620,27 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
         if (value is null or < 0) return;
         present = true;
         total = value.Value > int.MaxValue - total ? int.MaxValue : total + value.Value;
+    }
+
+    private static void AddCost(
+        InferenceCostEvidence? cost,
+        ref long totalMicrounits,
+        ref string? currencyCode,
+        ref string? pricingRevision,
+        ref bool present)
+    {
+        if (cost is null) return;
+        if (currencyCode is not null && !string.Equals(currencyCode, cost.CurrencyCode, StringComparison.Ordinal))
+            throw new InvalidOperationException("Baize binding produced mixed-currency cost evidence.");
+        currencyCode = cost.CurrencyCode;
+        if (pricingRevision is not null && cost.PricingRevision is not null &&
+            !string.Equals(pricingRevision, cost.PricingRevision, StringComparison.Ordinal))
+            throw new InvalidOperationException("Baize binding produced mixed pricing revisions.");
+        pricingRevision ??= cost.PricingRevision;
+        present = true;
+        totalMicrounits = cost.AmountMicrounits > long.MaxValue - totalMicrounits
+            ? long.MaxValue
+            : totalMicrounits + cost.AmountMicrounits;
     }
 
     private static string BoundText(string? value, int maximumUtf8Bytes)

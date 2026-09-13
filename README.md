@@ -126,7 +126,12 @@ bindings to Baize endpoints without leaking application profile names into the
 provider layer. Recorded tests distinguish malformed, repaired-but-invalid,
 schema-mismatched, truncated, tool-mapping, policy, and provider failures;
 only explicitly classified fallback or representation-retry cases may cause
-another model call.
+another model call. Evidence records modality, attempt-level and aggregate
+usage, duration, host-priced cost, and pricing revision. Descriptor-bound image,
+video, and audio generation requires crash-safe idempotent submission, polls a
+pinned provider operation, and returns host-verified artifact publication
+receipts. Exact routing composes structured-text and media inference in one
+workflow executor.
 
 IR v4 also contains the first programmatic keyed fan-out contract. It validates
 all stable item keys before child work, persists one durable item outcome per

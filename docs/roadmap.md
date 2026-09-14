@@ -800,6 +800,31 @@ Delivery F and for any subsequent compatibility-bearing preview.
 Exit: another application can author and execute the minimal vertical without
 referencing Guyabano or internal test infrastructure.
 
+### Delivery milestone H — Evidence-informed planning inputs
+
+Implement this only after the first consumer pilot and Hongxian's bounded
+recall/mechanical-retrospective contracts are stable. Fuwen remains a compiler
+and immutable plan-revision authority; a host or planning agent supplies the
+evidence used to author a proposal.
+
+- [ ] Define bounded, opaque planning-context references for relevant prior
+  runs, mutation patterns, recovery outcomes, model-usage guidance, and
+  promoted procedural knowledge without importing Hongxian, Cangjie, Marang,
+  or Baize storage/client types into the plan IR.
+- [ ] Preserve stable task/activity classification and structural identity so
+  executions can be compared across plan revisions and later runs.
+- [ ] Bind every proposal to the exact context snapshot, retrieval-policy
+  version, model-catalog snapshot, and planner identity that influenced it.
+- [ ] Keep historical reputation advisory. Capability, authorization, budget,
+  objective compatibility, admission, and activation remain explicit gates.
+- [ ] Add fixtures proving the same admitted plan executes deterministically
+  regardless of how it was proposed, and that changing planning evidence
+  creates a new immutable proposal/revision rather than mutating a plan.
+
+Fuwen does not query live memory during deterministic compilation, calculate
+model reputation, promote long-term knowledge, or silently rewrite workflows
+from historical patterns.
+
 ## Explicitly deferred from the first preview
 
 - General loops and correction syntax; initial retry/escalation is bounded

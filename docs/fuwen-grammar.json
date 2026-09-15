@@ -17,7 +17,9 @@
     "workflow": "workflow identifier ('@' string)? ('version'|'revision')? '(' (identifier ':' type)? ')' (('->'|'returns'|'output') ':'? type)? ('routing' ':' string)? '{' node* '}'",
     "field": "identifier ':' type (','|';')",
     "enumMember": "identifier ('=' string)? (','|';')",
-    "node": "contextNode | activityNode | inferenceNode | conditional | return",
+    "node": "contextNode | activityNode | inferenceNode | conditional | fanout | return",
+    "fanout": "'fanout' identifier 'over' binding 'as' identifier ':' type 'key' binding 'max' number ('concurrency' number)? '{' fanoutBody* '}' 'yield' binding ('->'|':') type",
+    "fanoutBody": "activityNode | conditional",
     "contextNode": "context identifier ('=' context)? descriptor arguments ('->'|':')? type? ';'?",
     "activityNode": "activity identifier ('=' activity)? descriptor arguments ('->'|':')? type? ';'?",
     "inferenceNode": "infer identifier ('=' infer)? descriptor ('using'|',') descriptor arguments? ('with'|'context') identifier (',' identifier)* ('->'|':')? type? ';'?",
@@ -32,6 +34,7 @@
   "semanticRules": [
     "Descriptor pins are exact kind, name, version, and sha256 descriptor/v1 digest identities.",
     "Conditional branches are control-only; branch-local return values cannot escape the branch.",
+    "A fan-out body contains only activity and conditional nodes; it sees the workflow input, the current item, and earlier body outputs, but no outer node. Keys are item projections validated before child work; results aggregate in source order.",
     "A workflow has one complete return and no cross-region output references.",
     "The trusted catalogue, not source text, is authoritative for schemas and callable contracts.",
     "All parser dimensions are bounded by CompilationBudget; diagnostic codes are stable API values."

@@ -156,7 +156,7 @@ public static class FuwenLexer
         private string ReadIdentifier()
         {
             var start = index;
-            while (index < source.Length && (char.IsLetterOrDigit(source[index]) || source[index] is '_' or '$' or '-')) Advance(source[index]);
+            while (index < source.Length && (char.IsLetterOrDigit(source[index]) || source[index] is '_' or '$' || (source[index] == '-' && Peek(1) != '>'))) Advance(source[index]);
             return source[start..index];
         }
         private string ReadNumber()
@@ -410,6 +410,10 @@ public sealed class FuwenSourceCompiler
                 Then = ReplaceNodes(conditional.Then, inferredPaths, contracts),
                 Else = ReplaceNodes(conditional.Else, inferredPaths, contracts),
             },
+            FanOutNode fanOut => fanOut with
+            {
+                Body = ReplaceNodes(fanOut.Body, inferredPaths, contracts),
+            },
             _ => node,
         }).ToArray();
 
@@ -421,6 +425,11 @@ public sealed class FuwenSourceCompiler
             if (node is ConditionalNode conditional)
             {
                 foreach (var child in EnumerateNodes(conditional.Then.Concat(conditional.Else)))
+                    yield return child;
+            }
+            else if (node is FanOutNode fanOut)
+            {
+                foreach (var child in EnumerateNodes(fanOut.Body))
                     yield return child;
             }
         }
@@ -493,6 +502,8 @@ internal sealed class SourceParser
     private int bindingDepth;
     private int conditionalOrdinal;
     private bool workflowSeen;
+    private bool fanOutSeen;
+    private string? fanOutItemName;
     private string workflowName = string.Empty;
     private string revision = "1";
     private string routing = "default";
@@ -541,7 +552,7 @@ internal sealed class SourceParser
                 foreach (var capability in capabilities) builder.RequireCapability(capability);
                 foreach (var node in nodes) builder.AddNode(node);
                 builder.SetExecutionOrder(new WorkflowExecutionOrder(BuildRegions(workflowName, nodes)));
-                plan = builder.BuildV3();
+                plan = fanOutSeen ? builder.BuildV4() : builder.BuildV3();
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
             {
@@ -648,7 +659,7 @@ internal sealed class SourceParser
                 else if (currentNodeCount == budget.MaxWorkflowNodes)
                     Error(CompilerDiagnosticCodes.BudgetWorkflowNodesExceeded, "Workflow node count exceeds the configured limit.", Current);
             }
-            else Recover("context", "activity", "infer", "if", "return", "}");
+            else Recover("context", "activity", "infer", "if", "fanout", "return", "}");
         }
         if (!closed)
             Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected '}'.", Current);
@@ -664,6 +675,7 @@ internal sealed class SourceParser
             "activity" => ParseCallable(parentPath, DescriptorKind.Activity, start),
             "infer" => ParseInference(parentPath, start),
             "if" => ParseConditional(parentPath, start),
+            "fanout" => ParseFanOut(parentPath, start),
             "return" => ParseReturn(parentPath, start, allowReturn),
             _ => Unsupported(keyword, start),
         };
@@ -733,6 +745,99 @@ internal sealed class SourceParser
         if (Match("else")) { Expect("{"); ParseNodes(elseNodes, path + "/$else", false); }
         else Error(CompilerDiagnosticCodes.ParseExpectedToken, "Conditional requires an else branch.", Current);
         AddSpan(path, start, Previous); Ast(); return new ConditionalNode(name, path, condition, thenNodes, elseNodes);
+    }
+
+    private WorkflowNode? ParseFanOut(string parentPath, FuwenToken start)
+    {
+        // Header shape:
+        //   fanout <name> over <source> as <item> : <type> key <key>
+        //   max <items> [concurrency <n>] { <body> } yield <yield> -> <result>
+        // The yield clause follows the body because it references body outputs,
+        // which do not exist until the body is parsed.
+        var name = ReadIdentifier("fan-out name");
+        if (!Match("over")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'over' before the fan-out source.", Current);
+        var source = ParseBinding();
+        if (!Match("as")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'as' before the fan-out item binding.", Current);
+        var itemName = ReadIdentifier("fan-out item name");
+        if (itemName == "input")
+            Error(CompilerDiagnosticCodes.BindingReferenceInvalid, "A fan-out item must not be named 'input'.", Previous);
+        FuwenType itemType = new PrimitiveType(FuwenPrimitiveKind.Json);
+        if (Match(":")) itemType = ParseType();
+        else Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected ':' and an item type after the fan-out item name.", Current);
+        if (!Match("key")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'key' before the fan-out key binding.", Current);
+
+        // The key and body resolve the current item; outer node names stay
+        // hidden so cross-region references fail fast at parse time instead
+        // of surfacing later as structured-region boundary violations.
+        var savedTypes = new Dictionary<string, FuwenType>(nodeTypes, StringComparer.Ordinal);
+        var savedPaths = new Dictionary<string, string>(nodePaths, StringComparer.Ordinal);
+        var savedItem = fanOutItemName;
+        nodeTypes.Clear();
+        nodePaths.Clear();
+        fanOutItemName = itemName;
+        var key = ParseBinding();
+
+        var maxItems = 100_000;
+        if (Match("max")) maxItems = ReadBound("fan-out maximum");
+        else Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'max' and a positive item bound.", Current);
+        var maxConcurrency = maxItems;
+        if (Match("concurrency")) maxConcurrency = ReadBound("fan-out concurrency bound");
+
+        var path = parentPath + "/" + name;
+        var bodyPath = path + "/$body";
+        Expect("{");
+        var body = new List<WorkflowNode>();
+        ParseFanOutBody(body, bodyPath, itemName);
+        if (!Match("yield")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'yield' after the fan-out body.", Current);
+        var yield = ParseBinding();
+        FuwenType resultType = new PrimitiveType(FuwenPrimitiveKind.Json);
+        if (Match("->") || Match(":")) resultType = ParseType();
+        else Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected '->' and a list result type after the fan-out yield.", Current);
+        Match(";");
+
+        nodeTypes.Clear(); foreach (var pair in savedTypes) nodeTypes[pair.Key] = pair.Value;
+        nodePaths.Clear(); foreach (var pair in savedPaths) nodePaths[pair.Key] = pair.Value;
+        fanOutItemName = savedItem;
+        var node = new FanOutNode(name, path, source, new FanOutItemBinding(itemName, itemType), key, body, yield, resultType, maxItems, maxConcurrency);
+        nodeTypes[name] = resultType; nodePaths[name] = path;
+        fanOutSeen = true;
+        AddSpan(path, start, Previous); Ast(); return node;
+    }
+
+    private void ParseFanOutBody(List<WorkflowNode> destination, string bodyPath, string itemName)
+    {
+        var closed = false;
+        while (!AtEnd)
+        {
+            if (Match("}")) { closed = true; break; }
+            cancellationToken.ThrowIfCancellationRequested();
+            WorkflowNode? node = null;
+            if (Current.Kind == FuwenTokenKind.Identifier && Current.Text is "activity" or "if" or "return")
+            {
+                node = ParseNode(bodyPath, allowReturn: false);
+                if (node is not null && string.Equals(node.Name, itemName, StringComparison.Ordinal))
+                    Error(CompilerDiagnosticCodes.BindingReferenceInvalid, $"A fan-out body node must not shadow the current item '{itemName}'.", Previous);
+            }
+            else
+            {
+                Error(CompilerDiagnosticCodes.FanOutBodyUnsupported,
+                    "A fan-out body supports only activity and conditional nodes; context, inference, nested fan-out, and returns are not supported in this preview.",
+                    Current);
+                Recover("activity", "if", "return", "}");
+                continue;
+            }
+            if (node is not null)
+            {
+                var currentNodeCount = CountNodes(nodes) + CountNodes(destination);
+                if (currentNodeCount < budget.MaxWorkflowNodes)
+                    destination.Add(node);
+                else if (currentNodeCount == budget.MaxWorkflowNodes)
+                    Error(CompilerDiagnosticCodes.BudgetWorkflowNodesExceeded, "Workflow node count exceeds the configured limit.", Current);
+            }
+            else Recover("activity", "if", "return", "}");
+        }
+        if (!closed)
+            Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected '}'.", Current);
     }
 
     private WorkflowNode? ParseReturn(string parentPath, FuwenToken start, bool allowReturn)
@@ -836,6 +941,8 @@ internal sealed class SourceParser
         var name = ReadIdentifier("binding expression"); var projection = new List<string>();
         while (Match(".")) projection.Add(ReadIdentifier("projection field"));
         if (name == "input") return new InputBinding(projection);
+        if (fanOutItemName is not null && string.Equals(name, fanOutItemName, StringComparison.Ordinal))
+            return new FanOutItemValueBinding(projection);
         if (!nodeTypes.ContainsKey(name))
             Error(CompilerDiagnosticCodes.BindingReferenceInvalid, "Binding references an unknown name.", Previous, name);
         return new NodeOutputBinding(nodePaths.TryGetValue(name, out var path) ? path : name, projection);
@@ -966,12 +1073,24 @@ internal sealed class SourceParser
             AddRegion(path + "/" + conditional.Name + "/$then", conditional.Then, result);
             AddRegion(path + "/" + conditional.Name + "/$else", conditional.Else, result);
         }
+        foreach (var fanOut in values.OfType<FanOutNode>())
+        {
+            AddRegion(path + "/" + fanOut.Name + "/$body", fanOut.Body, result);
+        }
     }
-    private static int CountNodes(IEnumerable<WorkflowNode> values) => values.Sum(item => 1 + (item is ConditionalNode conditional ? CountNodes(conditional.Then) + CountNodes(conditional.Else) : 0));
-    private int ParsePositiveInt()
+    private static int CountNodes(IEnumerable<WorkflowNode> values) => values.Sum(item => 1 + (item is ConditionalNode conditional ? CountNodes(conditional.Then) + CountNodes(conditional.Else) : item is FanOutNode fanOut ? CountNodes(fanOut.Body) : 0));
+    private int ParsePositiveInt() => ReadBound("positive integer");
+    private int ReadBound(string what)
     {
-        var text = ReadText("positive integer");
-        return int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var value) && value > 0 ? value : 100_000;
+        if (Current.Kind == FuwenTokenKind.Number &&
+            int.TryParse(Current.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var value) && value > 0)
+        {
+            Next();
+            return value;
+        }
+        Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected a positive integer " + what + ".", Current);
+        if (!AtEnd) Next();
+        return 100_000;
     }
     private string ReadIdentifier(string expected)
     {

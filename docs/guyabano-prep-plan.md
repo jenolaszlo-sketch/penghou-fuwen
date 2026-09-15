@@ -69,7 +69,7 @@ packages (`release-checklist.md:16,28`).
 Exit: clean restore of Guyabano from NuGet.org alone; no sibling checkout
 required.
 
-## Stage 1 — Fan-out DSL surface (Milestone 8, grammar only) — **next**
+## Stage 1 — Fan-out DSL surface (Milestone 8, grammar only) — **in progress (grammar + parser done 2026-09-15)**
 
 Unlocks: decomposition wave (`decomposition/{ver}/{parent}`) and generation
 wave (`generation/{parent}/{leaf}`) as authored source.
@@ -90,28 +90,32 @@ Zhinu `preview.12` `FanOutAsync` derives positional index keys
 (`docs/keyed-fanout.md:20`). So this stage adds no execution semantics —
 only text.
 
-- [ ] Grammar (`docs/fuwen-grammar.json`): add a `fanout` production, e.g.
-  `fanout identifier over binding key binding yield binding` with optional
-  `[maxItems]` / concurrency bound and a `$body` region of
-  `activity`/`conditional` nodes (matching what the adapter executes today,
-  `FuwenZhinuSequentialInterpreter.cs:515-517`).
-- [ ] Lexer/parser (`FuwenSource.cs:SourceParser`): parse the production into
-  `FanOutNode` with structural paths under `{workflow}/{name}` and body
-  region `{path}/$body`; enforce the same closed-region rules the
-  programmatic compiler enforces (no references into/out of the body except
-  through item and earlier body outputs).
-- [ ] Compiler (`WorkflowCompiler.cs`): reuse the existing fan-out
-  validation path (key uniqueness, bounds, item/result types) for
-  parser-built nodes; add stable `FWN-*` diagnostics for duplicate/null
-  keys, oversized sources, and body-boundary violations.
-- [ ] Formatter: canonical idempotent rendering of the new production;
-  golden shape test.
-- [ ] Tests: malformed fan-out, duplicate-key rejection before child work
-  (mirroring `FuwenZhinuFanOutTests.Keyed_fan_out_rejects_duplicate_keys…`),
-  source-order aggregation, one Baize-JSON-list-to-fan-out durable test
-  through the new syntax.
-- [ ] Docs: `fuwen-authoring.md` + grammar JSON + a Guyabano decomposition
-  example (component context → inference → per-parent fan-out → aggregation).
+- [x] Grammar (`docs/fuwen-grammar.json`): `fanout` production
+  `fanout identifier over binding as identifier : type key binding max number
+  [concurrency number] { fanoutBody* } yield binding -> type` with
+  `fanoutBody = activity | conditional` and semantic rule for closed body /
+  source-order aggregation. Authoring doc updated.
+- [x] Lexer/parser (`FuwenSource.cs:SourceParser`): `ParseFanOut` +
+  `ParseFanOutBody` with `fanOutSeen` -> `BuildV4()`, `fanOutItemName`
+  for `FanOutItemValueBinding`, `ReadIdentifier` fix for `->` without space
+  (`upper->` lexed as `upper` + `->`), `AddRegion`/`CountNodes` for
+  `$body`, closed-region enforcement (no outer refs, no item shadowing,
+  `FWN-CONTROL-002` for unsupported body nodes).
+- [x] Compiler (`WorkflowCompiler.cs`): parser-built nodes reuse the existing
+  fan-out validation path (key is `FanOutItemValueBinding`, bounds,
+  item/result types, body boundary); no new IR needed.
+- [x] Formatter: `FuwenFormatter` already handles `{`/`}`/`;`/`->` with
+  `NeedsSpace`; verified idempotent via `Fanout_formatter_is_idempotent`.
+- [x] Tests: `FuwenSourceFanOutTests.cs` — `Fanout_over_string_list…`
+  compiles to v4, `Fanout_body_rejects_context…`, `Fanout_key_must_be_item…`,
+  `Fanout_formatter_is_idempotent`, `Fanout_body_item_shadowing…`; all
+  `138` compiler tests pass (was `133`). Remaining: one Baize-JSON-list-
+  to-fan-out durable test through the new syntax (mirroring
+  `FuwenZhinuFanOutTests.Baize_json_list…`) plus source-order aggregation
+  check via DSL.
+- [x] Docs: `fuwen-authoring.md` (`fanout` added) + `fuwen-grammar.json`
+- [ ] Guyabano example: component context → inference → per-parent fan-out
+  → aggregation in `.fuwen` (pilot wave rewrite).
 
 Explicitly out of scope: dynamic ready-set scheduling. Guyabano computes
 ready parents/leaves at runtime; Fuwen fan-out consumes a bounded list

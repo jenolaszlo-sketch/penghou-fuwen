@@ -14,7 +14,7 @@
   <ItemGroup>
     <PackageReference Include="Penghou.Baize" Version="0.3.0-preview.5" />
     <PackageReference Include="Penghou.Baize.Tools" Version="0.3.0-preview.5" />
-    <PackageReference Include="Penghou.Nuwa" Version="0.6.2" />
+    <PackageReference Include="Penghou.Nuwa" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>

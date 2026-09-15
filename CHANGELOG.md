@@ -6,6 +6,14 @@ releases may still revise source syntax and public contracts; immutable plans
 remain governed by their explicit IR, canonicalization, and fingerprint
 contract versions.
 
+## 0.1.0-preview.2
+
+- Upgrade `Penghou.Fuwen.Baize` from `Penghou.Nuwa 0.6.2` to `1.0.0` (verified
+  compatible: `IJsonRepairPipeline` / `JsonRepairPipeline.Create` unchanged).
+- Add `Microsoft.SourceLink.GitHub 10.0.401` to packable projects for
+  deterministic source linking and to resolve the `Microsoft.Build.Tasks.Git
+  8.0.0` vulnerability.
+
 ## 0.1.0-preview.1
 
 - Introduce provider-neutral immutable workflow plans, canonical JSON,

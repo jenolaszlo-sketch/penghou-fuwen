@@ -249,6 +249,7 @@ Penghou.Fuwen.Compiler.WorkflowPlanBuilder.Build() -> Penghou.Fuwen.WorkflowPlan
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.BuildV3() -> Penghou.Fuwen.WorkflowPlan!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.BuildV4() -> Penghou.Fuwen.WorkflowPlan!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.BuildV5() -> Penghou.Fuwen.WorkflowPlan!
+Penghou.Fuwen.Compiler.WorkflowPlanBuilder.BuildV6() -> Penghou.Fuwen.WorkflowPlan!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.RequireCapability(Penghou.Fuwen.CapabilityRequirement! capability) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.SetExecutionOrder(Penghou.Fuwen.WorkflowExecutionOrder! order) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
 Penghou.Fuwen.Compiler.WorkflowCompiler

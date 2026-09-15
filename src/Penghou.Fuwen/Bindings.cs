@@ -11,6 +11,8 @@ namespace Penghou.Fuwen;
 [JsonDerivedType(typeof(ListBinding), "list")]
 [JsonDerivedType(typeof(ObjectBinding), "object")]
 [JsonDerivedType(typeof(FanOutItemValueBinding), "fan-out-item")]
+[JsonDerivedType(typeof(LoopStateBinding), "loop-state")]
+[JsonDerivedType(typeof(LoopIterationBinding), "loop-iteration")]
 public abstract record Binding;
 
 /// <summary>A workflow input with an optional field projection.</summary>

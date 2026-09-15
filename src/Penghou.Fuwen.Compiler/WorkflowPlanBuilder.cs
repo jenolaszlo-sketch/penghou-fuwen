@@ -98,6 +98,10 @@ public sealed class WorkflowPlanBuilder
     public WorkflowPlan BuildV5()
         => BuildVersioned(FuwenContracts.IrVersionV5, FuwenContracts.CompilerSemanticVersionV5, FuwenContracts.ExecutionFingerprintVersionV5);
 
+    /// <summary>Builds a pre-release v6 plan containing bounded repeat regions.</summary>
+    public WorkflowPlan BuildV6()
+        => BuildVersioned(FuwenContracts.IrVersionV6, FuwenContracts.CompilerSemanticVersionV6, FuwenContracts.ExecutionFingerprintVersionV6);
+
     private WorkflowPlan BuildVersioned(string irVersion, string compilerSemanticVersion, string fingerprintVersion)
     {
         var plan = new WorkflowPlan(
@@ -181,6 +185,11 @@ public sealed class WorkflowPlanBuilder
                     CollectType(fanOut.Item.Type, bindings);
                     CollectType(fanOut.ResultType, bindings);
                     CollectNodes(fanOut.Body, bindings);
+                    break;
+                case RepeatNode repeat:
+                    CollectBindingDescriptors(repeat.InitialState, bindings);
+                    CollectType(repeat.StateType, bindings);
+                    CollectNodes(repeat.Body, bindings);
                     break;
             }
         }

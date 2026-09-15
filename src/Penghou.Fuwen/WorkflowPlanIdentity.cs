@@ -10,6 +10,7 @@ public static class WorkflowPlanIdentity
     private const string ExecutionFingerprintPrefixV3 = "sha256:fuwen-execution/v3:";
     private const string ExecutionFingerprintPrefixV4 = "sha256:fuwen-execution/v4:";
     private const string ExecutionFingerprintPrefixV5 = "sha256:fuwen-execution/v5:";
+    private const string ExecutionFingerprintPrefixV6 = "sha256:fuwen-execution/v6:";
 
     /// <summary>Produces canonical resolved IR bytes after normalizing unordered collections.</summary>
     public static byte[] GetCanonicalBytes(WorkflowPlan plan)
@@ -53,7 +54,8 @@ public static class WorkflowPlanIdentity
             !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV2, StringComparison.Ordinal) &&
             !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV3, StringComparison.Ordinal) &&
             !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV4, StringComparison.Ordinal) &&
-            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV5, StringComparison.Ordinal))
+            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV5, StringComparison.Ordinal) &&
+            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV6, StringComparison.Ordinal))
             throw new NotSupportedException($"Unsupported fingerprint version '{fingerprintVersion}'.");
         var hash = SHA256.HashData(canonicalBytes);
         return $"sha256:{fingerprintVersion}:{Convert.ToHexString(hash).ToLowerInvariant()}";
@@ -73,12 +75,14 @@ public static class WorkflowPlanIdentity
                         ? ExecutionFingerprintPrefixV4
                         : executionFingerprint.StartsWith(ExecutionFingerprintPrefixV5, StringComparison.Ordinal)
                             ? ExecutionFingerprintPrefixV5
+                            : executionFingerprint.StartsWith(ExecutionFingerprintPrefixV6, StringComparison.Ordinal)
+                                ? ExecutionFingerprintPrefixV6
                 : string.Empty;
         if (prefix.Length == 0 || executionFingerprint.Length != prefix.Length + 64)
-            throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1, v2, v3, v4, or v5 lowercase hexadecimal form.", nameof(executionFingerprint));
+            throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1, v2, v3, v4, v5, or v6 lowercase hexadecimal form.", nameof(executionFingerprint));
         foreach (var character in executionFingerprint.AsSpan(prefix.Length))
             if (character is not (>= '0' and <= '9') and not (>= 'a' and <= 'f'))
-                throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1, v2, v3, v4, or v5 lowercase hexadecimal form.", nameof(executionFingerprint));
+                throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1, v2, v3, v4, v5, or v6 lowercase hexadecimal form.", nameof(executionFingerprint));
     }
 
     private static WorkflowPlan Normalize(WorkflowPlan plan) => plan with
@@ -160,6 +164,10 @@ public static class WorkflowPlanIdentity
         FanOutNode fanOut => fanOut with
         {
             Body = NormalizeNodes(fanOut.Body),
+        },
+        RepeatNode repeat => repeat with
+        {
+            Body = NormalizeNodes(repeat.Body),
         },
         _ => throw new NotSupportedException($"Unsupported workflow node type '{node.GetType().Name}'."),
     };

@@ -43,7 +43,8 @@ public static class WorkflowPlanValidator
         if (string.Equals(plan.IrVersion, FuwenContracts.IrVersionV2, StringComparison.Ordinal) ||
             string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) ||
             string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) ||
-            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal))
+            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) ||
+            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal))
             ValidateExecutionOrder(plan, nodes);
     }
 
@@ -59,9 +60,10 @@ public static class WorkflowPlanValidator
         var isV3 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal);
         var isV4 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal);
         var isV5 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal);
-        if (!isV1 && !isV2 && !isV3 && !isV4 && !isV5)
+        var isV6 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal);
+        if (!isV1 && !isV2 && !isV3 && !isV4 && !isV5 && !isV6)
             throw new NotSupportedException(
-                $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'. Expected '{FuwenContracts.IrVersionV1}', '{FuwenContracts.IrVersionV2}', '{FuwenContracts.IrVersionV3}', '{FuwenContracts.IrVersionV4}', or '{FuwenContracts.IrVersionV5}'.");
+                $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'. Expected '{FuwenContracts.IrVersionV1}', '{FuwenContracts.IrVersionV2}', '{FuwenContracts.IrVersionV3}', '{FuwenContracts.IrVersionV4}', '{FuwenContracts.IrVersionV5}', or '{FuwenContracts.IrVersionV6}'.");
 
         RequireVersion(plan.CanonicalJsonVersion, FuwenContracts.CanonicalJsonVersion, nameof(plan.CanonicalJsonVersion));
         var expectedFingerprint = isV1
@@ -109,6 +111,11 @@ public static class WorkflowPlanValidator
             else if (node is FanOutNode fanOut)
             {
                 foreach (var child in FlattenNodes(fanOut.Body))
+                    yield return child;
+            }
+            else if (node is RepeatNode repeat)
+            {
+                foreach (var child in FlattenNodes(repeat.Body))
                     yield return child;
             }
         }
@@ -174,6 +181,17 @@ public static class WorkflowPlanValidator
                         $"{fanOut.StructuralPath}/$body",
                         fanOut.Body,
                         $"{fanOut.StructuralPath}/$body",
+                        paths,
+                        locations);
+                    break;
+                case RepeatNode repeat:
+                    if (repeat.MaxIterations <= 0)
+                        throw new ArgumentOutOfRangeException(nameof(repeat.MaxIterations), "Repeat maximum iterations must be positive.");
+                    ValidateType(repeat.StateType);
+                    ValidateNodes(
+                        $"{repeat.StructuralPath}/$body",
+                        repeat.Body,
+                        $"{repeat.StructuralPath}/$body",
                         paths,
                         locations);
                     break;

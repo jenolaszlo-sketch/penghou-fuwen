@@ -17,6 +17,8 @@ public static class FuwenContracts
     public const string IrVersionV4 = "fuwen-ir/v4";
     /// <summary>The value-producing conditional executable-plan contract.</summary>
     public const string IrVersionV5 = "fuwen-ir/v5";
+    /// <summary>The bounded repeat executable-plan contract.</summary>
+    public const string IrVersionV6 = "fuwen-ir/v6";
     /// <summary>The historical v1 compiler-semantics contract.</summary>
     public const string CompilerSemanticVersion = "compiler-semantics/1";
     /// <summary>The historical v1 compiler-semantics contract.</summary>
@@ -29,6 +31,8 @@ public static class FuwenContracts
     public const string CompilerSemanticVersionV4 = "compiler-semantics/4";
     /// <summary>The compiler-semantics contract for value-producing conditionals.</summary>
     public const string CompilerSemanticVersionV5 = "compiler-semantics/5";
+    /// <summary>The compiler-semantics contract for bounded repeat.</summary>
+    public const string CompilerSemanticVersionV6 = "compiler-semantics/6";
     /// <summary>The canonical JSON contract used by all currently supported IR versions.</summary>
     public const string CanonicalJsonVersion = "penghou-canonical-json/v1";
     /// <summary>The historical v1 execution fingerprint envelope.</summary>
@@ -43,6 +47,8 @@ public static class FuwenContracts
     public const string ExecutionFingerprintVersionV4 = "fuwen-execution/v4";
     /// <summary>The execution fingerprint envelope for value-producing conditionals.</summary>
     public const string ExecutionFingerprintVersionV5 = "fuwen-execution/v5";
+    /// <summary>The execution fingerprint envelope for bounded repeat.</summary>
+    public const string ExecutionFingerprintVersionV6 = "fuwen-execution/v6";
     /// <summary>The first canonical authored-source fingerprint envelope.</summary>
     public const string SourceFingerprintVersion = "fuwen-source/v1";
     /// <summary>The maximum persisted canonical IR size accepted by the core verifier.</summary>
@@ -57,6 +63,7 @@ public static class FuwenContracts
 [JsonDerivedType(typeof(ConditionalNode), "conditional")]
 [JsonDerivedType(typeof(ReturnNode), "return")]
 [JsonDerivedType(typeof(FanOutNode), "fan-out")]
+[JsonDerivedType(typeof(RepeatNode), "repeat")]
 public abstract record WorkflowNode(string Name, string StructuralPath);
 
 /// <summary>Resolves an immutable context snapshot.</summary>
@@ -120,6 +127,12 @@ public sealed record FanOutItemBinding(string Name, FuwenType Type);
 /// <summary>References the current item while compiling a fan-out body.</summary>
 public sealed record FanOutItemValueBinding(IReadOnlyList<string> Projection) : Binding;
 
+/// <summary>References the current repeat state while compiling a repeat body.</summary>
+public sealed record LoopStateBinding(IReadOnlyList<string> Projection) : Binding;
+
+/// <summary>References the current repeat iteration number while compiling a repeat body.</summary>
+public sealed record LoopIterationBinding(IReadOnlyList<string> Projection) : Binding;
+
 /// <summary>
 /// A bounded keyed fan-out region. Its source is evaluated once, keys are
 /// validated before any body work starts, and yielded values are aggregated in
@@ -137,6 +150,15 @@ public sealed record FanOutNode(
     FuwenType ResultType,
     int MaximumItems,
     int MaximumConcurrency) : WorkflowNode(Name, StructuralPath);
+
+/// <summary>A bounded repeat region with explicit carried state. The loop value is its final state.</summary>
+public sealed record RepeatNode(
+    string Name,
+    string StructuralPath,
+    int MaxIterations,
+    FuwenType StateType,
+    Binding InitialState,
+    IReadOnlyList<WorkflowNode> Body) : WorkflowNode(Name, StructuralPath);
 
 /// <summary>The explicit completion schedule for an IR v2 workflow.</summary>
 public sealed record WorkflowExecutionOrder(

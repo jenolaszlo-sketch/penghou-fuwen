@@ -92,6 +92,9 @@ public static class WorkflowSourceMapValidator
                 if (node is FanOutNode fanOut)
                     foreach (var child in EnumerateNodes(fanOut.Body))
                         yield return child;
+                else if (node is RepeatNode repeat)
+                    foreach (var child in EnumerateNodes(repeat.Body))
+                        yield return child;
                 continue;
             }
             foreach (var child in EnumerateNodes(conditional.Then.Concat(conditional.Else)))

@@ -185,9 +185,14 @@ public static class WorkflowPlanValidator
                         locations);
                     break;
                 case RepeatNode repeat:
-                    if (repeat.MaxIterations <= 0)
-                        throw new ArgumentOutOfRangeException(nameof(repeat.MaxIterations), "Repeat maximum iterations must be positive.");
+                    if (repeat.MaxIterations <= 0 || repeat.MaxIterations > 1000)
+                        throw new ArgumentOutOfRangeException(nameof(repeat.MaxIterations), "Repeat maximum iterations must be between 1 and 1000.");
                     ValidateType(repeat.StateType);
+                    ValidateType(repeat.ResultType);
+                    if (!TypesEquivalent(repeat.StateType, repeat.ResultType))
+                        throw new ArgumentException("Repeat ResultType must equal StateType for v6 (single-state loop).", nameof(repeat.ResultType));
+                    if (repeat.BreakWhen is null)
+                        throw new ArgumentException("Repeat break condition is required.", nameof(repeat.BreakWhen));
                     ValidateNodes(
                         $"{repeat.StructuralPath}/$body",
                         repeat.Body,

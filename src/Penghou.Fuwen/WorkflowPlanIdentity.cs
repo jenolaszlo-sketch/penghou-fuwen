@@ -168,6 +168,8 @@ public static class WorkflowPlanIdentity
         RepeatNode repeat => repeat with
         {
             Body = NormalizeNodes(repeat.Body),
+            InitialState = NormalizeBinding(repeat.InitialState),
+            BreakWhen = NormalizeBinding(repeat.BreakWhen),
         },
         _ => throw new NotSupportedException($"Unsupported workflow node type '{node.GetType().Name}'."),
     };

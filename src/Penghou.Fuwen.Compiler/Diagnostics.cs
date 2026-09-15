@@ -38,6 +38,8 @@ public static class CompilerDiagnosticCodes
     public const string ParseUnsupportedConstruct = "FWN-PARSE-003";
     public const string ConditionalBranchValueUnsupported = "FWN-CONTROL-001";
     public const string FanOutBodyUnsupported = "FWN-CONTROL-002";
+    public const string RepeatBodyUnsupported = "FWN-CONTROL-003";
+    public const string LoopLimitExceeded = "FWN-CONTROL-004";
     public const string SourceDescriptorUnresolved = "FWN-BINDING-004";
     public const string DiagnosticsTruncated = "FWN-BUDGET-002";
     public const string InvalidBudget = "FWN-BUDGET-003";

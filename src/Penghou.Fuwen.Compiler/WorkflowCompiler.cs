@@ -541,6 +541,22 @@ internal static class WorkflowBindingValidator
         var diagnostics = new List<CompilerDiagnostic>();
         var locations = new Dictionary<string, NodeLocation>(StringComparer.Ordinal);
         CollectLocations(plan.Name, plan.Nodes, plan.Name, locations);
+        foreach (var repeat in locations.Values.Select(v => v.Node).OfType<RepeatNode>())
+        {
+            if (repeat.MaxIterations <= 0 || repeat.MaxIterations > 1000)
+                diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BudgetWorkflowNodesExceeded, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Repeat maximum iterations must be between 1 and 1000, not '{repeat.MaxIterations}'.", path: repeat.StructuralPath));
+            if (repeat.BreakWhen is not null)
+            {
+                var breakConsumer = new NodeLocation(repeat, repeat.StructuralPath + "/$body", null);
+                var breakType = ValidateBinding(repeat.BreakWhen, new PrimitiveType(FuwenPrimitiveKind.Boolean), breakConsumer, plan, locations, diagnostics, CompilerDiagnosticCodes.BindingTypeMismatch, exact: true);
+                if (breakType is not null && breakType is not PrimitiveType { Primitive: FuwenPrimitiveKind.Boolean })
+                    diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Repeat break condition must be a boolean.", path: repeat.StructuralPath));
+            }
+            var initConsumer = new NodeLocation(repeat, repeat.StructuralPath, null);
+            var initType = ValidateBinding(repeat.InitialState, repeat.StateType, initConsumer, plan, locations, diagnostics, CompilerDiagnosticCodes.BindingTypeMismatch, exact: true);
+            if (initType is not null && !EquivalentExact(initType, repeat.StateType))
+                diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Repeat initial state type must match the declared state type.", path: repeat.StructuralPath));
+        }
         foreach (var location in locations.Values)
         {
             switch (location.Node)

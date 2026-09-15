@@ -504,7 +504,10 @@ internal sealed class SourceParser
     private bool workflowSeen;
     private bool fanOutSeen;
     private bool conditionalMergeSeen;
+    private bool repeatSeen;
     private string? fanOutItemName;
+    private string? loopStateName;
+    private string? loopIterationName;
     private string workflowName = string.Empty;
     private string revision = "1";
     private string routing = "default";
@@ -553,7 +556,7 @@ internal sealed class SourceParser
                 foreach (var capability in capabilities) builder.RequireCapability(capability);
                 foreach (var node in nodes) builder.AddNode(node);
                 builder.SetExecutionOrder(new WorkflowExecutionOrder(BuildRegions(workflowName, nodes)));
-                plan = conditionalMergeSeen ? builder.BuildV5() : fanOutSeen ? builder.BuildV4() : builder.BuildV3();
+                plan = repeatSeen ? builder.BuildV6() : conditionalMergeSeen ? builder.BuildV5() : fanOutSeen ? builder.BuildV4() : builder.BuildV3();
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
             {
@@ -660,7 +663,7 @@ internal sealed class SourceParser
                 else if (currentNodeCount == budget.MaxWorkflowNodes)
                     Error(CompilerDiagnosticCodes.BudgetWorkflowNodesExceeded, "Workflow node count exceeds the configured limit.", Current);
             }
-            else Recover("context", "activity", "infer", "if", "fanout", "return", "}");
+            else Recover("context", "activity", "infer", "if", "fanout", "repeat", "return", "}");
         }
         if (!closed)
             Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected '}'.", Current);
@@ -677,6 +680,7 @@ internal sealed class SourceParser
             "infer" => ParseInference(parentPath, start),
             "if" => ParseConditional(parentPath, start),
             "fanout" => ParseFanOut(parentPath, start),
+            "repeat" => ParseRepeat(parentPath, start),
             "return" => ParseReturn(parentPath, start, allowReturn),
             _ => Unsupported(keyword, start),
         };
@@ -871,6 +875,79 @@ internal sealed class SourceParser
             Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected '}'.", Current);
     }
 
+    private WorkflowNode? ParseRepeat(string parentPath, FuwenToken start)
+    {
+        var name = ReadIdentifier("repeat name");
+        if (!Match("max")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'max' and a positive iteration bound.", Current);
+        var maxIterations = ReadBound("repeat maximum");
+        if (!Match("state")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'state' and a carried state declaration.", Current);
+        var stateName = ReadIdentifier("repeat state name");
+        if (!Match(":")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected ':' and a state type.", Current);
+        var stateType = ParseType();
+        if (!Match("=")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected '=' and an initial state binding.", Current);
+        var initialState = ParseBinding();
+        var path = parentPath + "/" + name;
+        var bodyPath = path + "/$body";
+        Expect("{");
+        var savedState = loopStateName; var savedIter = loopIterationName;
+        var savedTypes = new Dictionary<string, FuwenType>(nodeTypes, StringComparer.Ordinal);
+        var savedPaths = new Dictionary<string, string>(nodePaths, StringComparer.Ordinal);
+        nodeTypes.Clear(); nodePaths.Clear();
+        loopStateName = stateName; loopIterationName = stateName + "_iter";
+        var body = new List<WorkflowNode>();
+        ParseRepeatBody(body, bodyPath, stateName);
+        loopStateName = savedState; loopIterationName = savedIter;
+        nodeTypes.Clear(); foreach (var pair in savedTypes) nodeTypes[pair.Key] = pair.Value;
+        nodePaths.Clear(); foreach (var pair in savedPaths) nodePaths[pair.Key] = pair.Value;
+        if (!Match("break")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'break' and a boolean break condition.", Current);
+        var breakWhen = ParseBinding();
+        FuwenType resultType = stateType;
+        if (Match("->") || Match(":")) resultType = ParseType();
+        Match(";");
+        var node = new RepeatNode(name, path, maxIterations, stateType, initialState, body, breakWhen, resultType);
+        nodeTypes[name] = resultType; nodePaths[name] = path;
+        repeatSeen = true;
+        AddSpan(path, start, Previous); Ast(); return node;
+    }
+
+    private void ParseRepeatBody(List<WorkflowNode> destination, string bodyPath, string stateName)
+    {
+        var closed = false;
+        while (!AtEnd)
+        {
+            if (Match("}")) { closed = true; break; }
+            cancellationToken.ThrowIfCancellationRequested();
+            WorkflowNode? node = null;
+            if (Current.Kind == FuwenTokenKind.Identifier && Current.Text is "activity" or "if" or "fanout" or "repeat" or "return")
+            {
+                // Returns are allowed inside repeat to model early break via typed value;
+                // the repeat's BreakWhen decides the loop exit, not a bare return.
+                node = ParseNode(bodyPath, allowReturn: false);
+                if (node is not null && (string.Equals(node.Name, stateName, StringComparison.Ordinal) || string.Equals(node.Name, stateName + "_iter", StringComparison.Ordinal)))
+                    Error(CompilerDiagnosticCodes.BindingReferenceInvalid, $"A repeat body node must not shadow the loop state '{stateName}'.", Previous);
+            }
+            else
+            {
+                Error(CompilerDiagnosticCodes.RepeatBodyUnsupported,
+                    "A repeat body supports only activity, conditional, fan-out, nested repeat, and return nodes; context and inference are not supported in this preview.",
+                    Current);
+                Recover("activity", "if", "fanout", "repeat", "return", "}");
+                continue;
+            }
+            if (node is not null)
+            {
+                var currentNodeCount = CountNodes(nodes) + CountNodes(destination);
+                if (currentNodeCount < budget.MaxWorkflowNodes)
+                    destination.Add(node);
+                else if (currentNodeCount == budget.MaxWorkflowNodes)
+                    Error(CompilerDiagnosticCodes.BudgetWorkflowNodesExceeded, "Workflow node count exceeds the configured limit.", Current);
+            }
+            else Recover("activity", "if", "fanout", "repeat", "return", "}");
+        }
+        if (!closed)
+            Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected '}'.", Current);
+    }
+
     private WorkflowNode? ParseReturn(string parentPath, FuwenToken start, bool allowReturn)
     {
         if (!allowReturn)
@@ -974,6 +1051,10 @@ internal sealed class SourceParser
         if (name == "input") return new InputBinding(projection);
         if (fanOutItemName is not null && string.Equals(name, fanOutItemName, StringComparison.Ordinal))
             return new FanOutItemValueBinding(projection);
+        if (loopStateName is not null && string.Equals(name, loopStateName, StringComparison.Ordinal))
+            return new LoopStateBinding(projection);
+        if (loopIterationName is not null && string.Equals(name, loopIterationName, StringComparison.Ordinal))
+            return new LoopIterationBinding(projection);
         if (!nodeTypes.ContainsKey(name))
             Error(CompilerDiagnosticCodes.BindingReferenceInvalid, "Binding references an unknown name.", Previous, name);
         return new NodeOutputBinding(nodePaths.TryGetValue(name, out var path) ? path : name, projection);

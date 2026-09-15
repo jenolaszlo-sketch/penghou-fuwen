@@ -18,13 +18,17 @@ Penghou.Fuwen.LoopIterationBinding.LoopIterationBinding(System.Collections.Gener
 Penghou.Fuwen.LoopIterationBinding.Projection.get -> System.Collections.Generic.IReadOnlyList<string!>!
 Penghou.Fuwen.LoopIterationBinding.Projection.init -> void
 Penghou.Fuwen.RepeatNode
-Penghou.Fuwen.RepeatNode.RepeatNode(string! Name, string! StructuralPath, int MaxIterations, Penghou.Fuwen.FuwenType! StateType, Penghou.Fuwen.Binding! InitialState, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Body) -> void
+Penghou.Fuwen.RepeatNode.RepeatNode(string! Name, string! StructuralPath, int MaxIterations, Penghou.Fuwen.FuwenType! StateType, Penghou.Fuwen.Binding! InitialState, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Body, Penghou.Fuwen.Binding! BreakWhen, Penghou.Fuwen.FuwenType! ResultType) -> void
 Penghou.Fuwen.RepeatNode.Body.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>!
 Penghou.Fuwen.RepeatNode.Body.init -> void
+Penghou.Fuwen.RepeatNode.BreakWhen.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.RepeatNode.BreakWhen.init -> void
 Penghou.Fuwen.RepeatNode.InitialState.get -> Penghou.Fuwen.Binding!
 Penghou.Fuwen.RepeatNode.InitialState.init -> void
 Penghou.Fuwen.RepeatNode.MaxIterations.get -> int
 Penghou.Fuwen.RepeatNode.MaxIterations.init -> void
+Penghou.Fuwen.RepeatNode.ResultType.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.RepeatNode.ResultType.init -> void
 Penghou.Fuwen.RepeatNode.StateType.get -> Penghou.Fuwen.FuwenType!
 Penghou.Fuwen.RepeatNode.StateType.init -> void
 Penghou.Fuwen.FanOutNode

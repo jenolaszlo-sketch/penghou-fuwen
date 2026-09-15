@@ -188,7 +188,9 @@ public sealed class WorkflowPlanBuilder
                     break;
                 case RepeatNode repeat:
                     CollectBindingDescriptors(repeat.InitialState, bindings);
+                    CollectBindingDescriptors(repeat.BreakWhen, bindings);
                     CollectType(repeat.StateType, bindings);
+                    CollectType(repeat.ResultType, bindings);
                     CollectNodes(repeat.Body, bindings);
                     break;
             }

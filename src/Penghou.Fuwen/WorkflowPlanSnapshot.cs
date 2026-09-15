@@ -235,7 +235,9 @@ internal static class WorkflowPlanSnapshot
                     value.MaxIterations,
                     CloneType(value.StateType, state),
                     CloneBinding(value.InitialState, state),
-                    SnapshotList(value.Body, "repeat body nodes", CloneNode, state)),
+                    SnapshotList(value.Body, "repeat body nodes", CloneNode, state),
+                    CloneBinding(value.BreakWhen, state),
+                    CloneType(value.ResultType, state)),
                 _ => throw new NotSupportedException($"Unsupported workflow node type '{node.GetType().Name}'."),
             };
         }

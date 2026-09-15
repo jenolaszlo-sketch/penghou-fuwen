@@ -262,10 +262,11 @@ public sealed class FuwenZhinuWorkflowFactory
         var admittedPlan = definition.ReadPlan();
         if (executionPorts is not null &&
             !string.Equals(admittedPlan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) &&
-            !string.Equals(admittedPlan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal))
+            !string.Equals(admittedPlan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) &&
+            !string.Equals(admittedPlan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal))
         {
             throw new FuwenZhinuAdmissionException(
-                $"The sequential Zhinu adapter supports '{FuwenContracts.IrVersionV3}' and '{FuwenContracts.IrVersionV4}', not '{admittedPlan.IrVersion}'.");
+                $"The sequential Zhinu adapter supports '{FuwenContracts.IrVersionV3}', '{FuwenContracts.IrVersionV4}', and '{FuwenContracts.IrVersionV5}', not '{admittedPlan.IrVersion}'.");
         }
         if (executionPorts is not null)
             ValidateExecutableSubset(admittedPlan.Nodes, insideFanOut: false);

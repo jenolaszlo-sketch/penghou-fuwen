@@ -1,4 +1,6 @@
 #nullable enable
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.ConditionalBranchValueUnsupported = "FWN-CONTROL-001" -> string!
+const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.FanOutBodyUnsupported = "FWN-CONTROL-002" -> string!
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.LexUnterminatedComment = "FWN-LEX-004" -> string!
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.LexInvalidUnicode = "FWN-LEX-005" -> string!
 Penghou.Fuwen.Compiler.FuwenTokenKind
@@ -246,6 +248,7 @@ Penghou.Fuwen.Compiler.WorkflowPlanBuilder.AddSchema(Penghou.Fuwen.ResolvedSchem
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.Build() -> Penghou.Fuwen.WorkflowPlan!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.BuildV3() -> Penghou.Fuwen.WorkflowPlan!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.BuildV4() -> Penghou.Fuwen.WorkflowPlan!
+Penghou.Fuwen.Compiler.WorkflowPlanBuilder.BuildV5() -> Penghou.Fuwen.WorkflowPlan!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.RequireCapability(Penghou.Fuwen.CapabilityRequirement! capability) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.SetExecutionOrder(Penghou.Fuwen.WorkflowExecutionOrder! order) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
 Penghou.Fuwen.Compiler.WorkflowCompiler

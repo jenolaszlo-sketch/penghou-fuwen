@@ -175,7 +175,8 @@ public sealed class WorkflowCompiler
         // is never silently upgraded or accepted by the current compiler.
         if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV2, StringComparison.Ordinal) &&
             !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) &&
-            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal))
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) &&
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal))
         {
             diagnostics.Add(Diagnostic(
                 CompilerDiagnosticCodes.SemanticValidationFailed,
@@ -550,7 +551,8 @@ internal static class WorkflowBindingValidator
                 case InferenceNode inference:
                     ValidateCallableNode(inference.Profile, DescriptorKind.InferenceProfile, inference.Arguments, inference.OutputType, location, plan, locations, descriptors, diagnostics);
                     if (string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) ||
-                        string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal))
+                        string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) ||
+                        string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal))
                     {
                         var contextNames = new HashSet<string>(StringComparer.Ordinal);
                         var contextSources = new HashSet<string>(StringComparer.Ordinal);
@@ -620,6 +622,21 @@ internal static class WorkflowBindingValidator
                     break;
                 case ConditionalNode conditional:
                     ValidateCondition(conditional.Condition, location, plan, locations, diagnostics);
+                    if (conditional.Merge is not null)
+                    {
+                        if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal))
+                            diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.SemanticValidationFailed, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Value-producing conditionals require IR v5, not '{plan.IrVersion}'.", path: conditional.StructuralPath));
+                        // Merge bindings are validated as if consumed inside their own
+                        // branch region, so the existing closed-region rule applies:
+                        // each side may only see its own branch (plus region-free
+                        // inputs, literals, and the current fan-out item).
+                        var thenConsumer = location with { Region = $"{conditional.StructuralPath}/$then" };
+                        var elseConsumer = location with { Region = $"{conditional.StructuralPath}/$else" };
+                        var thenType = ValidateBinding(conditional.Merge.ThenValue, conditional.Merge.ResultType, thenConsumer, plan, locations, diagnostics, CompilerDiagnosticCodes.BindingTypeMismatch, exact: true);
+                        var elseType = ValidateBinding(conditional.Merge.ElseValue, conditional.Merge.ResultType, elseConsumer, plan, locations, diagnostics, CompilerDiagnosticCodes.BindingTypeMismatch, exact: true);
+                        if (thenType is not null && elseType is not null && !EquivalentExact(thenType, elseType))
+                            diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Conditional merge then/else types must be exactly equal.", path: conditional.StructuralPath, expected: Describe(thenType), actual: Describe(elseType)));
+                    }
                     break;
                 case ReturnNode @return:
                     ValidateBinding(@return.Value, plan.OutputType, location, plan, locations, diagnostics);
@@ -866,6 +883,7 @@ internal static class WorkflowBindingValidator
                     InferenceNode inference => inference.OutputType,
                     ActivityNode activity => activity.OutputType,
                     FanOutNode fanOut => fanOut.ResultType,
+                    ConditionalNode cond => cond.Merge?.ResultType,
                     _ => null,
                 };
                 return CheckExpected(ResolveProjection(sourceType, output.Projection, plan.Schemas, diagnostics, consumer.Node.StructuralPath), expected, consumer, diagnostics, mismatchCode, exact);

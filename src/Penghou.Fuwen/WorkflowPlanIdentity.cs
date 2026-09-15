@@ -9,6 +9,7 @@ public static class WorkflowPlanIdentity
     private const string ExecutionFingerprintPrefixV2 = "sha256:fuwen-execution/v2:";
     private const string ExecutionFingerprintPrefixV3 = "sha256:fuwen-execution/v3:";
     private const string ExecutionFingerprintPrefixV4 = "sha256:fuwen-execution/v4:";
+    private const string ExecutionFingerprintPrefixV5 = "sha256:fuwen-execution/v5:";
 
     /// <summary>Produces canonical resolved IR bytes after normalizing unordered collections.</summary>
     public static byte[] GetCanonicalBytes(WorkflowPlan plan)
@@ -51,7 +52,8 @@ public static class WorkflowPlanIdentity
         if (!string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV1, StringComparison.Ordinal) &&
             !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV2, StringComparison.Ordinal) &&
             !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV3, StringComparison.Ordinal) &&
-            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV4, StringComparison.Ordinal))
+            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV4, StringComparison.Ordinal) &&
+            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV5, StringComparison.Ordinal))
             throw new NotSupportedException($"Unsupported fingerprint version '{fingerprintVersion}'.");
         var hash = SHA256.HashData(canonicalBytes);
         return $"sha256:{fingerprintVersion}:{Convert.ToHexString(hash).ToLowerInvariant()}";
@@ -69,12 +71,14 @@ public static class WorkflowPlanIdentity
                 ? ExecutionFingerprintPrefixV3
                     : executionFingerprint.StartsWith(ExecutionFingerprintPrefixV4, StringComparison.Ordinal)
                         ? ExecutionFingerprintPrefixV4
+                        : executionFingerprint.StartsWith(ExecutionFingerprintPrefixV5, StringComparison.Ordinal)
+                            ? ExecutionFingerprintPrefixV5
                 : string.Empty;
         if (prefix.Length == 0 || executionFingerprint.Length != prefix.Length + 64)
-            throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1, v2, v3, or v4 lowercase hexadecimal form.", nameof(executionFingerprint));
+            throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1, v2, v3, v4, or v5 lowercase hexadecimal form.", nameof(executionFingerprint));
         foreach (var character in executionFingerprint.AsSpan(prefix.Length))
             if (character is not (>= '0' and <= '9') and not (>= 'a' and <= 'f'))
-                throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1, v2, v3, or v4 lowercase hexadecimal form.", nameof(executionFingerprint));
+                throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1, v2, v3, v4, or v5 lowercase hexadecimal form.", nameof(executionFingerprint));
     }
 
     private static WorkflowPlan Normalize(WorkflowPlan plan) => plan with
@@ -145,6 +149,12 @@ public static class WorkflowPlanIdentity
         {
             Then = NormalizeNodes(conditional.Then),
             Else = NormalizeNodes(conditional.Else),
+            Merge = conditional.Merge is null
+                ? null
+                : new ConditionalMerge(
+                    NormalizeBinding(conditional.Merge.ThenValue),
+                    NormalizeBinding(conditional.Merge.ElseValue),
+                    NormalizeFuwenType(conditional.Merge.ResultType)),
         },
         ReturnNode @return => @return,
         FanOutNode fanOut => fanOut with
@@ -157,6 +167,27 @@ public static class WorkflowPlanIdentity
     private static ArgumentBinding[] NormalizeArguments(IEnumerable<ArgumentBinding> arguments) => arguments
         .OrderBy(argument => argument.Name, StringComparer.Ordinal)
         .ToArray();
+
+    private static Binding NormalizeBinding(Binding binding) => binding switch
+    {
+        InputBinding value => new InputBinding(value.Projection.ToArray()),
+        NodeOutputBinding value => new NodeOutputBinding(value.NodePath, value.Projection.ToArray()),
+        FanOutItemValueBinding value => new FanOutItemValueBinding(value.Projection.ToArray()),
+        LiteralBinding value => new LiteralBinding(value.Value.Clone()),
+        ListBinding value => new ListBinding(value.Items.Select(NormalizeBinding).ToArray()),
+        ObjectBinding value => new ObjectBinding(value.Properties.ToDictionary(pair => pair.Key, pair => NormalizeBinding(pair.Value), StringComparer.Ordinal)),
+        _ => binding,
+    };
+
+    private static FuwenType NormalizeFuwenType(FuwenType type) => type switch
+    {
+        PrimitiveType _ => type,
+        NamedTypeReference _ => type,
+        OptionalType value => new OptionalType(NormalizeFuwenType(value.ValueType)),
+        ListType value => new ListType(NormalizeFuwenType(value.ItemType), value.MaxItems),
+        ArtifactType _ => type,
+        _ => type,
+    };
 
     private static string DescriptorSortKey(DescriptorReference descriptor) =>
         $"{descriptor.Kind:D}|{descriptor.Name}|{descriptor.Version}|{descriptor.ContentDigest.Algorithm}|{descriptor.ContentDigest.Contract}|{descriptor.ContentDigest.Value}";

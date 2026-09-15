@@ -503,6 +503,7 @@ internal sealed class SourceParser
     private int conditionalOrdinal;
     private bool workflowSeen;
     private bool fanOutSeen;
+    private bool conditionalMergeSeen;
     private string? fanOutItemName;
     private string workflowName = string.Empty;
     private string revision = "1";
@@ -552,7 +553,7 @@ internal sealed class SourceParser
                 foreach (var capability in capabilities) builder.RequireCapability(capability);
                 foreach (var node in nodes) builder.AddNode(node);
                 builder.SetExecutionOrder(new WorkflowExecutionOrder(BuildRegions(workflowName, nodes)));
-                plan = fanOutSeen ? builder.BuildV4() : builder.BuildV3();
+                plan = conditionalMergeSeen ? builder.BuildV5() : fanOutSeen ? builder.BuildV4() : builder.BuildV3();
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
             {
@@ -744,7 +745,37 @@ internal sealed class SourceParser
         var elseNodes = new List<WorkflowNode>();
         if (Match("else")) { Expect("{"); ParseNodes(elseNodes, path + "/$else", false); }
         else Error(CompilerDiagnosticCodes.ParseExpectedToken, "Conditional requires an else branch.", Current);
-        AddSpan(path, start, Previous); Ast(); return new ConditionalNode(name, path, condition, thenNodes, elseNodes);
+
+        ConditionalMerge? merge = null;
+        if (Match("merge"))
+        {
+            var thenName = ReadIdentifier("merge then binding");
+            var thenProj = new List<string>();
+            while (Match(".")) thenProj.Add(ReadIdentifier("projection field"));
+            if (!Match(",")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected ',' between the conditional merge bindings.", Current);
+            var elseName = ReadIdentifier("merge else binding");
+            var elseProj = new List<string>();
+            while (Match(".")) elseProj.Add(ReadIdentifier("projection field"));
+            FuwenType resultType = new PrimitiveType(FuwenPrimitiveKind.Json);
+            if (Match("->") || Match(":")) resultType = ParseType();
+            else Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected '->' and a result type after the conditional merge.", Current);
+            Match(";");
+
+            var thenNode = thenNodes.FirstOrDefault(n => string.Equals(n.Name, thenName, StringComparison.Ordinal));
+            var elseNode = elseNodes.FirstOrDefault(n => string.Equals(n.Name, elseName, StringComparison.Ordinal));
+            var thenPath = thenNode?.StructuralPath ?? path + "/$then/" + thenName;
+            var elsePath = elseNode?.StructuralPath ?? path + "/$else/" + elseName;
+            var thenBinding = new NodeOutputBinding(thenPath, thenProj);
+            var elseBinding = new NodeOutputBinding(elsePath, elseProj);
+            merge = new ConditionalMerge(thenBinding, elseBinding, resultType);
+            conditionalMergeSeen = true;
+            // A merged conditional produces a value at its own path, so
+            // downstream nodes may reference it by name. Control-only
+            // conditionals stay unreferenceable.
+            nodeTypes[name] = resultType; nodePaths[name] = path;
+        }
+
+        AddSpan(path, start, Previous); Ast(); return new ConditionalNode(name, path, condition, thenNodes, elseNodes, merge);
     }
 
     private WorkflowNode? ParseFanOut(string parentPath, FuwenToken start)

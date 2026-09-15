@@ -25,9 +25,10 @@ internal static class FuwenZhinuSequentialInterpreter
         ArgumentNullException.ThrowIfNull(context);
         WorkflowPlanValidator.Validate(plan);
         if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) &&
-            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal))
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) &&
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal))
             throw new FuwenZhinuAdapterException(
-                $"The sequential adapter supports '{FuwenContracts.IrVersionV3}' and '{FuwenContracts.IrVersionV4}', not '{plan.IrVersion}'.");
+                $"The sequential adapter supports '{FuwenContracts.IrVersionV3}', '{FuwenContracts.IrVersionV4}', and '{FuwenContracts.IrVersionV5}', not '{plan.IrVersion}'.");
         WorkflowPlanIdentity.ValidateExecutionFingerprint(executionFingerprint);
         if (input.ValueKind == JsonValueKind.Undefined)
             throw new FuwenZhinuExecutionException("Workflow input is undefined JSON.");
@@ -99,6 +100,23 @@ internal static class FuwenZhinuSequentialInterpreter
                                 inheritedDependencies.Append(conditionalNode.StructuralPath).Distinct(StringComparer.Ordinal).ToArray()).ConfigureAwait(false);
                             if (branch.Returned)
                                 return branch;
+                            if (conditionalNode.Merge is not null)
+                            {
+                                var selectedBinding = condition ? conditionalNode.Merge.ThenValue : conditionalNode.Merge.ElseValue;
+                                var mergedValue = EvaluateBinding(selectedBinding, plan, state);
+                                EnsureType(mergedValue, conditionalNode.Merge.ResultType, plan.Schemas, $"conditional merge '{conditionalNode.StructuralPath}'");
+                                var mergePath = conditionalNode.StructuralPath + "/$merge";
+                                var requestJson = RuntimeValueWire.Serialize(new ConditionalMergeRequestIdentity(mergePath, mergedValue));
+                                var outputJson = await context.StepAsync<JsonElement, JsonElement>(
+                                    mergePath,
+                                    requestJson,
+                                    (_, _, _) => Task.FromResult(RuntimeValueWire.ToJson(mergedValue)),
+                                    stepOptions: StepOptionsFor(inheritedDependencies, []),
+                                    cancellationToken: cancellationToken).ConfigureAwait(false);
+                                var output = RuntimeValueWire.FromJson(outputJson, conditionalNode.Merge.ResultType, plan.Schemas);
+                                EnsureType(output, conditionalNode.Merge.ResultType, plan.Schemas, $"conditional merge '{conditionalNode.StructuralPath}' output");
+                                state.Outputs[conditionalNode.StructuralPath] = output;
+                            }
                             break;
                         }
                     case FanOutNode fanOutNode:
@@ -1137,6 +1155,8 @@ internal static class FuwenZhinuSequentialInterpreter
         RuntimeValue? Right);
 
     private sealed record ReturnRequestIdentity(string NodePath, RuntimeValue Value);
+
+    private sealed record ConditionalMergeRequestIdentity(string NodePath, RuntimeValue Value);
 
     private sealed record FanOutItemRequestIdentity(
         string FanOutPath,

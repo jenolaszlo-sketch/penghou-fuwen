@@ -46,6 +46,9 @@ const Penghou.Fuwen.FuwenContracts.IrVersionV1 = "fuwen-ir/v1" -> string!
 const Penghou.Fuwen.FuwenContracts.IrVersionV2 = "fuwen-ir/v2" -> string!
 const Penghou.Fuwen.FuwenContracts.IrVersionV3 = "fuwen-ir/v3" -> string!
 const Penghou.Fuwen.FuwenContracts.IrVersionV4 = "fuwen-ir/v4" -> string!
+const Penghou.Fuwen.FuwenContracts.IrVersionV5 = "fuwen-ir/v5" -> string!
+const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersionV5 = "compiler-semantics/5" -> string!
+const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersionV5 = "fuwen-execution/v5" -> string!
 const Penghou.Fuwen.FuwenContracts.MaximumCanonicalPlanBytes = 4194304 -> int
 const Penghou.Fuwen.FuwenContracts.SourceFingerprintVersion = "fuwen-source/v1" -> string!
 const Penghou.Fuwen.JsonRuntimeValue.MaximumJsonDepth = 128 -> int
@@ -117,12 +120,22 @@ Penghou.Fuwen.CapabilityRequirement.Name.get -> string!
 Penghou.Fuwen.CapabilityRequirement.Name.init -> void
 Penghou.Fuwen.CapabilityRequirement.ScopeClass.get -> string?
 Penghou.Fuwen.CapabilityRequirement.ScopeClass.init -> void
+Penghou.Fuwen.ConditionalMerge
+Penghou.Fuwen.ConditionalMerge.ConditionalMerge(Penghou.Fuwen.Binding! ThenValue, Penghou.Fuwen.Binding! ElseValue, Penghou.Fuwen.FuwenType! ResultType) -> void
+Penghou.Fuwen.ConditionalMerge.ThenValue.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.ConditionalMerge.ThenValue.init -> void
+Penghou.Fuwen.ConditionalMerge.ElseValue.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.ConditionalMerge.ElseValue.init -> void
+Penghou.Fuwen.ConditionalMerge.ResultType.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.ConditionalMerge.ResultType.init -> void
 Penghou.Fuwen.ConditionalNode
 Penghou.Fuwen.ConditionalNode.Condition.get -> Penghou.Fuwen.ConditionExpression!
 Penghou.Fuwen.ConditionalNode.Condition.init -> void
-Penghou.Fuwen.ConditionalNode.ConditionalNode(string! Name, string! StructuralPath, Penghou.Fuwen.ConditionExpression! Condition, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Then, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Else) -> void
+Penghou.Fuwen.ConditionalNode.ConditionalNode(string! Name, string! StructuralPath, Penghou.Fuwen.ConditionExpression! Condition, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Then, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Else, Penghou.Fuwen.ConditionalMerge? Merge = null) -> void
 Penghou.Fuwen.ConditionalNode.Else.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>!
 Penghou.Fuwen.ConditionalNode.Else.init -> void
+Penghou.Fuwen.ConditionalNode.Merge.get -> Penghou.Fuwen.ConditionalMerge?
+Penghou.Fuwen.ConditionalNode.Merge.init -> void
 Penghou.Fuwen.ConditionalNode.Then.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>!
 Penghou.Fuwen.ConditionalNode.Then.init -> void
 Penghou.Fuwen.ConditionExpression

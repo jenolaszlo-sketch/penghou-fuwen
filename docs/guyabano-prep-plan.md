@@ -128,40 +128,45 @@ Exit: the Guyabano pilot expresses one decomposition wave in `.fuwen`,
 compiles to IR v4, executes durably with sibling reuse on single-item
 restart, and the `.fuwen` formatter round-trips it.
 
-## Stage 2 — Value-producing conditionals (new IR v5) — **queued after Stage 1**
+## Stage 2 — Value-producing conditionals (new IR v5) — **done 2026-09-15**
 
 Unlocks: review accept/repair branching (`if(CanAccept) … else …` with a
 merged outcome), gap-review routing, build no-progress detection.
 
-Current `ConditionalNode` is control-only by design
-(`WorkflowPlan.cs:91-96`, `zhinu-adapter.md:57`); branch-local returns are
-rejected (`FWN-CONTROL-001`). The roadmap requires an explicit typed
-branch-result/merge contract before source exposes value conditionals
-(`roadmap.md:660,669`).
-
-- [ ] IR v5: extend `ConditionalNode` with an explicit merge declaration —
-  recommended shape: an optional `Merge` binding pair naming one value from
-  each branch plus a declared result type, with type-equality enforced at
-  compile time.Closed-region rules stay: branches may not leak undeclared
-  values; omitting `Merge` keeps today's control-only behavior byte-for-byte.
-- [ ] New version triple (`fuwen-ir/v5`, `compiler-semantics/5`,
-  `fuwen-execution/v5`); validator accepts v5 and keeps v1–v4 paths
-  untouched; golden vectors for v5 canonical bytes and fingerprints plus
-  v1–v4 isolation (same pattern as the v2/v3 isolation).
-- [ ] Parser/formatter: `if … { … } else { … } merge …` spelling (one
-  canonical spelling per Milestone 7); stable diagnostics for
-  branch-type mismatch and undeclared merge sources.
-- [ ] Adapter: evaluate the merge binding after the selected branch region
-  completes (`ExecuteRegionAsync` returns the branch result); persist it in
-  the conditional step envelope so replay does not re-execute branches.
-- [ ] Tests: merge type mismatch, missing merge source, replay after branch
-  completion, nested conditional merge.
+- [x] IR v5: `ConditionalNode` gains optional `ConditionalMerge(ThenValue,
+  ElseValue, ResultType)` (`WorkflowPlan.cs`); omitting `Merge` keeps
+  control-only behavior byte-for-byte. Core validator rejects `Merge` on
+  pre-v5 IR; merged conditionals are valid `NodeOutputBinding` sources
+  (validator + compiler `sourceType` switch).
+- [x] New version triple (`fuwen-ir/v5`, `compiler-semantics/5`,
+  `fuwen-execution/v5`); validator/fingerprint/identity accept v5, v1–v4
+  paths untouched; `WorkflowPlanBuilder.BuildV5()`; PublicAPI baselines.
+- [x] Parser: `if <name> <cond> { } else { } merge <then>, <else> ->
+  <type>;` resolves branch-local names to structural paths, registers the
+  conditional as a downstream-referenceable value, selects `BuildV5()`.
+  Grammar JSON + authoring doc updated. Token-based formatter round-trips it.
+- [x] Compiler: merge sides validated as branch-region consumers (existing
+  closed-region rule — each side sees only its own branch); exact
+  type-equality between sides and declared result; merge on non-v5 rejected.
+- [x] Adapter: selected side evaluated after the branch, type-checked, and
+  persisted as a durable `$merge` step (`ConditionalMergeRequestIdentity`)
+  with no branch-descendant dependencies, so replay reuses the merged value
+  without re-invoking providers at the merge step. Factory + interpreter
+  accept v5.
+- [x] Tests: `FuwenSourceConditionalMergeTests` (7: v5 shape, downstream
+  consumption, type mismatch, unknown branch node, cross-branch reference,
+  formatter idempotency, core-validator v5 gate) + durable
+  `FuwenZhinuConditionalMergeTests` (both branches + conditional restart
+  determinism). Suite: compiler `145`, Zhinu `32` per TFM, all green.
+- [ ] Golden vectors for v5 canonical bytes/fingerprints + v1–v4 isolation
+  (deferred to the preview packaging pass with the other version goldens).
+- [ ] Nested-conditional merge + Guyabano review-branch pilot wave (follow-up
+  with the decomposition example).
 
 Exit: review-decision branching (`accept` vs `repair-requests`) expressed
-in `.fuwen` with a typed merged value; pilot covers one such branch
-durably.
+in `.fuwen` with a typed merged value — met for the sequential case.
 
-## Stage 3 — Bounded loops (Milestone 10, new IR v6) — **queued**
+## Stage 3 — Bounded loops (Milestone 10, new IR v6) — **in progress (design spike next)**
 
 Unlocks: architecture review passes (max 5), decomposition-architecture
 integration budget (max 2), build/repair cycles (max 6), coherence

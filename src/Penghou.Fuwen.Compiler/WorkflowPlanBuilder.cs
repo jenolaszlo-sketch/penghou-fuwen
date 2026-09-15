@@ -94,6 +94,10 @@ public sealed class WorkflowPlanBuilder
     public WorkflowPlan BuildV4()
         => BuildVersioned(FuwenContracts.IrVersionV4, FuwenContracts.CompilerSemanticVersionV4, FuwenContracts.ExecutionFingerprintVersionV4);
 
+    /// <summary>Builds a pre-release v5 plan containing value-producing conditionals.</summary>
+    public WorkflowPlan BuildV5()
+        => BuildVersioned(FuwenContracts.IrVersionV5, FuwenContracts.CompilerSemanticVersionV5, FuwenContracts.ExecutionFingerprintVersionV5);
+
     private WorkflowPlan BuildVersioned(string irVersion, string compilerSemanticVersion, string fingerprintVersion)
     {
         var plan = new WorkflowPlan(
@@ -163,6 +167,12 @@ public sealed class WorkflowPlanBuilder
                 case ConditionalNode conditional:
                     CollectNodes(conditional.Then, bindings);
                     CollectNodes(conditional.Else, bindings);
+                    if (conditional.Merge is not null)
+                    {
+                        CollectBindingDescriptors(conditional.Merge.ThenValue, bindings);
+                        CollectBindingDescriptors(conditional.Merge.ElseValue, bindings);
+                        CollectType(conditional.Merge.ResultType, bindings);
+                    }
                     break;
                 case FanOutNode fanOut:
                     CollectBindingDescriptors(fanOut.Source, bindings);

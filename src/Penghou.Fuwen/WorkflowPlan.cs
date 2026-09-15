@@ -15,6 +15,8 @@ public static class FuwenContracts
     public const string IrVersionV3 = "fuwen-ir/v3";
     /// <summary>The keyed fan-out executable-plan contract.</summary>
     public const string IrVersionV4 = "fuwen-ir/v4";
+    /// <summary>The value-producing conditional executable-plan contract.</summary>
+    public const string IrVersionV5 = "fuwen-ir/v5";
     /// <summary>The historical v1 compiler-semantics contract.</summary>
     public const string CompilerSemanticVersion = "compiler-semantics/1";
     /// <summary>The historical v1 compiler-semantics contract.</summary>
@@ -25,6 +27,8 @@ public static class FuwenContracts
     public const string CompilerSemanticVersionV3 = "compiler-semantics/3";
     /// <summary>The compiler-semantics contract for keyed fan-out.</summary>
     public const string CompilerSemanticVersionV4 = "compiler-semantics/4";
+    /// <summary>The compiler-semantics contract for value-producing conditionals.</summary>
+    public const string CompilerSemanticVersionV5 = "compiler-semantics/5";
     /// <summary>The canonical JSON contract used by all currently supported IR versions.</summary>
     public const string CanonicalJsonVersion = "penghou-canonical-json/v1";
     /// <summary>The historical v1 execution fingerprint envelope.</summary>
@@ -37,6 +41,8 @@ public static class FuwenContracts
     public const string ExecutionFingerprintVersionV3 = "fuwen-execution/v3";
     /// <summary>The execution fingerprint envelope for keyed fan-out.</summary>
     public const string ExecutionFingerprintVersionV4 = "fuwen-execution/v4";
+    /// <summary>The execution fingerprint envelope for value-producing conditionals.</summary>
+    public const string ExecutionFingerprintVersionV5 = "fuwen-execution/v5";
     /// <summary>The first canonical authored-source fingerprint envelope.</summary>
     public const string SourceFingerprintVersion = "fuwen-source/v1";
     /// <summary>The maximum persisted canonical IR size accepted by the core verifier.</summary>
@@ -87,13 +93,20 @@ public sealed record ActivityNode(
     IReadOnlyList<ArgumentBinding> Arguments,
     FuwenType OutputType) : WorkflowNode(Name, StructuralPath);
 
+/// <summary>The explicit merge declaration for a value-producing conditional.</summary>
+public sealed record ConditionalMerge(
+    Binding ThenValue,
+    Binding ElseValue,
+    FuwenType ResultType);
+
 /// <summary>Selects one named lexical branch using a deterministic condition.</summary>
 public sealed record ConditionalNode(
     string Name,
     string StructuralPath,
     ConditionExpression Condition,
     IReadOnlyList<WorkflowNode> Then,
-    IReadOnlyList<WorkflowNode> Else) : WorkflowNode(Name, StructuralPath);
+    IReadOnlyList<WorkflowNode> Else,
+    ConditionalMerge? Merge = null) : WorkflowNode(Name, StructuralPath);
 
 /// <summary>Produces the typed workflow result.</summary>
 public sealed record ReturnNode(

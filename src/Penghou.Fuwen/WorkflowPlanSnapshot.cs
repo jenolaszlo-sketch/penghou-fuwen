@@ -215,7 +215,8 @@ internal static class WorkflowPlanSnapshot
                     value.StructuralPath,
                     CloneCondition(value.Condition, state),
                     SnapshotList(value.Then, "then branch nodes", CloneNode, state),
-                    SnapshotList(value.Else, "else branch nodes", CloneNode, state)),
+                    SnapshotList(value.Else, "else branch nodes", CloneNode, state),
+                    value.Merge is null ? null : new ConditionalMerge(CloneBinding(value.Merge.ThenValue, state), CloneBinding(value.Merge.ElseValue, state), CloneType(value.Merge.ResultType, state))),
                 ReturnNode value => new ReturnNode(value.Name, value.StructuralPath, CloneBinding(value.Value, state)),
                 FanOutNode value => new FanOutNode(
                     value.Name,

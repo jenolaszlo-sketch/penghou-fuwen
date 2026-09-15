@@ -29,11 +29,21 @@ public static class WorkflowPlanValidator
             plan.Name,
             new HashSet<string>(StringComparer.Ordinal),
             nodes);
+        foreach (var conditional in FlattenNodes(plan.Nodes).OfType<ConditionalNode>())
+        {
+            if (conditional.Merge is not null)
+            {
+                if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal))
+                    throw new ArgumentException($"Value-producing conditionals require IR v5, not '{plan.IrVersion}'.", nameof(plan.Nodes));
+                ValidateType(conditional.Merge.ResultType);
+            }
+        }
         ValidateCatalogueClosure(plan);
 
         if (string.Equals(plan.IrVersion, FuwenContracts.IrVersionV2, StringComparison.Ordinal) ||
             string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) ||
-            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal))
+            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) ||
+            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal))
             ValidateExecutionOrder(plan, nodes);
     }
 
@@ -48,36 +58,37 @@ public static class WorkflowPlanValidator
         var isV2 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV2, StringComparison.Ordinal);
         var isV3 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal);
         var isV4 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal);
-        if (!isV1 && !isV2 && !isV3 && !isV4)
+        var isV5 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal);
+        if (!isV1 && !isV2 && !isV3 && !isV4 && !isV5)
             throw new NotSupportedException(
-                $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'. Expected '{FuwenContracts.IrVersionV1}', '{FuwenContracts.IrVersionV2}', '{FuwenContracts.IrVersionV3}', or '{FuwenContracts.IrVersionV4}'.");
+                $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'. Expected '{FuwenContracts.IrVersionV1}', '{FuwenContracts.IrVersionV2}', '{FuwenContracts.IrVersionV3}', '{FuwenContracts.IrVersionV4}', or '{FuwenContracts.IrVersionV5}'.");
 
         RequireVersion(plan.CanonicalJsonVersion, FuwenContracts.CanonicalJsonVersion, nameof(plan.CanonicalJsonVersion));
         var expectedFingerprint = isV1
             ? FuwenContracts.ExecutionFingerprintVersionV1
-            : isV2 ? FuwenContracts.ExecutionFingerprintVersionV2 : isV3 ? FuwenContracts.ExecutionFingerprintVersionV3 : FuwenContracts.ExecutionFingerprintVersionV4;
+            : isV2 ? FuwenContracts.ExecutionFingerprintVersionV2 : isV3 ? FuwenContracts.ExecutionFingerprintVersionV3 : isV4 ? FuwenContracts.ExecutionFingerprintVersionV4 : FuwenContracts.ExecutionFingerprintVersionV5;
         RequireVersion(plan.FingerprintVersion, expectedFingerprint, nameof(plan.FingerprintVersion));
         var expectedCompilerSemantics = isV1
             ? FuwenContracts.CompilerSemanticVersionV1
-            : isV2 ? FuwenContracts.CompilerSemanticVersionV2 : isV3 ? FuwenContracts.CompilerSemanticVersionV3 : FuwenContracts.CompilerSemanticVersionV4;
+            : isV2 ? FuwenContracts.CompilerSemanticVersionV2 : isV3 ? FuwenContracts.CompilerSemanticVersionV3 : isV4 ? FuwenContracts.CompilerSemanticVersionV4 : FuwenContracts.CompilerSemanticVersionV5;
         RequireVersion(plan.CompilerSemanticVersion, expectedCompilerSemantics, nameof(plan.CompilerSemanticVersion));
         if (isV1 && plan.ExecutionOrder is not null)
             throw new ArgumentException(
                 "IR v1 does not contain an execution order; historical v1 plans are never silently upgraded.",
                 nameof(plan.ExecutionOrder));
-        if ((isV2 || isV3 || isV4) && plan.ExecutionOrder is null)
+        if ((isV2 || isV3 || isV4 || isV5) && plan.ExecutionOrder is null)
             throw new ArgumentException(
                 $"{plan.IrVersion} requires an explicit execution order.",
                 nameof(plan.ExecutionOrder));
-        if (!isV3 && !isV4 && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextRequirements is not null))
+        if (!isV3 && !isV4 && !isV5 && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextRequirements is not null))
             throw new ArgumentException(
                 "Typed context requirements are only supported by IR v3; historical v1/v2 plans are never silently upgraded.",
                 nameof(plan.Nodes));
-        if ((isV3 || isV4) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextSnapshots.Count != 0))
+        if ((isV3 || isV4 || isV5) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextSnapshots.Count != 0))
             throw new ArgumentException(
                 "IR v3 uses typed context requirements and does not accept legacy context snapshots.",
                 nameof(plan.Nodes));
-        if ((isV3 || isV4) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextRequirements is null))
+        if ((isV3 || isV4 || isV5) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextRequirements is null))
             throw new ArgumentException(
                 "IR v3 requires a non-null ContextRequirements collection on every inference node.",
                 nameof(plan.Nodes));
@@ -648,7 +659,7 @@ public static class WorkflowPlanValidator
             throw new ArgumentException(
                 $"Node output binding references unknown node path '{output.NodePath}'.",
                 nameof(output));
-        if (source.Node is ReturnNode or ConditionalNode)
+        if (source.Node is ReturnNode || (source.Node is ConditionalNode cond && cond.Merge is null))
             throw new ArgumentException(
                 $"Node '{output.NodePath}' cannot be used as an output source.",
                 nameof(output));
@@ -714,6 +725,7 @@ public static class WorkflowPlanValidator
         InferenceNode inference => inference.OutputType,
         ActivityNode activity => activity.OutputType,
         FanOutNode fanOut => fanOut.ResultType,
+        ConditionalNode cond => cond.Merge?.ResultType,
         _ => null,
     };
 

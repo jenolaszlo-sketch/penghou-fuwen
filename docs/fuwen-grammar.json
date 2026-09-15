@@ -23,7 +23,7 @@
     "contextNode": "context identifier ('=' context)? descriptor arguments ('->'|':')? type? ';'?",
     "activityNode": "activity identifier ('=' activity)? descriptor arguments ('->'|':')? type? ';'?",
     "inferenceNode": "infer identifier ('=' infer)? descriptor ('using'|',') descriptor arguments? ('with'|'context') identifier (',' identifier)* ('->'|':')? type? ';'?",
-    "conditional": "if identifier? condition '{' node* '}' 'else' '{' node* '}'",
+    "conditional": "if identifier? condition '{' node* '}' 'else' '{' node* '}' ('merge' identifier ('.' identifier)* ',' identifier ('.' identifier)* ('->'|':') type ';'?)?",
     "return": "return binding ';'?",
     "descriptor": "string | identifier ('@' (string|identifier))? ('#' (string|identifier))?",
     "type": "string | bool | boolean | int | integer | number | duration | json | identifier | list '<' type '>' ('[' number ']')? | artifact '<' descriptor '>'",
@@ -33,7 +33,7 @@
   },
   "semanticRules": [
     "Descriptor pins are exact kind, name, version, and sha256 descriptor/v1 digest identities.",
-    "Conditional branches are control-only; branch-local return values cannot escape the branch.",
+    "Conditional branches are control-only unless an explicit merge names one value from each branch with an exact shared result type; branch-local return values cannot escape the branch.",
     "A fan-out body contains only activity and conditional nodes; it sees the workflow input, the current item, and earlier body outputs, but no outer node. Keys are item projections validated before child work; results aggregate in source order.",
     "A workflow has one complete return and no cross-region output references.",
     "The trusted catalogue, not source text, is authoritative for schemas and callable contracts.",

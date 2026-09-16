@@ -314,6 +314,12 @@ internal sealed class WorkflowPlanPayloadBounds
                 case FanOutItemValueBinding item:
                     List(item.Projection, path => Text(path, "binding projection"));
                     break;
+                case LoopStateBinding loop:
+                    List(loop.Projection, path => Text(path, "binding projection"));
+                    break;
+                case LoopIterationBinding iter:
+                    List(iter.Projection, path => Text(path, "binding projection"));
+                    break;
                 case LiteralBinding literal:
                     Json(literal.Value);
                     break;

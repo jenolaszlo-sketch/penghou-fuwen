@@ -893,34 +893,21 @@ internal sealed class SourceParser
         var savedTypes = new Dictionary<string, FuwenType>(nodeTypes, StringComparer.Ordinal);
         var savedPaths = new Dictionary<string, string>(nodePaths, StringComparer.Ordinal);
         nodeTypes.Clear(); nodePaths.Clear();
-        loopStateName = stateName; loopIterationName = stateName + "_iter";
+        if (string.Equals(stateName, "iter", StringComparison.Ordinal) || string.Equals(stateName, "input", StringComparison.Ordinal))
+            Error(CompilerDiagnosticCodes.BindingReferenceInvalid, $"A repeat state must not be named '{stateName}'.", Previous);
+        loopStateName = stateName; loopIterationName = "iter";
         var body = new List<WorkflowNode>();
-        // Body nodes are parsed with loopStateName visible, but after the body
-        // we need to make the body's outputs visible for the continue/break
-        // bindings. The body's last nodes are the only ones that should be
-        // referenceable as the next state.
-        var bodyTypes = new Dictionary<string, FuwenType>(nodeTypes, StringComparer.Ordinal);
-        var bodyPaths = new Dictionary<string, string>(nodePaths, StringComparer.Ordinal);
-        foreach (var key in savedTypes.Keys) bodyTypes.Remove(key);
-        foreach (var key in savedPaths.Keys) bodyPaths.Remove(key);
-        loopStateName = savedState; loopIterationName = savedIter;
-        nodeTypes.Clear(); foreach (var pair in savedTypes) nodeTypes[pair.Key] = pair.Value;
-        nodePaths.Clear(); foreach (var pair in savedPaths) nodePaths[pair.Key] = pair.Value;
-        // Make body outputs visible for continue/break, plus keep loop state visible.
-        foreach (var pair in bodyTypes) nodeTypes[pair.Key] = pair.Value;
-        foreach (var pair in bodyPaths) nodePaths[pair.Key] = pair.Value;
-        // Also keep loop state visible for break condition (e.g., s == "ok")
-        nodeTypes[stateName] = stateType;
-        nodePaths[stateName] = path;
+        ParseRepeatBody(body, bodyPath, stateName);
+        // Continue/break are parsed with body outputs plus the loop state and
+        // iteration in scope; outer node names stay hidden so cross-region
+        // references fail fast at parse time.
         if (!Match("continue")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'continue' and the next state binding.", Current);
         var continueWith = ParseBinding();
         if (!Match("break")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'break' and a break condition.", Current);
         var breakWhen = ParseCondition();
-        // Clean up the temporary body visibility.
-        foreach (var key in bodyTypes.Keys) nodeTypes.Remove(key);
-        foreach (var key in bodyPaths.Keys) nodePaths.Remove(key);
-        nodeTypes.Remove(stateName);
-        nodePaths.Remove(stateName);
+        loopStateName = savedState; loopIterationName = savedIter;
+        nodeTypes.Clear(); foreach (var pair in savedTypes) nodeTypes[pair.Key] = pair.Value;
+        nodePaths.Clear(); foreach (var pair in savedPaths) nodePaths[pair.Key] = pair.Value;
         FuwenType resultType = stateType;
         if (Match("->") || Match(":")) resultType = ParseType();
         Match(";");
@@ -938,20 +925,18 @@ internal sealed class SourceParser
             if (Match("}")) { closed = true; break; }
             cancellationToken.ThrowIfCancellationRequested();
             WorkflowNode? node = null;
-            if (Current.Kind == FuwenTokenKind.Identifier && Current.Text is "activity" or "if" or "fanout" or "repeat" or "return")
+            if (Current.Kind == FuwenTokenKind.Identifier && Current.Text is "activity" or "if")
             {
-                // Returns are allowed inside repeat to model early break via typed value;
-                // the repeat's BreakWhen decides the loop exit, not a bare return.
                 node = ParseNode(bodyPath, allowReturn: false);
-                if (node is not null && (string.Equals(node.Name, stateName, StringComparison.Ordinal) || string.Equals(node.Name, stateName + "_iter", StringComparison.Ordinal)))
+                if (node is not null && (string.Equals(node.Name, stateName, StringComparison.Ordinal) || string.Equals(node.Name, "iter", StringComparison.Ordinal)))
                     Error(CompilerDiagnosticCodes.BindingReferenceInvalid, $"A repeat body node must not shadow the loop state '{stateName}'.", Previous);
             }
             else
             {
                 Error(CompilerDiagnosticCodes.RepeatBodyUnsupported,
-                    "A repeat body supports only activity, conditional, fan-out, nested repeat, and return nodes; context and inference are not supported in this preview.",
+                    "A repeat body supports only activity and conditional nodes; nested regions need iteration-scoped step keys.",
                     Current);
-                Recover("activity", "if", "fanout", "repeat", "return", "}");
+                Recover("activity", "if", "}");
                 continue;
             }
             if (node is not null)
@@ -962,7 +947,7 @@ internal sealed class SourceParser
                 else if (currentNodeCount == budget.MaxWorkflowNodes)
                     Error(CompilerDiagnosticCodes.BudgetWorkflowNodesExceeded, "Workflow node count exceeds the configured limit.", Current);
             }
-            else Recover("activity", "if", "fanout", "repeat", "return", "}");
+            else Recover("activity", "if", "}");
         }
         if (!closed)
             Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected '}'.", Current);
@@ -1209,8 +1194,12 @@ internal sealed class SourceParser
         {
             AddRegion(path + "/" + fanOut.Name + "/$body", fanOut.Body, result);
         }
+        foreach (var repeat in values.OfType<RepeatNode>())
+        {
+            AddRegion(path + "/" + repeat.Name + "/$body", repeat.Body, result);
+        }
     }
-    private static int CountNodes(IEnumerable<WorkflowNode> values) => values.Sum(item => 1 + (item is ConditionalNode conditional ? CountNodes(conditional.Then) + CountNodes(conditional.Else) : item is FanOutNode fanOut ? CountNodes(fanOut.Body) : 0));
+    private static int CountNodes(IEnumerable<WorkflowNode> values) => values.Sum(item => 1 + (item is ConditionalNode conditional ? CountNodes(conditional.Then) + CountNodes(conditional.Else) : item is FanOutNode fanOut ? CountNodes(fanOut.Body) : item is RepeatNode repeat ? CountNodes(repeat.Body) : 0));
     private int ParsePositiveInt() => ReadBound("positive integer");
     private int ReadBound(string what)
     {

@@ -166,34 +166,42 @@ merged outcome), gap-review routing, build no-progress detection.
 Exit: review-decision branching (`accept` vs `repair-requests`) expressed
 in `.fuwen` with a typed merged value — met for the sequential case.
 
-## Stage 3 — Bounded loops (Milestone 10, new IR v6) — **in progress (design spike next)**
+## Stage 3 — Bounded loops (Milestone 10, new IR v6) — **in progress (parser + validator done, adapter draft)**
 
 Unlocks: architecture review passes (max 5), decomposition-architecture
 integration budget (max 2), build/repair cycles (max 6), coherence
 re-review — all currently unrolled.
 
 Follow `roadmap.md:1063-1075` exactly: named `repeat` only, positive static
-maximum, declared loop state, complete `continue with`, type-compatible
-`break with`, explicit outer result, first-class region with structural
-body identity and closed scope, typed `LoopLimitExceeded` (never silent
-last-state return), loop bounds and carried-state contracts in canonical
-plan identity.
+maximum (`1..1000` in snapshot, single-state `StateType == ResultType` for
+v6), declared loop state (`LoopStateBinding`) + `iter` (`LoopIterationBinding`),
+`continue` next-state + `break` condition (`ConditionExpression` on `iter`
+or `state`), explicit outer result, first-class `$body` region with closed
+scope, typed `LoopLimitExceeded` (never silent last-state), loop bounds in
+canonical identity.
 
-- [ ] IR v6: `RepeatNode` (name, path, static max, state declaration,
-  body region, exit binding). New version triple; v1–v5 frozen.
-- [ ] Parser/formatter/grammar for `repeat ….with` spelling; budget all
-  parser dimensions under `CompilationBudget`.
-- [ ] Compiler: definite-assignment across iterations, state-type
-  compatibility of `continue`/`break`, max-attempts positivity, closed body
-  scope; stable diagnostics.
-- [ ] Adapter: iteration execution as durable per-iteration steps
-  (`RuntimeNodeIdentity` iteration paths already reserved per
-  `identity-and-fingerprints.md:12`); iteration restart invalidates the
-  selected/later iterations and dependents while preserving earlier valid
-  iterations (mirror of the fan-out restart contract).
-- [ ] Tests: limit-exceeded typed failure, state-type mismatch, crash
-  between iterations, selective iteration restart, artifact evidence per
-  iteration.
+- [x] IR v6: `RepeatNode` single-state shape (`MaxIterations`, `StateType`,
+  `InitialState`, `Body`, `ContinueWith`, `BreakWhen`, `ResultType`); v6
+  triple (`fuwen-ir/v6` etc.); v1–v5 frozen; comparer/source-maps cover it.
+- [x] Parser: `repeat <name> max <n> state <s>:<T> = <init> { <body> }
+  continue <binding> break <condition> -> <type>` with `LoopStateBinding`
+  + `LoopIterationBinding` only inside `$body`; closed body, `continue`/`break`
+  see body outputs; `repeatSeen -> BuildV6()`; budget all parser dimensions.
+- [x] Compiler: `InitialState` ↔ `StateType` exact, `ContinueWith` ↔
+  `StateType` exact in body scope, `BreakWhen` as `bool` condition in body
+  scope; `MaxIterations` 1..1000; single-state `ResultType == StateType`;
+  `LoopState`/`LoopIteration` bindings only inside repeat; v6 gate.
+- [x] Adapter (draft, in tree, builds): `LoopAsync(name, InitialState,
+  _ => true, body, max)` with per-iteration `$loop/<name>/<n>/body/...`
+  step keys, `GetLoopProgressAsync` for persisted count, `LoopLimitExceeded`
+  typed as `Contract/LoopLimitExceeded`.
+- [ ] Adapter: polish body dispatch (no double-execution of conditionals
+  inside repeat), iteration-scoped `NodeOutputBinding` resolution, and
+  `ContinueWith` next-state threading (currently last-body-output heuristic).
+- [ ] Tests: parser 6 (v6 shape, `s`/`iter` visibility, type mismatch,
+  shadowing, formatter), durable 2 (break-early + `GetLoopProgressAsync`
+  count, limit-exceeded typed failure); remaining: crash-between-iterations
+  and selective single-iteration restart proof.
 
 Exit: one Guyabano bounded cycle (build/repair, max 6) authored as
 `repeat` in `.fuwen`, executed durably with per-iteration evidence.

@@ -1344,6 +1344,10 @@ internal static class FuwenZhinuSequentialInterpreter
                 {
                     foreach (var child in Flatten(fanOut.Body)) yield return child;
                 }
+                else if (node is RepeatNode repeat)
+                {
+                    foreach (var child in Flatten(repeat.Body)) yield return child;
+                }
             }
         }
     }

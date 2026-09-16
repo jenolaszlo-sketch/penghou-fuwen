@@ -176,7 +176,8 @@ public sealed class WorkflowCompiler
         if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV2, StringComparison.Ordinal) &&
             !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) &&
             !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) &&
-            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal))
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) &&
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal))
         {
             diagnostics.Add(Diagnostic(
                 CompilerDiagnosticCodes.SemanticValidationFailed,
@@ -543,17 +544,23 @@ internal static class WorkflowBindingValidator
         CollectLocations(plan.Name, plan.Nodes, plan.Name, locations);
         foreach (var repeat in locations.Values.Select(v => v.Node).OfType<RepeatNode>())
         {
+            if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal))
+                diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.SemanticValidationFailed, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Bounded repeat requires IR v6, not '{plan.IrVersion}'.", path: repeat.StructuralPath));
             if (repeat.MaxIterations <= 0 || repeat.MaxIterations > 1000)
                 diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BudgetWorkflowNodesExceeded, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Repeat maximum iterations must be between 1 and 1000, not '{repeat.MaxIterations}'.", path: repeat.StructuralPath));
-            if (repeat.BreakWhen is not null)
-            {
-                var breakConsumer = new NodeLocation(repeat, repeat.StructuralPath + "/$body", null);
-                ValidateCondition(repeat.BreakWhen, breakConsumer, plan, locations, diagnostics);
-            }
+            if (!EquivalentExact(repeat.StateType, repeat.ResultType))
+                diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Repeat result type must equal the state type for v6 (single-state loop).", path: repeat.StructuralPath, expected: Describe(repeat.StateType), actual: Describe(repeat.ResultType)));
+            // Continue/break are evaluated after the body with body outputs and
+            // the loop state in scope, so validate them as body-region consumers.
+            var bodyConsumer = new NodeLocation(repeat, repeat.StructuralPath + "/$body", null, repeat.StateType);
             var initConsumer = new NodeLocation(repeat, repeat.StructuralPath, null);
             var initType = ValidateBinding(repeat.InitialState, repeat.StateType, initConsumer, plan, locations, diagnostics, CompilerDiagnosticCodes.BindingTypeMismatch, exact: true);
             if (initType is not null && !EquivalentExact(initType, repeat.StateType))
-                diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Repeat initial state type must match the declared state type.", path: repeat.StructuralPath));
+                diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Repeat initial state type must match the declared state type.", path: repeat.StructuralPath, expected: Describe(repeat.StateType), actual: Describe(initType)));
+            var continueType = ValidateBinding(repeat.ContinueWith, repeat.StateType, bodyConsumer, plan, locations, diagnostics, CompilerDiagnosticCodes.BindingTypeMismatch, exact: true);
+            if (continueType is not null && !EquivalentExact(continueType, repeat.StateType))
+                diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Repeat continue type must match the declared state type.", path: repeat.StructuralPath, expected: Describe(repeat.StateType), actual: Describe(continueType)));
+            ValidateCondition(repeat.BreakWhen, bodyConsumer, plan, locations, diagnostics);
         }
         foreach (var location in locations.Values)
         {
@@ -802,19 +809,24 @@ internal static class WorkflowBindingValidator
         IEnumerable<WorkflowNode> nodes,
         string region,
         IDictionary<string, NodeLocation> locations,
-        FuwenType? fanOutItemType = null)
+        FuwenType? fanOutItemType = null,
+        FuwenType? loopStateType = null)
     {
         foreach (var node in nodes)
         {
-            locations[node.StructuralPath] = new NodeLocation(node, region, fanOutItemType);
+            locations[node.StructuralPath] = new NodeLocation(node, region, fanOutItemType, loopStateType);
             if (node is ConditionalNode conditional)
             {
-                CollectLocations($"{conditional.StructuralPath}/$then", conditional.Then, $"{conditional.StructuralPath}/$then", locations, fanOutItemType);
-                CollectLocations($"{conditional.StructuralPath}/$else", conditional.Else, $"{conditional.StructuralPath}/$else", locations, fanOutItemType);
+                CollectLocations($"{conditional.StructuralPath}/$then", conditional.Then, $"{conditional.StructuralPath}/$then", locations, fanOutItemType, loopStateType);
+                CollectLocations($"{conditional.StructuralPath}/$else", conditional.Else, $"{conditional.StructuralPath}/$else", locations, fanOutItemType, loopStateType);
             }
             else if (node is FanOutNode fanOut)
             {
-                CollectLocations($"{fanOut.StructuralPath}/$body", fanOut.Body, $"{fanOut.StructuralPath}/$body", locations, fanOut.Item.Type);
+                CollectLocations($"{fanOut.StructuralPath}/$body", fanOut.Body, $"{fanOut.StructuralPath}/$body", locations, fanOut.Item.Type, loopStateType);
+            }
+            else if (node is RepeatNode repeat)
+            {
+                CollectLocations($"{repeat.StructuralPath}/$body", repeat.Body, $"{repeat.StructuralPath}/$body", locations, fanOutItemType, repeat.StateType);
             }
         }
     }
@@ -880,6 +892,28 @@ internal static class WorkflowBindingValidator
                     diagnostics,
                     mismatchCode,
                     exact);
+            case LoopStateBinding loop when consumer.LoopStateType is not null:
+                return CheckExpected(
+                    ResolveProjection(consumer.LoopStateType, loop.Projection, plan.Schemas, diagnostics, consumer.Node.StructuralPath),
+                    expected,
+                    consumer,
+                    diagnostics,
+                    mismatchCode,
+                    exact);
+            case LoopStateBinding:
+                diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingReferenceInvalid, DiagnosticSeverity.Error, DiagnosticPhase.Binding, "A loop state binding is only valid inside its repeat body.", path: consumer.Node.StructuralPath));
+                return null;
+            case LoopIterationBinding when consumer.LoopStateType is not null:
+                return CheckExpected(
+                    new PrimitiveType(FuwenPrimitiveKind.Integer),
+                    expected,
+                    consumer,
+                    diagnostics,
+                    mismatchCode,
+                    exact);
+            case LoopIterationBinding:
+                diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingReferenceInvalid, DiagnosticSeverity.Error, DiagnosticPhase.Binding, "A loop iteration binding is only valid inside its repeat body.", path: consumer.Node.StructuralPath));
+                return null;
             case NodeOutputBinding output:
                 if (!locations.TryGetValue(output.NodePath, out var source))
                 {
@@ -1076,7 +1110,7 @@ internal static class WorkflowBindingValidator
         _ => false,
     };
     private static string Describe(FuwenType type) => type.GetType().Name;
-    private sealed record NodeLocation(WorkflowNode Node, string Region, FuwenType? FanOutItemType = null);
+    private sealed record NodeLocation(WorkflowNode Node, string Region, FuwenType? FanOutItemType = null, FuwenType? LoopStateType = null);
 }
 
 internal static class PlanUsage

@@ -263,13 +263,14 @@ public sealed class FuwenZhinuWorkflowFactory
         if (executionPorts is not null &&
             !string.Equals(admittedPlan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) &&
             !string.Equals(admittedPlan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) &&
-            !string.Equals(admittedPlan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal))
+            !string.Equals(admittedPlan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) &&
+            !string.Equals(admittedPlan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal))
         {
             throw new FuwenZhinuAdmissionException(
-                $"The sequential Zhinu adapter supports '{FuwenContracts.IrVersionV3}', '{FuwenContracts.IrVersionV4}', and '{FuwenContracts.IrVersionV5}', not '{admittedPlan.IrVersion}'.");
+                $"The sequential Zhinu adapter supports '{FuwenContracts.IrVersionV3}'–'{FuwenContracts.IrVersionV6}', not '{admittedPlan.IrVersion}'.");
         }
         if (executionPorts is not null)
-            ValidateExecutableSubset(admittedPlan.Nodes, insideFanOut: false);
+            ValidateExecutableSubset(admittedPlan.Nodes, insideFanOut: false, insideRepeat: false);
 
         await definitionStore.StoreAsync(definition, cancellationToken).ConfigureAwait(false);
         var stored = await definitionStore.ReadAsync(receipt.ExecutionFingerprint, cancellationToken).ConfigureAwait(false);
@@ -283,7 +284,7 @@ public sealed class FuwenZhinuWorkflowFactory
         return new FuwenZhinuWorkflowRegistration(name, version, stored, executionPorts);
     }
 
-    private static void ValidateExecutableSubset(IEnumerable<WorkflowNode> nodes, bool insideFanOut)
+    private static void ValidateExecutableSubset(IEnumerable<WorkflowNode> nodes, bool insideFanOut, bool insideRepeat)
     {
         foreach (var node in nodes)
         {
@@ -292,6 +293,11 @@ public sealed class FuwenZhinuWorkflowFactory
                 throw new FuwenZhinuAdmissionException(
                     $"The sequential Zhinu adapter does not support '{node.GetType().Name}' inside fan-out body '{node.StructuralPath}'.");
             }
+            if (insideRepeat && node is not ActivityNode and not ConditionalNode)
+            {
+                throw new FuwenZhinuAdmissionException(
+                    $"The sequential Zhinu adapter does not support '{node.GetType().Name}' inside repeat body '{node.StructuralPath}'.");
+            }
 
             switch (node)
             {
@@ -299,8 +305,8 @@ public sealed class FuwenZhinuWorkflowFactory
                     if (conditional.Merge is not null && insideFanOut)
                         throw new FuwenZhinuAdmissionException(
                             $"The sequential Zhinu adapter does not support value-producing conditional '{conditional.StructuralPath}' inside fan-out.");
-                    ValidateExecutableSubset(conditional.Then, insideFanOut);
-                    ValidateExecutableSubset(conditional.Else, insideFanOut);
+                    ValidateExecutableSubset(conditional.Then, insideFanOut, insideRepeat);
+                    ValidateExecutableSubset(conditional.Else, insideFanOut, insideRepeat);
                     break;
                 case FanOutNode fanOut:
                     if (insideFanOut)
@@ -308,10 +314,25 @@ public sealed class FuwenZhinuWorkflowFactory
                         throw new FuwenZhinuAdmissionException(
                             $"The sequential Zhinu adapter does not support nested fan-out body '{fanOut.StructuralPath}'.");
                     }
-                    ValidateExecutableSubset(fanOut.Body, insideFanOut: true);
+                    if (insideRepeat)
+                    {
+                        throw new FuwenZhinuAdmissionException(
+                            $"The sequential Zhinu adapter does not support fan-out '{fanOut.StructuralPath}' inside repeat; nested regions need iteration-scoped step keys.");
+                    }
+                    ValidateExecutableSubset(fanOut.Body, insideFanOut: true, insideRepeat: false);
                     break;
                 case RepeatNode repeat:
-                    ValidateExecutableSubset(repeat.Body, insideFanOut: false);
+                    if (insideFanOut)
+                    {
+                        throw new FuwenZhinuAdmissionException(
+                            $"The sequential Zhinu adapter does not support repeat '{repeat.StructuralPath}' inside fan-out; nested regions need iteration-scoped step keys.");
+                    }
+                    if (insideRepeat)
+                    {
+                        throw new FuwenZhinuAdmissionException(
+                            $"The sequential Zhinu adapter does not support nested repeat '{repeat.StructuralPath}'; nested regions need iteration-scoped step keys.");
+                    }
+                    ValidateExecutableSubset(repeat.Body, insideFanOut: false, insideRepeat: true);
                     break;
             }
         }

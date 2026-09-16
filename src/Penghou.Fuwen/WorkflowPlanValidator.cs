@@ -68,11 +68,11 @@ public static class WorkflowPlanValidator
         RequireVersion(plan.CanonicalJsonVersion, FuwenContracts.CanonicalJsonVersion, nameof(plan.CanonicalJsonVersion));
         var expectedFingerprint = isV1
             ? FuwenContracts.ExecutionFingerprintVersionV1
-            : isV2 ? FuwenContracts.ExecutionFingerprintVersionV2 : isV3 ? FuwenContracts.ExecutionFingerprintVersionV3 : isV4 ? FuwenContracts.ExecutionFingerprintVersionV4 : FuwenContracts.ExecutionFingerprintVersionV5;
+            : isV2 ? FuwenContracts.ExecutionFingerprintVersionV2 : isV3 ? FuwenContracts.ExecutionFingerprintVersionV3 : isV4 ? FuwenContracts.ExecutionFingerprintVersionV4 : isV5 ? FuwenContracts.ExecutionFingerprintVersionV5 : FuwenContracts.ExecutionFingerprintVersionV6;
         RequireVersion(plan.FingerprintVersion, expectedFingerprint, nameof(plan.FingerprintVersion));
         var expectedCompilerSemantics = isV1
             ? FuwenContracts.CompilerSemanticVersionV1
-            : isV2 ? FuwenContracts.CompilerSemanticVersionV2 : isV3 ? FuwenContracts.CompilerSemanticVersionV3 : isV4 ? FuwenContracts.CompilerSemanticVersionV4 : FuwenContracts.CompilerSemanticVersionV5;
+            : isV2 ? FuwenContracts.CompilerSemanticVersionV2 : isV3 ? FuwenContracts.CompilerSemanticVersionV3 : isV4 ? FuwenContracts.CompilerSemanticVersionV4 : isV5 ? FuwenContracts.CompilerSemanticVersionV5 : FuwenContracts.CompilerSemanticVersionV6;
         RequireVersion(plan.CompilerSemanticVersion, expectedCompilerSemantics, nameof(plan.CompilerSemanticVersion));
         if (isV1 && plan.ExecutionOrder is not null)
             throw new ArgumentException(
@@ -367,6 +367,8 @@ public static class WorkflowPlanValidator
             {
                 if (node is FanOutNode fanOut)
                     CollectExpectedRegions($"{fanOut.StructuralPath}/$body", fanOut.Body, expected);
+                else if (node is RepeatNode repeat)
+                    CollectExpectedRegions($"{repeat.StructuralPath}/$body", repeat.Body, expected);
                 continue;
             }
 
@@ -539,6 +541,16 @@ public static class WorkflowPlanValidator
                 ValidateProjection(item.Projection);
                 if (!consumer.RegionPath.Contains("/$body", StringComparison.Ordinal))
                     throw new ArgumentException("Fan-out item binding is only valid inside its closed body region.", nameof(binding));
+                break;
+            case LoopStateBinding loop:
+                ValidateProjection(loop.Projection);
+                if (!consumer.RegionPath.Contains("/$body", StringComparison.Ordinal))
+                    throw new ArgumentException("Loop state binding is only valid inside its closed repeat body region.", nameof(binding));
+                break;
+            case LoopIterationBinding iter:
+                ValidateProjection(iter.Projection);
+                if (!consumer.RegionPath.Contains("/$body", StringComparison.Ordinal))
+                    throw new ArgumentException("Loop iteration binding is only valid inside its closed repeat body region.", nameof(binding));
                 break;
             default:
                 throw new NotSupportedException($"Unsupported binding type '{binding.GetType().Name}'.");
@@ -751,6 +763,7 @@ public static class WorkflowPlanValidator
         ActivityNode activity => activity.OutputType,
         FanOutNode fanOut => fanOut.ResultType,
         ConditionalNode cond => cond.Merge?.ResultType,
+        RepeatNode repeat => repeat.ResultType,
         _ => null,
     };
 

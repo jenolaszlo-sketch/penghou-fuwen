@@ -324,6 +324,8 @@ internal static class WorkflowPlanSnapshot
                 InputBinding value => new InputBinding(SnapshotProjection(value.Projection, state)),
                 NodeOutputBinding value => new NodeOutputBinding(value.NodePath, SnapshotProjection(value.Projection, state)),
                 FanOutItemValueBinding value => new FanOutItemValueBinding(SnapshotProjection(value.Projection, state)),
+                LoopStateBinding value => new LoopStateBinding(SnapshotProjection(value.Projection, state)),
+                LoopIterationBinding value => new LoopIterationBinding(SnapshotProjection(value.Projection, state)),
                 LiteralBinding value when value.Value.ValueKind is not JsonValueKind.Undefined => new LiteralBinding(value.Value.Clone()),
                 ListBinding value => new ListBinding(SnapshotList(value.Items, "list literal items", CloneBinding, state)),
                 ObjectBinding value => new ObjectBinding(SnapshotProperties(value.Properties, state)),

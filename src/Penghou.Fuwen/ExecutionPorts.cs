@@ -229,6 +229,8 @@ public enum ExecutionFailureCode
     Cancelled,
     /// <summary>Publishing or verifying an artifact was rejected.</summary>
     PublicationRejected,
+    /// <summary>A bounded repeat exhausted its maximum iterations without break.</summary>
+    LoopLimitExceeded,
     /// <summary>Non-authoritative observation delivery failed.</summary>
     ObserverFailure,
     /// <summary>The failure is not classified by this contract version.</summary>
@@ -297,7 +299,7 @@ public sealed class ExecutionFailure
         ExecutionFailureCode.NotAdmitted or ExecutionFailureCode.DescriptorUnavailable or ExecutionFailureCode.PolicyRejected
             => kind == ExecutionFailureKind.Admission,
         ExecutionFailureCode.InvalidInput or ExecutionFailureCode.BindingFailure or ExecutionFailureCode.OutputTypeMismatch or
-        ExecutionFailureCode.ContextSnapshotMismatch or ExecutionFailureCode.PublicationRejected
+        ExecutionFailureCode.ContextSnapshotMismatch or ExecutionFailureCode.PublicationRejected or ExecutionFailureCode.LoopLimitExceeded
             => kind == ExecutionFailureKind.Contract,
         ExecutionFailureCode.MalformedOutput or ExecutionFailureCode.RepairedOutputSchemaInvalid or ExecutionFailureCode.SchemaMismatch or
         ExecutionFailureCode.ToolMappingFailure or ExecutionFailureCode.TruncatedOutput

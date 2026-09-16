@@ -191,8 +191,10 @@ public static class WorkflowPlanValidator
                     ValidateType(repeat.ResultType);
                     if (!TypesEquivalent(repeat.StateType, repeat.ResultType))
                         throw new ArgumentException("Repeat ResultType must equal StateType for v6 (single-state loop).", nameof(repeat.ResultType));
-                    if (repeat.BreakWhen is null)
-                        throw new ArgumentException("Repeat break condition is required.", nameof(repeat.BreakWhen));
+                    ArgumentNullException.ThrowIfNull(repeat.InitialState);
+                    ArgumentNullException.ThrowIfNull(repeat.ContinueWith);
+                    ArgumentNullException.ThrowIfNull(repeat.BreakWhen);
+                    ValidateConditionShape(repeat.BreakWhen);
                     ValidateNodes(
                         $"{repeat.StructuralPath}/$body",
                         repeat.Body,

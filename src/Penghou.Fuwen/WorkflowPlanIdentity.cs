@@ -169,10 +169,16 @@ public static class WorkflowPlanIdentity
         {
             Body = NormalizeNodes(repeat.Body),
             InitialState = NormalizeBinding(repeat.InitialState),
-            BreakWhen = NormalizeBinding(repeat.BreakWhen),
+            ContinueWith = NormalizeBinding(repeat.ContinueWith),
+            BreakWhen = NormalizeCondition(repeat.BreakWhen),
         },
         _ => throw new NotSupportedException($"Unsupported workflow node type '{node.GetType().Name}'."),
     };
+
+    private static ConditionExpression NormalizeCondition(ConditionExpression condition) => new(
+        condition.Operator,
+        NormalizeBinding(condition.Left),
+        condition.Right is null ? null : NormalizeBinding(condition.Right));
 
     private static ArgumentBinding[] NormalizeArguments(IEnumerable<ArgumentBinding> arguments) => arguments
         .OrderBy(argument => argument.Name, StringComparer.Ordinal)

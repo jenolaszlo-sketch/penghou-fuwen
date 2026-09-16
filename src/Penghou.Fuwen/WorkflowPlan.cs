@@ -151,7 +151,7 @@ public sealed record FanOutNode(
     int MaximumItems,
     int MaximumConcurrency) : WorkflowNode(Name, StructuralPath);
 
-/// <summary>A bounded repeat region with explicit carried state and break condition.</summary>
+/// <summary>A bounded repeat region with explicit carried state.</summary>
 public sealed record RepeatNode(
     string Name,
     string StructuralPath,
@@ -159,7 +159,8 @@ public sealed record RepeatNode(
     FuwenType StateType,
     Binding InitialState,
     IReadOnlyList<WorkflowNode> Body,
-    Binding BreakWhen,
+    Binding ContinueWith,
+    ConditionExpression BreakWhen,
     FuwenType ResultType) : WorkflowNode(Name, StructuralPath);
 
 /// <summary>The explicit completion schedule for an IR v2 workflow.</summary>

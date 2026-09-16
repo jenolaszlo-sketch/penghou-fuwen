@@ -296,6 +296,9 @@ public sealed class FuwenZhinuWorkflowFactory
             switch (node)
             {
                 case ConditionalNode conditional:
+                    if (conditional.Merge is not null && insideFanOut)
+                        throw new FuwenZhinuAdmissionException(
+                            $"The sequential Zhinu adapter does not support value-producing conditional '{conditional.StructuralPath}' inside fan-out.");
                     ValidateExecutableSubset(conditional.Then, insideFanOut);
                     ValidateExecutableSubset(conditional.Else, insideFanOut);
                     break;
@@ -306,6 +309,9 @@ public sealed class FuwenZhinuWorkflowFactory
                             $"The sequential Zhinu adapter does not support nested fan-out body '{fanOut.StructuralPath}'.");
                     }
                     ValidateExecutableSubset(fanOut.Body, insideFanOut: true);
+                    break;
+                case RepeatNode repeat:
+                    ValidateExecutableSubset(repeat.Body, insideFanOut: false);
                     break;
             }
         }

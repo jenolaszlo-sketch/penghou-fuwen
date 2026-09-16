@@ -548,9 +548,7 @@ internal static class WorkflowBindingValidator
             if (repeat.BreakWhen is not null)
             {
                 var breakConsumer = new NodeLocation(repeat, repeat.StructuralPath + "/$body", null);
-                var breakType = ValidateBinding(repeat.BreakWhen, new PrimitiveType(FuwenPrimitiveKind.Boolean), breakConsumer, plan, locations, diagnostics, CompilerDiagnosticCodes.BindingTypeMismatch, exact: true);
-                if (breakType is not null && breakType is not PrimitiveType { Primitive: FuwenPrimitiveKind.Boolean })
-                    diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Repeat break condition must be a boolean.", path: repeat.StructuralPath));
+                ValidateCondition(repeat.BreakWhen, breakConsumer, plan, locations, diagnostics);
             }
             var initConsumer = new NodeLocation(repeat, repeat.StructuralPath, null);
             var initType = ValidateBinding(repeat.InitialState, repeat.StateType, initConsumer, plan, locations, diagnostics, CompilerDiagnosticCodes.BindingTypeMismatch, exact: true);

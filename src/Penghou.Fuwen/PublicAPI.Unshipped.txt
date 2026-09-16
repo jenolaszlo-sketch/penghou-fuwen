@@ -18,11 +18,13 @@ Penghou.Fuwen.LoopIterationBinding.LoopIterationBinding(System.Collections.Gener
 Penghou.Fuwen.LoopIterationBinding.Projection.get -> System.Collections.Generic.IReadOnlyList<string!>!
 Penghou.Fuwen.LoopIterationBinding.Projection.init -> void
 Penghou.Fuwen.RepeatNode
-Penghou.Fuwen.RepeatNode.RepeatNode(string! Name, string! StructuralPath, int MaxIterations, Penghou.Fuwen.FuwenType! StateType, Penghou.Fuwen.Binding! InitialState, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Body, Penghou.Fuwen.Binding! BreakWhen, Penghou.Fuwen.FuwenType! ResultType) -> void
+Penghou.Fuwen.RepeatNode.RepeatNode(string! Name, string! StructuralPath, int MaxIterations, Penghou.Fuwen.FuwenType! StateType, Penghou.Fuwen.Binding! InitialState, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Body, Penghou.Fuwen.Binding! ContinueWith, Penghou.Fuwen.ConditionExpression! BreakWhen, Penghou.Fuwen.FuwenType! ResultType) -> void
 Penghou.Fuwen.RepeatNode.Body.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>!
 Penghou.Fuwen.RepeatNode.Body.init -> void
-Penghou.Fuwen.RepeatNode.BreakWhen.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.RepeatNode.BreakWhen.get -> Penghou.Fuwen.ConditionExpression!
 Penghou.Fuwen.RepeatNode.BreakWhen.init -> void
+Penghou.Fuwen.RepeatNode.ContinueWith.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.RepeatNode.ContinueWith.init -> void
 Penghou.Fuwen.RepeatNode.InitialState.get -> Penghou.Fuwen.Binding!
 Penghou.Fuwen.RepeatNode.InitialState.init -> void
 Penghou.Fuwen.RepeatNode.MaxIterations.get -> int
@@ -282,9 +284,10 @@ Penghou.Fuwen.ExecutionFailureCode.ContextSnapshotMismatch = 6 -> Penghou.Fuwen.
 Penghou.Fuwen.ExecutionFailureCode.DescriptorUnavailable = 1 -> Penghou.Fuwen.ExecutionFailureCode
 Penghou.Fuwen.ExecutionFailureCode.FencingLost = 15 -> Penghou.Fuwen.ExecutionFailureCode
 Penghou.Fuwen.ExecutionFailureCode.InvalidInput = 3 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.LoopLimitExceeded = 18 -> Penghou.Fuwen.ExecutionFailureCode
 Penghou.Fuwen.ExecutionFailureCode.MalformedOutput = 7 -> Penghou.Fuwen.ExecutionFailureCode
 Penghou.Fuwen.ExecutionFailureCode.NotAdmitted = 0 -> Penghou.Fuwen.ExecutionFailureCode
-Penghou.Fuwen.ExecutionFailureCode.ObserverFailure = 18 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.ObserverFailure = 19 -> Penghou.Fuwen.ExecutionFailureCode
 Penghou.Fuwen.ExecutionFailureCode.OutputTypeMismatch = 5 -> Penghou.Fuwen.ExecutionFailureCode
 Penghou.Fuwen.ExecutionFailureCode.PolicyRejected = 2 -> Penghou.Fuwen.ExecutionFailureCode
 Penghou.Fuwen.ExecutionFailureCode.ProviderError = 12 -> Penghou.Fuwen.ExecutionFailureCode
@@ -295,7 +298,7 @@ Penghou.Fuwen.ExecutionFailureCode.Timeout = 14 -> Penghou.Fuwen.ExecutionFailur
 Penghou.Fuwen.ExecutionFailureCode.ToolMappingFailure = 10 -> Penghou.Fuwen.ExecutionFailureCode
 Penghou.Fuwen.ExecutionFailureCode.TransientInfrastructureFailure = 13 -> Penghou.Fuwen.ExecutionFailureCode
 Penghou.Fuwen.ExecutionFailureCode.TruncatedOutput = 11 -> Penghou.Fuwen.ExecutionFailureCode
-Penghou.Fuwen.ExecutionFailureCode.Unknown = 19 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.ExecutionFailureCode.Unknown = 20 -> Penghou.Fuwen.ExecutionFailureCode
 Penghou.Fuwen.ExecutionFailureKind.Admission = 0 -> Penghou.Fuwen.ExecutionFailureKind
 Penghou.Fuwen.ExecutionFailureKind.Cancelled = 6 -> Penghou.Fuwen.ExecutionFailureKind
 Penghou.Fuwen.ExecutionFailureKind.Contract = 1 -> Penghou.Fuwen.ExecutionFailureKind

@@ -176,7 +176,7 @@ public static class PlanRevisionComparer
         ActivityNode value => new { Kind = "activity", value.Activity, value.OutputType },
         ConditionalNode value => new { Kind = "conditional", value.Condition.Operator },
         FanOutNode value => new { Kind = "fan-out", value.Item.Type, value.ResultType, value.MaximumItems, value.MaximumConcurrency },
-        RepeatNode value => new { Kind = "repeat", value.MaxIterations, value.StateType },
+        RepeatNode value => new { Kind = "repeat", value.MaxIterations, value.StateType, value.BreakWhen, value.ResultType },
         ReturnNode => new { Kind = "return" },
         _ => throw new NotSupportedException($"Unsupported workflow node '{node.GetType().Name}'."),
     };
@@ -194,7 +194,7 @@ public static class PlanRevisionComparer
             Else = value.Else.Select(static child => child.StructuralPath).ToArray(),
         },
         FanOutNode value => new { value.Source, value.Item, value.Key, value.Body, value.Yield },
-        RepeatNode value => new { value.InitialState, value.Body },
+        RepeatNode value => new { value.InitialState, value.Body, value.ContinueWith },
         ReturnNode value => new { value.Value },
         _ => throw new NotSupportedException($"Unsupported workflow node '{node.GetType().Name}'."),
     };

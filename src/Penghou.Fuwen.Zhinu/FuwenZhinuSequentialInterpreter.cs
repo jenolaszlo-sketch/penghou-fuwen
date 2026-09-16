@@ -26,9 +26,10 @@ internal static class FuwenZhinuSequentialInterpreter
         WorkflowPlanValidator.Validate(plan);
         if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) &&
             !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) &&
-            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal))
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) &&
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal))
             throw new FuwenZhinuAdapterException(
-                $"The sequential adapter supports '{FuwenContracts.IrVersionV3}', '{FuwenContracts.IrVersionV4}', and '{FuwenContracts.IrVersionV5}', not '{plan.IrVersion}'.");
+                $"The sequential adapter supports '{FuwenContracts.IrVersionV3}'–'{FuwenContracts.IrVersionV6}', not '{plan.IrVersion}'.");
         WorkflowPlanIdentity.ValidateExecutionFingerprint(executionFingerprint);
         if (input.ValueKind == JsonValueKind.Undefined)
             throw new FuwenZhinuExecutionException("Workflow input is undefined JSON.");
@@ -119,6 +120,10 @@ internal static class FuwenZhinuSequentialInterpreter
                             }
                             break;
                         }
+                    case RepeatNode repeatNode:
+                        state.Outputs[nodePath] = await ExecuteRepeatAsync(
+                            repeatNode, plan, executionFingerprint, ports, context, schedule, state, inheritedDependencies, cancellationToken).ConfigureAwait(false);
+                        break;
                     case FanOutNode fanOutNode:
                         state.Outputs[nodePath] = await ExecuteFanOutAsync(
                             fanOutNode,
@@ -465,6 +470,203 @@ internal static class FuwenZhinuSequentialInterpreter
         return RuntimeValue.FromList(values);
     }
 
+    private static async Task<RuntimeValue> ExecuteRepeatAsync(
+        RepeatNode node,
+        WorkflowPlan plan,
+        string executionFingerprint,
+        FuwenZhinuExecutionPorts ports,
+        WorkflowContext context,
+        ExecutionSchedule schedule,
+        InterpreterState state,
+        IReadOnlyCollection<string> inheritedDependencies,
+        CancellationToken cancellationToken)
+    {
+        var initialState = EvaluateBinding(node.InitialState, plan, state);
+        EnsureType(initialState, node.StateType, plan.Schemas, $"repeat '{node.StructuralPath}' initial state");
+        var initialJson = RuntimeValueWire.ToJson(initialState);
+
+        // Zhinu persists the loop count via $loop/<name>/<iter>/condition/commit.
+        // GetLoopProgressAsync exposes the persisted count for resume-testing:
+        // restarting an iteration step reuses earlier committed iterations and
+        // re-runs only the selected iteration and its dependents.
+        JsonElement resultJson;
+        try
+        {
+            resultJson = await context.LoopAsync(
+                node.Name,
+                initialJson,
+                _ => true,
+                async (iteration, token) =>
+                {
+                    var iterationState = RuntimeValueWire.FromJson(iteration.State, node.StateType, plan.Schemas);
+                    EnsureType(iterationState, node.StateType, plan.Schemas, $"repeat '{node.StructuralPath}' iteration state");
+                    state.CurrentLoopState = iterationState;
+                    state.CurrentLoopIteration = iteration.Iteration;
+                    try
+                    {
+                        await ExecuteRepeatRegionAsync(
+                            node.StructuralPath + "/$body", node, plan, executionFingerprint, ports, context, schedule, iteration, state, token).ConfigureAwait(false);
+                        var nextState = EvaluateBinding(node.ContinueWith, plan, state);
+                        EnsureType(nextState, node.StateType, plan.Schemas, $"repeat '{node.StructuralPath}' next state");
+                        var nextJson = RuntimeValueWire.ToJson(nextState);
+                        state.CurrentLoopState = nextState;
+                        var breakLeft = EvaluateBinding(node.BreakWhen.Left, plan, state);
+                        var breakRight = node.BreakWhen.Right is null ? null : EvaluateBinding(node.BreakWhen.Right, plan, state);
+                        if (EvaluateCondition(node.BreakWhen.Operator, breakLeft, breakRight))
+                            return iteration.Break(nextJson);
+                        return iteration.Continue(nextJson);
+                    }
+                    finally
+                    {
+                        state.CurrentLoopState = null;
+                        state.CurrentLoopIteration = null;
+                    }
+                },
+                new LoopOptions(node.MaxIterations),
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (LoopLimitExceededException)
+        {
+            throw new FuwenZhinuExecutionException(new ExecutionFailure(
+                ExecutionFailureKind.Contract,
+                ExecutionFailureCode.LoopLimitExceeded,
+                $"Repeat '{node.StructuralPath}' exceeded its maximum of {node.MaxIterations} iterations without break.",
+                providerCode: "LoopLimitExceeded"));
+        }
+
+        var resultValue = RuntimeValueWire.FromJson(resultJson, node.ResultType, plan.Schemas);
+        EnsureType(resultValue, node.ResultType, plan.Schemas, $"repeat '{node.StructuralPath}' result");
+        return resultValue;
+    }
+
+    private static async Task ExecuteRepeatRegionAsync(
+        string regionPath,
+        RepeatNode repeat,
+        WorkflowPlan plan,
+        string executionFingerprint,
+        FuwenZhinuExecutionPorts ports,
+        WorkflowContext context,
+        ExecutionSchedule schedule,
+        WorkflowLoopIteration<JsonElement> iteration,
+        InterpreterState state,
+        CancellationToken cancellationToken)
+    {
+        foreach (var phase in schedule.GetPhases(regionPath))
+        {
+            foreach (var nodePath in phase.OrderBy(static path => path, StringComparer.Ordinal))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var bodyNode = schedule.GetNode(nodePath);
+                switch (bodyNode)
+                {
+                    case ActivityNode activity:
+                        state.Outputs[bodyNode.StructuralPath] = await ExecuteRepeatActivityAsync(
+                            repeat, activity, plan, executionFingerprint, ports, iteration, state, cancellationToken).ConfigureAwait(false);
+                        break;
+                    case ConditionalNode conditional:
+                        await ExecuteRepeatConditionalAsync(
+                            repeat, conditional, plan, executionFingerprint, ports, context, schedule, iteration, state, cancellationToken).ConfigureAwait(false);
+                        break;
+                    default:
+                        throw new FuwenZhinuAdapterException($"Repeat bodies currently support activity nodes and conditionals with an optional merge; '{bodyNode.GetType().Name}' at '{nodePath}' is not executable here.");
+                }
+            }
+        }
+    }
+
+    private static async Task ExecuteRepeatConditionalAsync(
+        RepeatNode repeat,
+        ConditionalNode conditional,
+        WorkflowPlan plan,
+        string executionFingerprint,
+        FuwenZhinuExecutionPorts ports,
+        WorkflowContext context,
+        ExecutionSchedule schedule,
+        WorkflowLoopIteration<JsonElement> iteration,
+        InterpreterState state,
+        CancellationToken cancellationToken)
+    {
+        // Conditions are pure and deterministic over already-persisted values,
+        // so they are evaluated inline like fan-out conditions: no durable step.
+        var left = EvaluateBinding(conditional.Condition.Left, plan, state);
+        var right = conditional.Condition.Right is null ? null : EvaluateBinding(conditional.Condition.Right, plan, state);
+        var selectedRegion = EvaluateCondition(conditional.Condition.Operator, left, right)
+            ? $"{conditional.StructuralPath}/$then"
+            : $"{conditional.StructuralPath}/$else";
+        await ExecuteRepeatRegionAsync(
+            selectedRegion, repeat, plan, executionFingerprint, ports, context, schedule, iteration, state, cancellationToken).ConfigureAwait(false);
+        if (conditional.Merge is null)
+            return;
+        var selectedBinding = EvaluateCondition(conditional.Condition.Operator, left, right)
+            ? conditional.Merge.ThenValue
+            : conditional.Merge.ElseValue;
+        var mergedValue = EvaluateBinding(selectedBinding, plan, state);
+        EnsureType(mergedValue, conditional.Merge.ResultType, plan.Schemas, $"repeat conditional merge '{conditional.StructuralPath}'");
+        var stepSuffix = RepeatStepSuffix(conditional.StructuralPath, repeat.StructuralPath) + "-merge";
+        var mergePath = conditional.StructuralPath + "/$merge";
+        var requestJson = RuntimeValueWire.Serialize(new ConditionalMergeRequestIdentity(mergePath, mergedValue));
+        var outputJson = await iteration.StepAsync(
+            stepSuffix,
+            requestJson,
+            (_, _, _) => Task.FromResult(RuntimeValueWire.ToJson(mergedValue)),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var output = RuntimeValueWire.FromJson(outputJson, conditional.Merge.ResultType, plan.Schemas);
+        EnsureType(output, conditional.Merge.ResultType, plan.Schemas, $"repeat conditional merge '{conditional.StructuralPath}' output");
+        state.Outputs[conditional.StructuralPath] = output;
+    }
+
+    private static async Task<RuntimeValue> ExecuteRepeatActivityAsync(
+        RepeatNode repeat,
+        ActivityNode node,
+        WorkflowPlan plan,
+        string executionFingerprint,
+        FuwenZhinuExecutionPorts ports,
+        WorkflowLoopIteration<JsonElement> iteration,
+        InterpreterState state,
+        CancellationToken cancellationToken)
+    {
+        var arguments = EvaluateArguments(node.Arguments, plan, state);
+        var stepSuffix = RepeatStepSuffix(node.StructuralPath, repeat.StructuralPath);
+        var identity = new NodeRequestIdentity("activity", node.StructuralPath, node.Activity, null, arguments, null);
+        var requestJson = RuntimeValueWire.Serialize(identity);
+        var runtimePath = RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, iteration.Iteration, stepSuffix);
+        var result = await iteration.StepAsync(
+            stepSuffix,
+            requestJson,
+            async (_, step, token) =>
+            {
+                var inv = CreateInvocation(executionFingerprint, node.StructuralPath, runtimePath, requestJson, step);
+                var envelope = await ExecuteProviderAsync(
+                    ports, inv, node.StructuralPath,
+                    t => ports.ActivityExecutor.ExecuteAsync(new ActivityExecutionRequest(inv, node.Activity, arguments, node.OutputType), t),
+                    async r =>
+                    {
+                        EnsureType(r.Output!, node.OutputType, plan.Schemas, $"repeat activity '{node.StructuralPath}' output");
+                        await PublishReceiptsAsync(r.Publications, step, inv, plan, executionFingerprint, node.StructuralPath, token).ConfigureAwait(false);
+                        return NodeExecutionEnvelope.Succeeded(inv, r.Output!, null, r.Publications);
+                    }, token).ConfigureAwait(false);
+                ThrowIfFailed(envelope, node.StructuralPath);
+                return RuntimeValueWire.ToJson(envelope.Output!);
+            },
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var output = RuntimeValueWire.FromJson(result, node.OutputType, plan.Schemas);
+        EnsureType(output, node.OutputType, plan.Schemas, $"repeat activity '{node.StructuralPath}' output");
+        return output;
+    }
+
+    private static string RepeatStepSuffix(string nodePath, string repeatPath)
+    {
+        // Zhinu loop step names allow letters, digits, '_', '-', '.';
+        // Fuwen structural suffixes may contain '/' and '$', so sanitize both.
+        // A pathological collision (e.g. nodes "a$b" and "a_b") would surface
+        // loudly as a step input-contract mismatch, never silent corruption.
+        var marker = nodePath.IndexOf("/$body/", StringComparison.Ordinal);
+        var suffix = marker >= 0 ? nodePath[(marker + "/$body/".Length)..] : nodePath;
+        if (suffix.StartsWith(repeatPath + "/", StringComparison.Ordinal))
+            suffix = suffix[(repeatPath.Length + 1)..];
+        return suffix.Replace("/", "-", StringComparison.Ordinal).Replace("$", string.Empty, StringComparison.Ordinal);
+    }
+
     private static async Task<RuntimeValue> ExecuteFanOutBodyAsync(
         FanOutNode node,
         WorkflowPlan plan,
@@ -702,6 +904,10 @@ internal static class FuwenZhinuSequentialInterpreter
         InputBinding input => Project(state.Input, input.Projection),
         FanOutItemValueBinding item when state.CurrentItem is not null => Project(state.CurrentItem, item.Projection),
         FanOutItemValueBinding => throw new FuwenZhinuExecutionException("A fan-out item binding was evaluated outside an item body."),
+        LoopStateBinding loop when state.CurrentLoopState is not null => Project(state.CurrentLoopState, loop.Projection),
+        LoopStateBinding => throw new FuwenZhinuExecutionException("A loop state binding was evaluated outside a repeat body."),
+        LoopIterationBinding iter when state.CurrentLoopIteration is not null => Project(RuntimeValue.FromJson(JsonSerializer.SerializeToElement(state.CurrentLoopIteration.Value)), iter.Projection),
+        LoopIterationBinding => throw new FuwenZhinuExecutionException("A loop iteration binding was evaluated outside a repeat body."),
         NodeOutputBinding output when state.Outputs.TryGetValue(output.NodePath, out var value) => Project(value, output.Projection),
         NodeOutputBinding output => throw new FuwenZhinuExecutionException($"Binding refers to unavailable node '{output.NodePath}'."),
         LiteralBinding literal => RuntimeValueWire.FromJson(literal.Value, new PrimitiveType(FuwenPrimitiveKind.Json), plan.Schemas),
@@ -1094,6 +1300,8 @@ internal static class FuwenZhinuSequentialInterpreter
         internal Dictionary<string, RuntimeValue> Outputs { get; } = new(StringComparer.Ordinal);
         internal Dictionary<string, ContextSnapshotReference> Snapshots { get; } = new(StringComparer.Ordinal);
         internal RuntimeValue? CurrentItem { get; set; }
+        internal RuntimeValue? CurrentLoopState { get; set; }
+        internal int? CurrentLoopIteration { get; set; }
     }
 
     private readonly record struct RegionResult(RuntimeValue? Value, bool Returned);

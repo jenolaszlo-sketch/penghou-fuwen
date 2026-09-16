@@ -895,16 +895,36 @@ internal sealed class SourceParser
         nodeTypes.Clear(); nodePaths.Clear();
         loopStateName = stateName; loopIterationName = stateName + "_iter";
         var body = new List<WorkflowNode>();
-        ParseRepeatBody(body, bodyPath, stateName);
+        // Body nodes are parsed with loopStateName visible, but after the body
+        // we need to make the body's outputs visible for the continue/break
+        // bindings. The body's last nodes are the only ones that should be
+        // referenceable as the next state.
+        var bodyTypes = new Dictionary<string, FuwenType>(nodeTypes, StringComparer.Ordinal);
+        var bodyPaths = new Dictionary<string, string>(nodePaths, StringComparer.Ordinal);
+        foreach (var key in savedTypes.Keys) bodyTypes.Remove(key);
+        foreach (var key in savedPaths.Keys) bodyPaths.Remove(key);
         loopStateName = savedState; loopIterationName = savedIter;
         nodeTypes.Clear(); foreach (var pair in savedTypes) nodeTypes[pair.Key] = pair.Value;
         nodePaths.Clear(); foreach (var pair in savedPaths) nodePaths[pair.Key] = pair.Value;
-        if (!Match("break")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'break' and a boolean break condition.", Current);
-        var breakWhen = ParseBinding();
+        // Make body outputs visible for continue/break, plus keep loop state visible.
+        foreach (var pair in bodyTypes) nodeTypes[pair.Key] = pair.Value;
+        foreach (var pair in bodyPaths) nodePaths[pair.Key] = pair.Value;
+        // Also keep loop state visible for break condition (e.g., s == "ok")
+        nodeTypes[stateName] = stateType;
+        nodePaths[stateName] = path;
+        if (!Match("continue")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'continue' and the next state binding.", Current);
+        var continueWith = ParseBinding();
+        if (!Match("break")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'break' and a break condition.", Current);
+        var breakWhen = ParseCondition();
+        // Clean up the temporary body visibility.
+        foreach (var key in bodyTypes.Keys) nodeTypes.Remove(key);
+        foreach (var key in bodyPaths.Keys) nodePaths.Remove(key);
+        nodeTypes.Remove(stateName);
+        nodePaths.Remove(stateName);
         FuwenType resultType = stateType;
         if (Match("->") || Match(":")) resultType = ParseType();
         Match(";");
-        var node = new RepeatNode(name, path, maxIterations, stateType, initialState, body, breakWhen, resultType);
+        var node = new RepeatNode(name, path, maxIterations, stateType, initialState, body, continueWith, breakWhen, resultType);
         nodeTypes[name] = resultType; nodePaths[name] = path;
         repeatSeen = true;
         AddSpan(path, start, Previous); Ast(); return node;

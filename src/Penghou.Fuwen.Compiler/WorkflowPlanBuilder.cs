@@ -188,7 +188,8 @@ public sealed class WorkflowPlanBuilder
                     break;
                 case RepeatNode repeat:
                     CollectBindingDescriptors(repeat.InitialState, bindings);
-                    CollectBindingDescriptors(repeat.BreakWhen, bindings);
+                    CollectBindingDescriptors(repeat.ContinueWith, bindings);
+                    CollectConditionDescriptors(repeat.BreakWhen, bindings);
                     CollectType(repeat.StateType, bindings);
                     CollectType(repeat.ResultType, bindings);
                     CollectNodes(repeat.Body, bindings);
@@ -208,6 +209,13 @@ public sealed class WorkflowPlanBuilder
                 foreach (var item in @object.Properties.Values) CollectBindingDescriptors(item, bindings);
                 break;
         }
+    }
+
+    private static void CollectConditionDescriptors(ConditionExpression condition, List<DescriptorReference> bindings)
+    {
+        CollectBindingDescriptors(condition.Left, bindings);
+        if (condition.Right is not null)
+            CollectBindingDescriptors(condition.Right, bindings);
     }
 
     private static void CollectType(FuwenType type, List<DescriptorReference> bindings)

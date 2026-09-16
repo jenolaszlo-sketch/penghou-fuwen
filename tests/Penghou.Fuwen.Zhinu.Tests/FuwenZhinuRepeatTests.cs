@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using FluentAssertions;
 using Penghou.Fuwen.Compiler;
@@ -78,6 +79,68 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         finally { DeleteDirectory(root); }
     }
 
+    [Fact]
+    public async Task Repeat_crash_between_iterations_preserves_partial_progress_and_resumes()
+    {
+        var failingIterationTracker = new ConcurrentDictionary<Guid, int>();
+        var runId = Guid.NewGuid();
+        failingIterationTracker[runId] = 3; // fail on iteration 3
+
+        var admission = await AdmitRepeatAsync(maxIterations: 5, breakOnIter3: true);
+        var activity = new CrashOnIterationActivity(failingIterationTracker, runId);
+        var ports = new FuwenZhinuExecutionPorts(activity, new UnusedContext(), new UnusedInference());
+        var registration = await new FuwenZhinuWorkflowFactory(
+                new InMemoryWorkflowDefinitionStore(),
+                IdentityFor(admission),
+                ports)
+            .CreateAsync("fuwen.repeat-crash", "1", admission, TestContext.Current.CancellationToken);
+        var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(root, "workflow.db"), Pooling = false });
+            await using var engine = new WorkflowEngine(store, registration.Register(new WorkflowRegistry()), new ZhinuOptions { PollInterval = TimeSpan.FromMilliseconds(5) });
+
+            // First run: iterations 1, 2 succeed; iteration 3 crashes.
+            using var input = JsonDocument.Parse("\"start\"");
+            var firstRunId = await engine.StartAsync("fuwen.repeat-crash", "1", input.RootElement.Clone(), cancellationToken: TestContext.Current.CancellationToken);
+            await engine.ExecuteAsync(firstRunId, TestContext.Current.CancellationToken);
+            await Assert.ThrowsAsync<WorkflowExecutionFailedException>(
+                () => engine.WaitForCompletionAsync<JsonElement>(firstRunId, cancellationToken: TestContext.Current.CancellationToken));
+
+            // Partial progress: 2 committed iterations persisted.
+            var firstRun = await engine.GetRunAsync(firstRunId, TestContext.Current.CancellationToken);
+            firstRun!.Status.Should().Be(WorkflowStatus.Failed);
+
+            // Remove the failure tracker so the retry of iteration 3 succeeds.
+            failingIterationTracker.TryRemove(runId, out _);
+
+            // Resume: RestartStepAsync transitions back to Pending; ExecuteAsync re-enters at iteration 3.
+            await engine.RestartStepAsync(
+                firstRunId,
+                "$loop/loop1/3/body/step",
+                new RestartStepOptions { Mode = StepRestartMode.StepOnly },
+                TestContext.Current.CancellationToken);
+            await engine.ExecuteAsync(firstRunId, TestContext.Current.CancellationToken);
+            var output = await engine.WaitForCompletionAsync<JsonElement>(firstRunId, cancellationToken: TestContext.Current.CancellationToken);
+            // CrashOnIterationActivity appends "-break" + Calls (shared counter).
+            // First run: call 1→"start-break1", call 2→"start-break1-break2", call 3 throws.
+            // Second run: iter 1,2 replay from commit (no body), iter 3 body: call 4→"start-break1-break2-break4".
+            // Break at iter 3 returns "start-break1-break2-break4".
+            output.GetString().Should().Be("start-break1-break2-break4");
+
+            // Persisted loop count: 3 committed iterations.
+            var progress = await engine.GetLoopProgressAsync(firstRunId, WorkflowLoopReference.Root("loop1"), TestContext.Current.CancellationToken);
+            progress.Should().NotBeNull();
+            progress!.Iterations.Select(item => item.Iteration.Number).Should().Equal(1, 2, 3);
+            progress.Iterations[0].IsCommitted.Should().BeTrue();
+            progress.Iterations[1].IsCommitted.Should().BeTrue();
+            progress.Iterations[2].IsCommitted.Should().BeTrue();
+            progress.IsCompleted.Should().BeTrue();
+        }
+        finally { DeleteDirectory(root); }
+    }
+
     private static async Task<WorkflowAdmissionResult> AdmitRepeatAsync(int maxIterations, bool breakOnIter3 = true)
     {
         var str = new PrimitiveType(FuwenPrimitiveKind.String);
@@ -110,7 +173,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 ]),
                 capabilityPolicy: new CapabilityGrantPolicy("policy/1", [])))
             .AdmitAsync(plan, cancellationToken: TestContext.Current.CancellationToken);
-        admission.Succeeded.Should().BeTrue(string.Join("; ", admission.Diagnostics.Select(d => $"{d.Code}:{d.Message}")));
+        admission.Succeeded.Should().BeTrue($"Diagnostics: {string.Join("; ", admission.Diagnostics.Select(d => $"{d.Code}:{d.Message} (path={d.Path})"))}");
         return admission;
     }
 
@@ -133,10 +196,27 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
 
     private sealed class UnconditionallyContinuingActivity : IActivityExecutor
     {
+        public int Calls { get; private set; }
         public ValueTask<ActivityExecutionResult> ExecuteAsync(ActivityExecutionRequest request, CancellationToken ct = default)
         {
+            Calls++;
             var input = ((JsonRuntimeValue)request.Arguments.Single().Value).Value.GetString()!;
             using var doc = JsonDocument.Parse(JsonSerializer.Serialize(input + "-next"));
+            return ValueTask.FromResult(ActivityExecutionResult.Succeeded(RuntimeValue.FromJson(doc.RootElement)));
+        }
+    }
+
+    private sealed class CrashOnIterationActivity(ConcurrentDictionary<Guid, int> failingIterationTracker, Guid runId) : IActivityExecutor
+    {
+        public int Calls { get; private set; }
+        public ValueTask<ActivityExecutionResult> ExecuteAsync(ActivityExecutionRequest request, CancellationToken ct = default)
+        {
+            Calls++;
+            var input = ((JsonRuntimeValue)request.Arguments.Single().Value).Value.GetString()!;
+            var next = input + "-break" + Calls;
+            if (failingIterationTracker.TryGetValue(runId, out var failOn) && Calls == failOn)
+                throw new InvalidOperationException($"Simulated crash on iteration {Calls}");
+            using var doc = JsonDocument.Parse(JsonSerializer.Serialize(next));
             return ValueTask.FromResult(ActivityExecutionResult.Succeeded(RuntimeValue.FromJson(doc.RootElement)));
         }
     }

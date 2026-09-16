@@ -645,8 +645,9 @@ internal static class WorkflowBindingValidator
                     ValidateCondition(conditional.Condition, location, plan, locations, diagnostics);
                     if (conditional.Merge is not null)
                     {
-                        if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal))
-                            diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.SemanticValidationFailed, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Value-producing conditionals require IR v5, not '{plan.IrVersion}'.", path: conditional.StructuralPath));
+                        if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) &&
+                            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal))
+                            diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.SemanticValidationFailed, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Value-producing conditionals require IR v5 or v6, not '{plan.IrVersion}'.", path: conditional.StructuralPath));
                         // Merge bindings are validated as if consumed inside their own
                         // branch region, so the existing closed-region rule applies:
                         // each side may only see its own branch (plus region-free

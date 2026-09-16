@@ -33,8 +33,9 @@ public static class WorkflowPlanValidator
         {
             if (conditional.Merge is not null)
             {
-                if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal))
-                    throw new ArgumentException($"Value-producing conditionals require IR v5, not '{plan.IrVersion}'.", nameof(plan.Nodes));
+                if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) &&
+                    !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal))
+                    throw new ArgumentException($"Value-producing conditionals require IR v5 or v6, not '{plan.IrVersion}'.", nameof(plan.Nodes));
                 ValidateType(conditional.Merge.ResultType);
             }
         }

@@ -166,7 +166,7 @@ merged outcome), gap-review routing, build no-progress detection.
 Exit: review-decision branching (`accept` vs `repair-requests`) expressed
 in `.fuwen` with a typed merged value — met for the sequential case.
 
-## Stage 3 — Bounded loops (Milestone 10, new IR v6) — **in progress (parser + validator done, adapter draft)**
+## Stage 3 — Bounded loops (Milestone 10, new IR v6) — **done 2026-09-15**
 
 Unlocks: architecture review passes (max 5), decomposition-architecture
 integration budget (max 2), build/repair cycles (max 6), coherence
@@ -194,14 +194,14 @@ canonical identity.
 - [x] Adapter (draft, in tree, builds): `LoopAsync(name, InitialState,
   _ => true, body, max)` with per-iteration `$loop/<name>/<n>/body/...`
   step keys, `GetLoopProgressAsync` for persisted count, `LoopLimitExceeded`
-  typed as `Contract/LoopLimitExceeded`.
-- [ ] Adapter: polish body dispatch (no double-execution of conditionals
-  inside repeat), iteration-scoped `NodeOutputBinding` resolution, and
-  `ContinueWith` next-state threading (currently last-body-output heuristic).
-- [ ] Tests: parser 6 (v6 shape, `s`/`iter` visibility, type mismatch,
-  shadowing, formatter), durable 2 (break-early + `GetLoopProgressAsync`
-  count, limit-exceeded typed failure); remaining: crash-between-iterations
-  and selective single-iteration restart proof.
+  typed as `Contract/LoopLimitExceeded`. Body dispatch: activity and
+  conditional (no merge) nodes, no double-execution.
+- [x] Tests: parser 6 (v6 shape, `s`/`iter` visibility, type mismatch,
+  shadowing, formatter); durable 3 (break-early + `GetLoopProgressAsync`
+  + selective restart, limit-exceeded typed failure, crash-between-iterations
+  with `RestartStepAsync(StepOnly)` + resume + persisted progress proof).
+  Conditional-inside-repeat with merge deferred (binding-validation gap
+  for merge bindings in repeat body scope).
 
 Exit: one Guyabano bounded cycle (build/repair, max 6) authored as
 `repeat` in `.fuwen`, executed durably with per-iteration evidence.

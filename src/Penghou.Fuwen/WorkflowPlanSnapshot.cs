@@ -239,6 +239,17 @@ internal static class WorkflowPlanSnapshot
                     CloneBinding(value.ContinueWith, state),
                     CloneCondition(value.BreakWhen, state),
                     CloneType(value.ResultType, state)),
+                CheckpointNode value => new CheckpointNode(
+                    value.Name,
+                    value.StructuralPath,
+                    CloneBinding(value.Value, state),
+                    CloneType(value.OutputType, state)),
+                WaitNode value => new WaitNode(
+                    value.Name,
+                    value.StructuralPath,
+                    value.SignalName,
+                    CloneType(value.OutputType, state),
+                    value.TimeoutSeconds),
                 _ => throw new NotSupportedException($"Unsupported workflow node type '{node.GetType().Name}'."),
             };
         }

@@ -27,9 +27,10 @@ internal static class FuwenZhinuSequentialInterpreter
         if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) &&
             !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) &&
             !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) &&
-            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal))
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal) &&
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV7, StringComparison.Ordinal))
             throw new FuwenZhinuAdapterException(
-                $"The sequential adapter supports '{FuwenContracts.IrVersionV3}'–'{FuwenContracts.IrVersionV6}', not '{plan.IrVersion}'.");
+                $"The sequential adapter supports '{FuwenContracts.IrVersionV3}'–'{FuwenContracts.IrVersionV7}', not '{plan.IrVersion}'.");
         WorkflowPlanIdentity.ValidateExecutionFingerprint(executionFingerprint);
         if (input.ValueKind == JsonValueKind.Undefined)
             throw new FuwenZhinuExecutionException("Workflow input is undefined JSON.");
@@ -123,6 +124,14 @@ internal static class FuwenZhinuSequentialInterpreter
                     case RepeatNode repeatNode:
                         state.Outputs[nodePath] = await ExecuteRepeatAsync(
                             repeatNode, plan, executionFingerprint, ports, context, schedule, state, inheritedDependencies, cancellationToken).ConfigureAwait(false);
+                        break;
+                    case CheckpointNode checkpointNode:
+                        state.Outputs[nodePath] = await ExecuteCheckpointAsync(
+                            checkpointNode, plan, executionFingerprint, context, state, inheritedDependencies, cancellationToken).ConfigureAwait(false);
+                        break;
+                    case WaitNode waitNode:
+                        state.Outputs[nodePath] = await ExecuteWaitAsync(
+                            waitNode, plan, executionFingerprint, context, state, inheritedDependencies, cancellationToken).ConfigureAwait(false);
                         break;
                     case FanOutNode fanOutNode:
                         state.Outputs[nodePath] = await ExecuteFanOutAsync(
@@ -539,6 +548,102 @@ internal static class FuwenZhinuSequentialInterpreter
         return resultValue;
     }
 
+    private static async Task<RuntimeValue> ExecuteCheckpointAsync(
+        CheckpointNode node,
+        WorkflowPlan plan,
+        string executionFingerprint,
+        WorkflowContext context,
+        InterpreterState state,
+        IReadOnlyCollection<string> inheritedDependencies,
+        CancellationToken cancellationToken)
+    {
+        var value = EvaluateBinding(node.Value, plan, state);
+        EnsureType(value, node.OutputType, plan.Schemas, $"checkpoint '{node.StructuralPath}' value");
+        var valueJson = RuntimeValueWire.ToJson(value);
+        var outputJson = await context.StepAsync<JsonElement, JsonElement>(
+            node.StructuralPath,
+            valueJson,
+            (_, _, _) => Task.FromResult(valueJson),
+            stepOptions: StepOptionsForBindings(inheritedDependencies, [node.Value]),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var output = RuntimeValueWire.FromJson(outputJson, node.OutputType, plan.Schemas);
+        EnsureType(output, node.OutputType, plan.Schemas, $"checkpoint '{node.StructuralPath}' output");
+        return output;
+    }
+
+    private static async Task<RuntimeValue> ExecuteWaitAsync(
+        WaitNode node,
+        WorkflowPlan plan,
+        string executionFingerprint,
+        WorkflowContext context,
+        InterpreterState state,
+        IReadOnlyCollection<string> inheritedDependencies,
+        CancellationToken cancellationToken)
+    {
+        var timeout = node.TimeoutSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : (TimeSpan?)null;
+        var outputJson = await context.WaitForSignalAsync<JsonElement>(
+            node.StructuralPath,
+            node.SignalName,
+            timeout,
+            cancellationToken).ConfigureAwait(false);
+        var output = RuntimeValueWire.FromJson(outputJson, node.OutputType, plan.Schemas);
+        EnsureType(output, node.OutputType, plan.Schemas, $"wait '{node.StructuralPath}' signal output");
+        return output;
+    }
+
+    private static async Task<RuntimeValue> ExecuteRepeatCheckpointAsync(
+        RepeatNode repeat,
+        CheckpointNode node,
+        WorkflowPlan plan,
+        string executionFingerprint,
+        WorkflowLoopIteration<JsonElement> iteration,
+        InterpreterState state,
+        CancellationToken cancellationToken)
+    {
+        var value = EvaluateBinding(node.Value, plan, state);
+        EnsureType(value, node.OutputType, plan.Schemas, $"repeat checkpoint '{node.StructuralPath}' value");
+        var valueJson = RuntimeValueWire.ToJson(value);
+        var stepSuffix = RepeatStepSuffix(node.StructuralPath, repeat.StructuralPath);
+        var result = await iteration.StepAsync(
+            stepSuffix,
+            valueJson,
+            (_, _, _) => Task.FromResult(valueJson),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var output = RuntimeValueWire.FromJson(result, node.OutputType, plan.Schemas);
+        EnsureType(output, node.OutputType, plan.Schemas, $"repeat checkpoint '{node.StructuralPath}' output");
+        return output;
+    }
+
+    private static async Task<RuntimeValue> ExecuteRepeatWaitAsync(
+        RepeatNode repeat,
+        WaitNode node,
+        WorkflowPlan plan,
+        string executionFingerprint,
+        WorkflowContext context,
+        WorkflowLoopIteration<JsonElement> iteration,
+        InterpreterState state,
+        CancellationToken cancellationToken)
+    {
+        var timeout = node.TimeoutSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : (TimeSpan?)null;
+        var stepSuffix = RepeatStepSuffix(node.StructuralPath, repeat.StructuralPath);
+        var outputJson = await iteration.StepAsync(
+            stepSuffix,
+            node.SignalName,
+            async (signalName, step, token) =>
+            {
+                var result = await context.WaitForSignalAsync<JsonElement>(
+                    step.StepKey,
+                    signalName,
+                    timeout,
+                    token).ConfigureAwait(false);
+                return result;
+            },
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var output = RuntimeValueWire.FromJson(outputJson, node.OutputType, plan.Schemas);
+        EnsureType(output, node.OutputType, plan.Schemas, $"repeat wait '{node.StructuralPath}' signal output");
+        return output;
+    }
+
     private static async Task ExecuteRepeatRegionAsync(
         string regionPath,
         RepeatNode repeat,
@@ -567,8 +672,16 @@ internal static class FuwenZhinuSequentialInterpreter
                         await ExecuteRepeatConditionalAsync(
                             repeat, conditional, plan, executionFingerprint, ports, context, schedule, iteration, state, cancellationToken).ConfigureAwait(false);
                         break;
+                    case CheckpointNode checkpoint:
+                        state.Outputs[bodyNode.StructuralPath] = await ExecuteRepeatCheckpointAsync(
+                            repeat, checkpoint, plan, executionFingerprint, iteration, state, cancellationToken).ConfigureAwait(false);
+                        break;
+                    case WaitNode wait:
+                        state.Outputs[bodyNode.StructuralPath] = await ExecuteRepeatWaitAsync(
+                            repeat, wait, plan, executionFingerprint, context, iteration, state, cancellationToken).ConfigureAwait(false);
+                        break;
                     default:
-                        throw new FuwenZhinuAdapterException($"Repeat bodies currently support activity nodes and conditionals with an optional merge; '{bodyNode.GetType().Name}' at '{nodePath}' is not executable here.");
+                        throw new FuwenZhinuAdapterException($"Repeat bodies currently support activity nodes, conditionals, checkpoints, and waits; '{bodyNode.GetType().Name}' at '{nodePath}' is not executable here.");
                 }
             }
         }

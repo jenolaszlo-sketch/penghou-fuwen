@@ -177,6 +177,8 @@ public static class PlanRevisionComparer
         ConditionalNode value => new { Kind = "conditional", value.Condition.Operator },
         FanOutNode value => new { Kind = "fan-out", value.Item.Type, value.ResultType, value.MaximumItems, value.MaximumConcurrency },
         RepeatNode value => new { Kind = "repeat", value.MaxIterations, value.StateType, value.BreakWhen, value.ResultType },
+        CheckpointNode value => new { Kind = "checkpoint", value.OutputType },
+        WaitNode value => new { Kind = "wait", value.SignalName, value.OutputType, value.TimeoutSeconds },
         ReturnNode => new { Kind = "return" },
         _ => throw new NotSupportedException($"Unsupported workflow node '{node.GetType().Name}'."),
     };
@@ -195,6 +197,8 @@ public static class PlanRevisionComparer
         },
         FanOutNode value => new { value.Source, value.Item, value.Key, value.Body, value.Yield },
         RepeatNode value => new { value.InitialState, value.Body, value.ContinueWith },
+        CheckpointNode value => new { value.Value },
+        WaitNode => new { },
         ReturnNode value => new { value.Value },
         _ => throw new NotSupportedException($"Unsupported workflow node '{node.GetType().Name}'."),
     };

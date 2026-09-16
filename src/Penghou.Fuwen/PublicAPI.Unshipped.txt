@@ -51,6 +51,23 @@ Penghou.Fuwen.FanOutNode.Source.get -> Penghou.Fuwen.Binding!
 Penghou.Fuwen.FanOutNode.Source.init -> void
 Penghou.Fuwen.FanOutNode.Yield.get -> Penghou.Fuwen.Binding!
 Penghou.Fuwen.FanOutNode.Yield.init -> void
+Penghou.Fuwen.CheckpointNode
+Penghou.Fuwen.CheckpointNode.CheckpointNode(string! Name, string! StructuralPath, Penghou.Fuwen.Binding! Value, Penghou.Fuwen.FuwenType! OutputType) -> void
+Penghou.Fuwen.CheckpointNode.OutputType.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.CheckpointNode.OutputType.init -> void
+Penghou.Fuwen.CheckpointNode.Value.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.CheckpointNode.Value.init -> void
+Penghou.Fuwen.WaitNode
+Penghou.Fuwen.WaitNode.WaitNode(string! Name, string! StructuralPath, string! SignalName, Penghou.Fuwen.FuwenType! OutputType, int? TimeoutSeconds = null) -> void
+Penghou.Fuwen.WaitNode.OutputType.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.WaitNode.OutputType.init -> void
+Penghou.Fuwen.WaitNode.SignalName.get -> string!
+Penghou.Fuwen.WaitNode.SignalName.init -> void
+Penghou.Fuwen.WaitNode.TimeoutSeconds.get -> int?
+Penghou.Fuwen.WaitNode.TimeoutSeconds.init -> void
+Penghou.Fuwen.ApprovalOutcome
+Penghou.Fuwen.ApprovalOutcome.Approved = 0 -> Penghou.Fuwen.ApprovalOutcome
+Penghou.Fuwen.ApprovalOutcome.Denied = 1 -> Penghou.Fuwen.ApprovalOutcome
 const Penghou.Fuwen.ContextSnapshotReference.MaximumProvenanceReceiptUtf8Bytes = 2048 -> int
 const Penghou.Fuwen.ContextSnapshotReference.MaximumSnapshotIdUtf8Bytes = 512 -> int
 const Penghou.Fuwen.ContextSnapshotReference.MaximumSourceRevisions = 64 -> int
@@ -72,10 +89,13 @@ const Penghou.Fuwen.FuwenContracts.IrVersionV3 = "fuwen-ir/v3" -> string!
 const Penghou.Fuwen.FuwenContracts.IrVersionV4 = "fuwen-ir/v4" -> string!
 const Penghou.Fuwen.FuwenContracts.IrVersionV5 = "fuwen-ir/v5" -> string!
 const Penghou.Fuwen.FuwenContracts.IrVersionV6 = "fuwen-ir/v6" -> string!
+const Penghou.Fuwen.FuwenContracts.IrVersionV7 = "fuwen-ir/v7" -> string!
 const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersionV5 = "compiler-semantics/5" -> string!
 const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersionV6 = "compiler-semantics/6" -> string!
+const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersionV7 = "compiler-semantics/7" -> string!
 const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersionV5 = "fuwen-execution/v5" -> string!
 const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersionV6 = "fuwen-execution/v6" -> string!
+const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersionV7 = "fuwen-execution/v7" -> string!
 const Penghou.Fuwen.FuwenContracts.MaximumCanonicalPlanBytes = 4194304 -> int
 const Penghou.Fuwen.FuwenContracts.SourceFingerprintVersion = "fuwen-source/v1" -> string!
 const Penghou.Fuwen.JsonRuntimeValue.MaximumJsonDepth = 128 -> int

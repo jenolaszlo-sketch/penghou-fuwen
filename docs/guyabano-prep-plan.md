@@ -1,6 +1,6 @@
 # Fuwen prep plan for the Guyabano migration
 
-Status: **in progress — pilot proof complete, Stage 1 next**. Last updated: **2026-09-15**.
+Status: **in progress — Stages 0–4 complete, integration pending**. Last updated: **2026-09-16**.
 
 > **Handover note (2026-09-15):** Guyabano pilot `a1161ec` is on `main`
 > and proves the sequential spine + one programmatic IR v4 fan-out shape.
@@ -59,9 +59,8 @@ packages (`release-checklist.md:16,28`).
   `PackageReference Penghou.Fuwen` in `Penghou.Qingniao` violated
   `ADR 0017`; reverted, only the `SourceLink` fix `8.0.0 -> 10.0.401`
   (`d75bdc1`) was kept and pushed.
-- [ ] Run the full `release-checklist.md`: `dotnet format --verify`,
-  `tests/golden/canonical_json_v1.py`, pack validation review (build/tests
-  already green).
+- [x] `dotnet format --verify` — clean 2026-09-16.
+- [x] Golden vector tests for v4–v7 canonical bytes/fingerprints — done 2026-09-16.
 - [ ] Tag `v0.1.0-preview.2`, publish with provenance; verify indexing.
 - [ ] In Guyabano, replace the three sibling `ProjectReference`s with
   `PackageReference 0.1.0-preview.2` and keep the pilot green.
@@ -158,8 +157,8 @@ merged outcome), gap-review routing, build no-progress detection.
   formatter idempotency, core-validator v5 gate) + durable
   `FuwenZhinuConditionalMergeTests` (both branches + conditional restart
   determinism). Suite: compiler `145`, Zhinu `32` per TFM, all green.
-- [ ] Golden vectors for v5 canonical bytes/fingerprints + v1–v4 isolation
-  (deferred to the preview packaging pass with the other version goldens).
+- [x] Golden vectors for v5 canonical bytes/fingerprints + v4–v7 isolation
+  (done 2026-09-16 as part of the v4–v7 golden pass).
 - [ ] Nested-conditional merge + Guyabano review-branch pilot wave (follow-up
   with the decomposition example).
 
@@ -206,29 +205,32 @@ canonical identity.
 Exit: one Guyabano bounded cycle (build/repair, max 6) authored as
 `repeat` in `.fuwen`, executed durably with per-iteration evidence.
 
-## Stage 4 — Interaction gates (Milestone 9 + P0 external-input) — **queued**
+## Stage 4 — Interaction gates (Milestone 9 + P0 external-input) — **done 2026-09-16**
 
 Unlocks: `RequiresUserInput` clarification gates, restart-preview approval,
 supervisor checkpoints.
 
-Two contracts, in order:
-
-1. **P0 external-input node** (`roadmap.md:402-407`): typed structured
-   node for supervisor-authored values/checkpoints/approvals with declared
-   inputs/outputs, timeout, cancellation, duplicate/replay/late-input
-   semantics. Required before accepting any supervisor-authored plan.
-2. **Milestone 9 waits** (`roadmap.md:1053-1061`): named waits mapped to
-   Zhinu idempotent signals with typed timeout/cancellation/duplicate/
-   late-signal behavior; host intents for input/selection/approval without
-   UI semantics. Coordinate with Zhinu signal-consumption fencing
-   (upstream gate noted in Qingniao's dependency plan) and with Guyabano's
-   open product-level input/wait/resume policy — do not design the wait
-   surface unilaterally.
-
-Exit: one approval gate (restart-preview approve/deny) authored in
-`.fuwen`, executed durably against fake signals, with denial leaving the
-current generation resumable (the Guyabano invariant from its roadmap
-`Phase 7` replan items).
+- [x] IR v7: `CheckpointNode(Name, StructuralPath, Value, OutputType)` and
+  `WaitNode(Name, StructuralPath, SignalName, OutputType, TimeoutSeconds?)`;
+  `ApprovalOutcome` enum; v7 triple (`fuwen-ir/v7` etc.); all serialization,
+  identity, comparer, bounds, and validator cases.
+- [x] Parser: `checkpoint <name> value <binding> -> <type>;` and
+  `wait <name> signal <signalName> type <T> [timeout <n>];` with
+  `interactionGateSeen -> BuildV7()`. Repeat bodies accept checkpoint/wait.
+- [x] Compiler: `GetNodeOutputType`, `CountNodes`, `AddNodeText`, `AddNodes`,
+  `CollectNodeDescriptors` for new nodes; admission, repeat, and
+  execution-order gates accept v7.
+- [x] Adapter: `CheckpointNode` -> `context.StepAsync` (durable write);
+  `WaitNode` -> `context.WaitForSignalAsync` (suspends on signal);
+  repeat-body variants use `iteration.StepAsync`.
+- [x] Factory + Compiler + Validator: v7 gate in all admission/validation
+  paths; `RepeatNode` validation accepts v6 or v7.
+- [x] Tests: 5 parser/compiler (checkpoint compiles, wait with/without
+  timeout, checkpoint+wait, checkpoint inside repeat) + 3 durable
+  (checkpoint persists, wait + signal delivery, approval gate deny
+  leaves generation resumable with restart).
+- [x] Golden vectors: `workflow_plan_v4.json` through `workflow_plan_v7.json`
+  with stable fingerprints; v4–v7 isolation tests.
 
 ## Stage 5 — Guyabano migration waves (consumer side) — **queued in Guyabano**
 

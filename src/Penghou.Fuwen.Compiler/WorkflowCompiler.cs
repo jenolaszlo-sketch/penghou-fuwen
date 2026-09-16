@@ -177,7 +177,8 @@ public sealed class WorkflowCompiler
             !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) &&
             !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) &&
             !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) &&
-            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal))
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal) &&
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV7, StringComparison.Ordinal))
         {
             diagnostics.Add(Diagnostic(
                 CompilerDiagnosticCodes.SemanticValidationFailed,
@@ -544,8 +545,9 @@ internal static class WorkflowBindingValidator
         CollectLocations(plan.Name, plan.Nodes, plan.Name, locations);
         foreach (var repeat in locations.Values.Select(v => v.Node).OfType<RepeatNode>())
         {
-            if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal))
-                diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.SemanticValidationFailed, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Bounded repeat requires IR v6, not '{plan.IrVersion}'.", path: repeat.StructuralPath));
+            if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal) &&
+                !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV7, StringComparison.Ordinal))
+                diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.SemanticValidationFailed, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Bounded repeat requires IR v6 or v7, not '{plan.IrVersion}'.", path: repeat.StructuralPath));
             if (repeat.MaxIterations <= 0 || repeat.MaxIterations > 1000)
                 diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BudgetWorkflowNodesExceeded, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Repeat maximum iterations must be between 1 and 1000, not '{repeat.MaxIterations}'.", path: repeat.StructuralPath));
             if (!EquivalentExact(repeat.StateType, repeat.ResultType))
@@ -646,8 +648,9 @@ internal static class WorkflowBindingValidator
                     if (conditional.Merge is not null)
                     {
                         if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) &&
-                            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal))
-                            diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.SemanticValidationFailed, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Value-producing conditionals require IR v5 or v6, not '{plan.IrVersion}'.", path: conditional.StructuralPath));
+                            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal) &&
+                            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV7, StringComparison.Ordinal))
+                            diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.SemanticValidationFailed, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Value-producing conditionals require IR v5, v6, or v7, not '{plan.IrVersion}'.", path: conditional.StructuralPath));
                         // Merge bindings are validated as if consumed inside their own
                         // branch region, so the existing closed-region rule applies:
                         // each side may only see its own branch (plus region-free
@@ -659,6 +662,13 @@ internal static class WorkflowBindingValidator
                         if (thenType is not null && elseType is not null && !EquivalentExact(thenType, elseType))
                             diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Conditional merge then/else types must be exactly equal.", path: conditional.StructuralPath, expected: Describe(thenType), actual: Describe(elseType)));
                     }
+                    break;
+                case CheckpointNode checkpoint:
+                    ValidateBinding(checkpoint.Value, checkpoint.OutputType, location, plan, locations, diagnostics, exact: true);
+                    break;
+                case WaitNode wait:
+                    if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV7, StringComparison.Ordinal))
+                        diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.SemanticValidationFailed, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Wait nodes require IR v7, not '{plan.IrVersion}'.", path: wait.StructuralPath));
                     break;
                 case ReturnNode @return:
                     ValidateBinding(@return.Value, plan.OutputType, location, plan, locations, diagnostics);
@@ -933,6 +943,9 @@ internal static class WorkflowBindingValidator
                     ActivityNode activity => activity.OutputType,
                     FanOutNode fanOut => fanOut.ResultType,
                     ConditionalNode cond => cond.Merge?.ResultType,
+                    RepeatNode repeat => repeat.ResultType,
+                    CheckpointNode checkpoint => checkpoint.OutputType,
+                    WaitNode wait => wait.OutputType,
                     _ => null,
                 };
                 return CheckExpected(ResolveProjection(sourceType, output.Projection, plan.Schemas, diagnostics, consumer.Node.StructuralPath), expected, consumer, diagnostics, mismatchCode, exact);
@@ -1209,6 +1222,19 @@ internal static class PlanUsage
                     CountBinding(fanOut.Yield, currentDepth + 1, ref expressions, ref depth);
                     CountNodes(fanOut.Body, currentDepth + 1, ref nodes, ref expressions, ref depth);
                     break;
+                case RepeatNode repeat:
+                    CountBinding(repeat.InitialState, currentDepth, ref expressions, ref depth);
+                    CountBinding(repeat.ContinueWith, currentDepth, ref expressions, ref depth);
+                    CountBinding(repeat.BreakWhen.Left, currentDepth, ref expressions, ref depth);
+                    if (repeat.BreakWhen.Right is not null)
+                        CountBinding(repeat.BreakWhen.Right, currentDepth, ref expressions, ref depth);
+                    CountNodes(repeat.Body, currentDepth + 1, ref nodes, ref expressions, ref depth);
+                    break;
+                case CheckpointNode checkpoint:
+                    CountBinding(checkpoint.Value, currentDepth, ref expressions, ref depth);
+                    break;
+                case WaitNode:
+                    break;
             }
         }
     }
@@ -1347,6 +1373,24 @@ internal static class PlanUsage
                     AddBindingText(fanOut.Yield, ref bytes);
                     AddTypeText(fanOut.ResultType, ref bytes);
                     AddNodeText(fanOut.Body, ref bytes);
+                    break;
+                case RepeatNode repeat:
+                    AddBindingText(repeat.InitialState, ref bytes);
+                    AddBindingText(repeat.ContinueWith, ref bytes);
+                    AddBindingText(repeat.BreakWhen.Left, ref bytes);
+                    if (repeat.BreakWhen.Right is not null)
+                        AddBindingText(repeat.BreakWhen.Right, ref bytes);
+                    AddTypeText(repeat.StateType, ref bytes);
+                    AddTypeText(repeat.ResultType, ref bytes);
+                    AddNodeText(repeat.Body, ref bytes);
+                    break;
+                case CheckpointNode checkpoint:
+                    AddBindingText(checkpoint.Value, ref bytes);
+                    AddTypeText(checkpoint.OutputType, ref bytes);
+                    break;
+                case WaitNode wait:
+                    AddText(wait.SignalName, ref bytes);
+                    AddTypeText(wait.OutputType, ref bytes);
                     break;
             }
         }
@@ -1536,6 +1580,17 @@ internal static class PlanUsage
                     AddType(fanOut.Item.Type, result);
                     AddType(fanOut.ResultType, result);
                     AddNodes(fanOut.Body, result);
+                    break;
+                case RepeatNode repeat:
+                    AddType(repeat.StateType, result);
+                    AddType(repeat.ResultType, result);
+                    AddNodes(repeat.Body, result);
+                    break;
+                case CheckpointNode checkpoint:
+                    AddType(checkpoint.OutputType, result);
+                    break;
+                case WaitNode wait:
+                    AddType(wait.OutputType, result);
                     break;
             }
         }

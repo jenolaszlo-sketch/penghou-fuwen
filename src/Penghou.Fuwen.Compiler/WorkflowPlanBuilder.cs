@@ -102,6 +102,10 @@ public sealed class WorkflowPlanBuilder
     public WorkflowPlan BuildV6()
         => BuildVersioned(FuwenContracts.IrVersionV6, FuwenContracts.CompilerSemanticVersionV6, FuwenContracts.ExecutionFingerprintVersionV6);
 
+    /// <summary>Builds a pre-release v7 plan containing interaction gates (checkpoint + wait).</summary>
+    public WorkflowPlan BuildV7()
+        => BuildVersioned(FuwenContracts.IrVersionV7, FuwenContracts.CompilerSemanticVersionV7, FuwenContracts.ExecutionFingerprintVersionV7);
+
     private WorkflowPlan BuildVersioned(string irVersion, string compilerSemanticVersion, string fingerprintVersion)
     {
         var plan = new WorkflowPlan(
@@ -193,6 +197,13 @@ public sealed class WorkflowPlanBuilder
                     CollectType(repeat.StateType, bindings);
                     CollectType(repeat.ResultType, bindings);
                     CollectNodes(repeat.Body, bindings);
+                    break;
+                case CheckpointNode checkpoint:
+                    CollectBindingDescriptors(checkpoint.Value, bindings);
+                    CollectType(checkpoint.OutputType, bindings);
+                    break;
+                case WaitNode wait:
+                    CollectType(wait.OutputType, bindings);
                     break;
             }
         }

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using FluentAssertions;
 
 namespace Penghou.Fuwen.Tests;
@@ -113,7 +114,71 @@ public sealed class WorkflowPlanIdentityTests
     }
 
     [Fact]
-    public void V2_phase_order_cannot_move_a_data_dependency_forward()
+    public void V4_plan_has_fan_out_and_stable_golden_fingerprint()
+    {
+        var plan = PlanFixture.CreateV4();
+        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
+        var goldenPath = Path.Combine(AppContext.BaseDirectory, "golden", "workflow_plan_v4.json");
+        var goldenFile = File.ReadAllBytes(goldenPath);
+        var goldenLength = goldenFile.Length;
+        while (goldenLength > 0 && goldenFile[goldenLength - 1] is (byte)'\r' or (byte)'\n')
+            goldenLength--;
+
+        canonicalBytes.Should().Equal(goldenFile.AsSpan(0, goldenLength).ToArray());
+        WorkflowPlanIdentity.ComputeExecutionFingerprint(plan)
+            .Should().StartWith("sha256:fuwen-execution/v4:");
+    }
+
+    [Fact]
+    public void V5_plan_has_conditional_merge_and_stable_golden_fingerprint()
+    {
+        var plan = PlanFixture.CreateV5();
+        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
+        var goldenPath = Path.Combine(AppContext.BaseDirectory, "golden", "workflow_plan_v5.json");
+        var goldenFile = File.ReadAllBytes(goldenPath);
+        var goldenLength = goldenFile.Length;
+        while (goldenLength > 0 && goldenFile[goldenLength - 1] is (byte)'\r' or (byte)'\n')
+            goldenLength--;
+
+        canonicalBytes.Should().Equal(goldenFile.AsSpan(0, goldenLength).ToArray());
+        WorkflowPlanIdentity.ComputeExecutionFingerprint(plan)
+            .Should().StartWith("sha256:fuwen-execution/v5:");
+    }
+
+    [Fact]
+    public void V6_plan_has_repeat_and_stable_golden_fingerprint()
+    {
+        var plan = PlanFixture.CreateV6();
+        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
+        var goldenPath = Path.Combine(AppContext.BaseDirectory, "golden", "workflow_plan_v6.json");
+        var goldenFile = File.ReadAllBytes(goldenPath);
+        var goldenLength = goldenFile.Length;
+        while (goldenLength > 0 && goldenFile[goldenLength - 1] is (byte)'\r' or (byte)'\n')
+            goldenLength--;
+
+        canonicalBytes.Should().Equal(goldenFile.AsSpan(0, goldenLength).ToArray());
+        WorkflowPlanIdentity.ComputeExecutionFingerprint(plan)
+            .Should().StartWith("sha256:fuwen-execution/v6:");
+    }
+
+    [Fact]
+    public void V7_plan_has_checkpoint_and_wait_and_stable_golden_fingerprint()
+    {
+        var plan = PlanFixture.CreateV7();
+        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
+        var goldenPath = Path.Combine(AppContext.BaseDirectory, "golden", "workflow_plan_v7.json");
+        var goldenFile = File.ReadAllBytes(goldenPath);
+        var goldenLength = goldenFile.Length;
+        while (goldenLength > 0 && goldenFile[goldenLength - 1] is (byte)'\r' or (byte)'\n')
+            goldenLength--;
+
+        canonicalBytes.Should().Equal(goldenFile.AsSpan(0, goldenLength).ToArray());
+        WorkflowPlanIdentity.ComputeExecutionFingerprint(plan)
+            .Should().StartWith("sha256:fuwen-execution/v7:");
+    }
+
+    [Fact]
+    public void V4_fingerprint_differs_from_v3()
     {
         var plan = PlanFixture.CreateV2();
         var order = plan.ExecutionOrder!;
@@ -505,4 +570,140 @@ internal static class PlanFixture
         name,
         "1",
         new ContentDigest("sha256", "descriptor/v1", new string('a', 64)));
+
+    internal static WorkflowPlan CreateV4()
+    {
+        var str = new PrimitiveType(FuwenPrimitiveKind.String);
+        var contextProvider = Descriptor(DescriptorKind.ContextProvider, "sample.context");
+        var contextPath = StructuralNodeIdentity.Create("demo", "ctx");
+        var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
+        return new WorkflowPlan(
+            FuwenContracts.IrVersionV4,
+            "fuwen-language/v1",
+            FuwenContracts.CompilerSemanticVersionV4,
+            FuwenContracts.CanonicalJsonVersion,
+            FuwenContracts.ExecutionFingerprintVersionV4,
+            "demo",
+            "1",
+            str,
+            str,
+            "routing/1",
+            [],
+            [contextProvider],
+            new CapabilityManifest([]),
+            [
+                new ContextNode("ctx", contextPath, contextProvider, [new ArgumentBinding("input", new InputBinding([]))], str),
+                new ReturnNode("return_result", returnPath, new NodeOutputBinding(contextPath, [])),
+            ],
+            new WorkflowExecutionOrder([
+                new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([contextPath]), new WorkflowExecutionPhase([returnPath])]),
+            ]));
+    }
+
+    internal static WorkflowPlan CreateV5()
+    {
+        var str = new PrimitiveType(FuwenPrimitiveKind.String);
+        var activity = Descriptor(DescriptorKind.Activity, "sample.validate");
+        var checkPath = StructuralNodeIdentity.Create("demo", "check");
+        var thenPath = checkPath + "/$then/work";
+        var elsePath = checkPath + "/$else/work";
+        var mergePath = checkPath + "/$merge";
+        var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
+        var conditional = new ConditionalNode(
+            "check", checkPath,
+            new ConditionExpression(ConditionOperator.Exists, new InputBinding([])),
+            [new ActivityNode("work", thenPath, activity, [], str)],
+            [new ActivityNode("work", elsePath, activity, [], str)],
+            new ConditionalMerge(
+                new NodeOutputBinding(thenPath, []),
+                new NodeOutputBinding(elsePath, []),
+                str));
+        return new WorkflowPlan(
+            FuwenContracts.IrVersionV5,
+            "fuwen-language/v1",
+            FuwenContracts.CompilerSemanticVersionV5,
+            FuwenContracts.CanonicalJsonVersion,
+            FuwenContracts.ExecutionFingerprintVersionV5,
+            "demo",
+            "1",
+            str,
+            str,
+            "routing/1",
+            [],
+            [activity],
+            new CapabilityManifest([]),
+            [conditional, new ReturnNode("return_result", returnPath, new NodeOutputBinding(checkPath, []))],
+            new WorkflowExecutionOrder([
+                new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([checkPath]), new WorkflowExecutionPhase([returnPath])]),
+                new WorkflowExecutionRegion("demo/check/$then", [new WorkflowExecutionPhase([thenPath])]),
+                new WorkflowExecutionRegion("demo/check/$else", [new WorkflowExecutionPhase([elsePath])]),
+            ]));
+    }
+
+    internal static WorkflowPlan CreateV6()
+    {
+        var str = new PrimitiveType(FuwenPrimitiveKind.String);
+        var activity = Descriptor(DescriptorKind.Activity, "sample.validate");
+        var loopPath = StructuralNodeIdentity.Create("demo", "loop1");
+        var stepPath = loopPath + "/$body/step";
+        var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
+        return new WorkflowPlan(
+            FuwenContracts.IrVersionV6,
+            "fuwen-language/v1",
+            FuwenContracts.CompilerSemanticVersionV6,
+            FuwenContracts.CanonicalJsonVersion,
+            FuwenContracts.ExecutionFingerprintVersionV6,
+            "demo",
+            "1",
+            str,
+            str,
+            "routing/1",
+            [],
+            [activity],
+            new CapabilityManifest([]),
+            [
+                new RepeatNode(
+                    "loop1", loopPath, 5, str,
+                    new InputBinding([]),
+                    [new ActivityNode("step", stepPath, activity, [new ArgumentBinding("value", new LoopStateBinding([]))], str)],
+                    new NodeOutputBinding(stepPath, []),
+                    new ConditionExpression(ConditionOperator.Equal, new LoopIterationBinding([]), new LiteralBinding(JsonDocument.Parse("3").RootElement.Clone())),
+                    str),
+                new ReturnNode("return_result", returnPath, new NodeOutputBinding(loopPath, [])),
+            ],
+            new WorkflowExecutionOrder([
+                new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([loopPath]), new WorkflowExecutionPhase([returnPath])]),
+                new WorkflowExecutionRegion("demo/loop1/$body", [new WorkflowExecutionPhase([stepPath])]),
+            ]));
+    }
+
+    internal static WorkflowPlan CreateV7()
+    {
+        var str = new PrimitiveType(FuwenPrimitiveKind.String);
+        var checkpointPath = StructuralNodeIdentity.Create("demo", "saved");
+        var waitPath = StructuralNodeIdentity.Create("demo", "approval");
+        var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
+        return new WorkflowPlan(
+            FuwenContracts.IrVersionV7,
+            "fuwen-language/v1",
+            FuwenContracts.CompilerSemanticVersionV7,
+            FuwenContracts.CanonicalJsonVersion,
+            FuwenContracts.ExecutionFingerprintVersionV7,
+            "demo",
+            "1",
+            str,
+            str,
+            "routing/1",
+            [],
+            [],
+            new CapabilityManifest([]),
+            [
+                new CheckpointNode("saved", checkpointPath, new InputBinding([]), str),
+                new WaitNode("approval", waitPath, "approval_request", str, 3600),
+                new ReturnNode("return_result", returnPath, new NodeOutputBinding(waitPath, [])),
+            ],
+            new WorkflowExecutionOrder([
+                new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([checkpointPath]), new WorkflowExecutionPhase([waitPath]), new WorkflowExecutionPhase([returnPath])]),
+            ]));
+    }
 }

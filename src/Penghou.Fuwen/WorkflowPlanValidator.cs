@@ -45,7 +45,8 @@ public static class WorkflowPlanValidator
             string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) ||
             string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) ||
             string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) ||
-            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal))
+            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal) ||
+            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV7, StringComparison.Ordinal))
             ValidateExecutionOrder(plan, nodes);
     }
 
@@ -62,24 +63,25 @@ public static class WorkflowPlanValidator
         var isV4 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal);
         var isV5 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal);
         var isV6 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal);
-        if (!isV1 && !isV2 && !isV3 && !isV4 && !isV5 && !isV6)
+        var isV7 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV7, StringComparison.Ordinal);
+        if (!isV1 && !isV2 && !isV3 && !isV4 && !isV5 && !isV6 && !isV7)
             throw new NotSupportedException(
-                $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'. Expected '{FuwenContracts.IrVersionV1}', '{FuwenContracts.IrVersionV2}', '{FuwenContracts.IrVersionV3}', '{FuwenContracts.IrVersionV4}', '{FuwenContracts.IrVersionV5}', or '{FuwenContracts.IrVersionV6}'.");
+                $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'. Expected '{FuwenContracts.IrVersionV1}', '{FuwenContracts.IrVersionV2}', '{FuwenContracts.IrVersionV3}', '{FuwenContracts.IrVersionV4}', '{FuwenContracts.IrVersionV5}', '{FuwenContracts.IrVersionV6}', or '{FuwenContracts.IrVersionV7}'.");
 
         RequireVersion(plan.CanonicalJsonVersion, FuwenContracts.CanonicalJsonVersion, nameof(plan.CanonicalJsonVersion));
         var expectedFingerprint = isV1
             ? FuwenContracts.ExecutionFingerprintVersionV1
-            : isV2 ? FuwenContracts.ExecutionFingerprintVersionV2 : isV3 ? FuwenContracts.ExecutionFingerprintVersionV3 : isV4 ? FuwenContracts.ExecutionFingerprintVersionV4 : isV5 ? FuwenContracts.ExecutionFingerprintVersionV5 : FuwenContracts.ExecutionFingerprintVersionV6;
+            : isV2 ? FuwenContracts.ExecutionFingerprintVersionV2 : isV3 ? FuwenContracts.ExecutionFingerprintVersionV3 : isV4 ? FuwenContracts.ExecutionFingerprintVersionV4 : isV5 ? FuwenContracts.ExecutionFingerprintVersionV5 : isV6 ? FuwenContracts.ExecutionFingerprintVersionV6 : FuwenContracts.ExecutionFingerprintVersionV7;
         RequireVersion(plan.FingerprintVersion, expectedFingerprint, nameof(plan.FingerprintVersion));
         var expectedCompilerSemantics = isV1
             ? FuwenContracts.CompilerSemanticVersionV1
-            : isV2 ? FuwenContracts.CompilerSemanticVersionV2 : isV3 ? FuwenContracts.CompilerSemanticVersionV3 : isV4 ? FuwenContracts.CompilerSemanticVersionV4 : isV5 ? FuwenContracts.CompilerSemanticVersionV5 : FuwenContracts.CompilerSemanticVersionV6;
+            : isV2 ? FuwenContracts.CompilerSemanticVersionV2 : isV3 ? FuwenContracts.CompilerSemanticVersionV3 : isV4 ? FuwenContracts.CompilerSemanticVersionV4 : isV5 ? FuwenContracts.CompilerSemanticVersionV5 : isV6 ? FuwenContracts.CompilerSemanticVersionV6 : FuwenContracts.CompilerSemanticVersionV7;
         RequireVersion(plan.CompilerSemanticVersion, expectedCompilerSemantics, nameof(plan.CompilerSemanticVersion));
         if (isV1 && plan.ExecutionOrder is not null)
             throw new ArgumentException(
                 "IR v1 does not contain an execution order; historical v1 plans are never silently upgraded.",
                 nameof(plan.ExecutionOrder));
-        if ((isV2 || isV3 || isV4 || isV5) && plan.ExecutionOrder is null)
+        if ((isV2 || isV3 || isV4 || isV5 || isV6 || isV7) && plan.ExecutionOrder is null)
             throw new ArgumentException(
                 $"{plan.IrVersion} requires an explicit execution order.",
                 nameof(plan.ExecutionOrder));
@@ -202,6 +204,16 @@ public static class WorkflowPlanValidator
                         $"{repeat.StructuralPath}/$body",
                         paths,
                         locations);
+                    break;
+                case CheckpointNode checkpoint:
+                    ArgumentNullException.ThrowIfNull(checkpoint.Value);
+                    ValidateType(checkpoint.OutputType);
+                    break;
+                case WaitNode wait:
+                    RequireText(wait.SignalName, nameof(wait.SignalName));
+                    ValidateType(wait.OutputType);
+                    if (wait.TimeoutSeconds is <= 0)
+                        throw new ArgumentOutOfRangeException(nameof(wait.TimeoutSeconds), "Wait timeout must be positive.");
                     break;
                 case ReturnNode:
                     break;
@@ -441,6 +453,11 @@ public static class WorkflowPlanValidator
                     ValidateBindingForExecution(conditional.Condition.Left, location, locations, phasesByRegion);
                     if (conditional.Condition.Right is not null)
                         ValidateBindingForExecution(conditional.Condition.Right, location, locations, phasesByRegion);
+                    break;
+                case CheckpointNode checkpoint:
+                    ValidateBindingForExecution(checkpoint.Value, location, locations, phasesByRegion);
+                    break;
+                case WaitNode:
                     break;
                 case ReturnNode @return:
                     ValidateBindingForExecution(@return.Value, location, locations, phasesByRegion);
@@ -765,6 +782,8 @@ public static class WorkflowPlanValidator
         FanOutNode fanOut => fanOut.ResultType,
         ConditionalNode cond => cond.Merge?.ResultType,
         RepeatNode repeat => repeat.ResultType,
+        CheckpointNode checkpoint => checkpoint.OutputType,
+        WaitNode wait => wait.OutputType,
         _ => null,
     };
 
@@ -1056,6 +1075,17 @@ public static class WorkflowPlanValidator
                     CollectTypeDescriptors(fanOut.Item.Type, descriptors);
                     CollectTypeDescriptors(fanOut.ResultType, descriptors);
                     CollectNodeDescriptors(fanOut.Body, descriptors);
+                    break;
+                case RepeatNode repeat:
+                    CollectTypeDescriptors(repeat.StateType, descriptors);
+                    CollectTypeDescriptors(repeat.ResultType, descriptors);
+                    CollectNodeDescriptors(repeat.Body, descriptors);
+                    break;
+                case CheckpointNode checkpoint:
+                    CollectTypeDescriptors(checkpoint.OutputType, descriptors);
+                    break;
+                case WaitNode wait:
+                    CollectTypeDescriptors(wait.OutputType, descriptors);
                     break;
             }
         }

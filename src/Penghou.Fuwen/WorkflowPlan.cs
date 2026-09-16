@@ -19,6 +19,8 @@ public static class FuwenContracts
     public const string IrVersionV5 = "fuwen-ir/v5";
     /// <summary>The bounded repeat executable-plan contract.</summary>
     public const string IrVersionV6 = "fuwen-ir/v6";
+    /// <summary>The interaction gates (checkpoint + wait) executable-plan contract.</summary>
+    public const string IrVersionV7 = "fuwen-ir/v7";
     /// <summary>The historical v1 compiler-semantics contract.</summary>
     public const string CompilerSemanticVersion = "compiler-semantics/1";
     /// <summary>The historical v1 compiler-semantics contract.</summary>
@@ -33,6 +35,8 @@ public static class FuwenContracts
     public const string CompilerSemanticVersionV5 = "compiler-semantics/5";
     /// <summary>The compiler-semantics contract for bounded repeat.</summary>
     public const string CompilerSemanticVersionV6 = "compiler-semantics/6";
+    /// <summary>The compiler-semantics contract for interaction gates.</summary>
+    public const string CompilerSemanticVersionV7 = "compiler-semantics/7";
     /// <summary>The canonical JSON contract used by all currently supported IR versions.</summary>
     public const string CanonicalJsonVersion = "penghou-canonical-json/v1";
     /// <summary>The historical v1 execution fingerprint envelope.</summary>
@@ -49,6 +53,8 @@ public static class FuwenContracts
     public const string ExecutionFingerprintVersionV5 = "fuwen-execution/v5";
     /// <summary>The execution fingerprint envelope for bounded repeat.</summary>
     public const string ExecutionFingerprintVersionV6 = "fuwen-execution/v6";
+    /// <summary>The execution fingerprint envelope for interaction gates.</summary>
+    public const string ExecutionFingerprintVersionV7 = "fuwen-execution/v7";
     /// <summary>The first canonical authored-source fingerprint envelope.</summary>
     public const string SourceFingerprintVersion = "fuwen-source/v1";
     /// <summary>The maximum persisted canonical IR size accepted by the core verifier.</summary>
@@ -64,6 +70,8 @@ public static class FuwenContracts
 [JsonDerivedType(typeof(ReturnNode), "return")]
 [JsonDerivedType(typeof(FanOutNode), "fan-out")]
 [JsonDerivedType(typeof(RepeatNode), "repeat")]
+[JsonDerivedType(typeof(CheckpointNode), "checkpoint")]
+[JsonDerivedType(typeof(WaitNode), "wait")]
 public abstract record WorkflowNode(string Name, string StructuralPath);
 
 /// <summary>Resolves an immutable context snapshot.</summary>
@@ -162,6 +170,31 @@ public sealed record RepeatNode(
     Binding ContinueWith,
     ConditionExpression BreakWhen,
     FuwenType ResultType) : WorkflowNode(Name, StructuralPath);
+
+/// <summary>Durable state checkpoint without suspension.</summary>
+public sealed record CheckpointNode(
+    string Name,
+    string StructuralPath,
+    Binding Value,
+    FuwenType OutputType) : WorkflowNode(Name, StructuralPath);
+
+/// <summary>Suspends until an external signal delivers a typed payload.</summary>
+public sealed record WaitNode(
+    string Name,
+    string StructuralPath,
+    string SignalName,
+    FuwenType OutputType,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    int? TimeoutSeconds = null) : WorkflowNode(Name, StructuralPath);
+
+/// <summary>The typed outcome of an approval gate signal.</summary>
+public enum ApprovalOutcome
+{
+    /// <summary>The supervisor approved the request.</summary>
+    Approved,
+    /// <summary>The supervisor denied the request.</summary>
+    Denied,
+}
 
 /// <summary>The explicit completion schedule for an IR v2 workflow.</summary>
 public sealed record WorkflowExecutionOrder(

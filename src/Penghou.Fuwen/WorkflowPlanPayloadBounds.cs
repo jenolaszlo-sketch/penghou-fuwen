@@ -214,6 +214,14 @@ internal sealed class WorkflowPlanPayloadBounds
                     Binding(value.Yield);
                     Type(value.ResultType);
                     break;
+                case CheckpointNode value:
+                    Binding(value.Value);
+                    Type(value.OutputType);
+                    break;
+                case WaitNode value:
+                    Text(value.SignalName, "wait signal name");
+                    Type(value.OutputType);
+                    break;
             }
         }
         finally

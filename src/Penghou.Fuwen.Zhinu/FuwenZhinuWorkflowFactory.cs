@@ -264,10 +264,11 @@ public sealed class FuwenZhinuWorkflowFactory
             !string.Equals(admittedPlan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) &&
             !string.Equals(admittedPlan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) &&
             !string.Equals(admittedPlan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) &&
-            !string.Equals(admittedPlan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal))
+            !string.Equals(admittedPlan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal) &&
+            !string.Equals(admittedPlan.IrVersion, FuwenContracts.IrVersionV7, StringComparison.Ordinal))
         {
             throw new FuwenZhinuAdmissionException(
-                $"The sequential Zhinu adapter supports '{FuwenContracts.IrVersionV3}'–'{FuwenContracts.IrVersionV6}', not '{admittedPlan.IrVersion}'.");
+                $"The sequential Zhinu adapter supports '{FuwenContracts.IrVersionV3}'–'{FuwenContracts.IrVersionV7}', not '{admittedPlan.IrVersion}'.");
         }
         if (executionPorts is not null)
             ValidateExecutableSubset(admittedPlan.Nodes, insideFanOut: false, insideRepeat: false);
@@ -293,7 +294,7 @@ public sealed class FuwenZhinuWorkflowFactory
                 throw new FuwenZhinuAdmissionException(
                     $"The sequential Zhinu adapter does not support '{node.GetType().Name}' inside fan-out body '{node.StructuralPath}'.");
             }
-            if (insideRepeat && node is not ActivityNode and not ConditionalNode)
+            if (insideRepeat && node is not ActivityNode and not ConditionalNode and not CheckpointNode and not WaitNode)
             {
                 throw new FuwenZhinuAdmissionException(
                     $"The sequential Zhinu adapter does not support '{node.GetType().Name}' inside repeat body '{node.StructuralPath}'.");

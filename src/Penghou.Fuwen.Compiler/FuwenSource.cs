@@ -505,6 +505,7 @@ internal sealed class SourceParser
     private bool fanOutSeen;
     private bool conditionalMergeSeen;
     private bool repeatSeen;
+    private bool interactionGateSeen;
     private string? fanOutItemName;
     private string? loopStateName;
     private string? loopIterationName;
@@ -556,7 +557,7 @@ internal sealed class SourceParser
                 foreach (var capability in capabilities) builder.RequireCapability(capability);
                 foreach (var node in nodes) builder.AddNode(node);
                 builder.SetExecutionOrder(new WorkflowExecutionOrder(BuildRegions(workflowName, nodes)));
-                plan = repeatSeen ? builder.BuildV6() : conditionalMergeSeen ? builder.BuildV5() : fanOutSeen ? builder.BuildV4() : builder.BuildV3();
+                plan = interactionGateSeen ? builder.BuildV7() : repeatSeen ? builder.BuildV6() : conditionalMergeSeen ? builder.BuildV5() : fanOutSeen ? builder.BuildV4() : builder.BuildV3();
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
             {
@@ -663,7 +664,7 @@ internal sealed class SourceParser
                 else if (currentNodeCount == budget.MaxWorkflowNodes)
                     Error(CompilerDiagnosticCodes.BudgetWorkflowNodesExceeded, "Workflow node count exceeds the configured limit.", Current);
             }
-            else Recover("context", "activity", "infer", "if", "fanout", "repeat", "return", "}");
+            else Recover("context", "activity", "infer", "if", "fanout", "repeat", "checkpoint", "wait", "return", "}");
         }
         if (!closed)
             Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected '}'.", Current);
@@ -681,6 +682,8 @@ internal sealed class SourceParser
             "if" => ParseConditional(parentPath, start),
             "fanout" => ParseFanOut(parentPath, start),
             "repeat" => ParseRepeat(parentPath, start),
+            "checkpoint" => ParseCheckpoint(parentPath, start),
+            "wait" => ParseWait(parentPath, start),
             "return" => ParseReturn(parentPath, start, allowReturn),
             _ => Unsupported(keyword, start),
         };
@@ -925,7 +928,7 @@ internal sealed class SourceParser
             if (Match("}")) { closed = true; break; }
             cancellationToken.ThrowIfCancellationRequested();
             WorkflowNode? node = null;
-            if (Current.Kind == FuwenTokenKind.Identifier && Current.Text is "activity" or "if")
+            if (Current.Kind == FuwenTokenKind.Identifier && Current.Text is "activity" or "if" or "checkpoint" or "wait")
             {
                 node = ParseNode(bodyPath, allowReturn: false);
                 if (node is not null && (string.Equals(node.Name, stateName, StringComparison.Ordinal) || string.Equals(node.Name, "iter", StringComparison.Ordinal)))
@@ -934,9 +937,9 @@ internal sealed class SourceParser
             else
             {
                 Error(CompilerDiagnosticCodes.RepeatBodyUnsupported,
-                    "A repeat body supports only activity and conditional nodes; nested regions need iteration-scoped step keys.",
+                    "A repeat body supports only activity, conditional, checkpoint, and wait nodes; nested regions need iteration-scoped step keys.",
                     Current);
-                Recover("activity", "if", "}");
+                Recover("activity", "if", "checkpoint", "wait", "}");
                 continue;
             }
             if (node is not null)
@@ -951,6 +954,41 @@ internal sealed class SourceParser
         }
         if (!closed)
             Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected '}'.", Current);
+    }
+
+    private WorkflowNode? ParseCheckpoint(string parentPath, FuwenToken start)
+    {
+        var name = ReadIdentifier("checkpoint name");
+        if (!Match("value")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'value' and a binding.", Current);
+        var value = ParseBinding();
+        if (!Match("->") && !Match(":")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected '->' or ':' and an output type.", Current);
+        var outputType = ParseType();
+        Match(";");
+        var path = parentPath + "/" + name;
+        var node = new CheckpointNode(name, path, value, outputType);
+        nodeTypes[name] = outputType; nodePaths[name] = path;
+        interactionGateSeen = true;
+        AddSpan(path, start, Previous); Ast(); return node;
+    }
+
+    private WorkflowNode? ParseWait(string parentPath, FuwenToken start)
+    {
+        var name = ReadIdentifier("wait name");
+        if (!Match("signal")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'signal' and a signal name.", Current);
+        var signalName = ReadIdentifier("wait signal name");
+        if (!Match("type")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'type' and an output type.", Current);
+        var outputType = ParseType();
+        int? timeoutSeconds = null;
+        if (Match("timeout"))
+        {
+            timeoutSeconds = ReadBound("wait timeout");
+        }
+        Match(";");
+        var path = parentPath + "/" + name;
+        var node = new WaitNode(name, path, signalName, outputType, timeoutSeconds);
+        nodeTypes[name] = outputType; nodePaths[name] = path;
+        interactionGateSeen = true;
+        AddSpan(path, start, Previous); Ast(); return node;
     }
 
     private WorkflowNode? ParseReturn(string parentPath, FuwenToken start, bool allowReturn)

@@ -677,6 +677,37 @@ public sealed class WorkflowCompilerTests
     }
 
     [Theory]
+    [InlineData("""{"question":"why?"}""", true)]
+    [InlineData("""{"question":"why?","extra":1}""", false)]
+    [InlineData("""{"question":42}""", false)]
+    [InlineData("""{}""", false)]
+    [InlineData("""["question"]""", false)]
+    public void Compiler_MatchesObjectLiteralsAgainstNamedObjectSchemas(string literal, bool valid)
+    {
+        // R24: inline object literals must satisfy named object schemas
+        // field-wise (required presence, recursive matching, no unknown fields).
+        var plan = Fixture.CreatePlan();
+        var context = plan.Nodes.OfType<ContextNode>().Single();
+        using var document = JsonDocument.Parse(literal);
+        var changed = plan with
+        {
+            Nodes = plan.Nodes.Select(node => node == context
+                ? context with
+                {
+                    Arguments = [new ArgumentBinding("request", new LiteralBinding(document.RootElement.Clone()))],
+                }
+                : node).ToArray(),
+        };
+
+        var result = new WorkflowCompiler(Fixture.CreateCatalogue(), capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(changed, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().Be(valid);
+        if (!valid)
+            result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.CallableArgumentTypeMismatch);
+    }
+
+    [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public void Compiler_RejectsStructuralContainerForScalarCallableParameter(bool useList)

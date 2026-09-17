@@ -1067,8 +1067,31 @@ internal static class WorkflowBindingValidator
             },
             NamedTypeReference named when schemas.FirstOrDefault(schema => schema.Descriptor.Equals(named.Schema)) is EnumSchemaDefinition @enum =>
                 value.ValueKind == JsonValueKind.String && @enum.Members.Any(member => string.Equals(member.Value, value.GetString(), StringComparison.Ordinal)),
+            NamedTypeReference named when value.ValueKind == JsonValueKind.Object &&
+                schemas.FirstOrDefault(schema => schema.Descriptor.Equals(named.Schema)) is ObjectSchemaDefinition objectSchema =>
+                ObjectLiteralMatches(value, objectSchema, schemas, exact),
             _ => false,
         };
+
+    private static bool ObjectLiteralMatches(
+        JsonElement value,
+        ObjectSchemaDefinition objectSchema,
+        IReadOnlyList<ResolvedSchemaDefinition> schemas,
+        bool exact)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var property in value.EnumerateObject())
+        {
+            var field = objectSchema.Fields.FirstOrDefault(field =>
+                string.Equals(field.Name, property.Name, StringComparison.Ordinal));
+            if (field is null ||
+                !LiteralMatches(property.Value, field.Type, schemas, exact))
+                return false;
+            seen.Add(property.Name);
+        }
+        return objectSchema.Fields.All(field =>
+            field.Type is OptionalType || seen.Contains(field.Name));
+    }
 
     private static bool IsDuration(JsonElement value)
     {

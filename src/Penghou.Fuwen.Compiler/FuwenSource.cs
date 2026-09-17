@@ -850,7 +850,7 @@ internal sealed class SourceParser
             if (Match("}")) { closed = true; break; }
             cancellationToken.ThrowIfCancellationRequested();
             WorkflowNode? node = null;
-            if (Current.Kind == FuwenTokenKind.Identifier && Current.Text is "activity" or "if" or "return")
+            if (Current.Kind == FuwenTokenKind.Identifier && Current.Text is "activity" or "context" or "infer" or "if" or "return")
             {
                 node = ParseNode(bodyPath, allowReturn: false);
                 if (node is not null && string.Equals(node.Name, itemName, StringComparison.Ordinal))
@@ -859,9 +859,9 @@ internal sealed class SourceParser
             else
             {
                 Error(CompilerDiagnosticCodes.FanOutBodyUnsupported,
-                    "A fan-out body supports only activity and conditional nodes; context, inference, nested fan-out, and returns are not supported in this preview.",
+                    "A fan-out body supports only activity, context, inference, and conditional nodes; nested fan-out and returns are not supported in this preview.",
                     Current);
-                Recover("activity", "if", "return", "}");
+                Recover("activity", "context", "infer", "if", "return", "}");
                 continue;
             }
             if (node is not null)
@@ -872,7 +872,7 @@ internal sealed class SourceParser
                 else if (currentNodeCount == budget.MaxWorkflowNodes)
                     Error(CompilerDiagnosticCodes.BudgetWorkflowNodesExceeded, "Workflow node count exceeds the configured limit.", Current);
             }
-            else Recover("activity", "if", "return", "}");
+            else Recover("activity", "context", "infer", "if", "return", "}");
         }
         if (!closed)
             Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected '}'.", Current);

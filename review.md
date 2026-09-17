@@ -289,6 +289,14 @@ Status: resolved (2026-09-17). `ValidateCallableNode` skips the missing-argument
 
 Evidence: `src/Penghou.Fuwen.Compiler/WorkflowCompiler.cs`, `ValidateCallableNode` (before fix): every declared signature parameter had to be supplied at every call site, even one typed `OptionalType`.
 
+### R26 — P1: LLM inference and context cannot execute inside fan-out bodies in the Zhinu runtime
+
+Status: resolved (2026-09-17). `ContextNode` and `InferenceNode` are now allowed in fan-out bodies across the DSL parser, the factory executable subset, and the sequential interpreter (`ExecuteFanOutContextAsync` / `ExecuteFanOutInferenceAsync`). The enclosing item step is the durable boundary, so no per-node iteration steps are needed; snapshots live in item-scoped state for same-item inference requirements. Durable + DSL regression tests included.
+
+Evidence: `src/Penghou.Fuwen.Zhinu/FuwenZhinuWorkflowFactory.cs`, `ValidateExecutableSubset`, and `src/Penghou.Fuwen.Zhinu/FuwenZhinuSequentialInterpreter.cs`, `ExecuteFanOutRegionAsync`: fan-out bodies accept only activity nodes and control-only conditionals, and the `.fuwen` parser (`FuwenSource.cs`, `ParseFanOutBody`) rejects `context`/`infer`. Per-context staged work (e.g. contract/component design per bounded context) therefore cannot run inside fan-out bodies although repeat bodies support inference since R16.
+
+Recommendation: allow `ContextNode` and `InferenceNode` in fan-out bodies across the DSL parser, the factory executable subset, and the sequential interpreter (per-item step is the durable boundary, so no per-node iteration steps are needed; item-scoped snapshots serve same-item inference requirements). Add durable tests proving fan-out bodies containing context and inference calls.
+
 ## Suggested implementation order
 
 1. **Immediate Correctness Fixes** (done 2026-09-17):

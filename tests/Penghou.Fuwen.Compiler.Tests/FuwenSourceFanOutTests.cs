@@ -25,6 +25,18 @@ public sealed class FuwenSourceFanOutTests
                 callableContract: new CallableContract(
                     new CallableSignature([new CallableParameter("value", str)], str),
                     CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+            new TrustedCatalogueDescriptor(
+                new DescriptorReference(DescriptorKind.ContextProvider, "sample.context", "1", Digest('c')),
+                callableContract: new CallableContract(
+                    new CallableSignature([new CallableParameter("request", str)], str),
+                    CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+            new TrustedCatalogueDescriptor(
+                new DescriptorReference(DescriptorKind.InferenceProfile, "sample.profile", "1", Digest('d')),
+                callableContract: new CallableContract(
+                    new CallableSignature([new CallableParameter("request", str)], str),
+                    CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+            new TrustedCatalogueDescriptor(
+                new DescriptorReference(DescriptorKind.PromptTemplate, "sample.prompt", "1", Digest('e'))),
         ]);
     }
 
@@ -62,13 +74,38 @@ public sealed class FuwenSourceFanOutTests
     }
 
     [Fact]
-    public async Task Fanout_body_rejects_context_and_nested_fanout()
+    public async Task Fanout_body_supports_context_and_inference_nodes()
+    {
+        // R26: per-item staged work needs context and inference in fan-out bodies.
+        const string source = """
+            workflow batch(input: list<string>[8]) -> list<string>[8] {
+              fanout process over input as item: string key item max 8 {
+                context cx = context "sample.context@1#cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" (request: item;) -> string;
+                infer answer = infer "sample.profile@1#dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" using "sample.prompt@1#eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" (request: item;) with cx -> string;
+              } yield answer -> list<string>[8];
+              return process;
+            }
+            """;
+
+        var result = await new FuwenSourceCompiler(Catalogue()).CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+        result.Succeeded.Should().BeTrue(string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
+        var fanOut = result.Plan!.Nodes.OfType<FanOutNode>().Should().ContainSingle().Subject;
+        fanOut.Body.OfType<ContextNode>().Should().ContainSingle();
+        var inference = fanOut.Body.OfType<InferenceNode>().Should().ContainSingle().Subject;
+        inference.ContextRequirements.Should().ContainSingle()
+            .Which.Source.NodePath.Should().Contain("cx");
+    }
+
+    [Fact]
+    public async Task Fanout_body_still_rejects_nested_fanout()
     {
         const string source = """
             workflow batch(input: list<string>[8]) -> list<string>[8] {
               fanout process over input as item: string key item max 8 {
-                context bad = context "sample.context@1#cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" -> string;
-              } yield bad -> list<string>[8];
+                fanout nested over input as sub: string key sub max 8 {
+                  activity upper = activity "sample.uppercase@1#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" (value: sub;) -> string;
+                } yield upper -> list<string>[8];
+              } yield process -> list<string>[8];
               return process;
             }
             """;

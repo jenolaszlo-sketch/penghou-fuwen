@@ -417,6 +417,129 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         }
     }
 
+    [Fact]
+    public async Task Fanout_body_with_context_and_inference_executes_durably_per_item()
+    {
+        // R26: per-item staged work (e.g. contract/component design) needs
+        // context and inference inside fan-out bodies.
+        var text = new PrimitiveType(FuwenPrimitiveKind.String);
+        var list = new ListType(text, 2);
+        static ContentDigest Digest(char value) => new("sha256", "descriptor/v1", new string(value, 64));
+        var contextDesc = new DescriptorReference(DescriptorKind.ContextProvider, "sample.context", "1", Digest('a'));
+        var profile = new DescriptorReference(DescriptorKind.InferenceProfile, "sample.profile", "1", Digest('b'));
+        var template = new DescriptorReference(DescriptorKind.PromptTemplate, "sample.prompt", "1", Digest('c'));
+        var fanOutPath = StructuralNodeIdentity.Create("batch", "process");
+        var cxPath = $"{fanOutPath}/$body/cx";
+        var inferPath = $"{fanOutPath}/$body/infer";
+        var returnPath = StructuralNodeIdentity.Create("batch", "return_result");
+        var plan = new WorkflowPlanBuilder("batch", "1", list, list, "routing/1")
+            .AddFanOut(new FanOutNode(
+                "process", fanOutPath,
+                new InputBinding([]),
+                new FanOutItemBinding("item", text),
+                new FanOutItemValueBinding([]),
+                [
+                    new ContextNode("cx", cxPath, contextDesc,
+                        [new ArgumentBinding("request", new FanOutItemValueBinding([]))], text),
+                    new InferenceNode("infer", inferPath, profile, template,
+                        [new ArgumentBinding("request", new NodeOutputBinding(cxPath, []))], [], text,
+                        [new ContextRequirement("cx", new NodeOutputBinding(cxPath, []), text)]),
+                ],
+                new NodeOutputBinding(inferPath, []),
+                list,
+                MaximumItems: 2,
+                MaximumConcurrency: 2))
+            .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(fanOutPath, [])))
+            .SetExecutionOrder(new WorkflowExecutionOrder([
+                new WorkflowExecutionRegion("batch", [
+                    new WorkflowExecutionPhase([fanOutPath]),
+                    new WorkflowExecutionPhase([returnPath]),
+                ]),
+                new WorkflowExecutionRegion($"{fanOutPath}/$body", [
+                    new WorkflowExecutionPhase([cxPath]),
+                    new WorkflowExecutionPhase([inferPath]),
+                ]),
+            ]))
+            .BuildV4();
+        var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
+                new InMemoryTrustedCatalogue([
+                    new TrustedCatalogueDescriptor(contextDesc, callableContract: new CallableContract(
+                        new CallableSignature([new CallableParameter("request", text)], text),
+                        CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+                    new TrustedCatalogueDescriptor(profile, callableContract: new CallableContract(
+                        new CallableSignature([new CallableParameter("request", text)], text),
+                        CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+                    new TrustedCatalogueDescriptor(template),
+                ]),
+                capabilityPolicy: new CapabilityGrantPolicy("policy/1", [])))
+            .AdmitAsync(plan, cancellationToken: TestContext.Current.CancellationToken);
+        admission.Succeeded.Should().BeTrue(string.Join("; ", admission.Diagnostics.Select(static item => item.Message)));
+
+        var context = new EchoFanOutContext();
+        var inference = new EchoFanOutInference();
+        var registration = await new FuwenZhinuWorkflowFactory(
+                new InMemoryWorkflowDefinitionStore(),
+                IdentityFor(admission),
+                new FuwenZhinuExecutionPorts(new UnusedActivity(), context, inference))
+            .CreateAsync("fuwen.fanout-inference", "1", admission, TestContext.Current.CancellationToken);
+        var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(root, "workflow.db"), Pooling = false });
+            await using var engine = new WorkflowEngine(store, registration.Register(new WorkflowRegistry()), new ZhinuOptions { PollInterval = TimeSpan.FromMilliseconds(5) });
+            using var input = JsonDocument.Parse("[\"b\",\"a\"]");
+            var runId = await engine.StartAsync("fuwen.fanout-inference", "1", input.RootElement.Clone(), cancellationToken: TestContext.Current.CancellationToken);
+            await engine.ExecuteAsync(runId, TestContext.Current.CancellationToken);
+            (await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: TestContext.Current.CancellationToken))
+                .EnumerateArray().Select(item => item.GetString()).Should().Equal("b.ctx.inf", "a.ctx.inf");
+            context.Calls.Should().Be(2);
+            inference.Calls.Should().Be(2);
+            inference.Requests.Should().HaveCount(2)
+                .And.OnlyContain(request => request.ContextInputs.Count == 1 && request.ContextInputs[0].Name == "cx");
+
+            await engine.ExecuteAsync(runId, TestContext.Current.CancellationToken);
+            context.Calls.Should().Be(2);
+            inference.Calls.Should().Be(2);
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    private sealed class EchoFanOutContext : IContextProvider
+    {
+        public int Calls { get; private set; }
+
+        public ValueTask<ContextExecutionResult> ExecuteAsync(ContextExecutionRequest request, CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            var input = ((JsonRuntimeValue)request.Arguments.Single().Value).Value.GetString()!;
+            using var document = JsonDocument.Parse(JsonSerializer.Serialize(input + ".ctx"));
+            var snapshot = new ContextSnapshotReference(request.Provider, $"snap-{Calls}",
+                new ContentDigest("sha256", "request/v1", new string('c', 64)),
+                new ContentDigest("sha256", "content/v1", new string('d', 64)), [],
+                "policy/1", new ContextSnapshotBudgetEvidence(false, null, null, null, null), DateTimeOffset.UtcNow);
+            return ValueTask.FromResult(ContextExecutionResult.Succeeded(RuntimeValue.FromJson(document.RootElement), snapshot));
+        }
+    }
+
+    private sealed class EchoFanOutInference : IInferenceExecutor
+    {
+        public int Calls { get; private set; }
+        public List<InferenceExecutionRequest> Requests { get; } = [];
+
+        public ValueTask<InferenceExecutionResult> ExecuteAsync(InferenceExecutionRequest request, CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            Requests.Add(request);
+            var input = ((JsonRuntimeValue)request.Arguments.Single().Value).Value.GetString()!;
+            using var document = JsonDocument.Parse(JsonSerializer.Serialize(input + ".inf"));
+            return ValueTask.FromResult(InferenceExecutionResult.Succeeded(RuntimeValue.FromJson(document.RootElement)));
+        }
+    }
+
     private sealed record FanOutFixture(WorkflowAdmissionResult Admission, string FanOutPath);
 
     private sealed record BaizeListFanOutFixture(

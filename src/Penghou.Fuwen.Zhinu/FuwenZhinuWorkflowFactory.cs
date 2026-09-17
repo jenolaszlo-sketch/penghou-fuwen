@@ -285,7 +285,7 @@ public sealed class FuwenZhinuWorkflowFactory
     {
         foreach (var node in nodes)
         {
-            if (insideFanOut && node is not ActivityNode and not ConditionalNode)
+            if (insideFanOut && node is not ActivityNode and not ContextNode and not InferenceNode and not ConditionalNode)
             {
                 throw new FuwenZhinuAdmissionException(
                     $"The sequential Zhinu adapter does not support '{node.GetType().Name}' inside fan-out body '{node.StructuralPath}'.");

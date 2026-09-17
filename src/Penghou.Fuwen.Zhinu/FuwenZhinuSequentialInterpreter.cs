@@ -959,6 +959,14 @@ internal static class FuwenZhinuSequentialInterpreter
                         state.Outputs[activity.StructuralPath] = await ExecuteFanOutActivityAsync(
                             activity, plan, executionFingerprint, ports, itemStep, state, runtimePath, cancellationToken).ConfigureAwait(false);
                         break;
+                    case ContextNode contextNode:
+                        state.Outputs[bodyNode.StructuralPath] = await ExecuteFanOutContextAsync(
+                            contextNode, plan, executionFingerprint, ports, itemStep, state, runtimePath, cancellationToken).ConfigureAwait(false);
+                        break;
+                    case InferenceNode inference:
+                        state.Outputs[bodyNode.StructuralPath] = await ExecuteFanOutInferenceAsync(
+                            inference, plan, executionFingerprint, ports, itemStep, state, runtimePath, cancellationToken).ConfigureAwait(false);
+                        break;
                     case ConditionalNode conditional:
                         var left = EvaluateBinding(conditional.Condition.Left, plan, state);
                         var right = conditional.Condition.Right is null ? null : EvaluateBinding(conditional.Condition.Right, plan, state);
@@ -977,7 +985,7 @@ internal static class FuwenZhinuSequentialInterpreter
                             cancellationToken).ConfigureAwait(false);
                         break;
                     default:
-                        throw new FuwenZhinuAdapterException("Fan-out bodies currently support activity nodes and control-only conditionals.");
+                        throw new FuwenZhinuAdapterException("Fan-out bodies currently support activity nodes, context nodes, inference nodes, and control-only conditionals.");
                 }
             }
         }
@@ -1015,6 +1023,117 @@ internal static class FuwenZhinuSequentialInterpreter
                 EnsureType(result.Output!, node.OutputType, plan.Schemas, $"fan-out activity '{node.StructuralPath}' output");
                 await PublishReceiptsAsync(result.Publications, itemStep, invocation, plan, executionFingerprint, node.StructuralPath, cancellationToken).ConfigureAwait(false);
                 return NodeExecutionEnvelope.Succeeded(invocation, result.Output!, null, result.Publications);
+            },
+            cancellationToken).ConfigureAwait(false);
+        ThrowIfFailed(envelope, node.StructuralPath);
+        return envelope.Output!;
+    }
+
+    private static async Task<RuntimeValue> ExecuteFanOutContextAsync(
+        ContextNode node,
+        WorkflowPlan plan,
+        string executionFingerprint,
+        FuwenZhinuExecutionPorts ports,
+        WorkflowStepContext itemStep,
+        InterpreterState state,
+        string runtimePath,
+        CancellationToken cancellationToken)
+    {
+        // The enclosing fan-out item step is the durable boundary, so the
+        // provider runs directly like fan-out activities; the snapshot is
+        // kept in item-scoped state for same-item inference requirements.
+        var arguments = EvaluateArguments(node.Arguments, plan, state);
+        var bodyMarker = node.StructuralPath.IndexOf("/$body/", StringComparison.Ordinal);
+        var bodySuffix = bodyMarker >= 0 ? node.StructuralPath[(bodyMarker + "/$body/".Length)..] : node.Name;
+        var runtimeContextPath = $"{runtimePath}/{bodySuffix}";
+        var identity = new NodeRequestIdentity("context", runtimeContextPath, node.Provider, null, arguments, null);
+        var requestJson = RuntimeValueWire.Serialize(identity);
+        var invocation = CreateInvocation(
+            executionFingerprint,
+            node.StructuralPath,
+            runtimeContextPath,
+            requestJson,
+            itemStep);
+        var envelope = await ExecuteProviderAsync(
+            ports,
+            invocation,
+            node.StructuralPath,
+            token => ports.ContextProvider.ExecuteAsync(
+                new ContextExecutionRequest(invocation, node.Provider, arguments, node.OutputType), token),
+            result =>
+            {
+                if (result is not ContextExecutionResult contextResult ||
+                    contextResult.ContextSnapshot is null ||
+                    !Equals(contextResult.ContextSnapshot.Provider, node.Provider))
+                {
+                    throw new FuwenZhinuExecutionException(
+                        $"Fan-out context provider '{node.Provider.Name}' returned missing or mismatched snapshot evidence.");
+                }
+                EnsureType(result.Output!, node.OutputType, plan.Schemas, $"fan-out context '{node.StructuralPath}' output");
+                return Task.FromResult(NodeExecutionEnvelope.Succeeded(
+                    invocation,
+                    result.Output!,
+                    contextResult.ContextSnapshot,
+                    result.Publications));
+            },
+            cancellationToken).ConfigureAwait(false);
+        ThrowIfFailed(envelope, node.StructuralPath);
+        if (envelope.ContextSnapshot is null || !Equals(envelope.ContextSnapshot.Provider, node.Provider))
+            throw new FuwenZhinuExecutionException(
+                $"Fan-out context result for '{node.StructuralPath}' has missing or mismatched snapshot evidence.");
+        state.Snapshots[node.StructuralPath] = envelope.ContextSnapshot;
+        return envelope.Output!;
+    }
+
+    private static async Task<RuntimeValue> ExecuteFanOutInferenceAsync(
+        InferenceNode node,
+        WorkflowPlan plan,
+        string executionFingerprint,
+        FuwenZhinuExecutionPorts ports,
+        WorkflowStepContext itemStep,
+        InterpreterState state,
+        string runtimePath,
+        CancellationToken cancellationToken)
+    {
+        var arguments = EvaluateArguments(node.Arguments, plan, state);
+        var contextInputs = new List<InferenceContextInput>(node.ContextRequirements!.Count);
+        foreach (var requirement in node.ContextRequirements)
+        {
+            if (!state.Outputs.TryGetValue(requirement.Source.NodePath, out var value) ||
+                !state.Snapshots.TryGetValue(requirement.Source.NodePath, out var snapshot))
+                throw new FuwenZhinuExecutionException(
+                    $"Fan-out inference node '{node.StructuralPath}' requires unavailable context '{requirement.Source.NodePath}'.");
+            EnsureType(value, requirement.ExpectedType, plan.Schemas,
+                $"fan-out inference context '{requirement.Name}' for '{node.StructuralPath}'");
+            contextInputs.Add(new InferenceContextInput(
+                requirement.Name,
+                requirement.ExpectedType,
+                value,
+                snapshot));
+        }
+
+        var bodyMarker = node.StructuralPath.IndexOf("/$body/", StringComparison.Ordinal);
+        var bodySuffix = bodyMarker >= 0 ? node.StructuralPath[(bodyMarker + "/$body/".Length)..] : node.Name;
+        var runtimeInferencePath = $"{runtimePath}/{bodySuffix}";
+        var identity = new NodeRequestIdentity("inference", runtimeInferencePath, node.Profile, node.PromptTemplate, arguments, contextInputs);
+        var requestJson = RuntimeValueWire.Serialize(identity);
+        var invocation = CreateInvocation(
+            executionFingerprint,
+            node.StructuralPath,
+            runtimeInferencePath,
+            requestJson,
+            itemStep);
+        var envelope = await ExecuteProviderAsync(
+            ports,
+            invocation,
+            node.StructuralPath,
+            token => ports.InferenceExecutor.ExecuteAsync(new InferenceExecutionRequest(
+                invocation, node.Profile, node.PromptTemplate, arguments, contextInputs, node.OutputType), token),
+            async result =>
+            {
+                EnsureType(result.Output!, node.OutputType, plan.Schemas, $"fan-out inference '{node.StructuralPath}' output");
+                await PublishReceiptsAsync(result.Publications, itemStep, invocation, plan, executionFingerprint, node.StructuralPath, cancellationToken).ConfigureAwait(false);
+                return NodeExecutionEnvelope.Succeeded(invocation, result.Output!, null, result.Publications, result.Evidence);
             },
             cancellationToken).ConfigureAwait(false);
         ThrowIfFailed(envelope, node.StructuralPath);

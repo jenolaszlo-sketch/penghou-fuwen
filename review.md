@@ -297,6 +297,14 @@ Evidence: `src/Penghou.Fuwen.Zhinu/FuwenZhinuWorkflowFactory.cs`, `ValidateExecu
 
 Recommendation: allow `ContextNode` and `InferenceNode` in fan-out bodies across the DSL parser, the factory executable subset, and the sequential interpreter (per-item step is the durable boundary, so no per-node iteration steps are needed; item-scoped snapshots serve same-item inference requirements). Add durable tests proving fan-out bodies containing context and inference calls.
 
+### R27 — P2: Repeat initial state cannot consume parent-region outputs
+
+Status: open (found 2026-09-17 during Guyabano live-runner wiring).
+
+Evidence: `WorkflowCompiler.cs` validates `RepeatNode.InitialState` with a consumer whose region is the repeat's structural path (never equal to any real region), `WorkflowPlanValidator` enforces the same boundary structurally, and `FuwenSource.cs` hides outer names inside repeat bodies. Net effect: a repeat loop can only seed from workflow input or literals — a loop over stage N cannot start from stage N-1's output, so retry loops cannot be chained (topology retry cannot consume the domain artifact).
+
+Recommendation: decide whether this closedness is intentional (document it as an IR contract with a dedicated diagnostic) or a defect (validate `InitialState` in the repeat's parent region like every other root-region binding). Either way the DSL, structural validator, and compiler must agree; today all three agree on closed, so runners work around it with input-seeded loops plus strict single attempts downstream.
+
 ## Suggested implementation order
 
 1. **Immediate Correctness Fixes** (done 2026-09-17):

@@ -33,20 +33,14 @@ public static class WorkflowPlanValidator
         {
             if (conditional.Merge is not null)
             {
-                if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) &&
-                    !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal))
-                    throw new ArgumentException($"Value-producing conditionals require IR v5 or v6, not '{plan.IrVersion}'.", nameof(plan.Nodes));
+                if (!IrVersions.SupportsConditionalMerge(plan.IrVersion))
+                    throw new ArgumentException($"Value-producing conditionals require IR v5 or later, not '{plan.IrVersion}'.", nameof(plan.Nodes));
                 ValidateType(conditional.Merge.ResultType);
             }
         }
         ValidateCatalogueClosure(plan);
 
-        if (string.Equals(plan.IrVersion, FuwenContracts.IrVersionV2, StringComparison.Ordinal) ||
-            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) ||
-            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) ||
-            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) ||
-            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal) ||
-            string.Equals(plan.IrVersion, FuwenContracts.IrVersionV7, StringComparison.Ordinal))
+        if (IrVersions.SupportsExecutionOrder(plan.IrVersion))
             ValidateExecutionOrder(plan, nodes);
     }
 
@@ -81,21 +75,21 @@ public static class WorkflowPlanValidator
             throw new ArgumentException(
                 "IR v1 does not contain an execution order; historical v1 plans are never silently upgraded.",
                 nameof(plan.ExecutionOrder));
-        if ((isV2 || isV3 || isV4 || isV5 || isV6 || isV7) && plan.ExecutionOrder is null)
+        if (IrVersions.SupportsExecutionOrder(plan.IrVersion) && plan.ExecutionOrder is null)
             throw new ArgumentException(
                 $"{plan.IrVersion} requires an explicit execution order.",
                 nameof(plan.ExecutionOrder));
-        if (!isV3 && !isV4 && !isV5 && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextRequirements is not null))
+        if (!IrVersions.SupportsTypedContextRequirements(plan.IrVersion) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextRequirements is not null))
             throw new ArgumentException(
-                "Typed context requirements are only supported by IR v3; historical v1/v2 plans are never silently upgraded.",
+                "Typed context requirements are only supported by IR v3 and later; historical v1/v2 plans are never silently upgraded.",
                 nameof(plan.Nodes));
-        if ((isV3 || isV4 || isV5) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextSnapshots.Count != 0))
+        if (IrVersions.SupportsTypedContextRequirements(plan.IrVersion) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextSnapshots.Count != 0))
             throw new ArgumentException(
-                "IR v3 uses typed context requirements and does not accept legacy context snapshots.",
+                "IR v3 and later use typed context requirements and do not accept legacy context snapshots.",
                 nameof(plan.Nodes));
-        if ((isV3 || isV4 || isV5) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextRequirements is null))
+        if (IrVersions.SupportsTypedContextRequirements(plan.IrVersion) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextRequirements is null))
             throw new ArgumentException(
-                "IR v3 requires a non-null ContextRequirements collection on every inference node.",
+                "IR v3 and later require a non-null ContextRequirements collection on every inference node.",
                 nameof(plan.Nodes));
     }
 

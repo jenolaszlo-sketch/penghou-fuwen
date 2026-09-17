@@ -17,6 +17,18 @@ public sealed class FuwenSourceRepeatTests
                 callableContract: new CallableContract(
                     new CallableSignature([new CallableParameter("value", str)], str),
                     CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+            new TrustedCatalogueDescriptor(
+                new DescriptorReference(DescriptorKind.ContextProvider, "sample.context", "1", Digest('b')),
+                callableContract: new CallableContract(
+                    new CallableSignature([new CallableParameter("request", str)], str),
+                    CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+            new TrustedCatalogueDescriptor(
+                new DescriptorReference(DescriptorKind.InferenceProfile, "sample.profile", "1", Digest('c')),
+                callableContract: new CallableContract(
+                    new CallableSignature([new CallableParameter("request", str)], str),
+                    CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+            new TrustedCatalogueDescriptor(
+                new DescriptorReference(DescriptorKind.PromptTemplate, "sample.prompt", "1", Digest('d'))),
         ]);
     }
 
@@ -91,6 +103,30 @@ public sealed class FuwenSourceRepeatTests
         var result = await new FuwenSourceCompiler(Catalogue()).CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
         result.Succeeded.Should().BeFalse();
         result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.BindingReferenceInvalid);
+    }
+
+    [Fact]
+    public async Task Repeat_body_supports_context_and_inference_nodes()
+    {
+        // R16: review/repair loops repeat LLM inference with per-iteration
+        // context; the DSL must accept context + infer inside repeat bodies.
+        const string source = """
+            workflow demo(input: string) -> string {
+              repeat loop1 max 2 state s: string = input {
+                context cx = context "sample.context@1#bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" (request: s;) -> string;
+                infer answer = infer "sample.profile@1#cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" using "sample.prompt@1#dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" (request: s;) with cx -> string;
+              } continue answer break iter == 2 -> string;
+              return loop1;
+            }
+            """;
+        var result = await new FuwenSourceCompiler(Catalogue()).CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+        result.Succeeded.Should().BeTrue(string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersionV6);
+        var repeat = result.Plan.Nodes.OfType<RepeatNode>().Should().ContainSingle().Subject;
+        repeat.Body.OfType<ContextNode>().Should().ContainSingle();
+        var inference = repeat.Body.OfType<InferenceNode>().Should().ContainSingle().Subject;
+        inference.ContextRequirements.Should().ContainSingle()
+            .Which.Source.NodePath.Should().Contain("cx");
     }
 
     [Fact]

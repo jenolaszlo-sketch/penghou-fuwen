@@ -141,6 +141,117 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         finally { DeleteDirectory(root); }
     }
 
+    [Fact]
+    public async Task Repeat_with_context_and_inference_executes_durably_per_iteration()
+    {
+        // R16: review/repair loops repeat LLM inference with per-iteration
+        // context snapshots; both must execute durably inside repeat bodies
+        // and replay without reinvoking providers.
+        var admission = await AdmitRepeatInferenceAsync();
+        var context = new LoopSuffixContext(".cx");
+        var inference = new LoopSuffixInference(".inf");
+        var ports = new FuwenZhinuExecutionPorts(new UnusedActivity(), context, inference);
+        var registration = await new FuwenZhinuWorkflowFactory(
+                new InMemoryWorkflowDefinitionStore(),
+                IdentityFor(admission),
+                ports)
+            .CreateAsync("fuwen.repeat-inference", "1", admission, TestContext.Current.CancellationToken);
+        var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(root, "workflow.db"), Pooling = false });
+            await using var engine = new WorkflowEngine(store, registration.Register(new WorkflowRegistry()), new ZhinuOptions { PollInterval = TimeSpan.FromMilliseconds(5) });
+
+            using var input = JsonDocument.Parse("\"start\"");
+            var runId = await engine.StartAsync("fuwen.repeat-inference", "1", input.RootElement.Clone(), cancellationToken: TestContext.Current.CancellationToken);
+            await engine.ExecuteAsync(runId, TestContext.Current.CancellationToken);
+            var output = await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: TestContext.Current.CancellationToken);
+            output.GetString().Should().Be("start.cx.inf1.cx.inf2");
+            context.Calls.Should().Be(2);
+            inference.Calls.Should().Be(2);
+            inference.Requests.Should().HaveCount(2)
+                .And.OnlyContain(request => request.ContextInputs.Count == 1 && request.ContextInputs[0].Name == "cx");
+
+            await engine.ExecuteAsync(runId, TestContext.Current.CancellationToken);
+            context.Calls.Should().Be(2);
+            inference.Calls.Should().Be(2);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    private static async Task<WorkflowAdmissionResult> AdmitRepeatInferenceAsync()
+    {
+        var str = new PrimitiveType(FuwenPrimitiveKind.String);
+        var contextDesc = new DescriptorReference(DescriptorKind.ContextProvider, "sample.context", "1", new ContentDigest("sha256", "descriptor/v1", new string('b', 64)));
+        var profileDesc = new DescriptorReference(DescriptorKind.InferenceProfile, "sample.profile", "1", new ContentDigest("sha256", "descriptor/v1", new string('c', 64)));
+        var templateDesc = new DescriptorReference(DescriptorKind.PromptTemplate, "sample.prompt", "1", new ContentDigest("sha256", "descriptor/v1", new string('d', 64)));
+        var loopPath = StructuralNodeIdentity.Create("demo", "loop1");
+        var cxPath = loopPath + "/$body/cx";
+        var answerPath = loopPath + "/$body/answer";
+        var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
+        var plan = new WorkflowPlanBuilder("demo", "1", str, str, "routing/1")
+            .AddNode(new RepeatNode(
+                "loop1", loopPath, 3, str,
+                new InputBinding([]),
+                [
+                    new ContextNode("cx", cxPath, contextDesc,
+                        [new ArgumentBinding("request", new LoopStateBinding([]))], str),
+                    new InferenceNode("answer", answerPath, profileDesc, templateDesc,
+                        [new ArgumentBinding("request", new NodeOutputBinding(cxPath, []))], [], str,
+                        [new ContextRequirement("cx", new NodeOutputBinding(cxPath, []), str)]),
+                ],
+                new NodeOutputBinding(answerPath, []),
+                new ConditionExpression(ConditionOperator.Equal, new LoopIterationBinding([]), new LiteralBinding(JsonDocument.Parse("2").RootElement.Clone())),
+                str))
+            .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(loopPath, [])))
+            .SetExecutionOrder(new WorkflowExecutionOrder([
+                new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([loopPath]), new WorkflowExecutionPhase([returnPath])]),
+                new WorkflowExecutionRegion("demo/loop1/$body", [new WorkflowExecutionPhase([cxPath]), new WorkflowExecutionPhase([answerPath])]),
+            ]))
+            .BuildV6();
+        var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
+                new InMemoryTrustedCatalogue([
+                    new TrustedCatalogueDescriptor(contextDesc, callableContract: new CallableContract(new CallableSignature([new CallableParameter("request", str)], str), CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+                    new TrustedCatalogueDescriptor(profileDesc, callableContract: new CallableContract(new CallableSignature([new CallableParameter("request", str)], str), CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+                    new TrustedCatalogueDescriptor(templateDesc),
+                ]),
+                capabilityPolicy: new CapabilityGrantPolicy("policy/1", [])))
+            .AdmitAsync(plan, cancellationToken: TestContext.Current.CancellationToken);
+        admission.Succeeded.Should().BeTrue($"Diagnostics: {string.Join("; ", admission.Diagnostics.Select(d => $"{d.Code}:{d.Message} (path={d.Path})"))}");
+        return admission;
+    }
+
+    private sealed class LoopSuffixContext(string suffix) : IContextProvider
+    {
+        public int Calls { get; private set; }
+        public ValueTask<ContextExecutionResult> ExecuteAsync(ContextExecutionRequest request, CancellationToken ct = default)
+        {
+            Calls++;
+            var input = ((JsonRuntimeValue)request.Arguments.Single().Value).Value.GetString()!;
+            using var doc = JsonDocument.Parse(JsonSerializer.Serialize(input + suffix));
+            var snap = new ContextSnapshotReference(request.Provider, $"snap-{Calls}",
+                new ContentDigest("sha256", "request/v1", new string('c', 64)),
+                new ContentDigest("sha256", "content/v1", new string('d', 64)), [],
+                "policy/1", new ContextSnapshotBudgetEvidence(false, null, null, null, null), DateTimeOffset.UtcNow);
+            return ValueTask.FromResult(ContextExecutionResult.Succeeded(RuntimeValue.FromJson(doc.RootElement), snap));
+        }
+    }
+
+    private sealed class LoopSuffixInference(string suffix) : IInferenceExecutor
+    {
+        public int Calls { get; private set; }
+        public List<InferenceExecutionRequest> Requests { get; } = [];
+        public ValueTask<InferenceExecutionResult> ExecuteAsync(InferenceExecutionRequest request, CancellationToken ct = default)
+        {
+            Calls++;
+            Requests.Add(request);
+            var input = ((JsonRuntimeValue)request.Arguments.Single().Value).Value.GetString()!;
+            using var doc = JsonDocument.Parse(JsonSerializer.Serialize(input + suffix + Calls));
+            return ValueTask.FromResult(InferenceExecutionResult.Succeeded(RuntimeValue.FromJson(doc.RootElement)));
+        }
+    }
+
     private static async Task<WorkflowAdmissionResult> AdmitRepeatAsync(int maxIterations, bool breakOnIter3 = true)
     {
         var str = new PrimitiveType(FuwenPrimitiveKind.String);

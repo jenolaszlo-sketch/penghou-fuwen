@@ -174,4 +174,81 @@ public sealed class WorkflowPlanValidatorTests
 
         act.Should().Throw<ArgumentException>().WithMessage("*incompatible with the declared output type*");
     }
+
+    [Fact]
+    public void Value_producing_conditionals_are_accepted_on_ir_v7_with_interaction_gates()
+    {
+        // R13: a v7 plan combining a conditional merge with checkpoint and
+        // wait nodes must validate (previously rejected as "v5 or v6").
+        var source = PlanFixture.CreateV5();
+        var str = new PrimitiveType(FuwenPrimitiveKind.String);
+        var checkpointPath = StructuralNodeIdentity.Create(source.Name, "saved");
+        var waitPath = StructuralNodeIdentity.Create(source.Name, "approval");
+        var checkPath = source.Nodes.OfType<ConditionalNode>().Single().StructuralPath;
+        var returnNode = source.Nodes.OfType<ReturnNode>().Single();
+        var plan = source with
+        {
+            IrVersion = FuwenContracts.IrVersionV7,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV7,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV7,
+            Nodes = [
+                .. source.Nodes.Where(node => node is not ReturnNode),
+                new CheckpointNode("saved", checkpointPath, new NodeOutputBinding(checkPath, []), str),
+                new WaitNode("approval", waitPath, "approval_request", str, 3600),
+                returnNode with { Value = new NodeOutputBinding(waitPath, []) },
+            ],
+            ExecutionOrder = new WorkflowExecutionOrder([
+                new WorkflowExecutionRegion(source.Name, [
+                    new WorkflowExecutionPhase([checkPath]),
+                    new WorkflowExecutionPhase([checkpointPath]),
+                    new WorkflowExecutionPhase([waitPath]),
+                    new WorkflowExecutionPhase([returnNode.StructuralPath]),
+                ]),
+                .. source.ExecutionOrder!.Regions.Where(region => !string.Equals(region.RegionPath, source.Name, StringComparison.Ordinal)),
+            ]),
+        };
+
+        var act = () => WorkflowPlanValidator.Validate(plan);
+
+        act.Should().NotThrow();
+    }
+
+    [Theory]
+    [InlineData("fuwen-ir/v6", "compiler-semantics/6", "fuwen-execution/v6")]
+    [InlineData("fuwen-ir/v7", "compiler-semantics/7", "fuwen-execution/v7")]
+    public void Typed_context_requirements_are_accepted_on_ir_v6_and_v7(
+        string irVersion, string compilerSemantics, string fingerprintVersion)
+    {
+        // R14: inference nodes with typed context requirements must validate
+        // on modern IR versions, not just v3-v5.
+        var plan = PlanFixture.CreateV3() with
+        {
+            IrVersion = irVersion,
+            CompilerSemanticVersion = compilerSemantics,
+            FingerprintVersion = fingerprintVersion,
+        };
+
+        var act = () => WorkflowPlanValidator.Validate(plan);
+
+        act.Should().NotThrow();
+    }
+
+    [Theory]
+    [InlineData("fuwen-ir/v1", "compiler-semantics/1", "fuwen-execution/v1", true)]
+    [InlineData("fuwen-ir/v2", "compiler-semantics/2", "fuwen-execution/v2", false)]
+    public void Typed_context_requirements_are_rejected_on_legacy_ir(
+        string irVersion, string compilerSemantics, string fingerprintVersion, bool dropExecutionOrder)
+    {
+        var source = PlanFixture.CreateV3() with
+        {
+            IrVersion = irVersion,
+            CompilerSemanticVersion = compilerSemantics,
+            FingerprintVersion = fingerprintVersion,
+        };
+        var plan = dropExecutionOrder ? source with { ExecutionOrder = null } : source;
+
+        var act = () => WorkflowPlanValidator.Validate(plan);
+
+        act.Should().Throw<ArgumentException>().WithMessage("*never silently upgraded*");
+    }
 }

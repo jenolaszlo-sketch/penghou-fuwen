@@ -1,4 +1,21 @@
 #nullable enable
+Penghou.Fuwen.IrVersions
+const Penghou.Fuwen.IrVersions.V1 = 1 -> int
+const Penghou.Fuwen.IrVersions.V2 = 2 -> int
+const Penghou.Fuwen.IrVersions.V3 = 3 -> int
+const Penghou.Fuwen.IrVersions.V4 = 4 -> int
+const Penghou.Fuwen.IrVersions.V5 = 5 -> int
+const Penghou.Fuwen.IrVersions.V6 = 6 -> int
+const Penghou.Fuwen.IrVersions.V7 = 7 -> int
+static Penghou.Fuwen.IrVersions.AtLeast(string? irVersion, int minimum) -> bool
+static Penghou.Fuwen.IrVersions.IsKnown(string? irVersion) -> bool
+static Penghou.Fuwen.IrVersions.Ordinal(string? irVersion) -> int
+static Penghou.Fuwen.IrVersions.SupportsConditionalMerge(string? irVersion) -> bool
+static Penghou.Fuwen.IrVersions.SupportsExecutionOrder(string? irVersion) -> bool
+static Penghou.Fuwen.IrVersions.SupportsFanOut(string? irVersion) -> bool
+static Penghou.Fuwen.IrVersions.SupportsInteractionGates(string? irVersion) -> bool
+static Penghou.Fuwen.IrVersions.SupportsRepeat(string? irVersion) -> bool
+static Penghou.Fuwen.IrVersions.SupportsTypedContextRequirements(string? irVersion) -> bool
 Penghou.Fuwen.FanOutItemBinding
 Penghou.Fuwen.FanOutItemBinding.FanOutItemBinding(string! Name, Penghou.Fuwen.FuwenType! Type) -> void
 Penghou.Fuwen.FanOutItemBinding.Name.get -> string!

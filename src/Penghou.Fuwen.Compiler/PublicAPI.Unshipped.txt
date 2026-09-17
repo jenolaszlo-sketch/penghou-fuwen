@@ -1,4 +1,9 @@
 #nullable enable
+Penghou.Fuwen.Compiler.ITrustedCatalogueDiscovery
+Penghou.Fuwen.Compiler.ITrustedCatalogueDiscovery.TryGetDescriptor(Penghou.Fuwen.DescriptorKind kind, string! name, string! version, out Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor? descriptor) -> bool
+Penghou.Fuwen.Compiler.ITrustedCatalogueDiscovery.TryGetDescriptor(Penghou.Fuwen.DescriptorReference! descriptor, out Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor? result) -> bool
+Penghou.Fuwen.Compiler.InMemoryTrustedCatalogue.TryGetDescriptor(Penghou.Fuwen.DescriptorKind kind, string! name, string! version, out Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor? descriptor) -> bool
+Penghou.Fuwen.Compiler.InMemoryTrustedCatalogue.TryGetDescriptor(Penghou.Fuwen.DescriptorReference! descriptor, out Penghou.Fuwen.Compiler.TrustedCatalogueDescriptor? result) -> bool
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.ConditionalBranchValueUnsupported = "FWN-CONTROL-001" -> string!
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.FanOutBodyUnsupported = "FWN-CONTROL-002" -> string!
 const Penghou.Fuwen.Compiler.CompilerDiagnosticCodes.LexUnterminatedComment = "FWN-LEX-004" -> string!

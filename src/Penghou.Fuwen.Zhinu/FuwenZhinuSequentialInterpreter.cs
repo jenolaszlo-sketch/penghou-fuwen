@@ -668,6 +668,14 @@ internal static class FuwenZhinuSequentialInterpreter
                         state.Outputs[bodyNode.StructuralPath] = await ExecuteRepeatActivityAsync(
                             repeat, activity, plan, executionFingerprint, ports, iteration, state, cancellationToken).ConfigureAwait(false);
                         break;
+                    case ContextNode contextNode:
+                        state.Outputs[bodyNode.StructuralPath] = await ExecuteRepeatContextAsync(
+                            repeat, contextNode, plan, executionFingerprint, ports, iteration, state, cancellationToken).ConfigureAwait(false);
+                        break;
+                    case InferenceNode inference:
+                        state.Outputs[bodyNode.StructuralPath] = await ExecuteRepeatInferenceAsync(
+                            repeat, inference, plan, executionFingerprint, ports, iteration, state, cancellationToken).ConfigureAwait(false);
+                        break;
                     case ConditionalNode conditional:
                         await ExecuteRepeatConditionalAsync(
                             repeat, conditional, plan, executionFingerprint, ports, context, schedule, iteration, state, cancellationToken).ConfigureAwait(false);
@@ -681,7 +689,7 @@ internal static class FuwenZhinuSequentialInterpreter
                             repeat, wait, plan, executionFingerprint, context, iteration, state, cancellationToken).ConfigureAwait(false);
                         break;
                     default:
-                        throw new FuwenZhinuAdapterException($"Repeat bodies currently support activity nodes, conditionals, checkpoints, and waits; '{bodyNode.GetType().Name}' at '{nodePath}' is not executable here.");
+                        throw new FuwenZhinuAdapterException($"Repeat bodies currently support activity nodes, context nodes, inference nodes, conditionals, checkpoints, and waits; '{bodyNode.GetType().Name}' at '{nodePath}' is not executable here.");
                 }
             }
         }
@@ -764,6 +772,129 @@ internal static class FuwenZhinuSequentialInterpreter
             cancellationToken: cancellationToken).ConfigureAwait(false);
         var output = RuntimeValueWire.FromJson(result, node.OutputType, plan.Schemas);
         EnsureType(output, node.OutputType, plan.Schemas, $"repeat activity '{node.StructuralPath}' output");
+        return output;
+    }
+
+    private static async Task<RuntimeValue> ExecuteRepeatContextAsync(
+        RepeatNode repeat,
+        ContextNode node,
+        WorkflowPlan plan,
+        string executionFingerprint,
+        FuwenZhinuExecutionPorts ports,
+        WorkflowLoopIteration<JsonElement> iteration,
+        InterpreterState state,
+        CancellationToken cancellationToken)
+    {
+        var arguments = EvaluateArguments(node.Arguments, plan, state);
+        var stepSuffix = RepeatStepSuffix(node.StructuralPath, repeat.StructuralPath);
+        var identity = new NodeRequestIdentity("context", node.StructuralPath, node.Provider, null, arguments, null);
+        var requestJson = RuntimeValueWire.Serialize(identity);
+        var runtimePath = RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, iteration.Iteration, stepSuffix);
+        // The full envelope (output + snapshot) is the persisted step
+        // value so replay restores snapshot evidence without reinvoking
+        // the provider; the snapshot slot below is populated on both
+        // fresh execution and replay.
+        var result = await iteration.StepAsync(
+            stepSuffix,
+            requestJson,
+            async (_, step, token) =>
+            {
+                var inv = CreateInvocation(executionFingerprint, node.StructuralPath, runtimePath, requestJson, step);
+                var envelope = await ExecuteProviderAsync(
+                    ports, inv, node.StructuralPath,
+                    t => ports.ContextProvider.ExecuteAsync(new ContextExecutionRequest(inv, node.Provider, arguments, node.OutputType), t),
+                    t =>
+                    {
+                        if (t is not ContextExecutionResult contextResult ||
+                            contextResult.ContextSnapshot is null ||
+                            !Equals(contextResult.ContextSnapshot.Provider, node.Provider))
+                        {
+                            throw new FuwenZhinuExecutionException(
+                                $"Repeat context provider '{node.Provider.Name}' returned missing or mismatched snapshot evidence.");
+                        }
+                        EnsureType(t.Output!, node.OutputType, plan.Schemas, $"repeat context '{node.StructuralPath}' output");
+                        return Task.FromResult(NodeExecutionEnvelope.Succeeded(inv, t.Output!, contextResult.ContextSnapshot, t.Publications));
+                    }, token).ConfigureAwait(false);
+                ThrowIfFailed(envelope, node.StructuralPath);
+                return RuntimeValueWire.Serialize(envelope);
+            },
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        NodeExecutionEnvelope envelope;
+        try
+        {
+            envelope = CanonicalJson.Deserialize<NodeExecutionEnvelope>(CanonicalJson.Canonicalize(result))
+                ?? throw new FuwenZhinuExecutionException($"Persisted repeat context result for '{node.StructuralPath}' is null.");
+        }
+        catch (Exception exception) when (exception is JsonException or ArgumentException or NotSupportedException)
+        {
+            throw new FuwenZhinuExecutionException($"Persisted repeat context result for '{node.StructuralPath}' is malformed: {exception.Message}");
+        }
+        ThrowIfFailed(envelope, node.StructuralPath);
+        if (envelope.ContextSnapshot is null || !Equals(envelope.ContextSnapshot.Provider, node.Provider))
+            throw new FuwenZhinuExecutionException(
+                $"Persisted repeat context result for '{node.StructuralPath}' has missing or mismatched snapshot evidence.");
+        // Loop-carried snapshot slot: keyed by structural path like
+        // top-level snapshots, holding the current iteration's
+        // evidence for same-iteration inference requirements.
+        state.Snapshots[node.StructuralPath] = envelope.ContextSnapshot;
+        var output = envelope.Output!;
+        EnsureType(output, node.OutputType, plan.Schemas, $"repeat context '{node.StructuralPath}' output");
+        return output;
+    }
+
+    private static async Task<RuntimeValue> ExecuteRepeatInferenceAsync(
+        RepeatNode repeat,
+        InferenceNode node,
+        WorkflowPlan plan,
+        string executionFingerprint,
+        FuwenZhinuExecutionPorts ports,
+        WorkflowLoopIteration<JsonElement> iteration,
+        InterpreterState state,
+        CancellationToken cancellationToken)
+    {
+        var arguments = EvaluateArguments(node.Arguments, plan, state);
+        var contextInputs = new List<InferenceContextInput>(node.ContextRequirements!.Count);
+        foreach (var requirement in node.ContextRequirements)
+        {
+            if (!state.Outputs.TryGetValue(requirement.Source.NodePath, out var value) ||
+                !state.Snapshots.TryGetValue(requirement.Source.NodePath, out var snapshot))
+                throw new FuwenZhinuExecutionException(
+                    $"Repeat inference node '{node.StructuralPath}' requires unavailable context '{requirement.Source.NodePath}'.");
+            EnsureType(value, requirement.ExpectedType, plan.Schemas,
+                $"repeat inference context '{requirement.Name}' for '{node.StructuralPath}'");
+            contextInputs.Add(new InferenceContextInput(
+                requirement.Name,
+                requirement.ExpectedType,
+                value,
+                snapshot));
+        }
+
+        var stepSuffix = RepeatStepSuffix(node.StructuralPath, repeat.StructuralPath);
+        var identity = new NodeRequestIdentity("inference", node.StructuralPath, node.Profile, node.PromptTemplate, arguments, contextInputs);
+        var requestJson = RuntimeValueWire.Serialize(identity);
+        var runtimePath = RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, iteration.Iteration, stepSuffix);
+        var result = await iteration.StepAsync(
+            stepSuffix,
+            requestJson,
+            async (_, step, token) =>
+            {
+                var inv = CreateInvocation(executionFingerprint, node.StructuralPath, runtimePath, requestJson, step);
+                var envelope = await ExecuteProviderAsync(
+                    ports, inv, node.StructuralPath,
+                    t => ports.InferenceExecutor.ExecuteAsync(new InferenceExecutionRequest(
+                        inv, node.Profile, node.PromptTemplate, arguments, contextInputs, node.OutputType), t),
+                    async r =>
+                    {
+                        EnsureType(r.Output!, node.OutputType, plan.Schemas, $"repeat inference '{node.StructuralPath}' output");
+                        await PublishReceiptsAsync(r.Publications, step, inv, plan, executionFingerprint, node.StructuralPath, token).ConfigureAwait(false);
+                        return NodeExecutionEnvelope.Succeeded(inv, r.Output!, null, r.Publications, r.Evidence);
+                    }, token).ConfigureAwait(false);
+                ThrowIfFailed(envelope, node.StructuralPath);
+                return RuntimeValueWire.ToJson(envelope.Output!);
+            },
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var output = RuntimeValueWire.FromJson(result, node.OutputType, plan.Schemas);
+        EnsureType(output, node.OutputType, plan.Schemas, $"repeat inference '{node.StructuralPath}' output");
         return output;
     }
 
@@ -970,9 +1101,9 @@ internal static class FuwenZhinuSequentialInterpreter
             case ConditionOperator.Or:
                 return ReadBoolean(leftJson, "or") || ReadBoolean(RuntimeValueWire.ToJson(right!), "or");
             case ConditionOperator.Equal:
-                return CanonicalJson.Canonicalize(leftJson).AsSpan().SequenceEqual(CanonicalJson.Canonicalize(RuntimeValueWire.ToJson(right!)));
+                return ScalarEqual(leftJson, RuntimeValueWire.ToJson(right!));
             case ConditionOperator.NotEqual:
-                return !CanonicalJson.Canonicalize(leftJson).AsSpan().SequenceEqual(CanonicalJson.Canonicalize(RuntimeValueWire.ToJson(right!)));
+                return !ScalarEqual(leftJson, RuntimeValueWire.ToJson(right!));
             case ConditionOperator.LessThan:
                 return Compare(leftJson, RuntimeValueWire.ToJson(right!), "less-than") < 0;
             case ConditionOperator.LessThanOrEqual:
@@ -984,6 +1115,36 @@ internal static class FuwenZhinuSequentialInterpreter
             default:
                 throw new FuwenZhinuAdapterException($"Condition operator '{op}' is unsupported.");
         }
+    }
+
+    private static bool ScalarEqual(JsonElement left, JsonElement right)
+    {
+        // Fast path for primitive operands (hot in repeat-loop break
+        // conditions): compare without canonical-JSON serialization.
+        // Complex objects and arrays fall back to canonical bytes.
+        if (left.ValueKind != right.ValueKind)
+        {
+            // JSON numbers may differ in representation kind but compare
+            // equal numerically (e.g. 3 vs 3.0); both report Number.
+            if (left.ValueKind != JsonValueKind.Number || right.ValueKind != JsonValueKind.Number)
+                return false;
+        }
+        switch (left.ValueKind)
+        {
+            case JsonValueKind.String:
+                return string.Equals(left.GetString(), right.GetString(), StringComparison.Ordinal);
+            case JsonValueKind.Number:
+                if (left.TryGetDecimal(out var leftNumber) && right.TryGetDecimal(out var rightNumber))
+                    return leftNumber == rightNumber;
+                break;
+            case JsonValueKind.True:
+            case JsonValueKind.False:
+                return left.GetBoolean() == right.GetBoolean();
+            case JsonValueKind.Null:
+            case JsonValueKind.Undefined:
+                return true;
+        }
+        return CanonicalJson.Canonicalize(left).AsSpan().SequenceEqual(CanonicalJson.Canonicalize(right));
     }
 
     private static int Compare(JsonElement left, JsonElement right, string operation)

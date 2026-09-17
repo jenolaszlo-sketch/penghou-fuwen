@@ -159,6 +159,27 @@ public interface ITrustedCatalogue
 }
 
 /// <summary>
+/// Optional synchronous descriptor discovery for catalogue implementations.
+/// The <c>.fuwen</c> source compiler programs against this abstraction so
+/// hosts can supply SQLite-backed, caching, or service-hosted catalogues
+/// without depending on <see cref="InMemoryTrustedCatalogue"/> (see review R17).
+/// </summary>
+public interface ITrustedCatalogueDiscovery
+{
+    /// <summary>Looks up a descriptor by kind, name, and version (digest-agnostic).</summary>
+    bool TryGetDescriptor(
+        DescriptorKind kind,
+        string name,
+        string version,
+        out TrustedCatalogueDescriptor? descriptor);
+
+    /// <summary>Looks up the trusted catalogue record for an exact descriptor reference.</summary>
+    bool TryGetDescriptor(
+        DescriptorReference descriptor,
+        out TrustedCatalogueDescriptor? result);
+}
+
+/// <summary>
 /// Optional authority identity for an immutable trusted-catalogue snapshot.
 /// Semantic compilation can use an unversioned catalogue, but host admission
 /// requires this identity.
@@ -170,7 +191,7 @@ public interface ITrustedCatalogueSnapshot
 }
 
 /// <summary>A deterministic in-memory trusted catalogue useful for hosts and tests.</summary>
-public sealed class InMemoryTrustedCatalogue : ITrustedCatalogue, ITrustedCatalogueSnapshot
+public sealed class InMemoryTrustedCatalogue : ITrustedCatalogue, ITrustedCatalogueSnapshot, ITrustedCatalogueDiscovery
 {
     private readonly IReadOnlyDictionary<DescriptorKey, TrustedCatalogueDescriptor> entries;
     private readonly IReadOnlyList<TrustedCatalogueDescriptor> orderedEntries;
@@ -240,6 +261,32 @@ public sealed class InMemoryTrustedCatalogue : ITrustedCatalogue, ITrustedCatalo
         result = null;
         return false;
     }
+
+    /// <inheritdoc />
+    public bool TryGetDescriptor(
+        DescriptorKind kind,
+        string name,
+        string version,
+        out TrustedCatalogueDescriptor? descriptor)
+    {
+        var found = orderedEntries.FirstOrDefault(item =>
+            item.Descriptor.Kind == kind &&
+            string.Equals(item.Descriptor.Name, name, StringComparison.Ordinal) &&
+            string.Equals(item.Descriptor.Version, version, StringComparison.Ordinal));
+        descriptor = found is null
+            ? null
+            : new TrustedCatalogueDescriptor(
+                found.Descriptor,
+                found.SchemaDefinition,
+                found.RequiredCapabilities,
+                found.CallableContract);
+        return descriptor is not null;
+    }
+
+    /// <inheritdoc />
+    public bool TryGetDescriptor(
+        DescriptorReference descriptor,
+        out TrustedCatalogueDescriptor? result) => TryGet(descriptor, out result);
 
     public ValueTask<DescriptorResolutionResult> ResolveAsync(
         DescriptorReference descriptor,

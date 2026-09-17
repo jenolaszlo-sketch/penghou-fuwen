@@ -230,6 +230,57 @@ public sealed class PlanRevisionComparerTests
             .Which.ParamName.Should().Be("beforeDefinition");
     }
 
+    [Fact]
+    public void Compare_reports_conditional_merge_result_type_change_as_semantic_change()
+    {
+        // R15: altering Merge.ResultType must not compare as Unchanged.
+        var beforePlan = PlanFixture.CreateV5();
+        var conditional = beforePlan.Nodes.OfType<ConditionalNode>().Single();
+        var changedPlan = beforePlan with
+        {
+            OutputType = new PrimitiveType(FuwenPrimitiveKind.Integer),
+            Nodes = beforePlan.Nodes.Select(node => node is ConditionalNode value &&
+                string.Equals(value.StructuralPath, conditional.StructuralPath, StringComparison.Ordinal)
+                ? value with { Merge = value.Merge! with { ResultType = new PrimitiveType(FuwenPrimitiveKind.Integer) } }
+                : node).ToArray(),
+        };
+        var beforeDefinition = WorkflowDefinitionDocument.Create(beforePlan);
+        var before = PlanRevisionDocument.Create(beforeDefinition, "revision/1", null, Semantics());
+        var afterDefinition = WorkflowDefinitionDocument.Create(changedPlan);
+        var after = PlanRevisionDocument.Create(afterDefinition, "revision/2", "revision/1", Semantics());
+
+        var comparison = PlanRevisionComparer.Compare(before, beforeDefinition, after, afterDefinition);
+
+        comparison.ExecutionFingerprintEqual.Should().BeFalse();
+        comparison.Changes.Should().Contain(new PlanChange(conditional.StructuralPath, PlanChangeKind.Changed));
+    }
+
+    [Fact]
+    public void Compare_reports_conditional_merge_binding_change_as_dependency_change()
+    {
+        // R15: retargeting a merge branch binding keeps the result type, so
+        // the change is a dependency change rather than a semantic change.
+        var beforePlan = PlanFixture.CreateV5();
+        var conditional = beforePlan.Nodes.OfType<ConditionalNode>().Single();
+        using var document = System.Text.Json.JsonDocument.Parse("\"retargeted\"");
+        var changedPlan = beforePlan with
+        {
+            Nodes = beforePlan.Nodes.Select(node => node is ConditionalNode value &&
+                string.Equals(value.StructuralPath, conditional.StructuralPath, StringComparison.Ordinal)
+                ? value with { Merge = value.Merge! with { ThenValue = new LiteralBinding(document.RootElement.Clone()) } }
+                : node).ToArray(),
+        };
+        var beforeDefinition = WorkflowDefinitionDocument.Create(beforePlan);
+        var before = PlanRevisionDocument.Create(beforeDefinition, "revision/1", null, Semantics());
+        var afterDefinition = WorkflowDefinitionDocument.Create(changedPlan);
+        var after = PlanRevisionDocument.Create(afterDefinition, "revision/2", "revision/1", Semantics());
+
+        var comparison = PlanRevisionComparer.Compare(before, beforeDefinition, after, afterDefinition);
+
+        comparison.Changes.Should().Contain(new PlanChange(conditional.StructuralPath, PlanChangeKind.DependencyChanged));
+        comparison.Changes.Should().NotContain(new PlanChange(conditional.StructuralPath, PlanChangeKind.Changed));
+    }
+
     private static PlanRevisionSemantics Semantics(
         char objective = 'a',
         char acceptance = 'b',

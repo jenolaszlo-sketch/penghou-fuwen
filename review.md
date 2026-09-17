@@ -1,23 +1,18 @@
 # Penghou.Fuwen implementation and design review
 
-Reviewed: 2026-09-13.
+Reviewed: 2026-09-13 (initial delivery and Baize integration).
+Updated: 2026-09-17 (Stages 1–4 review: IR v4–v7 evolution, repeat loops, value-producing conditionals, interaction gates, and Guyabano pilot readiness).
 
-Scope: correctness, compiler/runtime contracts, Baize adapters, Zhinu durable execution, artifact publication, OOP/design patterns, usability, usefulness, and test coverage. This includes the recently completed Baize delivery.
+Scope: correctness, compiler/runtime contracts, Baize adapters, Zhinu durable execution, artifact publication, OOP/design patterns, usability, usefulness, and test coverage across all current features.
 
 ## Assessment and verification
 
-Release-hardening status (2026-09-13): R01-R05 are implemented with focused
-regressions. R06-R12 remain curated follow-up work; the roadmap records the
-parts that affect the first preview and the later architectural cleanup.
-
-The compiler/admission/runtime separation is appropriate. Exact descriptor identities, canonical definitions, opaque admission receipts, bounded runtime values, explicit execution ports, and durable invocation evidence provide useful boundaries. Preserve these distinctions. The strongest opportunities are consistent value representation across adapters and more precise accounting/recovery contracts.
-
-- Full solution tests passed: 330 logical tests on both .NET 8 and .NET 10, totaling 660 passing executions with zero failures or skips.
-- Per framework: core 148, compiler 133, Baize 21, Zhinu 28.
-- Temporary fake-provider probes outside the repository reproduced the list representation mismatch, prompt substitution problem, and missing-usage cost-policy behavior below. No paid provider calls were made.
-- Numeric comparison probes initially appeared suspicious, but RuntimeValueValidator rejects the non-representable inputs before execution. They are not reported as reachable correctness defects.
-- Python golden tests, live generation providers, and external publication services were not exercised in this review.
-- No implementation files were modified. This document is the review deliverable.
+Release-hardening status (2026-09-17, second pass):
+- R01–R05 are resolved with regressions in the test suite.
+- R06–R12 remain tracked follow-up items; several parts were hardened (R09 bounded raw provider output, R11 cross-adapter matrix, R12 publisher contract).
+- Recent work delivered Stage 1 (fan-out DSL), Stage 2 (IR v5 value-producing conditionals with `merge`), Stage 3 (IR v6 bounded `repeat` loops), and Stage 4 (IR v7 `checkpoint` and `wait` interaction gates).
+- Full solution tests pass: 388 logical tests on both .NET 8 and .NET 10, totaling 776 passing executions with zero failures or skips (Core: 160, Compiler: 156, Baize: 33, Zhinu: 39).
+- The blocking cross-feature correctness defects R13–R16 are now resolved with regression fixtures, and the abstraction/performance/versioning items R17–R19 are resolved. R07 and R20–R23 remain tracked follow-up items.
 
 ## Correctness findings
 
@@ -29,13 +24,7 @@ without reinvoking the provider.
 
 Evidence: `src/Penghou.Fuwen.Baize/BaizeInferenceExecutor.cs`, `ExtractOutputAsync`; `src/Penghou.Fuwen.Compiler/RuntimeValueValidator.cs`, JSON-list validation; `src/Penghou.Fuwen.Zhinu/FuwenZhinuSequentialInterpreter.cs`, `ExecuteInferenceAsync` and `ExecuteFanOutAsync`.
 
-Baize structured output is constructed with `RuntimeValue.FromJson`, including JSON arrays. Runtime validation accepts JsonRuntimeValue arrays for a declared ListType. Zhinu preserves that successful provider output in its execution envelope, but ExecuteFanOutAsync requires the source to be a ListRuntimeValue. The declared type validates while the downstream representation check rejects it.
-
-Probe: fake Baize response `[1,2]`, output type List<Integer> bounded to five items. Execution and runtime validation succeed; the returned type is JsonRuntimeValue and fails the ListRuntimeValue check used by fan-out. The review confirmed this handoff and inspected the rejection path; it did not run a complete durable workflow for this probe.
-
-Other execution ports returning JSON lists and list projections from JSON objects can encounter the same mismatch.
-
-Recommendation: establish a shared typed normalization boundary for provider output, including nested/projection values, or let fan-out consume both validated list representations. Preserve artifact values during normalization. Add an admitted Baize-list-to-Zhinu-fan-out integration test, including replay and projected list input.
+Recommendation: preserve shared typed normalization across all execution ports.
 
 ### R02 — P2: Prompt substitution rewrites literal argument content
 
@@ -44,12 +33,6 @@ argument and context JSON is never scanned as template syntax.
 
 Evidence: `src/Penghou.Fuwen.Baize/BaizeInferenceExecutor.cs`, `CreateRequest`.
 
-Template expansion replaces `{arguments}` first, then runs `{context}` replacement over the entire resulting string. Literal `{context}` text inside an argument is replaced with context JSON. This silently changes data supplied to the model; nonempty context can also insert unexpected JSON syntax into the serialized argument region.
-
-Reproduced: template `ARGS {arguments} CTX {context}` and argument text `literal {context}` with empty context. The provider receives `ARGS {"text":"literal {}"} CTX {}`.
-
-Recommendation: expand placeholders only in the original template using a single-pass renderer or pre-parsed segments. Never rescan inserted values. Test placeholder-like text in arguments and context, including all supported template forms.
-
 ### R03 — P2: Missing usage allows retries despite a configured cost ceiling
 
 Status: resolved conservatively. Missing or partial billable usage is recorded
@@ -57,24 +40,12 @@ as unknown cost and prevents another priced attempt when a ceiling is active.
 
 Evidence: `BaizeTokenPricing.Calculate`, `ShouldRetry`, and cost aggregation in `src/Penghou.Fuwen.Baize/BaizeInferenceExecutor.cs`.
 
-Pricing is required on every endpoint when a ceiling is configured, but reported token usage is not. If usage is absent, cost remains unknown while the retry comparison uses the accumulated numeric value, initially zero. Partial usage treats the missing component as zero. Another attempt can therefore be authorized without evidence that prior spending remains within the budget.
-
-Reproduced: a one-microunit ceiling, trusted nonzero pricing, two permitted representation attempts, and a fake provider returning schema-invalid output without usage. Both calls execute and aggregate cost remains null.
-
-Recommendation: make unknown/partial usage an explicit accounting state. Under an enforced retry ceiling, stop or reserve a conservative host-defined estimate before another call. Distinguish a post-response retry threshold from a strict maximum-spend guarantee: the current API cannot prevent a single completed call exceeding the threshold. Add missing/partial usage tests.
-
 ### R04 — P2: Zhinu drops inference evidence when success processing fails
 
 Status: resolved. Available inference evidence is retained in the durable
 failure envelope when post-provider validation or publication fails.
 
-Evidence: `src/Penghou.Fuwen.Zhinu/FuwenZhinuSequentialInterpreter.cs`, the catch around `buildSuccess(result)` inside `ExecuteProviderAsync`.
-
-A provider can return successful inference with usage/cost evidence, after which output validation or artifact receipt registration fails. The catch creates a failed NodeExecutionEnvelope without preserving that inference evidence. The durable record loses provider/accounting information for an operation that ran. The branch handling an explicit failed InferenceExecutionResult does preserve its evidence.
-
-Status: code-inspection finding; no durable publication-failure probe was run.
-
-Recommendation: retain available inference evidence on every terminal path after a provider result exists, while keeping failed-envelope publication semantics explicit. Test successful provider execution followed by rejected output or publication, and inspect the persisted failure envelope.
+Evidence: `src/Penghou.Fuwen.Zhinu/FuwenZhinuSequentialInterpreter.cs`, catch around `buildSuccess(result)` in `ExecuteProviderAsync`.
 
 ### R05 — P2: Generation polling follows replacement handles without checking identity
 
@@ -84,73 +55,240 @@ permitting opaque continuation metadata to refresh.
 
 Evidence: `src/Penghou.Fuwen.Baize/BaizeGenerationInferenceExecutor.cs`, `ExecuteDurablyAsync`.
 
-Each poll uses the handle from the latest response. The adapter does not retain the submitted handle's stable identity and reject a different identity in subsequent responses. A misbehaving client/decorator can redirect later polling while Fuwen attributes the result to the original invocation. This weakens the documented pinned-operation behavior.
+### R13 — P1: Value-producing conditionals (`merge`) are rejected on IR v7 plans
 
-Status: code-inspection contract-hardening finding. The client is a trusted host dependency; no real provider redirect was observed.
+Status: resolved (2026-09-17). `WorkflowPlanValidator` now gates merges via `IrVersions.SupportsConditionalMerge` (IR v5+); regression test combines merge with checkpoint and wait on v7.
 
-Recommendation: validate stable operation identity from submission onward. If Baize permits refreshed continuation metadata, distinguish it from provider/endpoint/operation identity. Test a synthetic mismatched handle. Verify request modality against the binding where possible, or document modality evidence as host-declared rather than validated result provenance.
+Evidence: `src/Penghou.Fuwen/WorkflowPlanValidator.cs`, lines 36–38 (before fix):
+```csharp
+if (conditional.Merge is not null)
+{
+    if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) &&
+        !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal))
+        throw new ArgumentException($"Value-producing conditionals require IR v5 or v6, not '{plan.IrVersion}'.", nameof(plan.Nodes));
+    ValidateType(conditional.Merge.ResultType);
+}
+```
+
+When Stage 4 introduced IR v7 (`checkpoint` and `wait` interaction gates), `WorkflowCompiler.cs` line 650 was updated to accept v7, but `WorkflowPlanValidator.cs` line 36 was not updated. Any workflow combining an interaction gate (`checkpoint` or `wait`) and a conditional `merge` will be assigned `fuwen-ir/v7` by the builder/compiler, causing `WorkflowPlanValidator.Validate` to throw:
+`ArgumentException: Value-producing conditionals require IR v5 or v6, not 'fuwen-ir/v7'.`
+
+Recommendation: update `WorkflowPlanValidator.cs` line 36 to permit `FuwenContracts.IrVersionV7`. Add a compiler and validator fixture that combines a conditional merge with checkpoint and wait nodes.
+
+### R14 — P1: Typed context requirements are rejected on all IR v6 and IR v7 plans
+
+Status: resolved (2026-09-17). Both `WorkflowPlanValidator.ValidateCompatibility` and `WorkflowCompiler` semantic validation now use `IrVersions.SupportsTypedContextRequirements` (IR v3+); regression tests admit inference with requirements on v6/v7 and still reject v1/v2.
+
+Evidence: `src/Penghou.Fuwen/WorkflowPlanValidator.cs`, lines 88–99 (before fix):
+```csharp
+if (!isV3 && !isV4 && !isV5 && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextRequirements is not null))
+    throw new ArgumentException(
+        "Typed context requirements are only supported by IR v3; historical v1/v2 plans are never silently upgraded.",
+        nameof(plan.Nodes));
+if ((isV3 || isV4 || isV5) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextSnapshots.Count != 0))
+    throw new ArgumentException(
+        "IR v3 uses typed context requirements and does not accept legacy context snapshots.",
+        nameof(plan.Nodes));
+if ((isV3 || isV4 || isV5) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextRequirements is null))
+    throw new ArgumentException(
+        "IR v3 requires a non-null ContextRequirements collection on every inference node.",
+        nameof(plan.Nodes));
+```
+
+The validator uses negative check `!isV3 && !isV4 && !isV5` intending to catch legacy v1/v2 plans. When a plan contains `repeat` (IR v6) or `checkpoint`/`wait` (IR v7), `isV3`, `isV4`, and `isV5` are all false. Therefore, any modern workflow with an `InferenceNode` carrying `ContextRequirements` (the standard way Fuwen connects context snapshots to inference) triggers the exception:
+`ArgumentException: Typed context requirements are only supported by IR v3; historical v1/v2 plans are never silently upgraded.`
+Furthermore, lines 92 and 96 only check `(isV3 || isV4 || isV5)`, so legacy context snapshots on v6/v7 are not properly forbidden, and null requirements are not checked.
+
+Recommendation: change line 88 to explicitly check legacy versions `(isV1 || isV2)`. Change lines 92 and 96 to check all modern versions `(isV3 || isV4 || isV5 || isV6 || isV7)`. Add test fixtures combining inference nodes with context requirements alongside repeat, checkpoint, and wait nodes.
+
+### R15 — P2: `PlanRevisionComparer` silently ignores `conditional.Merge`
+
+Status: resolved (2026-09-17). `NodeSemantics` now includes `Merge.ResultType` and `NodeDependencies` includes `Merge.ThenValue`/`Merge.ElseValue`; regression tests cover result-type change (Changed) and branch retarget (DependencyChanged).
+
+Evidence: `src/Penghou.Fuwen/PlanRevisionComparer.cs`, `NodeSemantics` and `NodeDependencies` (before fix):
+```csharp
+ConditionalNode value => new { Kind = "conditional", value.Condition.Operator },
+```
+and
+```csharp
+ConditionalNode value => new
+{
+    value.Condition.Left,
+    value.Condition.Right,
+    Then = value.Then.Select(static child => child.StructuralPath).ToArray(),
+    Else = value.Else.Select(static child => child.StructuralPath).ToArray(),
+},
+```
+
+Neither helper includes `value.Merge`. If a plan revision adds a `merge`, removes a `merge`, alters `Merge.ResultType`, or modifies `Merge.ThenValue` / `Merge.ElseValue` bindings, `PlanRevisionComparer` will report `PlanChangeKind.Unchanged` for that node. This violates Fuwen's contract that changes between admitted plan revisions produce deterministic semantic difference records.
+
+Recommendation: add `value.Merge?.ResultType` to `NodeSemantics` and `value.Merge?.ThenValue`, `value.Merge?.ElseValue` to `NodeDependencies`. Add comparison test cases for conditional merge mutations.
+
+### R16 — P1: LLM inference cannot execute inside `repeat` loops in the Zhinu runtime
+
+Status: resolved (2026-09-17). Repeat bodies now support `context` and `inference` nodes end to end: DSL parser allow-list, `FuwenZhinuWorkflowFactory` executable subset, and durable `ExecuteRepeatContextAsync` (envelope-persisted snapshots, replay-safe) plus `ExecuteRepeatInferenceAsync` via `iteration.StepAsync`. Loop-local context is required because compiler closed-region rules forbid outer-region bindings inside `$body`. Durable SQLite test proves per-iteration context+inference with replay without reinvoking providers.
+
+Evidence: `src/Penghou.Fuwen.Zhinu/FuwenZhinuSequentialInterpreter.cs`, `ExecuteRepeatRegionAsync` (before fix):
+```csharp
+switch (bodyNode)
+{
+    case ActivityNode activity:
+        state.Outputs[bodyNode.StructuralPath] = await ExecuteRepeatActivityAsync(...);
+        break;
+    case ConditionalNode conditional:
+        await ExecuteRepeatConditionalAsync(...);
+        break;
+    case CheckpointNode checkpoint:
+        state.Outputs[bodyNode.StructuralPath] = await ExecuteRepeatCheckpointAsync(...);
+        break;
+    case WaitNode wait:
+        state.Outputs[bodyNode.StructuralPath] = await ExecuteRepeatWaitAsync(...);
+        break;
+    default:
+        throw new FuwenZhinuAdapterException($"Repeat bodies currently support activity nodes, conditionals, checkpoints, and waits; '{bodyNode.GetType().Name}' at '{nodePath}' is not executable here.");
+}
+```
+
+The loop region dispatcher explicitly excludes `InferenceNode` and `ContextNode`.
+However, the stated purpose of Stage 3 (`guyabano-prep-plan.md`) is unlocking Guyabano's build/repair cycles (max 6) and review passes. In any repair or review loop, the core repeated operation is an LLM inference step (e.g. reviewing code diffs, generating repair patches, evaluating test outcomes). While `InferenceNode` inside `RepeatNode` passes compiler syntax and structural validation, attempting to run it durably under Zhinu immediately crashes with `FuwenZhinuAdapterException`.
+
+Recommendation: implement `ExecuteRepeatInferenceAsync` in `FuwenZhinuSequentialInterpreter.cs` (mirroring `ExecuteInferenceAsync`, but recording steps and durable execution envelopes through `iteration.StepAsync`), and add durable tests proving repeat loops containing Baize inference calls.
 
 ## Design, OOP, and usability improvements
 
 ### R06 — Normalize runtime values through a shared typed boundary
 
-JsonRuntimeValue, ObjectRuntimeValue, and ListRuntimeValue serve useful JSON and artifact needs, but consumers currently must understand representation distinctions beyond the admitted FuwenType. R01 demonstrates the incompatibility.
-
-Recommendation: share normalization between adapters and interpreter. Keep normalization, validation, and wire serialization explicit and separate. Avoid provider-specific branches in fan-out. Preserve immutable value objects and nominal artifact types.
+Status: partially resolved. Fan-out now normalizes lists; a comprehensive shared normalization helper across all ports and interpreters remains open.
 
 ### R07 — Separate interpreter responsibilities internally
 
-FuwenZhinuSequentialInterpreter handles scheduling, projection, conditions, fan-out, provider invocation/retry, receipt publication, observation, and envelope validation. The structured Baize executor combines rendering, schema projection, repair, validation, accounting, and routing.
-
-Recommendation: extract cohesive internal collaborators where they support independent contracts: typed value normalization, prompt rendering, outcome/evidence construction, and durable envelope validation. Keep the public facade and execution ports small. Composition is sufficient; a public hierarchy or interface for every helper is unnecessary.
+Status: open. `FuwenZhinuSequentialInterpreter.cs` has grown to ~1,700 lines. It combines workflow scheduling, execution phase barriers, condition evaluation, wire serialization (`RuntimeValueWire`), fan-out coordination, loop state management, and envelope validation. Extract cohesive internal collaborators (`FuwenConditionEvaluator`, `FuwenRuntimeValueWire`, `FuwenRepeatCoordinator`, `FuwenFanOutCoordinator`).
 
 ### R08 — Make accounting and generation recovery contracts explicit
 
-Generation cost resolution is optional and occurs after provider completion. Earlier output-count rejection can omit cost even when generation incurred it. Polling timeout is cooperative with client cancellation; it does not establish that a remote operation stopped. Replay depends on stable host request mapping and provider idempotency retention.
-
-Recommendation: distinguish known, estimated, incomplete, and unavailable cost, and remote operation state from local polling failure. Consider durable provider operation identity for reconciliation. Specify idempotency retention/request-stability requirements and publication replay semantics. Test timeout-after-submission and crash-between-generation-and-publication with stateful fakes.
+Status: open. Tracked for provider durable reconciliation.
 
 ### R09 — Bound raw provider output before parsing and repair
 
-Status: resolved. Trusted profiles now bound raw and repaired UTF-8 output
-before parsing/runtime-value construction, and repair-adapter contract failures
-remain typed provider-output failures.
-
-Structured output is parsed and potentially repaired before the bounded runtime-value constructor enforces its final contract. Large provider strings can incur substantial transient work before rejection. Injected repair pipelines can also return malformed or oversized repaired output.
-
-Recommendation: enforce a raw response budget before parsing/repair and carry it through repaired output. Map repair contract failures accurately instead of generic provider failure. Test oversized raw output and invalid repair results. Keep final schema validation after repair.
+Status: resolved. Trusted profiles now enforce raw and repaired response ceilings.
 
 ### R10 — Improve host setup and authoring feedback
 
-Exact descriptor/admission/runtime identities are valuable but require significant host wiring. A minimal complete example should cover source, catalogue admission, durable execution, and replay with structured inference and an artifact result.
-
-Recommendation: add setup diagnostics for configured routes and required descriptors before execution; reject unsupported adapter shapes at registration where possible. Include cancellation, unknown-cost failure, fan-out normalization, and source-mapped runtime failures in examples. Preserve the distinction between compilation, authorization, and execution.
+Status: open. See R22 and R23 below.
 
 ### R11 — Extend cross-adapter conformance
 
-Status: resolved for the first preview. A documented compact matrix and shared
-runtime-value result test cover primitive, object, list, optional, and artifact
-representations; durable Baize/Zhinu tests cover replay, projection, receipts,
-evidence, and failure paths.
-
-The existing durable Baize vertical is useful but does not cover all combinations of provider shapes and downstream control flow. Unit success can coexist with an invalid handoff, as R01 shows.
-
-Recommendation: reuse a compact execution-port conformance matrix for primitive/object/list/optional/artifact results, projections, replay, invalid receipts, evidence retention, and failed output. Apply it to synthetic ports and Baize. Test observable contracts rather than duplicating implementation details.
+Status: resolved for the first preview.
 
 ### R12 — Specify the generated-asset publisher contract precisely
 
-Status: resolved for the first preview. The trusted boundary now specifies
-ordered batches, exact-byte verification, atomic-or-resumable publication, and
-idempotent replay; tests cover ordering and recovery after ambiguous partial
-publication.
+Status: resolved for the first preview.
 
-The generation adapter checks receipt count, operation key, and artifact descriptor. It cannot establish that each receipt matches the correct bytes or that external content is durable; those guarantees belong to IBaizeGeneratedAssetPublisher. Repeated/reordered receipt semantics need definition.
+### R17 — OOP / Abstraction: `FuwenSource` hard-codes concrete type-cast to `InMemoryTrustedCatalogue`
 
-Recommendation: document the trusted publisher contract and add a reusable conformance fixture for idempotent batches, stable ordering, partial failures, and content verification. Keep remote fetching and verification outside compiler/core contracts.
+Status: resolved (2026-09-17). New `ITrustedCatalogueDiscovery` interface (`TryGetDescriptor` by kind/name/version and by exact reference) is implemented by `InMemoryTrustedCatalogue`; `FuwenSource` programs against the interface, so custom catalogues can opt in without the concrete cast.
+
+Evidence: `src/Penghou.Fuwen.Compiler/FuwenSource.cs` (before fix):
+```csharp
+if (catalogue is InMemoryTrustedCatalogue memory)
+{
+    var found = memory.Descriptors.FirstOrDefault(item => item.Descriptor.Kind == kind &&
+        item.Descriptor.Name == name && item.Descriptor.Version == version);
+    if (found is not null) return found.Descriptor;
+}
+```
+and
+```csharp
+if (catalogue is InMemoryTrustedCatalogue memory)
+{
+    var found = memory.Descriptors.FirstOrDefault(item => item.Descriptor.Equals(descriptor));
+    if (found?.CallableContract is not null) return found.CallableContract.Signature.OutputType;
+}
+```
+
+`ITrustedCatalogue` is defined as a public interface (`ResolveAsync(DescriptorReference, ...)`), but the `.fuwen` language compiler hard-codes an `is InMemoryTrustedCatalogue` pattern match. If a host passes a custom `ITrustedCatalogue` implementation (e.g. SQLite-backed, caching, or service-hosted catalogue), the compiler cannot resolve descriptors by `name@version` and falls back to a dummy zero-hash descriptor, with all callable output types defaulting to `PrimitiveType(Json)`.
+
+Recommendation: extend `ITrustedCatalogue` with descriptor discovery/lookup capabilities (e.g. `TryGetDescriptor(DescriptorKind kind, string name, string version, out DescriptorReference descriptor)` or an indexing interface) so that `FuwenSource` relies strictly on interface abstractions rather than a concrete test implementation.
+
+### R18 — Performance: Condition evaluation relies on full canonical JSON serialization
+
+Status: resolved (2026-09-17). `Equal`/`NotEqual` now use a `ScalarEqual` fast path (ordinal strings, decimal numbers, booleans, null) and only fall back to canonical JSON bytes for complex values.
+
+Evidence: `src/Penghou.Fuwen.Zhinu/FuwenZhinuSequentialInterpreter.cs` (before fix):
+```csharp
+var leftJson = RuntimeValueWire.ToJson(left);
+...
+return CanonicalJson.Canonicalize(leftJson).AsSpan().SequenceEqual(CanonicalJson.Canonicalize(RuntimeValueWire.ToJson(right!)));
+```
+
+Every condition evaluation (`==`, `!=`, `<`, `<=`, `>`, `>=`) serializes `RuntimeValue` instances to JSON, converts them into canonical byte arrays via `CanonicalJson.Canonicalize`, and performs byte span comparisons. In high-frequency loop iterations (e.g. `repeat max 1000` checking `iter == 3`), serializing and canonicalizing JSON on every step allocates transient buffers and burns CPU cycles unnecessarily.
+
+Recommendation: add fast-path scalar comparisons for primitive types (`long`, `double`, `bool`, `string`) when comparing runtime values, falling back to canonical JSON bytes only for complex objects or detached JSON payloads.
+
+### R19 — Architecture: Fragile string-based `IrVersion` checking across subsystems
+
+Status: resolved (2026-09-17). New `Penghou.Fuwen.IrVersions` helper (ordinals V1–V7 plus `SupportsExecutionOrder`, `SupportsTypedContextRequirements`, `SupportsFanOut`, `SupportsConditionalMerge`, `SupportsRepeat`, `SupportsInteractionGates`) centralizes gating; `WorkflowPlanValidator`, `WorkflowCompiler` (merge/repeat/context/wait gates), and `FuwenZhinuWorkflowFactory` (adapter IR range) now use it.
+
+Evidence: version checks across Core, Compiler, Zhinu, and Baize used scattered string equality checks (before fix):
+`!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) && !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal)`
+
+Each new IR feature requires manually updating dozens of string comparisons across 4 separate projects. Overlooking even one location was the exact cause of R13 (v7 merge rejection) and R14 (v6/v7 context rejection).
+
+Recommendation: model IR versions with an ordinal enum (`IrVersion.V7`) or feature capability flags (`plan.SupportsFeature(IrFeatures.ConditionalMerge)`), allowing clean range comparisons (`plan.IrVersion >= IrVersion.V5`) rather than hardcoded combinatorial string checks.
+
+### R20 — Usability: DSL mandates 64-character hex digests in source text
+
+Status: open.
+
+Evidence: `src/Penghou.Fuwen.Compiler/FuwenSource.cs`, lines 1153–1178.
+
+When authoring `.fuwen` files without an in-memory catalogue that pre-indexes digests, authors are forced to write:
+`activity step = activity "sample.echo@1#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" (value: s;) -> string;`
+Requiring raw 64-character SHA-256 digests in authored source text is extremely brittle, unreadable, and hostile to human editing or code reviews.
+
+Recommendation: allow human-authored `.fuwen` files to reference logical names (`sample.echo@1`), and provide a lockfile/manifest tool (`fuwen.lock` or catalogue manifest) that pins and verifies the content digests at compilation time.
+
+### R21 — Usability: Sparse authoring documentation and lack of end-to-end samples
+
+Status: open.
+
+Evidence: `docs/fuwen-authoring.md` is only 21 lines long, and the repository contains no `samples/` directory.
+
+External consumers attempting to integrate Fuwen (such as Guyabano, Qingniao, or Marang developers) have no comprehensive grammar specification, syntax guide, or runnable sample demonstrating how to take a `.fuwen` file, compile it against a catalogue, obtain an admission receipt, and execute it with Baize and Zhinu.
+
+Recommendation: expand `docs/fuwen-authoring.md` into a complete syntax and keyword reference, and provide a `samples/` directory with a self-contained, end-to-end runnable workflow sample.
+
+### R22 — Usability / Host Integration: Heavy host setup ceremony
+
+Status: open.
+
+Evidence: executing a single Fuwen workflow currently requires manually instantiating and wiring ~8 low-level abstractions:
+`ITrustedCatalogue`, `CapabilityGrantPolicy`, `WorkflowCompiler`, `WorkflowAdmissionService`, `FuwenZhinuExecutionPorts`, `FuwenZhinuProviderRuntimeIdentity`, `FuwenZhinuWorkflowFactory`, `WorkflowRegistry`, and `WorkflowEngine`.
+
+Recommendation: provide a fluent host builder (`FuwenHostBuilder`) and `Microsoft.Extensions.DependencyInjection` extensions (e.g. `services.AddFuwenZhinu(...)`) to simplify host adoption in Guyabano, Qingniao, and ASP.NET Core services.
+
+### R23 — Usability: Lack of formatted diagnostic reporting for CLI/terminal
+
+Status: open.
+
+Evidence: `CompilerDiagnostic` produces structured codes, severity, message, and `SourceSpan`, but the compiler provides no standard ANSI or source-excerpt formatter (like Rust or Roslyn-style caret underlines: `^^^`). Diagnosing syntax or type errors in authored `.fuwen` files from logs or terminal outputs requires manual offset calculation.
+
+Recommendation: add a `DiagnosticFormatter` that renders source lines with context, line/column numbers, and caret indicators for human readability.
 
 ## Suggested implementation order
 
-1. Fix list/fan-out compatibility and add a durable integration regression (R01).
-2. Fix prompt rendering and unknown-cost retry policy (R02–R03).
-3. Preserve failure-path evidence and validate generation identity (R04–R05).
-4. Consolidate normalization/outcome helpers and improve bounds, recovery documentation, and host examples (R06–R12).
+1. **Immediate Correctness Fixes** (done 2026-09-17):
+    - Fix `WorkflowPlanValidator` to permit IR v7 on conditional merge (R13).
+    - Fix `WorkflowPlanValidator` typed context check for IR v6 and v7 (R14).
+    - Update `PlanRevisionComparer` to inspect `conditional.Merge` semantics and dependencies (R15).
+2. **Unblock Guyabano Repair Loops** (done 2026-09-17):
+    - Implement repeat inference/context execution in `FuwenZhinuSequentialInterpreter.cs` (R16).
+3. **OOP & Abstraction Hardening** (done 2026-09-17):
+    - Eliminate concrete `InMemoryTrustedCatalogue` cast in `FuwenSource.cs` (R17).
+    - Add scalar fast-path for condition evaluation (R18).
+    - Replace string-based IR checks with ordinal/feature checks (R19).
+4. **Developer Experience & Architecture** (still open):
+    - Refactor `FuwenZhinuSequentialInterpreter.cs` into cohesive collaborators (R07).
+    - Relax 64-character hex digests in authored source via lockfile/manifest (R20).
+    - Expand `docs/fuwen-authoring.md` and provide runnable samples (R21).
+    - Add fluent host configuration / DI extensions (R22) and CLI diagnostic formatter (R23).

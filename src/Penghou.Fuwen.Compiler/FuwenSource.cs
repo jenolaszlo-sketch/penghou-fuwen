@@ -928,7 +928,7 @@ internal sealed class SourceParser
             if (Match("}")) { closed = true; break; }
             cancellationToken.ThrowIfCancellationRequested();
             WorkflowNode? node = null;
-            if (Current.Kind == FuwenTokenKind.Identifier && Current.Text is "activity" or "if" or "checkpoint" or "wait")
+            if (Current.Kind == FuwenTokenKind.Identifier && Current.Text is "activity" or "context" or "infer" or "if" or "checkpoint" or "wait")
             {
                 node = ParseNode(bodyPath, allowReturn: false);
                 if (node is not null && (string.Equals(node.Name, stateName, StringComparison.Ordinal) || string.Equals(node.Name, "iter", StringComparison.Ordinal)))
@@ -937,9 +937,9 @@ internal sealed class SourceParser
             else
             {
                 Error(CompilerDiagnosticCodes.RepeatBodyUnsupported,
-                    "A repeat body supports only activity, conditional, checkpoint, and wait nodes; nested regions need iteration-scoped step keys.",
+                    "A repeat body supports only activity, context, inference, conditional, checkpoint, and wait nodes; nested regions need iteration-scoped step keys.",
                     Current);
-                Recover("activity", "if", "checkpoint", "wait", "}");
+                Recover("activity", "context", "infer", "if", "checkpoint", "wait", "}");
                 continue;
             }
             if (node is not null)
@@ -950,7 +950,7 @@ internal sealed class SourceParser
                 else if (currentNodeCount == budget.MaxWorkflowNodes)
                     Error(CompilerDiagnosticCodes.BudgetWorkflowNodesExceeded, "Workflow node count exceeds the configured limit.", Current);
             }
-            else Recover("activity", "if", "}");
+            else Recover("activity", "context", "infer", "if", "checkpoint", "wait", "}");
         }
         if (!closed)
             Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected '}'.", Current);
@@ -1176,11 +1176,11 @@ internal sealed class SourceParser
                 version,
                 new ContentDigest("sha256", "descriptor/v1", new string('0', 64)));
         }
-        if (catalogue is InMemoryTrustedCatalogue memory)
+        if (catalogue is ITrustedCatalogueDiscovery discovery &&
+            discovery.TryGetDescriptor(kind, name, version, out var found) &&
+            found is not null)
         {
-            var found = memory.Descriptors.FirstOrDefault(item => item.Descriptor.Kind == kind &&
-                item.Descriptor.Name == name && item.Descriptor.Version == version);
-            if (found is not null) return found.Descriptor;
+            return found.Descriptor;
         }
         Error(CompilerDiagnosticCodes.SourceDescriptorUnresolved,
             "Descriptor '" + kind + ":" + name + "@" + version + "' requires an exact trusted catalogue identity.", token);
@@ -1206,10 +1206,11 @@ internal sealed class SourceParser
 
     private FuwenType CallableOutput(DescriptorReference descriptor)
     {
-        if (catalogue is InMemoryTrustedCatalogue memory)
+        if (catalogue is ITrustedCatalogueDiscovery discovery &&
+            discovery.TryGetDescriptor(descriptor, out var found) &&
+            found?.CallableContract is not null)
         {
-            var found = memory.Descriptors.FirstOrDefault(item => item.Descriptor.Equals(descriptor));
-            if (found?.CallableContract is not null) return found.CallableContract.Signature.OutputType;
+            return found.CallableContract.Signature.OutputType;
         }
         return new PrimitiveType(FuwenPrimitiveKind.Json);
     }

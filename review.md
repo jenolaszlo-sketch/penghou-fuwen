@@ -285,11 +285,9 @@ Recommendation: extend `LiteralMatches` to validate object literals field-wise a
 
 ### R25 — P3: Callable contracts have no optional parameters
 
-Status: open (found 2026-09-17 during Guyabano real-planning slice 2).
+Status: resolved (2026-09-17). `ValidateCallableNode` skips the missing-argument error for `OptionalType`-typed parameters; hosts observe only supplied arguments. Backwards compatible: previously admitted plans passing explicit `null` literals keep admitting (null still matches `OptionalType`), and omission vs. explicit null produce distinct but deterministic fingerprints. Repair guidance text updated accordingly. Regression tests cover omitted-optional, explicit-null, and omitted-required cases.
 
-Evidence: `src/Penghou.Fuwen.Compiler/WorkflowCompiler.cs`, `ValidateCallableNode` (lines ~766–779): every declared signature parameter must be supplied at every call site, even one typed `OptionalType`. Callers pass explicit `null` literals for absent optionals (e.g. `previousFailure`), which typechecks but litters plans and DSL text with noise.
-
-Recommendation: treat `OptionalType`-typed parameters as omittable at call sites. This is a versioned-contract change (admission, canonical bytes, fingerprints), so it needs an IR/compiler-semantics decision and cross-adapter conformance before implementation. Until then the explicit-null workaround is sound.
+Evidence: `src/Penghou.Fuwen.Compiler/WorkflowCompiler.cs`, `ValidateCallableNode` (before fix): every declared signature parameter had to be supplied at every call site, even one typed `OptionalType`.
 
 ## Suggested implementation order
 

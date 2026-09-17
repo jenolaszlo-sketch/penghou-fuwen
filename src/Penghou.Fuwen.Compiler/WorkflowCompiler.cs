@@ -765,7 +765,11 @@ internal static class WorkflowBindingValidator
             .ToDictionary(static group => group.Key, static group => group.First(), StringComparer.Ordinal);
         foreach (var parameter in contract.Signature.Parameters)
         {
-            if (!supplied.ContainsKey(parameter.Name))
+            // R25: OptionalType-typed parameters are omittable at call
+            // sites; hosts observe only supplied arguments. Previously
+            // admitted plans passing explicit null literals keep admitting:
+            // null still matches OptionalType (see LiteralMatches).
+            if (!supplied.ContainsKey(parameter.Name) && parameter.Type is not OptionalType)
             {
                 diagnostics.Add(new CompilerDiagnostic(
                     CompilerDiagnosticCodes.CallableArgumentMissing,

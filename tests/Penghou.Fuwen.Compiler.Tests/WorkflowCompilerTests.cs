@@ -710,6 +710,78 @@ public sealed class WorkflowCompilerTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
+    public void Compiler_AcceptsOmittedOrExplicitNullOptionalCallableParameter(bool supply)
+    {
+        // R25: OptionalType-typed signature parameters may be omitted at
+        // call sites; required parameters still must be supplied.
+        var plan = Fixture.CreatePlan();
+        var inference = plan.Nodes.OfType<InferenceNode>().Single();
+        var changed = plan with
+        {
+            Nodes = plan.Nodes.Select(node => node == inference
+                ? inference with
+                {
+                    Arguments = supply
+                        ? [
+                            new ArgumentBinding("request", new LiteralBinding(JsonDocument.Parse("\"hello\"").RootElement.Clone())),
+                            new ArgumentBinding("previousFailure", new LiteralBinding(JsonDocument.Parse("null").RootElement.Clone())),
+                        ]
+                        : [new ArgumentBinding("request", new LiteralBinding(JsonDocument.Parse("\"hello\"").RootElement.Clone()))],
+                }
+                : node).ToArray(),
+        };
+        var catalogue = Fixture.CreateCatalogue(
+            transformCallable: (descriptor, contract) => descriptor.Equals(inference.Profile)
+                ? contract! with
+                {
+                    Signature = contract.Signature with
+                    {
+                        Parameters =
+                        [
+                            new CallableParameter("request", new PrimitiveType(FuwenPrimitiveKind.String)),
+                            new CallableParameter("previousFailure", new OptionalType(new PrimitiveType(FuwenPrimitiveKind.String))),
+                        ],
+                    },
+                }
+                : contract);
+
+        var result = new WorkflowCompiler(catalogue, capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(changed, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeTrue(
+            string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message}")));
+    }
+
+    [Fact]
+    public void Compiler_RejectsOmittedRequiredCallableParameter()
+    {
+        var plan = Fixture.CreatePlan();
+        var inference = plan.Nodes.OfType<InferenceNode>().Single();
+        var catalogue = Fixture.CreateCatalogue(
+            transformCallable: (descriptor, contract) => descriptor.Equals(inference.Profile)
+                ? contract! with
+                {
+                    Signature = contract.Signature with
+                    {
+                        Parameters =
+                        [
+                            new CallableParameter("request", new PrimitiveType(FuwenPrimitiveKind.String)),
+                            new CallableParameter("extra", new PrimitiveType(FuwenPrimitiveKind.String)),
+                        ],
+                    },
+                }
+                : contract);
+
+        var result = new WorkflowCompiler(catalogue, capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(plan, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.CallableArgumentMissing);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
     public void Compiler_RejectsStructuralContainerForScalarCallableParameter(bool useList)
     {
         var plan = Fixture.CreatePlan();

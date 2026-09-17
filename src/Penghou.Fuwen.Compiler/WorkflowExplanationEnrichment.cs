@@ -211,7 +211,7 @@ internal static class WorkflowExplanationEnrichment
         CompilerDiagnosticCodes.CatalogueCallableContractMissing => "Publish a complete trusted callable contract for the referenced descriptor before compiling the node.",
         CompilerDiagnosticCodes.CatalogueCallableContractInvalid => "Correct the trusted callable descriptor kind or contract metadata before compiling the node.",
         CompilerDiagnosticCodes.CatalogueCallableContractReferenceMissing => "Resolve every schema or artifact referenced by the trusted callable contract in the plan's descriptor closure.",
-        CompilerDiagnosticCodes.CallableArgumentMissing => "Add the required named argument using the exact name declared by the trusted callable signature.",
+        CompilerDiagnosticCodes.CallableArgumentMissing => "Add the required (non-optional) named argument using the exact name declared by the trusted callable signature; OptionalType parameters may be omitted.",
         CompilerDiagnosticCodes.CallableArgumentUnknown => "Remove the unknown argument or rename it to an exact parameter from the trusted callable signature.",
         CompilerDiagnosticCodes.CallableArgumentTypeMismatch => "Change the argument binding so its type exactly matches the trusted callable parameter.",
         CompilerDiagnosticCodes.CallableOutputTypeMismatch => "Change the node output type to the trusted callable output type, or select a descriptor with the intended output.",

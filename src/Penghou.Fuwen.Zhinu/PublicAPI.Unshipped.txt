@@ -18,6 +18,8 @@ Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.FuwenZhinuExecutionPorts(Penghou.Fu
 Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.FuwenZhinuExecutionPorts(Penghou.Fuwen.IActivityExecutor! activityExecutor, Penghou.Fuwen.IContextProvider! contextProvider, Penghou.Fuwen.IInferenceExecutor! inferenceExecutor, Penghou.Fuwen.IExecutionObserver? observer) -> void
 Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.InferenceExecutor.get -> Penghou.Fuwen.IInferenceExecutor!
 Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Observer.get -> Penghou.Fuwen.IExecutionObserver?
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.PriorExecutionFingerprints.get -> System.Collections.Generic.IReadOnlySet<string!>!
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.PriorExecutionFingerprints.init -> void
 Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.ExecutionOptions.get -> Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options!
 Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.FuwenZhinuExecutionPorts(Penghou.Fuwen.IActivityExecutor! activityExecutor, Penghou.Fuwen.IContextProvider! contextProvider, Penghou.Fuwen.IInferenceExecutor! inferenceExecutor, Penghou.Fuwen.IExecutionObserver? observer, Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options! options) -> void
 Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options

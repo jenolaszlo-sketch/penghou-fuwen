@@ -305,6 +305,14 @@ Evidence: `WorkflowCompiler.cs` validates `RepeatNode.InitialState` with a consu
 
 Recommendation: decide whether this closedness is intentional (document it as an IR contract with a dedicated diagnostic) or a defect (validate `InitialState` in the repeat's parent region like every other root-region binding). Either way the DSL, structural validator, and compiler must agree; today all three agree on closed, so runners work around it with input-seeded loops plus strict single attempts downstream.
 
+### R28 — P1: Durable step evidence is bound to a single plan fingerprint and run
+
+Status: resolved (2026-09-18). `FuwenZhinuExecutionPorts.PriorExecutionFingerprints` declares host-trusted prior plans; `ReadEnvelope` then accepts fork-copied evidence when the fingerprint is listed, the structural path matches, the request fingerprint matches, and the runtime path names the same node. Default (empty) preserves strict single-plan checks; claim-time contract checks are untouched. Verified by `tests/Penghou.Fuwen.Zhinu.Tests/FuwenZhinuMutationTests.cs` (cross-version fork reuses declared prior evidence; undeclared prior evidence still fails closed).
+
+Evidence: `src/Penghou.Fuwen.Zhinu/FuwenZhinuSequentialInterpreter.cs`, `ReadEnvelope`: persisted results are rejected unless the invocation fingerprint equals the current plan's fingerprint and the runtime path equals the current run's path. After a Zhinu fork migrates a run to a new plan version, every copied step is rejected even though the store copied it legitimately and claim-time contract checks (key, implementation, input) still apply.
+
+Recommendation: accept host-declared prior execution fingerprints plus run-prefix-independent runtime paths when structural path and request fingerprint match exactly. Keep the default (no priors) strictly single-plan.
+
 ## Suggested implementation order
 
 1. **Immediate Correctness Fixes** (done 2026-09-17):

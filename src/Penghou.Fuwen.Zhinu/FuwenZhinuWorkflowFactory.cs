@@ -145,6 +145,17 @@ public sealed class FuwenZhinuExecutionPorts
     public IExecutionObserver? Observer { get; }
     /// <summary>The validated bounded execution options.</summary>
     public Options ExecutionOptions { get; }
+    /// <summary>
+    /// Previously admitted execution fingerprints whose durable step evidence
+    /// this registration accepts alongside its own fingerprint. The host sets
+    /// this when migrating a run across admitted plan versions (workflow
+    /// mutation): reused steps keep their original evidence, which the
+    /// interpreter admits only when the fingerprint is listed here, the
+    /// structural path matches, and the request fingerprint matches. Empty
+    /// by default, preserving strict single-plan evidence checks.
+    /// </summary>
+    public IReadOnlySet<string> PriorExecutionFingerprints { get; init; } =
+        new HashSet<string>(StringComparer.Ordinal);
 }
 
 /// <summary>

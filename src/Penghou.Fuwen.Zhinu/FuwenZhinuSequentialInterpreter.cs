@@ -210,7 +210,7 @@ internal static class FuwenZhinuSequentialInterpreter
             stepOptions: StepOptionsFor(inheritedDependencies, node.Arguments),
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        var envelope = ReadEnvelope(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId);
+        var envelope = ReadEnvelope(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId, ports.PriorExecutionFingerprints);
         ThrowIfFailed(envelope, node.StructuralPath);
         EnsureType(envelope.Output!, node.OutputType, plan.Schemas, $"context node '{node.StructuralPath}' output");
         if (envelope.ContextSnapshot is null || !Equals(envelope.ContextSnapshot.Provider, node.Provider))
@@ -293,7 +293,7 @@ internal static class FuwenZhinuSequentialInterpreter
                 node.ContextRequirements.Select(static requirement => requirement.Source)),
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        var envelope = ReadEnvelope(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId);
+        var envelope = ReadEnvelope(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId, ports.PriorExecutionFingerprints);
         ThrowIfFailed(envelope, node.StructuralPath);
         EnsureType(envelope.Output!, node.OutputType, plan.Schemas, $"inference node '{node.StructuralPath}' output");
         return envelope.Output!;
@@ -346,7 +346,7 @@ internal static class FuwenZhinuSequentialInterpreter
             stepOptions: StepOptionsFor(inheritedDependencies, node.Arguments),
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        var envelope = ReadEnvelope(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId);
+        var envelope = ReadEnvelope(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId, ports.PriorExecutionFingerprints);
         ThrowIfFailed(envelope, node.StructuralPath);
         EnsureType(envelope.Output!, node.OutputType, plan.Schemas, $"activity node '{node.StructuralPath}' output");
         return envelope.Output!;
@@ -1602,7 +1602,8 @@ internal static class FuwenZhinuSequentialInterpreter
         WorkflowPlan plan,
         string executionFingerprint,
         string effectiveRequestFingerprint,
-        Guid workflowRunId)
+        Guid workflowRunId,
+        IReadOnlySet<string> priorExecutionFingerprints)
     {
         try
         {
@@ -1611,11 +1612,23 @@ internal static class FuwenZhinuSequentialInterpreter
                 throw new FuwenZhinuExecutionException($"Persisted result for '{nodePath}' is null.");
 
             var invocation = envelope.Invocation;
+            var isCurrentPlan =
+                string.Equals(invocation?.ExecutionFingerprint, executionFingerprint, StringComparison.Ordinal);
+            var isPriorPlan = !isCurrentPlan &&
+                invocation?.ExecutionFingerprint is not null &&
+                priorExecutionFingerprints.Contains(invocation.ExecutionFingerprint);
+            // Cross-version reuse (workflow mutation) keeps the original
+            // evidence: the fingerprint may be a host-accepted prior plan,
+            // and the runtime path then names the source run instead of the
+            // current one. The structural path and request fingerprint stay
+            // exact in both cases, and claim-time contract checks still apply.
+            var runtimeMatches = string.Equals(invocation?.RuntimePath, $"{workflowRunId:D}/{nodePath}", StringComparison.Ordinal) ||
+                (isPriorPlan && invocation!.RuntimePath.EndsWith("/" + nodePath, StringComparison.Ordinal));
             if (invocation is null ||
-                !string.Equals(invocation.ExecutionFingerprint, executionFingerprint, StringComparison.Ordinal) ||
+                (!isCurrentPlan && !isPriorPlan) ||
                 !string.Equals(invocation.StructuralPath, nodePath, StringComparison.Ordinal) ||
                 !string.Equals(invocation.EffectiveRequestFingerprint, effectiveRequestFingerprint, StringComparison.Ordinal) ||
-                !string.Equals(invocation.RuntimePath, $"{workflowRunId:D}/{nodePath}", StringComparison.Ordinal))
+                !runtimeMatches)
                 throw new FuwenZhinuExecutionException(
                     $"Persisted result for '{nodePath}' has invocation evidence that does not match the current step.");
 

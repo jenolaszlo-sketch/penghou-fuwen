@@ -252,6 +252,249 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         }
     }
 
+    [Fact]
+    public async Task Repeat_break_on_body_output_projection_stops_the_loop()
+    {
+        var str = new PrimitiveType(FuwenPrimitiveKind.String);
+        var activityDesc = new DescriptorReference(DescriptorKind.Activity, "sample.echo", "1", new ContentDigest("sha256", "descriptor/v1", new string('a', 64)));
+        var loopPath = StructuralNodeIdentity.Create("demo", "loop1");
+        var stepPath = loopPath + "/$body/step";
+        var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
+        var plan = new WorkflowPlanBuilder("demo", "1", str, str, "routing/1")
+            .AddNode(new RepeatNode(
+                "loop1", loopPath, 5, str,
+                new InputBinding([]),
+                [new ActivityNode("step", stepPath, activityDesc, [new ArgumentBinding("value", new LoopStateBinding([]))], str)],
+                new NodeOutputBinding(stepPath, []),
+                new ConditionExpression(ConditionOperator.Equal,
+                    new NodeOutputBinding(stepPath, []),
+                    new LiteralBinding(JsonDocument.Parse("\"stop\"").RootElement.Clone())),
+                str))
+            .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(loopPath, [])))
+            .SetExecutionOrder(new WorkflowExecutionOrder([
+                new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([loopPath]), new WorkflowExecutionPhase([returnPath])]),
+                new WorkflowExecutionRegion("demo/loop1/$body", [new WorkflowExecutionPhase([stepPath])]),
+            ]))
+            .BuildV6();
+        var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
+                new InMemoryTrustedCatalogue([
+                    new TrustedCatalogueDescriptor(activityDesc, callableContract: new CallableContract(new CallableSignature([new CallableParameter("value", str)], str), CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+                ]),
+                capabilityPolicy: new CapabilityGrantPolicy("policy/1", [])))
+            .AdmitAsync(plan, cancellationToken: TestContext.Current.CancellationToken);
+        admission.Succeeded.Should().BeTrue($"Diagnostics: {string.Join("; ", admission.Diagnostics.Select(d => $"{d.Code}:{d.Message} (path={d.Path})"))}");
+
+        var activity = new StopAfterTwoActivity();
+        var registration = await new FuwenZhinuWorkflowFactory(
+                new InMemoryWorkflowDefinitionStore(),
+                IdentityFor(admission),
+                new FuwenZhinuExecutionPorts(activity, new UnusedContext(), new UnusedInference()))
+            .CreateAsync("fuwen.repeat-break-output", "1", admission, TestContext.Current.CancellationToken);
+        var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(root, "workflow.db"), Pooling = false });
+            await using var engine = new WorkflowEngine(store, registration.Register(new WorkflowRegistry()), new ZhinuOptions { PollInterval = TimeSpan.FromMilliseconds(5) });
+            using var input = JsonDocument.Parse("\"start\"");
+            var runId = await engine.StartAsync("fuwen.repeat-break-output", "1", input.RootElement.Clone(), cancellationToken: TestContext.Current.CancellationToken);
+            await engine.ExecuteAsync(runId, TestContext.Current.CancellationToken);
+            var output = await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: TestContext.Current.CancellationToken);
+            output.GetString().Should().Be("stop");
+            activity.Calls.Should().Be(2);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    [Fact]
+    public async Task Repeat_break_on_projected_output_field_stops_the_loop()
+    {
+        var boolean = new PrimitiveType(FuwenPrimitiveKind.Boolean);
+        var str = new PrimitiveType(FuwenPrimitiveKind.String);
+        var flagSchemaDescriptor = new DescriptorReference(
+            DescriptorKind.Schema, "sample.flag", "1",
+            new ContentDigest("sha256", "descriptor/v1", new string('b', 64)));
+        var flagSchema = new ObjectSchemaDefinition(
+            flagSchemaDescriptor,
+            [new SchemaField("done", boolean)]);
+        var flagType = new NamedTypeReference(flagSchemaDescriptor);
+        var activityDesc = new DescriptorReference(DescriptorKind.Activity, "sample.echo", "1", new ContentDigest("sha256", "descriptor/v1", new string('a', 64)));
+        var loopPath = StructuralNodeIdentity.Create("demo", "loop1");
+        var stepPath = loopPath + "/$body/step";
+        var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
+        var plan = new WorkflowPlanBuilder("demo", "1", str, flagType, "routing/1")
+            .AddSchema(flagSchema)
+            .AddNode(new RepeatNode(
+                "loop1", loopPath, 5, flagType,
+                new ObjectBinding(new Dictionary<string, Binding>
+                {
+                    ["done"] = new LiteralBinding(JsonDocument.Parse("false").RootElement.Clone()),
+                }),
+                [new ActivityNode("step", stepPath, activityDesc, [new ArgumentBinding("value", new LoopStateBinding(["done"]))], flagType)],
+                new NodeOutputBinding(stepPath, []),
+                new ConditionExpression(ConditionOperator.Equal,
+                    new NodeOutputBinding(stepPath, ["done"]),
+                    new LiteralBinding(JsonDocument.Parse("true").RootElement.Clone())),
+                flagType))
+            .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(loopPath, [])))
+            .SetExecutionOrder(new WorkflowExecutionOrder([
+                new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([loopPath]), new WorkflowExecutionPhase([returnPath])]),
+                new WorkflowExecutionRegion("demo/loop1/$body", [new WorkflowExecutionPhase([stepPath])]),
+            ]))
+            .BuildV6();
+        var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
+                new InMemoryTrustedCatalogue([
+                    new TrustedCatalogueDescriptor(flagSchemaDescriptor, schemaDefinition: flagSchema),
+                    new TrustedCatalogueDescriptor(activityDesc, callableContract: new CallableContract(new CallableSignature([new CallableParameter("value", boolean)], flagType), CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+                ]),
+                capabilityPolicy: new CapabilityGrantPolicy("policy/1", [])))
+            .AdmitAsync(plan, cancellationToken: TestContext.Current.CancellationToken);
+        admission.Succeeded.Should().BeTrue($"Diagnostics: {string.Join("; ", admission.Diagnostics.Select(d => $"{d.Code}:{d.Message} (path={d.Path})"))}");
+
+        var activity = new FlagFlippingActivity();
+        var registration = await new FuwenZhinuWorkflowFactory(
+                new InMemoryWorkflowDefinitionStore(),
+                IdentityFor(admission),
+                new FuwenZhinuExecutionPorts(activity, new UnusedContext(), new UnusedInference()))
+            .CreateAsync("fuwen.repeat-break-field", "1", admission, TestContext.Current.CancellationToken);
+        var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(root, "workflow.db"), Pooling = false });
+            await using var engine = new WorkflowEngine(store, registration.Register(new WorkflowRegistry()), new ZhinuOptions { PollInterval = TimeSpan.FromMilliseconds(5) });
+            using var input = JsonDocument.Parse("\"start\"");
+            var runId = await engine.StartAsync("fuwen.repeat-break-field", "1", input.RootElement.Clone(), cancellationToken: TestContext.Current.CancellationToken);
+            await engine.ExecuteAsync(runId, TestContext.Current.CancellationToken);
+            var output = await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: TestContext.Current.CancellationToken);
+            output.GetProperty("done").GetBoolean().Should().BeTrue();
+            activity.Calls.Should().Be(2);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    [Fact]
+    public async Task Repeat_break_on_middle_node_projection_with_trailing_nodes()
+    {
+        // Shape mirror of the Guyabano phased loop: the break reads a
+        // middle body node while later body nodes also write state.
+        var boolean = new PrimitiveType(FuwenPrimitiveKind.Boolean);
+        var str = new PrimitiveType(FuwenPrimitiveKind.String);
+        var flagSchemaDescriptor = new DescriptorReference(
+            DescriptorKind.Schema, "sample.flag", "1",
+            new ContentDigest("sha256", "descriptor/v1", new string('b', 64)));
+        var flagSchema = new ObjectSchemaDefinition(
+            flagSchemaDescriptor,
+            [
+                new SchemaField("ok", boolean),
+                new SchemaField("note", new OptionalType(str)),
+            ]);
+        var flagType = new NamedTypeReference(flagSchemaDescriptor);
+        var activityDesc = new DescriptorReference(DescriptorKind.Activity, "sample.echo", "1", new ContentDigest("sha256", "descriptor/v1", new string('a', 64)));
+        var loopPath = StructuralNodeIdentity.Create("demo", "loop1");
+        var firstPath = loopPath + "/$body/first";
+        var secondPath = loopPath + "/$body/second";
+        var assessPath = loopPath + "/$body/assess";
+        var tailPath = loopPath + "/$body/tail";
+        var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
+        using var initial = JsonDocument.Parse("""{"ok":false,"note":""}""");
+        using var breakLiteral = JsonDocument.Parse("true");
+        using var emptyNote = JsonDocument.Parse("\"\"");
+        var plan = new WorkflowPlanBuilder("demo", "1", str, flagType, "routing/1")
+            .AddSchema(flagSchema)
+            .AddNode(new RepeatNode(
+                "loop1", loopPath, 5, flagType,
+                new LiteralBinding(initial.RootElement.Clone()),
+                [
+                    new ActivityNode("first", firstPath, activityDesc, [new ArgumentBinding("value", new LoopStateBinding([]))], flagType),
+                    new ActivityNode("second", secondPath, activityDesc, [new ArgumentBinding("value", new NodeOutputBinding(firstPath, []))], flagType),
+                    new ActivityNode("assess", assessPath, activityDesc, [new ArgumentBinding("value", new NodeOutputBinding(secondPath, []))], flagType),
+                    new ActivityNode("tail", tailPath, activityDesc, [new ArgumentBinding("value", new NodeOutputBinding(assessPath, []))], flagType),
+                ],
+                new NodeOutputBinding(tailPath, []),
+                new ConditionExpression(ConditionOperator.Equal,
+                    new NodeOutputBinding(assessPath, ["ok"]),
+                    new LiteralBinding(breakLiteral.RootElement.Clone())),
+                flagType))
+            .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(loopPath, [])))
+            .SetExecutionOrder(new WorkflowExecutionOrder([
+                new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([loopPath]), new WorkflowExecutionPhase([returnPath])]),
+                new WorkflowExecutionRegion("demo/loop1/$body", [
+                    new WorkflowExecutionPhase([firstPath]),
+                    new WorkflowExecutionPhase([secondPath]),
+                    new WorkflowExecutionPhase([assessPath]),
+                    new WorkflowExecutionPhase([tailPath]),
+                ]),
+            ]))
+            .BuildV6();
+        var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
+                new InMemoryTrustedCatalogue([
+                    new TrustedCatalogueDescriptor(flagSchemaDescriptor, schemaDefinition: flagSchema),
+                    new TrustedCatalogueDescriptor(activityDesc, callableContract: new CallableContract(
+                        new CallableSignature([new CallableParameter("value", flagType)], flagType),
+                        CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+                ]),
+                capabilityPolicy: new CapabilityGrantPolicy("policy/1", [])))
+            .AdmitAsync(plan, cancellationToken: TestContext.Current.CancellationToken);
+        admission.Succeeded.Should().BeTrue($"Diagnostics: {string.Join("; ", admission.Diagnostics.Select(d => $"{d.Code}:{d.Message} (path={d.Path})"))}");
+
+        var activity = new OkEnvelopeActivity();
+        var registration = await new FuwenZhinuWorkflowFactory(
+                new InMemoryWorkflowDefinitionStore(),
+                IdentityFor(admission),
+                new FuwenZhinuExecutionPorts(activity, new UnusedContext(), new UnusedInference()))
+            .CreateAsync("fuwen.repeat-break-middle", "1", admission, TestContext.Current.CancellationToken);
+        var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(root, "workflow.db"), Pooling = false });
+            await using var engine = new WorkflowEngine(store, registration.Register(new WorkflowRegistry()), new ZhinuOptions { PollInterval = TimeSpan.FromMilliseconds(5) });
+            using var input = JsonDocument.Parse("\"start\"");
+            var runId = await engine.StartAsync("fuwen.repeat-break-middle", "1", input.RootElement.Clone(), cancellationToken: TestContext.Current.CancellationToken);
+            await engine.ExecuteAsync(runId, TestContext.Current.CancellationToken);
+            var output = await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: TestContext.Current.CancellationToken);
+            output.GetProperty("ok").GetBoolean().Should().BeTrue();
+            activity.Calls.Should().Be(4);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    private sealed class OkEnvelopeActivity : IActivityExecutor
+    {
+        public int Calls { get; private set; }
+        public ValueTask<ActivityExecutionResult> ExecuteAsync(ActivityExecutionRequest request, CancellationToken ct = default)
+        {
+            Calls++;
+            using var doc = JsonDocument.Parse("""{"ok":true,"note":null}""");
+            return ValueTask.FromResult(ActivityExecutionResult.Succeeded(RuntimeValue.FromJson(doc.RootElement)));
+        }
+    }
+
+    private sealed class FlagFlippingActivity : IActivityExecutor
+    {
+        public int Calls { get; private set; }
+        public ValueTask<ActivityExecutionResult> ExecuteAsync(ActivityExecutionRequest request, CancellationToken ct = default)
+        {
+            Calls++;
+            var done = Calls >= 2;
+            using var doc = JsonDocument.Parse(JsonSerializer.Serialize(new { done }));
+            return ValueTask.FromResult(ActivityExecutionResult.Succeeded(RuntimeValue.FromJson(doc.RootElement)));
+        }
+    }
+
+    private sealed class StopAfterTwoActivity : IActivityExecutor
+    {
+        public int Calls { get; private set; }
+        public ValueTask<ActivityExecutionResult> ExecuteAsync(ActivityExecutionRequest request, CancellationToken ct = default)
+        {
+            Calls++;
+            var next = Calls >= 2 ? "stop" : "go";
+            using var doc = JsonDocument.Parse(JsonSerializer.Serialize(next));
+            return ValueTask.FromResult(ActivityExecutionResult.Succeeded(RuntimeValue.FromJson(doc.RootElement)));
+        }
+    }
+
     private static async Task<WorkflowAdmissionResult> AdmitRepeatAsync(int maxIterations, bool breakOnIter3 = true)
     {
         var str = new PrimitiveType(FuwenPrimitiveKind.String);

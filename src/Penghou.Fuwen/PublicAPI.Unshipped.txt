@@ -1,4 +1,6 @@
 #nullable enable
+Penghou.Fuwen.RuntimeValueJson
+static Penghou.Fuwen.RuntimeValueJson.ToJsonElement(Penghou.Fuwen.RuntimeValue! value) -> System.Text.Json.JsonElement
 Penghou.Fuwen.IrVersions
 const Penghou.Fuwen.IrVersions.V1 = 1 -> int
 const Penghou.Fuwen.IrVersions.V2 = 2 -> int

@@ -779,6 +779,47 @@ public sealed class WorkflowCompilerTests
         result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.CallableArgumentMissing);
     }
 
+    [Fact]
+    public void Compiler_RejectsLoopStateBinding_in_repeat_initial_state()
+    {
+        // R27: the initial state is evaluated before the first iteration,
+        // so loop-state bindings stay body-only even though outer outputs
+        // are now accepted as seeds.
+        var str = new PrimitiveType(FuwenPrimitiveKind.String);
+        var activity = Fixture.Descriptor(DescriptorKind.Activity, "sample.step");
+        var loopPath = StructuralNodeIdentity.Create("demo", "loop1");
+        var stepPath = loopPath + "/$body/step";
+        var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
+        var plan = new WorkflowPlanBuilder("demo", "1", str, str, "routing/1")
+            .AddNode(new RepeatNode(
+                "loop1", loopPath, 3, str,
+                new LoopStateBinding([]),
+                [new ActivityNode("step", stepPath, activity, [new ArgumentBinding("value", new LoopStateBinding([]))], str)],
+                new NodeOutputBinding(stepPath, []),
+                new ConditionExpression(ConditionOperator.Equal,
+                    new LoopIterationBinding([]),
+                    new LiteralBinding(JsonDocument.Parse("3").RootElement.Clone())),
+                str))
+            .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(loopPath, [])))
+            .SetExecutionOrder(new WorkflowExecutionOrder([
+                new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([loopPath]), new WorkflowExecutionPhase([returnPath])]),
+                new WorkflowExecutionRegion("demo/loop1/$body", [new WorkflowExecutionPhase([stepPath])]),
+            ]))
+            .BuildV6();
+
+        var result = new WorkflowCompiler(
+                new InMemoryTrustedCatalogue([
+                    new TrustedCatalogueDescriptor(activity, callableContract: new CallableContract(
+                        new CallableSignature([new CallableParameter("value", str)], str),
+                        CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+                ]),
+                capabilityPolicy: CapabilityGrantPolicy.AllowAll)
+            .Compile(plan, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.BindingReferenceInvalid);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

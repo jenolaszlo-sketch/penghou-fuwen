@@ -19,6 +19,37 @@ public sealed class RuntimeValueTests
     }
 
     [Fact]
+    public void RuntimeValueJson_serializes_all_kinds_to_detached_json()
+    {
+        // R06: hosts convert any runtime representation (including nominal
+        // composites produced by typed normalization) without assuming JSON.
+        using var text = JsonDocument.Parse("\"hello\"");
+        using var number = JsonDocument.Parse("42");
+        using var nothing = JsonDocument.Parse("null");
+        var descriptor = PlanFixture.Descriptor(DescriptorKind.Artifact, "sample.artifact");
+        var value = RuntimeValue.FromObject(new Dictionary<string, RuntimeValue>
+        {
+            ["text"] = RuntimeValue.FromJson(text.RootElement),
+            ["nested"] = RuntimeValue.FromList([
+                RuntimeValue.FromJson(number.RootElement),
+                RuntimeValue.FromJson(nothing.RootElement),
+            ]),
+            ["artifact"] = RuntimeValue.FromArtifact(new ArtifactReference(
+                "provider", "artifact-1", descriptor,
+                new ContentDigest("sha256", "content/v1", new string('c', 64)))),
+        });
+
+        var json = RuntimeValueJson.ToJsonElement(value);
+
+        json.ValueKind.Should().Be(JsonValueKind.Object);
+        json.GetProperty("text").GetString().Should().Be("hello");
+        json.GetProperty("nested").EnumerateArray().Select(item => item.ValueKind)
+            .Should().Equal(JsonValueKind.Number, JsonValueKind.Null);
+        json.GetProperty("artifact").GetProperty("$kind").GetString().Should().Be("artifact");
+        json.GetProperty("artifact").GetProperty("artifactId").GetString().Should().Be("artifact-1");
+    }
+
+    [Fact]
     public void CompositeRuntimeValues_deeply_snapshot_children_and_round_trip()
     {
         using var document = JsonDocument.Parse("\"before\"");

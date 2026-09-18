@@ -495,6 +495,80 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         }
     }
 
+    [Fact]
+    public async Task Repeat_seeded_from_outer_node_output_executes_with_seed()
+    {
+        // R27: the loop must observe the outer seed value, proving the
+        // initial state is evaluated in the parent region at runtime.
+        var str = new PrimitiveType(FuwenPrimitiveKind.String);
+        var activityDesc = new DescriptorReference(DescriptorKind.Activity, "sample.echo", "1", new ContentDigest("sha256", "descriptor/v1", new string('a', 64)));
+        var prepPath = StructuralNodeIdentity.Create("demo", "prep");
+        var loopPath = StructuralNodeIdentity.Create("demo", "loop1");
+        var stepPath = loopPath + "/$body/step";
+        var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
+        var plan = new WorkflowPlanBuilder("demo", "1", str, str, "routing/1")
+            .AddNode(new ActivityNode("prep", prepPath, activityDesc,
+                [new ArgumentBinding("value", new InputBinding([]))], str))
+            .AddNode(new RepeatNode(
+                "loop1", loopPath, 5, str,
+                new NodeOutputBinding(prepPath, []),
+                [new ActivityNode("step", stepPath, activityDesc, [new ArgumentBinding("value", new LoopStateBinding([]))], str)],
+                new NodeOutputBinding(stepPath, []),
+                new ConditionExpression(ConditionOperator.Equal,
+                    new LoopIterationBinding([]),
+                    new LiteralBinding(JsonDocument.Parse("2").RootElement.Clone())),
+                str))
+            .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(loopPath, [])))
+            .SetExecutionOrder(new WorkflowExecutionOrder([
+                new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([prepPath]), new WorkflowExecutionPhase([loopPath]), new WorkflowExecutionPhase([returnPath])]),
+                new WorkflowExecutionRegion("demo/loop1/$body", [new WorkflowExecutionPhase([stepPath])]),
+            ]))
+            .BuildV6();
+        var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
+                new InMemoryTrustedCatalogue([
+                    new TrustedCatalogueDescriptor(activityDesc, callableContract: new CallableContract(new CallableSignature([new CallableParameter("value", str)], str), CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+                ]),
+                capabilityPolicy: new CapabilityGrantPolicy("policy/1", [])))
+            .AdmitAsync(plan, cancellationToken: TestContext.Current.CancellationToken);
+        admission.Succeeded.Should().BeTrue($"Diagnostics: {string.Join("; ", admission.Diagnostics.Select(d => $"{d.Code}:{d.Message} (path={d.Path})"))}");
+
+        var activity = new SeedEchoActivity();
+        var registration = await new FuwenZhinuWorkflowFactory(
+                new InMemoryWorkflowDefinitionStore(),
+                IdentityFor(admission),
+                new FuwenZhinuExecutionPorts(activity, new UnusedContext(), new UnusedInference()))
+            .CreateAsync("fuwen.repeat-seed", "1", admission, TestContext.Current.CancellationToken);
+        var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(root, "workflow.db"), Pooling = false });
+            await using var engine = new WorkflowEngine(store, registration.Register(new WorkflowRegistry()), new ZhinuOptions { PollInterval = TimeSpan.FromMilliseconds(5) });
+            using var input = JsonDocument.Parse("\"start\"");
+            var runId = await engine.StartAsync("fuwen.repeat-seed", "1", input.RootElement.Clone(), cancellationToken: TestContext.Current.CancellationToken);
+            await engine.ExecuteAsync(runId, TestContext.Current.CancellationToken);
+            var output = await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: TestContext.Current.CancellationToken);
+            output.GetString().Should().Be("start-seeded-pass1-pass2");
+            activity.Calls.Should().Be(3);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    private sealed class SeedEchoActivity : IActivityExecutor
+    {
+        public int Calls { get; private set; }
+        public ValueTask<ActivityExecutionResult> ExecuteAsync(ActivityExecutionRequest request, CancellationToken ct = default)
+        {
+            Calls++;
+            var input = ((JsonRuntimeValue)request.Arguments.Single().Value).Value.GetString()!;
+            // First call is the outer prep node (seeds the loop); the rest
+            // are loop iterations carrying the loop state forward.
+            var next = Calls == 1 ? input + "-seeded" : input + "-pass" + (Calls - 1);
+            using var doc = JsonDocument.Parse(JsonSerializer.Serialize(next));
+            return ValueTask.FromResult(ActivityExecutionResult.Succeeded(RuntimeValue.FromJson(doc.RootElement)));
+        }
+    }
+
     private static async Task<WorkflowAdmissionResult> AdmitRepeatAsync(int maxIterations, bool breakOnIter3 = true)
     {
         var str = new PrimitiveType(FuwenPrimitiveKind.String);

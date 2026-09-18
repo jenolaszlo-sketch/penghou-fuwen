@@ -538,8 +538,10 @@ internal static class WorkflowBindingValidator
         var diagnostics = new List<CompilerDiagnostic>();
         var locations = new Dictionary<string, NodeLocation>(StringComparer.Ordinal);
         CollectLocations(plan.Name, plan.Nodes, plan.Name, locations);
-        foreach (var repeat in locations.Values.Select(v => v.Node).OfType<RepeatNode>())
+        foreach (var location in locations.Values)
         {
+            if (location.Node is not RepeatNode repeat)
+                continue;
             if (!IrVersions.SupportsRepeat(plan.IrVersion))
                 diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.SemanticValidationFailed, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Bounded repeat requires IR v6 or later, not '{plan.IrVersion}'.", path: repeat.StructuralPath));
             if (repeat.MaxIterations <= 0 || repeat.MaxIterations > 1000)
@@ -548,8 +550,11 @@ internal static class WorkflowBindingValidator
                 diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Repeat result type must equal the state type for v6 (single-state loop).", path: repeat.StructuralPath, expected: Describe(repeat.StateType), actual: Describe(repeat.ResultType)));
             // Continue/break are evaluated after the body with body outputs and
             // the loop state in scope, so validate them as body-region consumers.
+            // The initial state is evaluated before the first iteration in the
+            // repeat's own (parent) region, so it may seed from outer outputs
+            // (R27); loop-state bindings stay body-only.
             var bodyConsumer = new NodeLocation(repeat, repeat.StructuralPath + "/$body", null, repeat.StateType);
-            var initConsumer = new NodeLocation(repeat, repeat.StructuralPath, null);
+            var initConsumer = location with { LoopStateType = null };
             var initType = ValidateBinding(repeat.InitialState, repeat.StateType, initConsumer, plan, locations, diagnostics, CompilerDiagnosticCodes.BindingTypeMismatch, exact: true);
             if (initType is not null && !EquivalentExact(initType, repeat.StateType))
                 diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Repeat initial state type must match the declared state type.", path: repeat.StructuralPath, expected: Describe(repeat.StateType), actual: Describe(initType)));

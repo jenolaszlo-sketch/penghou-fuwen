@@ -90,6 +90,26 @@ public sealed class FuwenSourceRepeatTests
     }
 
     [Fact]
+    public async Task Repeat_initial_state_may_seed_from_outer_node_output()
+    {
+        // R27: the initial state is evaluated before the first iteration in
+        // the parent region, so it may reference outer node outputs.
+        const string source = """
+            workflow demo(input: string) -> string {
+              activity prep = activity "sample.echo@1#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" (value: input;) -> string;
+              repeat loop1 max 2 state s: string = prep {
+                activity step = activity "sample.echo@1#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" (value: s;) -> string;
+              } continue step break iter == 2 -> string;
+              return loop1;
+            }
+            """;
+        var result = await new FuwenSourceCompiler(Catalogue()).CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+        result.Succeeded.Should().BeTrue(string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
+        var repeat = result.Plan!.Nodes.OfType<RepeatNode>().Should().ContainSingle().Subject;
+        repeat.InitialState.Should().BeOfType<NodeOutputBinding>().Which.NodePath.Should().Contain("prep");
+    }
+
+    [Fact]
     public async Task Repeat_body_must_not_shadow_state()
     {
         const string source = """

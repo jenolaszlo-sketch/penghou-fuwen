@@ -158,7 +158,7 @@ Recommendation: implement `ExecuteRepeatInferenceAsync` in `FuwenZhinuSequential
 
 ### R06 — Normalize runtime values through a shared typed boundary
 
-Status: partially resolved. Fan-out now normalizes lists; a comprehensive shared normalization helper across all ports and interpreters remains open.
+Status: partially resolved. Fan-out now normalizes lists; new public `RuntimeValueJson.ToJsonElement` lets hosts convert any representation (JSON, nominal composites, artifacts) without assuming `JsonRuntimeValue` — proven by Guyabano stage executors consuming normalized outputs. A comprehensive shared normalization helper across all ports and interpreters remains open.
 
 ### R07 — Separate interpreter responsibilities internally
 
@@ -299,7 +299,7 @@ Recommendation: allow `ContextNode` and `InferenceNode` in fan-out bodies across
 
 ### R27 — P2: Repeat initial state cannot consume parent-region outputs
 
-Status: open (found 2026-09-17 during Guyabano live-runner wiring).
+Status: resolved (2026-09-17). The initial state is evaluated once before the first iteration in the repeat's own (parent) region, so the compiler now validates it against the repeat's location region instead of a bogus self-path region; loop-state bindings stay body-only, and continue/break remain body-scoped. The DSL parser already exposed outer names at the seed position, so no parser change was needed. Regression tests cover outer-node seeds (DSL, compiler rejection of loop-state seeds, durable execution observing the seed).
 
 Evidence: `WorkflowCompiler.cs` validates `RepeatNode.InitialState` with a consumer whose region is the repeat's structural path (never equal to any real region), `WorkflowPlanValidator` enforces the same boundary structurally, and `FuwenSource.cs` hides outer names inside repeat bodies. Net effect: a repeat loop can only seed from workflow input or literals — a loop over stage N cannot start from stage N-1's output, so retry loops cannot be chained (topology retry cannot consume the domain artifact).
 

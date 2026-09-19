@@ -198,13 +198,17 @@ internal static class WorkflowPlanSnapshot
                     value.Name,
                     value.StructuralPath,
                     CloneDescriptor(value.Profile, state),
-                    CloneDescriptor(value.PromptTemplate, state),
+                    value.PromptTemplate is null ? null : CloneDescriptor(value.PromptTemplate, state),
                     SnapshotList(value.Arguments, "inference arguments", CloneArgument, state),
                     SnapshotList(value.ContextSnapshots, "context snapshots", CloneNodeOutput, state),
                     CloneType(value.OutputType, state),
                     value.ContextRequirements is null
                         ? null
-                        : SnapshotList(value.ContextRequirements, "context requirements", CloneContextRequirement, state)),
+                        : SnapshotList(value.ContextRequirements, "context requirements", CloneContextRequirement, state),
+                    value.PromptName,
+                    value.PromptBindings is null
+                        ? null
+                        : SnapshotList(value.PromptBindings, "prompt bindings", ClonePromptBinding, state)),
                 ActivityNode value => new ActivityNode(
                     value.Name,
                     value.StructuralPath,
@@ -429,7 +433,8 @@ internal static class WorkflowPlanSnapshot
             return new(
                 prompt.Name,
                 SnapshotList(prompt.Parameters, "prompt parameters", ClonePromptParameter, state),
-                SnapshotList(prompt.Messages, "prompt messages", ClonePromptMessage, state));
+                SnapshotList(prompt.Messages, "prompt messages", ClonePromptMessage, state),
+                prompt.RegisteredSource is null ? null : CloneDescriptor(prompt.RegisteredSource, state));
         }
         finally
         {
@@ -462,6 +467,20 @@ internal static class WorkflowPlanSnapshot
         finally
         {
             state.Exit(message);
+        }
+    }
+
+    private static PromptBinding ClonePromptBinding(PromptBinding binding, SnapshotState state)
+    {
+        ArgumentNullException.ThrowIfNull(binding);
+        state.Enter(binding);
+        try
+        {
+            return new(binding.ParameterName, CloneBinding(binding.Value, state));
+        }
+        finally
+        {
+            state.Exit(binding);
         }
     }
 

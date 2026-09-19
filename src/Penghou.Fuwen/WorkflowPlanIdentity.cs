@@ -115,7 +115,8 @@ public static class WorkflowPlanIdentity
                 .Select(prompt => new PromptDefinition(
                     prompt.Name,
                     prompt.Parameters.ToArray(),
-                    prompt.Messages.Select(message => new PromptMessage(message.Role, message.Template)).ToArray()))
+                    prompt.Messages.Select(message => new PromptMessage(message.Role, message.Template)).ToArray(),
+                    prompt.RegisteredSource))
                 .OrderBy(prompt => prompt.Name, StringComparer.Ordinal)
                 .ToArray(),
     };
@@ -163,6 +164,14 @@ public static class WorkflowPlanIdentity
                 : inference.ContextRequirements
                     .OrderBy(requirement => requirement.Name, StringComparer.Ordinal)
                     .ThenBy(requirement => requirement.Source.NodePath, StringComparer.Ordinal)
+                    .ToArray(),
+            PromptBindings = inference.PromptBindings is null
+                ? null
+                : inference.PromptBindings
+                    .Select(binding => new PromptBinding(
+                        binding.ParameterName,
+                        NormalizeBinding(binding.Value)))
+                    .OrderBy(binding => binding.ParameterName, StringComparer.Ordinal)
                     .ToArray(),
         },
         ActivityNode activity => activity with { Arguments = NormalizeArguments(activity.Arguments) },

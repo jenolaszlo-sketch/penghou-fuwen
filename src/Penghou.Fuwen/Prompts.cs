@@ -18,16 +18,22 @@ public sealed record PromptParameter(string Name, FuwenType Type);
 /// <summary>One prompt message: a role plus a template with typed placeholders.</summary>
 public sealed record PromptMessage(PromptMessageRole Role, string Template);
 
+/// <summary>A binding of one prompt parameter to a workflow value.</summary>
+public sealed record PromptBinding(string ParameterName, Binding Value);
+
 /// <summary>
-/// A workflow-owned prompt declaration: named typed parameters plus ordered
-/// messages whose <c>{{ name }}</c> placeholders reference only declared
-/// parameters. The definition is part of workflow semantics and carries its
-/// own content digest; rendering with bindings is a host responsibility.
+/// A workflow-owned prompt declaration: named typed parameters plus either
+/// inline ordered messages whose <c>{{ name }}</c> placeholders reference
+/// only declared parameters, or an explicit registered prompt source whose
+/// semantics live in the referenced trusted descriptor. The definition is
+/// part of workflow semantics and carries its own content digest; rendering
+/// with bindings is a host responsibility.
 /// </summary>
 public sealed record PromptDefinition(
     string Name,
     IReadOnlyList<PromptParameter> Parameters,
-    IReadOnlyList<PromptMessage> Messages)
+    IReadOnlyList<PromptMessage> Messages,
+    DescriptorReference? RegisteredSource = null)
 {
     /// <summary>The semantic content contract for prompt definitions.</summary>
     public const string SemanticDigestContract = "prompt-definition/v1";
@@ -35,8 +41,9 @@ public sealed record PromptDefinition(
     /// <summary>
     /// Computes the self-describing semantic digest over the canonical
     /// definition: name, parameters in declaration order with normalized
-    /// types, and messages in order. Any wording, structure, or binding-shape
-    /// change yields a different digest.
+    /// types, messages in order, and the registered source identity when the
+    /// definition aliases a host prompt. Any wording, structure, binding-shape,
+    /// or source change yields a different digest.
     /// </summary>
     public string GetSemanticDigest()
     {
@@ -47,7 +54,10 @@ public sealed record PromptDefinition(
                 Encoding.UTF8.GetString(CanonicalJson.Serialize(parameter.Type)))).ToArray(),
             Messages.Select(message => new PromptMessageCanonicalForm(
                 message.Role.ToString(),
-                message.Template)).ToArray()));
+                message.Template)).ToArray(),
+            RegisteredSource is null
+                ? null
+                : Encoding.UTF8.GetString(CanonicalJson.Serialize(RegisteredSource))));
         var hash = SHA256.HashData(canonical);
         return $"sha256:{SemanticDigestContract}:{Convert.ToHexString(hash).ToLowerInvariant()}";
     }
@@ -117,8 +127,15 @@ public sealed record PromptDefinition(
             if (parameter.Type is null)
                 errors.Add($"Prompt '{definition.Name}' parameter '{parameter.Name}' requires a type.");
         }
-        if (definition.Messages.Count == 0)
+        if (definition.RegisteredSource is not null)
+        {
+            if (definition.Messages.Count != 0)
+                errors.Add($"Prompt '{definition.Name}' aliases a registered prompt and must not declare inline messages.");
+        }
+        else if (definition.Messages.Count == 0)
+        {
             errors.Add($"Prompt '{definition.Name}' requires at least one message.");
+        }
         foreach (var message in definition.Messages)
         {
             if (!Enum.IsDefined(message.Role))
@@ -150,7 +167,8 @@ public sealed record PromptDefinition(
     private sealed record PromptDefinitionCanonicalForm(
         string Name,
         IReadOnlyList<PromptParameterCanonicalForm> Parameters,
-        IReadOnlyList<PromptMessageCanonicalForm> Messages);
+        IReadOnlyList<PromptMessageCanonicalForm> Messages,
+        string? RegisteredSource);
 
     private sealed record PromptParameterCanonicalForm(string Name, string Type);
 

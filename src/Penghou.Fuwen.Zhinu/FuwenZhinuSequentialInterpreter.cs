@@ -230,6 +230,9 @@ internal static class FuwenZhinuSequentialInterpreter
         IReadOnlyCollection<string> inheritedDependencies,
         CancellationToken cancellationToken)
     {
+        if (node.PromptName is not null)
+            throw new FuwenZhinuAdapterException(
+                $"Inference node '{node.StructuralPath}' uses a workflow-owned prompt, which requires IR v8 execution support that has not shipped.");
         var arguments = EvaluateArguments(node.Arguments, plan, state);
         var contextInputs = new List<InferenceContextInput>(node.ContextRequirements!.Count);
         foreach (var requirement in node.ContextRequirements)
@@ -263,7 +266,7 @@ internal static class FuwenZhinuSequentialInterpreter
                         new InferenceExecutionRequest(
                             invocation,
                             node.Profile,
-                            node.PromptTemplate,
+                            node.PromptTemplate!,
                             arguments,
                             contextInputs,
                             node.OutputType), token),
@@ -852,6 +855,9 @@ internal static class FuwenZhinuSequentialInterpreter
         InterpreterState state,
         CancellationToken cancellationToken)
     {
+        if (node.PromptName is not null)
+            throw new FuwenZhinuAdapterException(
+                $"Repeat inference node '{node.StructuralPath}' uses a workflow-owned prompt, which requires IR v8 execution support that has not shipped.");
         var arguments = EvaluateArguments(node.Arguments, plan, state);
         var contextInputs = new List<InferenceContextInput>(node.ContextRequirements!.Count);
         foreach (var requirement in node.ContextRequirements)
@@ -882,7 +888,7 @@ internal static class FuwenZhinuSequentialInterpreter
                 var envelope = await ExecuteProviderAsync(
                     ports, inv, node.StructuralPath,
                     t => ports.InferenceExecutor.ExecuteAsync(new InferenceExecutionRequest(
-                        inv, node.Profile, node.PromptTemplate, arguments, contextInputs, node.OutputType), t),
+                        inv, node.Profile, node.PromptTemplate!, arguments, contextInputs, node.OutputType), t),
                     async r =>
                     {
                         EnsureType(r.Output!, node.OutputType, plan.Schemas, $"repeat inference '{node.StructuralPath}' output");
@@ -1095,6 +1101,9 @@ internal static class FuwenZhinuSequentialInterpreter
         string runtimePath,
         CancellationToken cancellationToken)
     {
+        if (node.PromptName is not null)
+            throw new FuwenZhinuAdapterException(
+                $"Fan-out inference node '{node.StructuralPath}' uses a workflow-owned prompt, which requires IR v8 execution support that has not shipped.");
         var arguments = EvaluateArguments(node.Arguments, plan, state);
         var contextInputs = new List<InferenceContextInput>(node.ContextRequirements!.Count);
         foreach (var requirement in node.ContextRequirements)
@@ -1128,7 +1137,7 @@ internal static class FuwenZhinuSequentialInterpreter
             invocation,
             node.StructuralPath,
             token => ports.InferenceExecutor.ExecuteAsync(new InferenceExecutionRequest(
-                invocation, node.Profile, node.PromptTemplate, arguments, contextInputs, node.OutputType), token),
+                invocation, node.Profile, node.PromptTemplate!, arguments, contextInputs, node.OutputType), token),
             async result =>
             {
                 EnsureType(result.Output!, node.OutputType, plan.Schemas, $"fan-out inference '{node.StructuralPath}' output");
@@ -1962,3 +1971,4 @@ internal static class RuntimeValueWire
         }
     }
 }
+

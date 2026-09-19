@@ -375,13 +375,17 @@ Penghou.Fuwen.InferenceNode.ContextSnapshots.get -> System.Collections.Generic.I
 Penghou.Fuwen.InferenceNode.ContextSnapshots.init -> void
 Penghou.Fuwen.InferenceNode.ContextRequirements.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ContextRequirement!>?
 Penghou.Fuwen.InferenceNode.ContextRequirements.init -> void
-Penghou.Fuwen.InferenceNode.InferenceNode(string! Name, string! StructuralPath, Penghou.Fuwen.DescriptorReference! Profile, Penghou.Fuwen.DescriptorReference! PromptTemplate, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArgumentBinding!>! Arguments, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.NodeOutputBinding!>! ContextSnapshots, Penghou.Fuwen.FuwenType! OutputType, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ContextRequirement!>? ContextRequirements = null) -> void
+Penghou.Fuwen.InferenceNode.InferenceNode(string! Name, string! StructuralPath, Penghou.Fuwen.DescriptorReference! Profile, Penghou.Fuwen.DescriptorReference? PromptTemplate, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArgumentBinding!>! Arguments, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.NodeOutputBinding!>! ContextSnapshots, Penghou.Fuwen.FuwenType! OutputType, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ContextRequirement!>? ContextRequirements = null, string? PromptName = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PromptBinding!>? PromptBindings = null) -> void
 Penghou.Fuwen.InferenceNode.OutputType.get -> Penghou.Fuwen.FuwenType!
 Penghou.Fuwen.InferenceNode.OutputType.init -> void
 Penghou.Fuwen.InferenceNode.Profile.get -> Penghou.Fuwen.DescriptorReference!
 Penghou.Fuwen.InferenceNode.Profile.init -> void
-Penghou.Fuwen.InferenceNode.PromptTemplate.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.InferenceNode.PromptTemplate.get -> Penghou.Fuwen.DescriptorReference?
 Penghou.Fuwen.InferenceNode.PromptTemplate.init -> void
+Penghou.Fuwen.InferenceNode.PromptName.get -> string?
+Penghou.Fuwen.InferenceNode.PromptName.init -> void
+Penghou.Fuwen.InferenceNode.PromptBindings.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PromptBinding!>?
+Penghou.Fuwen.InferenceNode.PromptBindings.init -> void
 Penghou.Fuwen.InMemoryWorkflowDefinitionStore
 Penghou.Fuwen.InMemoryWorkflowDefinitionStore.InMemoryWorkflowDefinitionStore() -> void
 Penghou.Fuwen.InMemoryWorkflowDefinitionStore.ReadAsync(string! executionFingerprint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.WorkflowDefinitionDocument?>
@@ -576,7 +580,15 @@ Penghou.Fuwen.PromptMessage.Role.init -> void
 Penghou.Fuwen.PromptMessage.Template.get -> string!
 Penghou.Fuwen.PromptMessage.Template.init -> void
 Penghou.Fuwen.PromptDefinition
-Penghou.Fuwen.PromptDefinition.PromptDefinition(string! Name, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PromptParameter!>! Parameters, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PromptMessage!>! Messages) -> void
+Penghou.Fuwen.PromptDefinition.PromptDefinition(string! Name, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PromptParameter!>! Parameters, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PromptMessage!>! Messages, Penghou.Fuwen.DescriptorReference? RegisteredSource = null) -> void
+Penghou.Fuwen.PromptDefinition.RegisteredSource.get -> Penghou.Fuwen.DescriptorReference?
+Penghou.Fuwen.PromptDefinition.RegisteredSource.init -> void
+Penghou.Fuwen.PromptBinding
+Penghou.Fuwen.PromptBinding.PromptBinding(string! ParameterName, Penghou.Fuwen.Binding! Value) -> void
+Penghou.Fuwen.PromptBinding.ParameterName.get -> string!
+Penghou.Fuwen.PromptBinding.ParameterName.init -> void
+Penghou.Fuwen.PromptBinding.Value.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.PromptBinding.Value.init -> void
 Penghou.Fuwen.PromptDefinition.Name.get -> string!
 Penghou.Fuwen.PromptDefinition.Name.init -> void
 Penghou.Fuwen.PromptDefinition.Parameters.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PromptParameter!>!

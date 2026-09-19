@@ -133,7 +133,7 @@ public sealed class WorkflowPlanBuilder
             outputType,
             routingPolicyRevision,
             schemas.ToArray(),
-            MergeDescriptors(catalogueBindings, schemas, inputType, outputType, nodes),
+            MergeDescriptors(catalogueBindings, schemas, inputType, outputType, nodes, prompts),
             new CapabilityManifest(capabilities.ToArray()),
             nodes.ToArray(),
             executionOrder ?? throw new InvalidOperationException(
@@ -151,13 +151,21 @@ public sealed class WorkflowPlanBuilder
         IEnumerable<ResolvedSchemaDefinition> schemas,
         FuwenType inputType,
         FuwenType outputType,
-        IEnumerable<WorkflowNode> nodes)
+        IEnumerable<WorkflowNode> nodes,
+        IEnumerable<PromptDefinition> prompts)
     {
         var bindings = new List<DescriptorReference>();
         foreach (var descriptor in explicitBindings)
             AddDescriptor(bindings, descriptor);
         foreach (var schema in schemas)
             AddDescriptor(bindings, schema.Descriptor);
+        foreach (var prompt in prompts)
+        {
+            if (prompt.RegisteredSource is not null)
+                AddDescriptor(bindings, prompt.RegisteredSource);
+            foreach (var parameter in prompt.Parameters)
+                CollectType(parameter.Type, bindings);
+        }
         CollectType(inputType, bindings);
         CollectType(outputType, bindings);
         CollectNodes(nodes, bindings);
@@ -176,7 +184,8 @@ public sealed class WorkflowPlanBuilder
                     break;
                 case InferenceNode inference:
                     AddDescriptor(bindings, inference.Profile);
-                    AddDescriptor(bindings, inference.PromptTemplate);
+                    if (inference.PromptTemplate is not null)
+                        AddDescriptor(bindings, inference.PromptTemplate);
                     CollectType(inference.OutputType, bindings);
                     if (inference.ContextRequirements is not null)
                         foreach (var requirement in inference.ContextRequirements)

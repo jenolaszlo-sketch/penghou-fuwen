@@ -571,7 +571,10 @@ internal static class WorkflowBindingValidator
                     ValidateCallableNode(context.Provider, DescriptorKind.ContextProvider, context.Arguments, context.OutputType, location, plan, locations, descriptors, diagnostics);
                     break;
                 case InferenceNode inference:
-                    ValidateCallableNode(inference.Profile, DescriptorKind.InferenceProfile, inference.Arguments, inference.OutputType, location, plan, locations, descriptors, diagnostics);
+                    if (inference.PromptName is not null)
+                        ValidatePromptInference(inference, location, plan, locations, descriptors, diagnostics);
+                    else
+                        ValidateCallableNode(inference.Profile, DescriptorKind.InferenceProfile, inference.Arguments, inference.OutputType, location, plan, locations, descriptors, diagnostics);
                     if (IrVersions.SupportsTypedContextRequirements(plan.IrVersion))
                     {
                         var contextNames = new HashSet<string>(StringComparer.Ordinal);
@@ -711,6 +714,80 @@ internal static class WorkflowBindingValidator
         }
 
         return diagnostics;
+    }
+
+    private static void ValidatePromptInference(
+        InferenceNode inference,
+        NodeLocation location,
+        WorkflowPlan plan,
+        IReadOnlyDictionary<string, NodeLocation> locations,
+        IReadOnlyDictionary<DescriptorReference, TrustedCatalogueDescriptor> descriptors,
+        List<CompilerDiagnostic> diagnostics)
+    {
+        var profileReference = inference.Profile;
+        if (!descriptors.TryGetValue(profileReference, out var profile) ||
+            profile.Descriptor.Kind != DescriptorKind.InferenceProfile)
+        {
+            diagnostics.Add(new CompilerDiagnostic(
+                CompilerDiagnosticCodes.CatalogueCallableContractMissing,
+                DiagnosticSeverity.Error,
+                DiagnosticPhase.Binding,
+                $"Trusted inference profile '{profileReference.Name}@{profileReference.Version}' is not in the resolved catalogue.",
+                path: location.Node.StructuralPath));
+            return;
+        }
+
+        var contract = profile.CallableContract;
+        if (contract is not null)
+        {
+            if (!Enum.IsDefined(contract.Effect) || contract.Effect is CallableEffect.External or CallableEffect.Destructive)
+                diagnostics.Add(new CompilerDiagnostic(
+                    CompilerDiagnosticCodes.CallableEffectRejected,
+                    DiagnosticSeverity.Error,
+                    DiagnosticPhase.Admission,
+                    $"Callable '{profileReference.Name}@{profileReference.Version}' has an effect outside the conservative compilation matrix.",
+                    path: location.Node.StructuralPath,
+                    actual: contract.Effect.ToString()));
+            if (!Enum.IsDefined(contract.Idempotency) || contract.Idempotency != CallableIdempotency.Idempotent ||
+                !Enum.IsDefined(contract.RetrySafety) || contract.RetrySafety != CallableRetrySafety.Safe)
+                diagnostics.Add(new CompilerDiagnostic(
+                    CompilerDiagnosticCodes.CallableRetryRejected,
+                    DiagnosticSeverity.Error,
+                    DiagnosticPhase.Admission,
+                    $"Callable '{profileReference.Name}@{profileReference.Version}' is not conservatively retry-safe.",
+                    path: location.Node.StructuralPath,
+                    actual: $"{contract.Idempotency}/{contract.RetrySafety}"));
+        }
+
+        var definition = plan.Prompts?.FirstOrDefault(
+            prompt => string.Equals(prompt.Name, inference.PromptName, StringComparison.Ordinal));
+        if (definition is null)
+        {
+            diagnostics.Add(new CompilerDiagnostic(
+                CompilerDiagnosticCodes.BindingReferenceInvalid,
+                DiagnosticSeverity.Error,
+                DiagnosticPhase.Binding,
+                $"Inference node '{inference.StructuralPath}' references unknown prompt '{inference.PromptName}'.",
+                path: location.Node.StructuralPath));
+            return;
+        }
+
+        var parameters = definition.Parameters.ToDictionary(
+            static parameter => parameter.Name, StringComparer.Ordinal);
+        foreach (var binding in inference.PromptBindings ?? [])
+        {
+            if (!parameters.TryGetValue(binding.ParameterName, out var parameter))
+                continue;
+            ValidateBinding(
+                binding.Value,
+                parameter.Type,
+                location,
+                plan,
+                locations,
+                diagnostics,
+                CompilerDiagnosticCodes.BindingTypeMismatch,
+                exact: true);
+        }
     }
 
     private static void ValidateCallableNode(
@@ -1359,7 +1436,8 @@ internal static class PlanUsage
                     break;
                 case InferenceNode inference:
                     AddDescriptorText(inference.Profile, ref bytes);
-                    AddDescriptorText(inference.PromptTemplate, ref bytes);
+                    if (inference.PromptTemplate is not null)
+                        AddDescriptorText(inference.PromptTemplate, ref bytes);
                     AddTypeText(inference.OutputType, ref bytes);
                     AddArgumentsText(inference.Arguments, ref bytes);
                     foreach (var snapshot in inference.ContextSnapshots)
@@ -1584,7 +1662,8 @@ internal static class PlanUsage
                     break;
                 case InferenceNode inference:
                     result.Add(inference.Profile);
-                    result.Add(inference.PromptTemplate);
+                    if (inference.PromptTemplate is not null)
+                        result.Add(inference.PromptTemplate);
                     AddType(inference.OutputType, result);
                     if (inference.ContextRequirements is not null)
                         foreach (var requirement in inference.ContextRequirements)

@@ -23,6 +23,7 @@ public static class WorkflowPlanValidator
         ValidateDescriptors(plan.CatalogueBindings);
         ValidateCapabilities(plan.CapabilityManifest);
         ValidatePrompts(plan);
+        ValidateInferencePrompts(plan);
         var nodes = new Dictionary<string, NodeLocation>(StringComparer.Ordinal);
         ValidateNodes(
             plan.Name,
@@ -149,7 +150,8 @@ public static class WorkflowPlanValidator
                     break;
                 case InferenceNode inference:
                     RequireKind(inference.Profile, DescriptorKind.InferenceProfile);
-                    RequireKind(inference.PromptTemplate, DescriptorKind.PromptTemplate);
+                    if (inference.PromptTemplate is not null)
+                        RequireKind(inference.PromptTemplate, DescriptorKind.PromptTemplate);
                     ValidateArguments(inference.Arguments);
                     ValidateType(inference.OutputType);
                     ValidateContextRequirementsShape(inference.ContextRequirements);
@@ -1053,7 +1055,8 @@ public static class WorkflowPlanValidator
                     break;
                 case InferenceNode inference:
                     descriptors.Add(inference.Profile);
-                    descriptors.Add(inference.PromptTemplate);
+                    if (inference.PromptTemplate is not null)
+                        descriptors.Add(inference.PromptTemplate);
                     CollectTypeDescriptors(inference.OutputType, descriptors);
                     if (inference.ContextRequirements is not null)
                         foreach (var requirement in inference.ContextRequirements)
@@ -1169,6 +1172,66 @@ public static class WorkflowPlanValidator
                 throw new ArgumentException(error, nameof(plan.Prompts));
             foreach (var parameter in prompt.Parameters)
                 ValidateType(parameter.Type);
+            if (prompt.RegisteredSource is not null)
+                RequireKind(prompt.RegisteredSource, DescriptorKind.PromptTemplate);
+        }
+    }
+
+    private static void ValidateInferencePrompts(WorkflowPlan plan)
+    {
+        var prompts = (plan.Prompts ?? Enumerable.Empty<PromptDefinition>())
+            .ToDictionary(static prompt => prompt.Name, StringComparer.Ordinal);
+        foreach (var inference in FlattenNodes(plan.Nodes).OfType<InferenceNode>())
+        {
+            if (inference.PromptName is null)
+            {
+                if (inference.PromptTemplate is null)
+                    throw new ArgumentException(
+                        $"Inference node '{inference.StructuralPath}' requires a prompt template or a workflow-owned prompt reference.",
+                        nameof(plan.Nodes));
+                if (inference.PromptBindings is not null && inference.PromptBindings.Count != 0)
+                    throw new ArgumentException(
+                        $"Inference node '{inference.StructuralPath}' has prompt bindings without a prompt reference.",
+                        nameof(plan.Nodes));
+                continue;
+            }
+            if (!IrVersions.SupportsWorkflowPrompts(plan.IrVersion))
+                throw new ArgumentException(
+                    $"Workflow-owned prompt references require IR v8 or later, not '{plan.IrVersion}'.",
+                    nameof(plan.Nodes));
+            if (inference.PromptTemplate is not null)
+                throw new ArgumentException(
+                    $"Inference node '{inference.StructuralPath}' declares both a prompt template and a workflow-owned prompt; exactly one prompt source is allowed.",
+                    nameof(plan.Nodes));
+            if (inference.Arguments.Count != 0)
+                throw new ArgumentException(
+                    $"Inference node '{inference.StructuralPath}' uses a workflow-owned prompt and must not declare descriptor arguments.",
+                    nameof(plan.Nodes));
+            if (!prompts.TryGetValue(inference.PromptName, out var definition))
+                throw new ArgumentException(
+                    $"Inference node '{inference.StructuralPath}' references unknown prompt '{inference.PromptName}'.",
+                    nameof(plan.Nodes));
+            var bound = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var binding in inference.PromptBindings ?? Enumerable.Empty<PromptBinding>())
+            {
+                ArgumentNullException.ThrowIfNull(binding);
+                if (!bound.Add(binding.ParameterName))
+                    throw new ArgumentException(
+                        $"Inference node '{inference.StructuralPath}' binds prompt parameter '{binding.ParameterName}' more than once.",
+                        nameof(plan.Nodes));
+                if (definition.Parameters.All(parameter => parameter.Name != binding.ParameterName))
+                    throw new ArgumentException(
+                        $"Inference node '{inference.StructuralPath}' binds unknown prompt parameter '{binding.ParameterName}' for prompt '{definition.Name}'.",
+                        nameof(plan.Nodes));
+                ArgumentNullException.ThrowIfNull(binding.Value);
+            }
+            foreach (var parameter in definition.Parameters)
+            {
+                if (!bound.Contains(parameter.Name) && parameter.Type is not OptionalType)
+                    throw new ArgumentException(
+                        $"Inference node '{inference.StructuralPath}' does not bind required prompt parameter '{parameter.Name}' for prompt '{definition.Name}'.",
+                        nameof(plan.Nodes));
+            }
         }
     }
 

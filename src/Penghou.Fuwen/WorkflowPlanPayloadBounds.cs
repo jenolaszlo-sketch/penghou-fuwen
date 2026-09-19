@@ -182,11 +182,16 @@ internal sealed class WorkflowPlanPayloadBounds
                     break;
                 case InferenceNode value:
                     Descriptor(value.Profile);
-                    Descriptor(value.PromptTemplate);
+                    if (value.PromptTemplate is not null)
+                        Descriptor(value.PromptTemplate);
                     Arguments(value.Arguments);
                     List(value.ContextSnapshots, NodeOutput, "context snapshots");
                     if (value.ContextRequirements is not null)
                         List(value.ContextRequirements, ContextRequirement, "context requirements");
+                    if (value.PromptName is not null)
+                        Text(value.PromptName, "prompt reference");
+                    if (value.PromptBindings is not null)
+                        List(value.PromptBindings, PromptBindingValue, "prompt bindings");
                     Type(value.OutputType);
                     break;
                 case ActivityNode value:
@@ -264,6 +269,22 @@ internal sealed class WorkflowPlanPayloadBounds
                 Exit(argument);
             }
         });
+    }
+
+    private void PromptBindingValue(PromptBinding binding)
+    {
+        if (binding is null)
+            return;
+        Enter(binding);
+        try
+        {
+            Text(binding.ParameterName, "prompt binding name");
+            Binding(binding.Value);
+        }
+        finally
+        {
+            Exit(binding);
+        }
     }
 
     private void Condition(ConditionExpression condition)

@@ -177,7 +177,19 @@ public static class PlanRevisionComparer
     private static object NodeSemantics(WorkflowNode node) => node switch
     {
         ContextNode value => new { Kind = "context", value.Provider, value.OutputType },
-        InferenceNode value => new { Kind = "inference", value.Profile, value.PromptTemplate, value.OutputType },
+        InferenceNode value => new
+        {
+            Kind = "inference",
+            value.Profile,
+            value.PromptTemplate,
+            value.OutputType,
+            value.PromptName,
+            PromptBindings = string.Join(
+                "|",
+                (value.PromptBindings ?? Enumerable.Empty<PromptBinding>())
+                    .Select(binding => binding.ParameterName)
+                    .OrderBy(name => name, StringComparer.Ordinal)),
+        },
         ActivityNode value => new { Kind = "activity", value.Activity, value.OutputType },
         ConditionalNode value => new { Kind = "conditional", value.Condition.Operator, MergeResultType = value.Merge?.ResultType },
         FanOutNode value => new { Kind = "fan-out", value.Item.Type, value.ResultType, value.MaximumItems, value.MaximumConcurrency },

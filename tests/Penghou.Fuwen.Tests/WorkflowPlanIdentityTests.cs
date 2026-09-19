@@ -46,7 +46,7 @@ public sealed class WorkflowPlanIdentityTests
     {
         var plan = PlanFixture.Create();
         var inference = (InferenceNode)plan.Nodes.Single(node => node.Name == "infer");
-        var changedDescriptor = inference.PromptTemplate with
+        var changedDescriptor = inference.PromptTemplate! with
         {
             ContentDigest = new ContentDigest("sha256", "descriptor/v1", new string('f', 64)),
         };

@@ -8,6 +8,24 @@ public sealed class FuwenSourcePromptTests
 {
     private static ITrustedCatalogue Catalogue() => new InMemoryTrustedCatalogue([]);
 
+    private static ITrustedCatalogue InferenceCatalogue()
+    {
+        var str = new PrimitiveType(FuwenPrimitiveKind.String);
+        ContentDigest DigestOf(char c) => new("sha256", "descriptor/v1", new string(c, 64));
+        return new InMemoryTrustedCatalogue([
+            new TrustedCatalogueDescriptor(
+                new DescriptorReference(DescriptorKind.InferenceProfile, "sample.profile", "1", DigestOf('d')),
+                callableContract: new CallableContract(
+                    new CallableSignature([new CallableParameter("request", str)], str),
+                    CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+            new TrustedCatalogueDescriptor(
+                new DescriptorReference(DescriptorKind.PromptTemplate, "sample.template", "1", DigestOf('e'))),
+        ]);
+    }
+
+    private const string ProfileRef = "sample.profile@1#dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
+    private const string TemplateRef = "sample.template@1#eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+
     private const string MinimalWorkflow = "workflow demo(input: string) -> string { return input; }";
 
     private static string PromptSource(string prompt) => prompt + "\n" + MinimalWorkflow;
@@ -63,7 +81,7 @@ public sealed class FuwenSourcePromptTests
             .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
 
         result.Succeeded.Should().BeFalse();
-        result.Diagnostics.Should().Contain(d => d.Message.Contains("Duplicate prompt definition 'a'"));
+        result.Diagnostics.Should().Contain(d => ((d.Message + ' ' + d.Actual)).Contains("Duplicate prompt definition 'a'"));
     }
 
     [Fact]
@@ -75,7 +93,7 @@ public sealed class FuwenSourcePromptTests
             .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
 
         result.Succeeded.Should().BeFalse();
-        result.Diagnostics.Should().Contain(d => d.Message.Contains("Duplicate prompt parameter 'x'"));
+        result.Diagnostics.Should().Contain(d => ((d.Message + ' ' + d.Actual)).Contains("Duplicate prompt parameter 'x'"));
     }
 
     [Fact]
@@ -87,7 +105,7 @@ public sealed class FuwenSourcePromptTests
             .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
 
         result.Succeeded.Should().BeFalse();
-        result.Diagnostics.Should().Contain(d => d.Message.Contains("undeclared parameter"));
+        result.Diagnostics.Should().Contain(d => ((d.Message + ' ' + d.Actual)).Contains("undeclared parameter"));
     }
 
     [Fact]
@@ -99,7 +117,7 @@ public sealed class FuwenSourcePromptTests
             .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
 
         result.Succeeded.Should().BeFalse();
-        result.Diagnostics.Should().Contain(d => d.Message.Contains("Malformed prompt placeholder"));
+        result.Diagnostics.Should().Contain(d => ((d.Message + ' ' + d.Actual)).Contains("Malformed prompt placeholder"));
     }
 
     [Fact]
@@ -111,7 +129,7 @@ public sealed class FuwenSourcePromptTests
             .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
 
         result.Succeeded.Should().BeFalse();
-        result.Diagnostics.Should().Contain(d => d.Message.Contains("at least one message"));
+        result.Diagnostics.Should().Contain(d => ((d.Message + ' ' + d.Actual)).Contains("at least one message"));
     }
 
     [Fact]
@@ -123,7 +141,7 @@ public sealed class FuwenSourcePromptTests
             .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
 
         result.Succeeded.Should().BeFalse();
-        result.Diagnostics.Should().Contain(d => d.Message.Contains("Unterminated triple-quoted string"));
+        result.Diagnostics.Should().Contain(d => ((d.Message + ' ' + d.Actual)).Contains("Unterminated triple-quoted string"));
     }
 
     [Fact]
@@ -242,4 +260,138 @@ public sealed class FuwenSourcePromptTests
         new ContentDigest("sha256", "objective/v1", new string('a', 64)),
         new ContentDigest("sha256", "acceptance/v1", new string('b', 64)),
         new ContentDigest("sha256", "validation/v1", new string('c', 64)));
+
+    [Fact]
+    public async Task Inference_with_prompt_reference_compiles_to_v8()
+    {
+        var source =
+            "prompt greet(name: string) {\n" +
+            "  system \"You greet users.\"\n" +
+            "  user \"Greet {{ name }}.\"\n" +
+            "}\n" +
+            "workflow demo(input: string) -> string {\n" +
+            $"  infer hello = infer \"{ProfileRef}\" prompt greet(name: input;) -> string;\n" +
+            "  return hello;\n" +
+            "}";
+
+        var result = await new FuwenSourceCompiler(InferenceCatalogue())
+            .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeTrue(
+            string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersionV8);
+        var inference = result.Plan.Nodes.OfType<InferenceNode>().Single();
+        inference.PromptName.Should().Be("greet");
+        inference.PromptTemplate.Should().BeNull();
+        inference.PromptBindings.Should().ContainSingle()
+            .Which.ParameterName.Should().Be("name");
+    }
+
+    [Fact]
+    public async Task Prompt_alias_for_registered_template_compiles()
+    {
+        var source =
+            "prompt standard_greeting(name: string) uses registered \"sample.template@1#eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\";\n" +
+            "workflow demo(input: string) -> string {\n" +
+            $"  infer hello = infer \"{ProfileRef}\" prompt standard_greeting(name: input;) -> string;\n" +
+            "  return hello;\n" +
+            "}";
+
+        var result = await new FuwenSourceCompiler(InferenceCatalogue())
+            .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeTrue(
+            string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
+        var prompt = result.Plan!.Prompts!.Single(p => p.Name == "standard_greeting");
+        prompt.Messages.Should().BeEmpty();
+        prompt.RegisteredSource.Should().NotBeNull();
+        prompt.RegisteredSource!.Name.Should().Be("sample.template");
+    }
+
+    [Fact]
+    public async Task Unknown_prompt_reference_is_rejected()
+    {
+        var source =
+            "prompt greet(name: string) {\n  user \"Hi {{ name}}.\"\n}\n" +
+            "workflow demo(input: string) -> string {\n" +
+            $"  infer hello = infer \"{ProfileRef}\" prompt missing(name: input;) -> string;\n" +
+            "  return hello;\n" +
+            "}";
+
+        var result = await new FuwenSourceCompiler(InferenceCatalogue())
+            .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Should().Contain(d => ((d.Message + ' ' + d.Actual)).Contains("unknown prompt 'missing'"));
+    }
+
+    [Fact]
+    public async Task Missing_required_prompt_binding_is_rejected()
+    {
+        var source =
+            "prompt greet(first: string, last: string) {\n  user \"Hi {{ first }} {{ last}}.\"\n}\n" +
+            "workflow demo(input: string) -> string {\n" +
+            $"  infer hello = infer \"{ProfileRef}\" prompt greet(first: input;) -> string;\n" +
+            "  return hello;\n" +
+            "}";
+
+        var result = await new FuwenSourceCompiler(InferenceCatalogue())
+            .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Should().Contain(d => ((d.Message + ' ' + d.Actual)).Contains("does not bind required prompt parameter 'last'"));
+    }
+
+    [Fact]
+    public async Task Unknown_prompt_binding_is_rejected()
+    {
+        var source =
+            "prompt greet(name: string) {\n  user \"Hi {{ name}}.\"\n}\n" +
+            "workflow demo(input: string) -> string {\n" +
+            $"  infer hello = infer \"{ProfileRef}\" prompt greet(nickname: input;) -> string;\n" +
+            "  return hello;\n" +
+            "}";
+
+        var result = await new FuwenSourceCompiler(InferenceCatalogue())
+            .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Should().Contain(d => ((d.Message + ' ' + d.Actual)).Contains("unknown prompt parameter 'nickname'"));
+    }
+
+    [Fact]
+    public async Task Prompt_binding_type_mismatch_is_rejected()
+    {
+        var source =
+            "prompt greet(count: integer) {\n  user \"Greet {{ count }} times.\"\n}\n" +
+            "workflow demo(input: string) -> string {\n" +
+            $"  infer hello = infer \"{ProfileRef}\" prompt greet(count: input;) -> string;\n" +
+            "  return hello;\n" +
+            "}";
+
+        var result = await new FuwenSourceCompiler(InferenceCatalogue())
+            .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.BindingTypeMismatch);
+    }
+
+    [Fact]
+    public async Task Optional_prompt_parameter_may_be_omitted()
+    {
+        var source =
+            "prompt greet(name: string, title: string?) {\n  user \"Hi {{ name}}.\"\n}\n" +
+            "workflow demo(input: string) -> string {\n" +
+            $"  infer hello = infer \"{ProfileRef}\" prompt greet(name: input;) -> string;\n" +
+            "  return hello;\n" +
+            "}";
+
+        var result = await new FuwenSourceCompiler(InferenceCatalogue())
+            .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeTrue(
+            string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
+    }
 }
+
+

@@ -94,17 +94,27 @@ public sealed record ContextRequirement(
     NodeOutputBinding Source,
     FuwenType ExpectedType);
 
-/// <summary>Executes structured or media inference through a resolved profile.</summary>
+/// <summary>
+/// Executes structured or media inference through a resolved profile, either
+/// with a registered prompt template and descriptor arguments (legacy) or
+/// with a workflow-owned prompt reference and typed prompt bindings.
+/// Exactly one prompt source is set: <see cref="PromptTemplate"/> is null
+/// if and only if <see cref="PromptName"/> names a plan prompt definition.
+/// </summary>
 public sealed record InferenceNode(
     string Name,
     string StructuralPath,
     DescriptorReference Profile,
-    DescriptorReference PromptTemplate,
+    DescriptorReference? PromptTemplate,
     IReadOnlyList<ArgumentBinding> Arguments,
     IReadOnlyList<NodeOutputBinding> ContextSnapshots,
     FuwenType OutputType,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    IReadOnlyList<ContextRequirement>? ContextRequirements = null) : WorkflowNode(Name, StructuralPath);
+    IReadOnlyList<ContextRequirement>? ContextRequirements = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    string? PromptName = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    IReadOnlyList<PromptBinding>? PromptBindings = null) : WorkflowNode(Name, StructuralPath);
 
 /// <summary>Executes one trusted catalogue activity.</summary>
 public sealed record ActivityNode(

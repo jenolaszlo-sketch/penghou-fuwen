@@ -677,6 +677,18 @@ internal sealed class SourceParser
                 if (AtEnd) break;
             }
         }
+        if (Match("uses"))
+        {
+            if (!MatchIdentifier("registered"))
+                Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'registered' after 'uses' in prompt alias.", Current);
+            var source = ParseDescriptor(DescriptorKind.PromptTemplate, name);
+            Match(";");
+            if (prompts.Any(prompt => string.Equals(prompt.Name, name, StringComparison.Ordinal)))
+                Error(CompilerDiagnosticCodes.SemanticValidationFailed, $"Duplicate prompt definition '{name}'.", Previous);
+            prompts.Add(new PromptDefinition(name, parameters, [], source));
+            promptSeen = true;
+            return;
+        }
         Expect("{");
         var messages = new List<PromptMessage>();
         while (!AtEnd && Current.Text != "}")
@@ -820,9 +832,22 @@ internal sealed class SourceParser
         if (Match(":")) declared = ParseType();
         Expect("="); Match("infer");
         var profile = ParseDescriptor(DescriptorKind.InferenceProfile, name);
-        if (!Match("using") && !Match(",")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'using' before prompt template.", Current);
-        var template = ParseDescriptor(DescriptorKind.PromptTemplate, name);
-        var arguments = ParseArguments(); var requirements = new List<ContextRequirement>();
+        DescriptorReference? template = null;
+        var arguments = new List<ArgumentBinding>();
+        string? promptName = null;
+        List<PromptBinding>? promptBindings = null;
+        if (Match("prompt"))
+        {
+            promptName = ReadIdentifier("prompt name");
+            promptBindings = ParsePromptBindings();
+        }
+        else
+        {
+            if (!Match("using") && !Match(",")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'using' before prompt template or 'prompt' before a workflow-owned prompt.", Current);
+            template = ParseDescriptor(DescriptorKind.PromptTemplate, name);
+            arguments = new List<ArgumentBinding>(ParseArguments());
+        }
+        var requirements = new List<ContextRequirement>();
         if (Match("with") || Match("context"))
         {
             do
@@ -838,8 +863,25 @@ internal sealed class SourceParser
         Match(";");
         var type = declared ?? CallableOutput(profile); var path = parentPath + "/" + name;
         if (declared is null) inferredOutputPaths.Add(path);
-        var node = new InferenceNode(name, path, profile, template, arguments, [], type, requirements);
+        var node = new InferenceNode(
+            name, path, profile, template, arguments, [], type, requirements,
+            promptName, promptBindings is null || promptBindings.Count == 0 ? null : promptBindings);
         nodeTypes[name] = type; nodePaths[name] = path; AddSpan(path, start, Previous); Ast(); return node;
+    }
+
+    private List<PromptBinding> ParsePromptBindings()
+    {
+        var result = new List<PromptBinding>();
+        if (!Match("(")) return result;
+        while (!AtEnd && Current.Text != ")")
+        {
+            var parameterName = ReadIdentifier("prompt parameter name");
+            if (!Match(":") && !Match("=")) Expect(":");
+            result.Add(new PromptBinding(parameterName, ParseBinding())); CountExpression();
+            if (!Match(",")) Expect(";");
+        }
+        Expect(")");
+        return result;
     }
 
     private WorkflowNode ParseConditional(string parentPath, FuwenToken start)

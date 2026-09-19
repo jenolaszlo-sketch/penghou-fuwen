@@ -247,4 +247,32 @@ public sealed class FuwenSourceToolTests
         WorkflowPlanIdentity.ComputeExecutionFingerprint(reordered).Should().Be(
             WorkflowPlanIdentity.ComputeExecutionFingerprint(sorted));
     }
+
+    [Fact]
+    public async Task Identical_sources_compile_to_identical_fingerprints()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var source =
+            "toolset coding_tools {\n" +
+            $"  use \"{SearchRef}\";\n" +
+            $"  use \"{ReadRef}\";\n" +
+            "}\n" +
+            PromptPrelude +
+            "workflow demo(input: string) -> string {\n" +
+            $"  infer hello = infer \"{ProfileRef}\" prompt greet(name: input;) tools coding_tools -> string;\n" +
+            "  return hello;\n" +
+            "}";
+
+        var first = await new FuwenSourceCompiler(Catalogue())
+            .CompileAsync(source, cancellationToken: ct);
+        var second = await new FuwenSourceCompiler(Catalogue())
+            .CompileAsync(source, cancellationToken: ct);
+
+        first.Succeeded.Should().BeTrue(
+            string.Join("; ", first.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
+        second.Succeeded.Should().BeTrue(
+            string.Join("; ", second.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
+        WorkflowPlanIdentity.ComputeExecutionFingerprint(first.Plan!)
+            .Should().Be(WorkflowPlanIdentity.ComputeExecutionFingerprint(second.Plan!));
+    }
 }

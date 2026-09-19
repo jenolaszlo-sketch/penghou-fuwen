@@ -175,6 +175,7 @@ public static class FuwenLexer
         }
         private void EmitString()
         {
+            if (Peek(1) == '"' && Peek(2) == '"') { EmitTripleQuotedString(); return; }
             var mark = Mark(); var start = index; Advance('"'); var closed = false;
             while (index < source.Length)
             {
@@ -189,6 +190,27 @@ public static class FuwenLexer
             if (!closed) { Add(CompilerDiagnosticCodes.LexUnterminatedString, "Unterminated string literal.", mark); return; }
             try { using var _ = JsonDocument.Parse(raw); } catch (JsonException) { Add(CompilerDiagnosticCodes.LexInvalidEscape, "String literal contains an invalid JSON escape.", mark); }
             Emit(FuwenTokenKind.String, raw, mark);
+        }
+        private void EmitTripleQuotedString()
+        {
+            var mark = Mark();
+            Advance('"'); Advance('"'); Advance('"');
+            var contentStart = index; var closed = false;
+            while (index < source.Length)
+            {
+                if (source[index] == '"' && Peek(1) == '"' && Peek(2) == '"')
+                {
+                    closed = true;
+                    break;
+                }
+                Advance(source[index]);
+            }
+            var content = source[contentStart..index];
+            StringBytes += Encoding.UTF8.GetByteCount(content);
+            if (StringBytes > limits.MaxStringBytes) Add(CompilerDiagnosticCodes.BudgetStringBytesExceeded, "String literals exceed the configured byte limit.", mark);
+            if (!closed) { Add(CompilerDiagnosticCodes.LexUnterminatedString, "Unterminated triple-quoted string literal.", mark); return; }
+            Advance('"'); Advance('"'); Advance('"');
+            Emit(FuwenTokenKind.String, JsonSerializer.Serialize(content), mark);
         }
         private void Emit(FuwenTokenKind kind, string text, Position? mark = null)
         {
@@ -488,6 +510,7 @@ internal sealed class SourceParser
     private readonly DiagnosticBuilder diagnostics;
     private readonly Dictionary<string, DescriptorReference> schemaAliases = new(StringComparer.Ordinal);
     private readonly List<ResolvedSchemaDefinition> schemas = [];
+    private readonly List<PromptDefinition> prompts = [];
     private readonly List<WorkflowNode> nodes = [];
     private readonly List<CapabilityRequirement> capabilities = [];
     private readonly List<SourceMapEntry> sourceEntries = [];
@@ -502,6 +525,7 @@ internal sealed class SourceParser
     private int bindingDepth;
     private int conditionalOrdinal;
     private bool workflowSeen;
+    private bool promptSeen;
     private bool fanOutSeen;
     private bool conditionalMergeSeen;
     private bool repeatSeen;
@@ -530,12 +554,13 @@ internal sealed class SourceParser
             if (Match("schema")) ParseSchema();
             else if (Match("enum")) ParseEnum();
             else if (Match("capability")) ParseCapability();
+            else if (Match("prompt")) ParsePrompt();
             else if (Match("workflow"))
             {
                 if (workflowSeen)
                 {
                     Error(CompilerDiagnosticCodes.ParseUnexpectedToken, "A source document may declare only one workflow.", Previous);
-                    Recover("schema", "enum", "workflow", "capability");
+                    Recover("schema", "enum", "prompt", "workflow", "capability");
                 }
                 else
                 {
@@ -543,7 +568,7 @@ internal sealed class SourceParser
                     ParseWorkflow();
                 }
             }
-            else { Error(CompilerDiagnosticCodes.ParseUnexpectedToken, "Expected a top-level declaration.", Current); Recover("schema", "enum", "workflow", "capability"); }
+            else { Error(CompilerDiagnosticCodes.ParseUnexpectedToken, "Expected a top-level declaration.", Current); Recover("schema", "enum", "prompt", "workflow", "capability"); }
         }
         WorkflowPlan? plan = null;
         if (!workflowSeen)
@@ -555,9 +580,10 @@ internal sealed class SourceParser
                 var builder = new WorkflowPlanBuilder(workflowName, revision, inputType, outputType, routing);
                 foreach (var schema in schemas) builder.AddSchema(schema);
                 foreach (var capability in capabilities) builder.RequireCapability(capability);
+                foreach (var prompt in prompts) builder.AddPrompt(prompt);
                 foreach (var node in nodes) builder.AddNode(node);
                 builder.SetExecutionOrder(new WorkflowExecutionOrder(BuildRegions(workflowName, nodes)));
-                plan = interactionGateSeen ? builder.BuildV7() : repeatSeen ? builder.BuildV6() : conditionalMergeSeen ? builder.BuildV5() : fanOutSeen ? builder.BuildV4() : builder.BuildV3();
+                plan = promptSeen ? builder.BuildV8() : interactionGateSeen ? builder.BuildV7() : repeatSeen ? builder.BuildV6() : conditionalMergeSeen ? builder.BuildV5() : fanOutSeen ? builder.BuildV4() : builder.BuildV3();
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
             {
@@ -626,6 +652,87 @@ internal sealed class SourceParser
         var name = ReadText("capability name"); string? scope = null;
         if (Match(":")) scope = ReadText("capability scope");
         capabilities.Add(new CapabilityRequirement(name, scope)); Match(";");
+    }
+
+    private void ParsePrompt()
+    {
+        var name = ReadIdentifier("prompt name");
+        Expect("(");
+        var parameters = new List<PromptParameter>();
+        var parameterNames = new HashSet<string>(StringComparer.Ordinal);
+        if (!Match(")"))
+        {
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var parameterName = ReadIdentifier("prompt parameter name");
+                Expect(":");
+                var parameterType = ParseType();
+                if (!parameterNames.Add(parameterName))
+                    Error(CompilerDiagnosticCodes.SemanticValidationFailed, $"Duplicate prompt parameter '{parameterName}' in prompt '{name}'.", Previous);
+                parameters.Add(new PromptParameter(parameterName, parameterType));
+                Ast();
+                if (Match(")")) break;
+                if (!Match(",")) Expect(";");
+                if (AtEnd) break;
+            }
+        }
+        Expect("{");
+        var messages = new List<PromptMessage>();
+        while (!AtEnd && Current.Text != "}")
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            PromptMessageRole role;
+            if (MatchIdentifier("system")) role = PromptMessageRole.System;
+            else if (MatchIdentifier("user")) role = PromptMessageRole.User;
+            else
+            {
+                Error(CompilerDiagnosticCodes.ParseUnexpectedToken, "Expected a 'system' or 'user' prompt message.", Current);
+                Recover("system", "user", "}");
+                continue;
+            }
+            messages.Add(new PromptMessage(role, ReadPromptText()));
+            Ast();
+            Match(";");
+        }
+        Expect("}");
+        if (messages.Count == 0)
+            Error(CompilerDiagnosticCodes.SemanticValidationFailed, $"Prompt '{name}' requires at least one message.", Previous);
+        if (prompts.Any(prompt => string.Equals(prompt.Name, name, StringComparison.Ordinal)))
+            Error(CompilerDiagnosticCodes.SemanticValidationFailed, $"Duplicate prompt definition '{name}'.", Previous);
+        foreach (var message in messages)
+        {
+            IReadOnlyList<string> placeholders;
+            try
+            {
+                placeholders = PromptDefinition.GetPlaceholders(message.Template);
+            }
+            catch (ArgumentException exception)
+            {
+                Error(CompilerDiagnosticCodes.SemanticValidationFailed, $"Prompt '{name}': {exception.Message}", Previous);
+                continue;
+            }
+            foreach (var placeholder in placeholders)
+            {
+                if (!parameterNames.Contains(placeholder))
+                    Error(CompilerDiagnosticCodes.SemanticValidationFailed, $"Prompt '{name}' references undeclared parameter '{{{{ {placeholder} }}}}'." , Previous);
+            }
+        }
+        prompts.Add(new PromptDefinition(name, parameters, messages));
+        promptSeen = true;
+    }
+
+    private string ReadPromptText()
+    {
+        if (Current.Kind == FuwenTokenKind.String)
+        {
+            var raw = Next().Text;
+            try { using var document = JsonDocument.Parse(raw); return document.RootElement.GetString() ?? string.Empty; }
+            catch (JsonException) { Error(CompilerDiagnosticCodes.ParseUnexpectedToken, "Invalid prompt text literal.", Previous); return string.Empty; }
+        }
+        Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected prompt message text.", Current);
+        if (!AtEnd) Next();
+        return string.Empty;
     }
 
     private void ParseWorkflow()

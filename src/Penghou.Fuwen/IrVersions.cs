@@ -21,6 +21,8 @@ public static class IrVersions
     public const int V6 = 6;
     /// <summary>Ordinal for <c>fuwen-ir/v7</c> (interaction gates).</summary>
     public const int V7 = 7;
+    /// <summary>Ordinal for <c>fuwen-ir/v8</c> (workflow-owned prompts).</summary>
+    public const int V8 = 8;
 
     /// <summary>Maps an IR version string to its ordinal; 0 when unknown.</summary>
     public static int Ordinal(string? irVersion) => irVersion switch
@@ -32,6 +34,7 @@ public static class IrVersions
         _ when string.Equals(irVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) => V5,
         _ when string.Equals(irVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal) => V6,
         _ when string.Equals(irVersion, FuwenContracts.IrVersionV7, StringComparison.Ordinal) => V7,
+        _ when string.Equals(irVersion, FuwenContracts.IrVersionV8, StringComparison.Ordinal) => V8,
         _ => 0,
     };
 
@@ -58,4 +61,7 @@ public static class IrVersions
 
     /// <summary>Whether checkpoint and wait interaction gates are supported (IR v7+).</summary>
     public static bool SupportsInteractionGates(string? irVersion) => AtLeast(irVersion, V7);
+
+    /// <summary>Whether workflow-owned prompt declarations are supported (IR v8+).</summary>
+    public static bool SupportsWorkflowPrompts(string? irVersion) => AtLeast(irVersion, V8);
 }

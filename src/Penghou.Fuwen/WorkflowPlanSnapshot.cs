@@ -40,7 +40,8 @@ internal static class WorkflowPlanSnapshot
                 SnapshotList(plan.CatalogueBindings, "catalogue bindings", CloneDescriptor, state),
                 CloneCapabilities(plan.CapabilityManifest, state),
                 SnapshotList(plan.Nodes, "workflow nodes", CloneNode, state),
-                plan.ExecutionOrder is null ? null : CloneExecutionOrder(plan.ExecutionOrder, state));
+                plan.ExecutionOrder is null ? null : CloneExecutionOrder(plan.ExecutionOrder, state),
+                plan.Prompts is null ? null : SnapshotList(plan.Prompts, "prompts", ClonePrompt, state));
         }
         finally
         {
@@ -416,6 +417,51 @@ internal static class WorkflowPlanSnapshot
         finally
         {
             state.Exit(requirement);
+        }
+    }
+
+    private static PromptDefinition ClonePrompt(PromptDefinition prompt, SnapshotState state)
+    {
+        ArgumentNullException.ThrowIfNull(prompt);
+        state.Enter(prompt);
+        try
+        {
+            return new(
+                prompt.Name,
+                SnapshotList(prompt.Parameters, "prompt parameters", ClonePromptParameter, state),
+                SnapshotList(prompt.Messages, "prompt messages", ClonePromptMessage, state));
+        }
+        finally
+        {
+            state.Exit(prompt);
+        }
+    }
+
+    private static PromptParameter ClonePromptParameter(PromptParameter parameter, SnapshotState state)
+    {
+        ArgumentNullException.ThrowIfNull(parameter);
+        state.Enter(parameter);
+        try
+        {
+            return new(parameter.Name, CloneType(parameter.Type, state));
+        }
+        finally
+        {
+            state.Exit(parameter);
+        }
+    }
+
+    private static PromptMessage ClonePromptMessage(PromptMessage message, SnapshotState state)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        state.Enter(message);
+        try
+        {
+            return new(message.Role, message.Template);
+        }
+        finally
+        {
+            state.Exit(message);
         }
     }
 

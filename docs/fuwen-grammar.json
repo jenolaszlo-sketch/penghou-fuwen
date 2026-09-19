@@ -4,13 +4,16 @@
   "lexical": {
     "identifier": "[A-Za-z_$][A-Za-z0-9_$-]*",
     "number": "-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?",
-    "string": "JSON string literal",
+    "string": "JSON string literal, or triple-quoted raw multi-line literal",
+    "tripleQuotedString": "'\"\"\"' raw-text '\"\"\"' (may span lines; no escape processing; cannot contain '\"\"\"')",
     "comments": ["// to end of line", "/* ... */"],
     "coordinates": "zero-based UTF-8 byte offsets plus zero-based UTF-16 columns"
   },
   "productions": {
     "source": "declaration*",
-    "declaration": "schema | enum | capability | workflow",
+    "declaration": "schema | enum | capability | prompt | workflow",
+    "prompt": "'prompt' identifier '(' (identifier ':' type (','|';'))* ')' '{' promptMessage* '}'",
+    "promptMessage": "('system' | 'user') string",
     "schema": "schema identifier descriptor? '{' field* '}'",
     "enum": "enum identifier descriptor? '{' enumMember* '}'",
     "capability": "capability string (':' string)? ';'?",
@@ -37,6 +40,7 @@
     "A fan-out body contains only activity and conditional nodes; it sees the workflow input, the current item, and earlier body outputs, but no outer node. Keys are item projections validated before child work; results aggregate in source order.",
     "A workflow has one complete return and no cross-region output references.",
     "The trusted catalogue, not source text, is authoritative for schemas and callable contracts.",
-    "All parser dimensions are bounded by CompilationBudget; diagnostic codes are stable API values."
+    "All parser dimensions are bounded by CompilationBudget; diagnostic codes are stable API values.",
+    "Workflow-owned prompt declarations require IR v8; prompt placeholders use '{{ name }}' and must reference declared typed parameters; bindings evaluate in the parent region."
   ]
 }

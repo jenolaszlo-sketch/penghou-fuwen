@@ -9,6 +9,7 @@ const Penghou.Fuwen.IrVersions.V4 = 4 -> int
 const Penghou.Fuwen.IrVersions.V5 = 5 -> int
 const Penghou.Fuwen.IrVersions.V6 = 6 -> int
 const Penghou.Fuwen.IrVersions.V7 = 7 -> int
+const Penghou.Fuwen.IrVersions.V8 = 8 -> int
 static Penghou.Fuwen.IrVersions.AtLeast(string? irVersion, int minimum) -> bool
 static Penghou.Fuwen.IrVersions.IsKnown(string? irVersion) -> bool
 static Penghou.Fuwen.IrVersions.Ordinal(string? irVersion) -> int
@@ -18,6 +19,7 @@ static Penghou.Fuwen.IrVersions.SupportsFanOut(string? irVersion) -> bool
 static Penghou.Fuwen.IrVersions.SupportsInteractionGates(string? irVersion) -> bool
 static Penghou.Fuwen.IrVersions.SupportsRepeat(string? irVersion) -> bool
 static Penghou.Fuwen.IrVersions.SupportsTypedContextRequirements(string? irVersion) -> bool
+static Penghou.Fuwen.IrVersions.SupportsWorkflowPrompts(string? irVersion) -> bool
 Penghou.Fuwen.FanOutItemBinding
 Penghou.Fuwen.FanOutItemBinding.FanOutItemBinding(string! Name, Penghou.Fuwen.FuwenType! Type) -> void
 Penghou.Fuwen.FanOutItemBinding.Name.get -> string!
@@ -109,12 +111,15 @@ const Penghou.Fuwen.FuwenContracts.IrVersionV4 = "fuwen-ir/v4" -> string!
 const Penghou.Fuwen.FuwenContracts.IrVersionV5 = "fuwen-ir/v5" -> string!
 const Penghou.Fuwen.FuwenContracts.IrVersionV6 = "fuwen-ir/v6" -> string!
 const Penghou.Fuwen.FuwenContracts.IrVersionV7 = "fuwen-ir/v7" -> string!
+const Penghou.Fuwen.FuwenContracts.IrVersionV8 = "fuwen-ir/v8" -> string!
 const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersionV5 = "compiler-semantics/5" -> string!
 const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersionV6 = "compiler-semantics/6" -> string!
 const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersionV7 = "compiler-semantics/7" -> string!
+const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersionV8 = "compiler-semantics/8" -> string!
 const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersionV5 = "fuwen-execution/v5" -> string!
 const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersionV6 = "fuwen-execution/v6" -> string!
 const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersionV7 = "fuwen-execution/v7" -> string!
+const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersionV8 = "fuwen-execution/v8" -> string!
 const Penghou.Fuwen.FuwenContracts.MaximumCanonicalPlanBytes = 4194304 -> int
 const Penghou.Fuwen.FuwenContracts.SourceFingerprintVersion = "fuwen-source/v1" -> string!
 const Penghou.Fuwen.JsonRuntimeValue.MaximumJsonDepth = 128 -> int
@@ -553,6 +558,35 @@ Penghou.Fuwen.WorkflowPlan.CatalogueBindings.get -> System.Collections.Generic.I
 Penghou.Fuwen.WorkflowPlan.CatalogueBindings.init -> void
 Penghou.Fuwen.WorkflowPlan.ExecutionOrder.get -> Penghou.Fuwen.WorkflowExecutionOrder?
 Penghou.Fuwen.WorkflowPlan.ExecutionOrder.init -> void
+Penghou.Fuwen.WorkflowPlan.Prompts.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PromptDefinition!>?
+Penghou.Fuwen.WorkflowPlan.Prompts.init -> void
+Penghou.Fuwen.PromptMessageRole
+Penghou.Fuwen.PromptMessageRole.System = 0 -> Penghou.Fuwen.PromptMessageRole
+Penghou.Fuwen.PromptMessageRole.User = 1 -> Penghou.Fuwen.PromptMessageRole
+Penghou.Fuwen.PromptParameter
+Penghou.Fuwen.PromptParameter.PromptParameter(string! Name, Penghou.Fuwen.FuwenType! Type) -> void
+Penghou.Fuwen.PromptParameter.Name.get -> string!
+Penghou.Fuwen.PromptParameter.Name.init -> void
+Penghou.Fuwen.PromptParameter.Type.get -> Penghou.Fuwen.FuwenType!
+Penghou.Fuwen.PromptParameter.Type.init -> void
+Penghou.Fuwen.PromptMessage
+Penghou.Fuwen.PromptMessage.PromptMessage(Penghou.Fuwen.PromptMessageRole Role, string! Template) -> void
+Penghou.Fuwen.PromptMessage.Role.get -> Penghou.Fuwen.PromptMessageRole
+Penghou.Fuwen.PromptMessage.Role.init -> void
+Penghou.Fuwen.PromptMessage.Template.get -> string!
+Penghou.Fuwen.PromptMessage.Template.init -> void
+Penghou.Fuwen.PromptDefinition
+Penghou.Fuwen.PromptDefinition.PromptDefinition(string! Name, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PromptParameter!>! Parameters, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PromptMessage!>! Messages) -> void
+Penghou.Fuwen.PromptDefinition.Name.get -> string!
+Penghou.Fuwen.PromptDefinition.Name.init -> void
+Penghou.Fuwen.PromptDefinition.Parameters.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PromptParameter!>!
+Penghou.Fuwen.PromptDefinition.Parameters.init -> void
+Penghou.Fuwen.PromptDefinition.Messages.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PromptMessage!>!
+Penghou.Fuwen.PromptDefinition.Messages.init -> void
+const Penghou.Fuwen.PromptDefinition.SemanticDigestContract = "prompt-definition/v1" -> string!
+Penghou.Fuwen.PromptDefinition.GetSemanticDigest() -> string!
+static Penghou.Fuwen.PromptDefinition.GetPlaceholders(string! template) -> System.Collections.Generic.IReadOnlyList<string!>!
+static Penghou.Fuwen.PromptDefinition.ValidateDefinition(Penghou.Fuwen.PromptDefinition! definition) -> System.Collections.Generic.IReadOnlyList<string!>!
 Penghou.Fuwen.WorkflowPlan.CompilerSemanticVersion.get -> string!
 Penghou.Fuwen.WorkflowPlan.CompilerSemanticVersion.init -> void
 Penghou.Fuwen.WorkflowPlan.FingerprintVersion.get -> string!
@@ -575,7 +609,7 @@ Penghou.Fuwen.WorkflowPlan.RoutingPolicyRevision.get -> string!
 Penghou.Fuwen.WorkflowPlan.RoutingPolicyRevision.init -> void
 Penghou.Fuwen.WorkflowPlan.Schemas.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>!
 Penghou.Fuwen.WorkflowPlan.Schemas.init -> void
-Penghou.Fuwen.WorkflowPlan.WorkflowPlan(string! IrVersion, string! LanguageVersion, string! CompilerSemanticVersion, string! CanonicalJsonVersion, string! FingerprintVersion, string! Name, string! Revision, Penghou.Fuwen.FuwenType! InputType, Penghou.Fuwen.FuwenType! OutputType, string! RoutingPolicyRevision, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>! Schemas, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>! CatalogueBindings, Penghou.Fuwen.CapabilityManifest! CapabilityManifest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Nodes, Penghou.Fuwen.WorkflowExecutionOrder? ExecutionOrder = null) -> void
+Penghou.Fuwen.WorkflowPlan.WorkflowPlan(string! IrVersion, string! LanguageVersion, string! CompilerSemanticVersion, string! CanonicalJsonVersion, string! FingerprintVersion, string! Name, string! Revision, Penghou.Fuwen.FuwenType! InputType, Penghou.Fuwen.FuwenType! OutputType, string! RoutingPolicyRevision, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>! Schemas, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>! CatalogueBindings, Penghou.Fuwen.CapabilityManifest! CapabilityManifest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowNode!>! Nodes, Penghou.Fuwen.WorkflowExecutionOrder? ExecutionOrder = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.PromptDefinition!>? Prompts = null) -> void
 Penghou.Fuwen.WorkflowPlanIdentity
 Penghou.Fuwen.WorkflowPlanValidator
 Penghou.Fuwen.WorkflowSourceMap

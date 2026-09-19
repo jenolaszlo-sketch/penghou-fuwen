@@ -249,6 +249,7 @@ Penghou.Fuwen.Compiler.WorkflowPlanBuilder.WorkflowPlanBuilder(string! name, str
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.AddCatalogueBinding(Penghou.Fuwen.DescriptorReference! descriptor) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.AddNode(Penghou.Fuwen.WorkflowNode! node) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.AddFanOut(Penghou.Fuwen.FanOutNode! node) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
+Penghou.Fuwen.Compiler.WorkflowPlanBuilder.AddPrompt(Penghou.Fuwen.PromptDefinition! prompt) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.AddSchema(Penghou.Fuwen.ResolvedSchemaDefinition! schema) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.Build() -> Penghou.Fuwen.WorkflowPlan!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.BuildV3() -> Penghou.Fuwen.WorkflowPlan!
@@ -256,6 +257,7 @@ Penghou.Fuwen.Compiler.WorkflowPlanBuilder.BuildV4() -> Penghou.Fuwen.WorkflowPl
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.BuildV5() -> Penghou.Fuwen.WorkflowPlan!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.BuildV6() -> Penghou.Fuwen.WorkflowPlan!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.BuildV7() -> Penghou.Fuwen.WorkflowPlan!
+Penghou.Fuwen.Compiler.WorkflowPlanBuilder.BuildV8() -> Penghou.Fuwen.WorkflowPlan!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.RequireCapability(Penghou.Fuwen.CapabilityRequirement! capability) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
 Penghou.Fuwen.Compiler.WorkflowPlanBuilder.SetExecutionOrder(Penghou.Fuwen.WorkflowExecutionOrder! order) -> Penghou.Fuwen.Compiler.WorkflowPlanBuilder!
 Penghou.Fuwen.Compiler.WorkflowCompiler

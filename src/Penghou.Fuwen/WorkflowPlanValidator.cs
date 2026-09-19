@@ -22,6 +22,7 @@ public static class WorkflowPlanValidator
         ValidateSchemas(plan.Schemas);
         ValidateDescriptors(plan.CatalogueBindings);
         ValidateCapabilities(plan.CapabilityManifest);
+        ValidatePrompts(plan);
         var nodes = new Dictionary<string, NodeLocation>(StringComparer.Ordinal);
         ValidateNodes(
             plan.Name,
@@ -58,18 +59,19 @@ public static class WorkflowPlanValidator
         var isV5 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal);
         var isV6 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal);
         var isV7 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV7, StringComparison.Ordinal);
-        if (!isV1 && !isV2 && !isV3 && !isV4 && !isV5 && !isV6 && !isV7)
+        var isV8 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV8, StringComparison.Ordinal);
+        if (!isV1 && !isV2 && !isV3 && !isV4 && !isV5 && !isV6 && !isV7 && !isV8)
             throw new NotSupportedException(
-                $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'. Expected '{FuwenContracts.IrVersionV1}', '{FuwenContracts.IrVersionV2}', '{FuwenContracts.IrVersionV3}', '{FuwenContracts.IrVersionV4}', '{FuwenContracts.IrVersionV5}', '{FuwenContracts.IrVersionV6}', or '{FuwenContracts.IrVersionV7}'.");
+                $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'. Expected '{FuwenContracts.IrVersionV1}', '{FuwenContracts.IrVersionV2}', '{FuwenContracts.IrVersionV3}', '{FuwenContracts.IrVersionV4}', '{FuwenContracts.IrVersionV5}', '{FuwenContracts.IrVersionV6}', '{FuwenContracts.IrVersionV7}', or '{FuwenContracts.IrVersionV8}'.");
 
         RequireVersion(plan.CanonicalJsonVersion, FuwenContracts.CanonicalJsonVersion, nameof(plan.CanonicalJsonVersion));
         var expectedFingerprint = isV1
             ? FuwenContracts.ExecutionFingerprintVersionV1
-            : isV2 ? FuwenContracts.ExecutionFingerprintVersionV2 : isV3 ? FuwenContracts.ExecutionFingerprintVersionV3 : isV4 ? FuwenContracts.ExecutionFingerprintVersionV4 : isV5 ? FuwenContracts.ExecutionFingerprintVersionV5 : isV6 ? FuwenContracts.ExecutionFingerprintVersionV6 : FuwenContracts.ExecutionFingerprintVersionV7;
+            : isV2 ? FuwenContracts.ExecutionFingerprintVersionV2 : isV3 ? FuwenContracts.ExecutionFingerprintVersionV3 : isV4 ? FuwenContracts.ExecutionFingerprintVersionV4 : isV5 ? FuwenContracts.ExecutionFingerprintVersionV5 : isV6 ? FuwenContracts.ExecutionFingerprintVersionV6 : isV7 ? FuwenContracts.ExecutionFingerprintVersionV7 : FuwenContracts.ExecutionFingerprintVersionV8;
         RequireVersion(plan.FingerprintVersion, expectedFingerprint, nameof(plan.FingerprintVersion));
         var expectedCompilerSemantics = isV1
             ? FuwenContracts.CompilerSemanticVersionV1
-            : isV2 ? FuwenContracts.CompilerSemanticVersionV2 : isV3 ? FuwenContracts.CompilerSemanticVersionV3 : isV4 ? FuwenContracts.CompilerSemanticVersionV4 : isV5 ? FuwenContracts.CompilerSemanticVersionV5 : isV6 ? FuwenContracts.CompilerSemanticVersionV6 : FuwenContracts.CompilerSemanticVersionV7;
+            : isV2 ? FuwenContracts.CompilerSemanticVersionV2 : isV3 ? FuwenContracts.CompilerSemanticVersionV3 : isV4 ? FuwenContracts.CompilerSemanticVersionV4 : isV5 ? FuwenContracts.CompilerSemanticVersionV5 : isV6 ? FuwenContracts.CompilerSemanticVersionV6 : isV7 ? FuwenContracts.CompilerSemanticVersionV7 : FuwenContracts.CompilerSemanticVersionV8;
         RequireVersion(plan.CompilerSemanticVersion, expectedCompilerSemantics, nameof(plan.CompilerSemanticVersion));
         if (isV1 && plan.ExecutionOrder is not null)
             throw new ArgumentException(
@@ -1145,6 +1147,28 @@ public static class WorkflowPlanValidator
                 throw new ArgumentException(
                     $"Duplicate capability requirement '{requirement.Name}|{requirement.ScopeClass}'.",
                     nameof(manifest));
+        }
+    }
+
+    private static void ValidatePrompts(WorkflowPlan plan)
+    {
+        var prompts = plan.Prompts ?? (IReadOnlyList<PromptDefinition>)[];
+        if (prompts.Count != 0 && !IrVersions.SupportsWorkflowPrompts(plan.IrVersion))
+            throw new ArgumentException(
+                $"Workflow-owned prompts require IR v8 or later, not '{plan.IrVersion}'.",
+                nameof(plan.Prompts));
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var prompt in prompts)
+        {
+            ArgumentNullException.ThrowIfNull(prompt);
+            if (!names.Add(prompt.Name))
+                throw new ArgumentException(
+                    $"Duplicate prompt definition '{prompt.Name}'.",
+                    nameof(plan.Prompts));
+            foreach (var error in PromptDefinition.ValidateDefinition(prompt))
+                throw new ArgumentException(error, nameof(plan.Prompts));
+            foreach (var parameter in prompt.Parameters)
+                ValidateType(parameter.Type);
         }
     }
 

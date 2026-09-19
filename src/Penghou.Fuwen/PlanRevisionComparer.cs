@@ -167,6 +167,11 @@ public static class PlanRevisionComparer
         plan.Schemas,
         plan.CatalogueBindings,
         plan.CapabilityManifest,
+        PromptDigests = string.Join(
+            "|",
+            (plan.Prompts ?? Enumerable.Empty<PromptDefinition>())
+                .Select(prompt => prompt.GetSemanticDigest())
+                .OrderBy(digest => digest, StringComparer.Ordinal)),
     };
 
     private static object NodeSemantics(WorkflowNode node) => node switch

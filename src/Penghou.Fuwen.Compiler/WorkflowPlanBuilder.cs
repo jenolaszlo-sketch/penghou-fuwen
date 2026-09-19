@@ -19,6 +19,7 @@ public sealed class WorkflowPlanBuilder
     private readonly List<DescriptorReference> catalogueBindings = [];
     private readonly List<CapabilityRequirement> capabilities = [];
     private readonly List<WorkflowNode> nodes = [];
+    private readonly List<PromptDefinition> prompts = [];
     private WorkflowExecutionOrder? executionOrder;
 
     /// <summary>Creates a v2 builder with the current canonical contracts.</summary>
@@ -74,6 +75,14 @@ public sealed class WorkflowPlanBuilder
     /// <summary>Adds one bounded keyed fan-out region to the programmatic plan.</summary>
     public WorkflowPlanBuilder AddFanOut(FanOutNode node) => AddNode(node);
 
+    /// <summary>Adds one workflow-owned prompt declaration (IR v8).</summary>
+    public WorkflowPlanBuilder AddPrompt(PromptDefinition prompt)
+    {
+        ArgumentNullException.ThrowIfNull(prompt);
+        prompts.Add(prompt);
+        return this;
+    }
+
     /// <summary>Sets the explicit v2 completion schedule.</summary>
     public WorkflowPlanBuilder SetExecutionOrder(WorkflowExecutionOrder order)
     {
@@ -106,6 +115,10 @@ public sealed class WorkflowPlanBuilder
     public WorkflowPlan BuildV7()
         => BuildVersioned(FuwenContracts.IrVersionV7, FuwenContracts.CompilerSemanticVersionV7, FuwenContracts.ExecutionFingerprintVersionV7);
 
+    /// <summary>Builds a pre-release v8 plan containing workflow-owned prompt declarations.</summary>
+    public WorkflowPlan BuildV8()
+        => BuildVersioned(FuwenContracts.IrVersionV8, FuwenContracts.CompilerSemanticVersionV8, FuwenContracts.ExecutionFingerprintVersionV8);
+
     private WorkflowPlan BuildVersioned(string irVersion, string compilerSemanticVersion, string fingerprintVersion)
     {
         var plan = new WorkflowPlan(
@@ -124,7 +137,8 @@ public sealed class WorkflowPlanBuilder
             new CapabilityManifest(capabilities.ToArray()),
             nodes.ToArray(),
             executionOrder ?? throw new InvalidOperationException(
-                $"{irVersion} requires an explicit execution order; use SetExecutionOrder before building the plan."));
+                $"{irVersion} requires an explicit execution order; use SetExecutionOrder before building the plan."),
+            prompts.Count == 0 ? null : prompts.ToArray());
 
         // The core snapshot is intentionally the only place that freezes the
         // recursive plan graph. This keeps builder and future parser paths

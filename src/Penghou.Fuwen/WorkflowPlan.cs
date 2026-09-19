@@ -21,6 +21,8 @@ public static class FuwenContracts
     public const string IrVersionV6 = "fuwen-ir/v6";
     /// <summary>The interaction gates (checkpoint + wait) executable-plan contract.</summary>
     public const string IrVersionV7 = "fuwen-ir/v7";
+    /// <summary>The self-describing inference (workflow-owned prompts) executable-plan contract.</summary>
+    public const string IrVersionV8 = "fuwen-ir/v8";
     /// <summary>The historical v1 compiler-semantics contract.</summary>
     public const string CompilerSemanticVersion = "compiler-semantics/1";
     /// <summary>The historical v1 compiler-semantics contract.</summary>
@@ -37,6 +39,8 @@ public static class FuwenContracts
     public const string CompilerSemanticVersionV6 = "compiler-semantics/6";
     /// <summary>The compiler-semantics contract for interaction gates.</summary>
     public const string CompilerSemanticVersionV7 = "compiler-semantics/7";
+    /// <summary>The compiler-semantics contract for workflow-owned prompts.</summary>
+    public const string CompilerSemanticVersionV8 = "compiler-semantics/8";
     /// <summary>The canonical JSON contract used by all currently supported IR versions.</summary>
     public const string CanonicalJsonVersion = "penghou-canonical-json/v1";
     /// <summary>The historical v1 execution fingerprint envelope.</summary>
@@ -55,6 +59,8 @@ public static class FuwenContracts
     public const string ExecutionFingerprintVersionV6 = "fuwen-execution/v6";
     /// <summary>The execution fingerprint envelope for interaction gates.</summary>
     public const string ExecutionFingerprintVersionV7 = "fuwen-execution/v7";
+    /// <summary>The execution fingerprint envelope for workflow-owned prompts.</summary>
+    public const string ExecutionFingerprintVersionV8 = "fuwen-execution/v8";
     /// <summary>The first canonical authored-source fingerprint envelope.</summary>
     public const string SourceFingerprintVersion = "fuwen-source/v1";
     /// <summary>The maximum persisted canonical IR size accepted by the core verifier.</summary>
@@ -226,4 +232,6 @@ public sealed record WorkflowPlan(
     CapabilityManifest CapabilityManifest,
     IReadOnlyList<WorkflowNode> Nodes,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    WorkflowExecutionOrder? ExecutionOrder = null);
+    WorkflowExecutionOrder? ExecutionOrder = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    IReadOnlyList<PromptDefinition>? Prompts = null);

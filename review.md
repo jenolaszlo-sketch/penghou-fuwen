@@ -313,6 +313,16 @@ Evidence: `src/Penghou.Fuwen.Zhinu/FuwenZhinuSequentialInterpreter.cs`, `ReadEnv
 
 Recommendation: accept host-declared prior execution fingerprints plus run-prefix-independent runtime paths when structural path and request fingerprint match exactly. Keep the default (no priors) strictly single-plan.
 
+### R29 — P1: Inference nodes do not describe their own contract (architectural pivot)
+
+Status: in progress (2026-09-19). Inference nodes reference host-registered prompt templates and profiles by digest, so the workflow carries no instructions and no tool surface. Generated workflows describe the graph without the work; supervisor-authored workflows cannot be understood, compared, or executed without the authoring host's hidden configuration. Recorded as ADR 0005 (`docs/decisions/0005-inference-contracts-are-self-describing.md`).
+
+Phase A steps 1–2 done (2026-09-19): canonical `PromptDefinition` with typed parameters, message roles, `{{ name }}` placeholder validation, and `sha256:prompt-definition/v1` semantic digests; top-level `prompt` declarations with triple-quoted raw text; `WorkflowPlan.Prompts` carriage with null-omitted canonical JSON (v3–v7 fingerprints byte-identical); IR v8 gating end to end (validator, fingerprint v8, `BuildV8`, source `promptSeen` selection, `SupportsWorkflowPrompts`); prompt digests in plan comparison; `WorkflowPlanSnapshot` deep-clones prompts. Verified by `tests/Penghou.Fuwen.Compiler.Tests/FuwenSourcePromptTests.cs` (13 tests). Inference-node prompt references, execution wiring, and tools remain for later phases; the Zhinu adapter correctly rejects v8 until then.
+
+Evidence: `InferenceNode` carries `ProfileDescriptor` + `TemplateDescriptor` only; `FuwenSource.cs` parses no prompt text; execution identity covers descriptor digests but not prompt semantics; there is no tool concept anywhere in the language.
+
+Recommendation: implement in phases under a new IR version (v3–v7 keep current semantics). Phase A (prompts): canonical `PromptDefinition` with typed parameters and message roles, top-level workflow-owned `prompt` declarations, typed bindings with compile-time validation, parent-region binding evaluation, and prompt semantics in execution fingerprints and plan comparison. Phase B (tools): `DescriptorKind.Tool` with side-effect/idempotency metadata, `tools none` default, inline lists and `toolset` declarations, exact admission, and tool semantics in fingerprints. Restrict Phase B initially to none/read-only/idempotent. Guyabano generation guidance and Marang authoring requirements follow Fuwen, not interleaved.
+
 ## Suggested implementation order
 
 1. **Immediate Correctness Fixes** (done 2026-09-17):

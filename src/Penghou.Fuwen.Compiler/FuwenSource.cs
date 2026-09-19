@@ -730,7 +730,7 @@ internal sealed class SourceParser
             foreach (var placeholder in placeholders)
             {
                 if (!parameterNames.Contains(placeholder))
-                    Error(CompilerDiagnosticCodes.SemanticValidationFailed, $"Prompt '{name}' references undeclared parameter '{{{{ {placeholder} }}}}'." , Previous);
+                    Error(CompilerDiagnosticCodes.SemanticValidationFailed, $"Prompt '{name}' references undeclared parameter '{{{{ {placeholder} }}}}'.", Previous);
             }
         }
         prompts.Add(new PromptDefinition(name, parameters, messages));

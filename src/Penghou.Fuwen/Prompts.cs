@@ -166,7 +166,7 @@ public sealed record PromptDefinition(
             foreach (var placeholder in placeholders)
             {
                 if (!parameterNames.Contains(placeholder))
-                    errors.Add($"Prompt '{definition.Name}' references undeclared parameter '{{{{ {placeholder} }}}}'." );
+                    errors.Add($"Prompt '{definition.Name}' references undeclared parameter '{{{{ {placeholder} }}}}'.");
             }
         }
         return errors;

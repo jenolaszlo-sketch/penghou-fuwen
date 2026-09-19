@@ -36,6 +36,8 @@ internal sealed class WorkflowPlanPayloadBounds
             List(plan.Nodes, Node, "workflow nodes");
             if (plan.ExecutionOrder is not null)
                 ExecutionOrder(plan.ExecutionOrder);
+            if (plan.Prompts is not null)
+                List(plan.Prompts, Prompt, "prompts");
         }
         finally
         {
@@ -272,6 +274,52 @@ internal sealed class WorkflowPlanPayloadBounds
                 Exit(argument);
             }
         });
+    }
+
+    private void Prompt(PromptDefinition prompt)
+    {
+        if (prompt is null)
+            return;
+        Enter(prompt);
+        try
+        {
+            Text(prompt.Name, "prompt name");
+            List(prompt.Parameters, parameter =>
+            {
+                if (parameter is null)
+                    return;
+                Enter(parameter);
+                try
+                {
+                    Text(parameter.Name, "prompt parameter name");
+                    Type(parameter.Type);
+                }
+                finally
+                {
+                    Exit(parameter);
+                }
+            });
+            List(prompt.Messages, message =>
+            {
+                if (message is null)
+                    return;
+                Enter(message);
+                try
+                {
+                    Text(message.Template, "prompt message template");
+                }
+                finally
+                {
+                    Exit(message);
+                }
+            });
+            if (prompt.RegisteredSource is not null)
+                Descriptor(prompt.RegisteredSource);
+        }
+        finally
+        {
+            Exit(prompt);
+        }
     }
 
     private void PromptBindingValue(PromptBinding binding)

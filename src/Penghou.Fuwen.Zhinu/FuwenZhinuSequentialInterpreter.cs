@@ -233,7 +233,8 @@ internal static class FuwenZhinuSequentialInterpreter
         var nodePath = nodePathOverride ?? node.StructuralPath;
         if (node.PromptName is null)
         {
-            var identity = new NodeRequestIdentity("inference", nodePath, node.Profile, node.PromptTemplate, arguments, contextInputs);
+            var toolList = node.Tools is null || node.Tools.Count == 0 ? null : node.Tools.ToArray();
+            var identity = new NodeRequestIdentity("inference", nodePath, node.Profile, node.PromptTemplate, arguments, contextInputs, toolList);
             var requestJson = RuntimeValueWire.Serialize(identity);
             return (requestJson, invocation => new InferenceExecutionRequest(
                 invocation,
@@ -241,7 +242,10 @@ internal static class FuwenZhinuSequentialInterpreter
                 node.PromptTemplate,
                 arguments,
                 contextInputs,
-                node.OutputType));
+                node.OutputType,
+                null,
+                null,
+                toolList));
         }
 
         var definition = plan.Prompts?.FirstOrDefault(
@@ -1806,7 +1810,9 @@ internal static class FuwenZhinuSequentialInterpreter
         DescriptorReference Descriptor,
         DescriptorReference? SecondaryDescriptor,
         IReadOnlyList<RuntimeArgument> Arguments,
-        IReadOnlyList<InferenceContextInput>? ContextInputs);
+        IReadOnlyList<InferenceContextInput>? ContextInputs,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        IReadOnlyList<DescriptorReference>? Tools = null);
 
     private sealed record PromptNodeRequestIdentity(
         string Kind,

@@ -72,40 +72,47 @@ public sealed record PromptDefinition(
     {
         ArgumentNullException.ThrowIfNull(template);
         var placeholders = new List<string>();
-        var index = 0;
+        var offset = 0;
         while (true)
         {
-            var open = template.IndexOf("{{", index, StringComparison.Ordinal);
+            var open = template.IndexOf("{{", offset, StringComparison.Ordinal);
             if (open < 0)
                 return placeholders;
-            var cursor = open + 2;
-            while (cursor < template.Length && char.IsWhiteSpace(template[cursor]))
-                cursor++;
-            var start = cursor;
-            if (cursor < template.Length &&
-                (char.IsLetter(template[cursor]) || template[cursor] is '_' or '$'))
-            {
-                cursor++;
-                while (cursor < template.Length &&
-                    (char.IsLetterOrDigit(template[cursor]) || template[cursor] is '_' or '$'))
-                {
-                    cursor++;
-                }
-            }
-            var name = template[start..cursor];
-            while (cursor < template.Length && char.IsWhiteSpace(template[cursor]))
-                cursor++;
-            if (name.Length == 0 ||
-                !template.AsSpan(cursor).StartsWith("}}", StringComparison.Ordinal))
-            {
+            if (!TryReadPlaceholderAt(template, open, out var name, out var end))
                 throw new ArgumentException(
                     $"Malformed prompt placeholder starting at offset {open}; " +
                     "placeholders use '{{ name }}' with an identifier name.",
                     nameof(template));
-            }
             placeholders.Add(name);
-            index = cursor + 2;
+            offset = end;
         }
+    }
+
+    internal static bool TryReadPlaceholderAt(string template, int open, out string name, out int end)
+    {
+        name = string.Empty;
+        end = open;
+        var cursor = open + 2;
+        while (cursor < template.Length && char.IsWhiteSpace(template[cursor]))
+            cursor++;
+        var start = cursor;
+        if (cursor < template.Length &&
+            (char.IsLetter(template[cursor]) || template[cursor] is '_' or '$'))
+        {
+            cursor++;
+            while (cursor < template.Length &&
+                (char.IsLetterOrDigit(template[cursor]) || template[cursor] is '_' or '$'))
+            {
+                cursor++;
+            }
+        }
+        name = template[start..cursor];
+        while (cursor < template.Length && char.IsWhiteSpace(template[cursor]))
+            cursor++;
+        if (name.Length == 0 || !template.AsSpan(cursor).StartsWith("}}", StringComparison.Ordinal))
+            return false;
+        end = cursor + 2;
+        return true;
     }
 
     /// <summary>
@@ -238,25 +245,7 @@ public static class PromptRenderer
                 builder.Append(template, offset, template.Length - offset);
                 break;
             }
-            var cursor = open + 2;
-            while (cursor < template.Length && char.IsWhiteSpace(template[cursor]))
-                cursor++;
-            var start = cursor;
-            if (cursor < template.Length &&
-                (char.IsLetter(template[cursor]) || template[cursor] is '_' or '$'))
-            {
-                cursor++;
-                while (cursor < template.Length &&
-                    (char.IsLetterOrDigit(template[cursor]) || template[cursor] is '_' or '$'))
-                {
-                    cursor++;
-                }
-            }
-            var name = template[start..cursor];
-            var tail = cursor;
-            while (tail < template.Length && char.IsWhiteSpace(template[tail]))
-                tail++;
-            if (name.Length == 0 || !template.AsSpan(tail).StartsWith("}}", StringComparison.Ordinal))
+            if (!PromptDefinition.TryReadPlaceholderAt(template, open, out var name, out var end))
                 throw new ArgumentException(
                     $"Prompt '{promptName}' has a malformed placeholder starting at offset {open}.",
                     nameof(template));
@@ -266,7 +255,7 @@ public static class PromptRenderer
                     nameof(template));
             builder.Append(template, offset, open - offset);
             builder.Append(replacement);
-            offset = tail + 2;
+            offset = end;
         }
         return builder.ToString();
     }

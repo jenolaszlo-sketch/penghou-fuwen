@@ -272,8 +272,7 @@ public sealed class FuwenZhinuWorkflowFactory
 
         var admittedPlan = definition.ReadPlan();
         if (executionPorts is not null &&
-            !(IrVersions.SupportsTypedContextRequirements(admittedPlan.IrVersion) ||
-              IrVersions.SupportsWorkflowPrompts(admittedPlan.IrVersion)))
+            !IrVersions.SupportsTypedContextRequirements(admittedPlan.IrVersion))
         {
             throw new FuwenZhinuAdmissionException(
                 $"The sequential Zhinu adapter supports '{FuwenContracts.IrVersionV3}'–'{FuwenContracts.IrVersionV8}', not '{admittedPlan.IrVersion}'.");

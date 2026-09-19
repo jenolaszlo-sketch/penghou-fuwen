@@ -741,23 +741,11 @@ internal static class WorkflowBindingValidator
         var contract = profile.CallableContract;
         if (contract is not null)
         {
-            if (!Enum.IsDefined(contract.Effect) || contract.Effect is CallableEffect.External or CallableEffect.Destructive)
-                diagnostics.Add(new CompilerDiagnostic(
-                    CompilerDiagnosticCodes.CallableEffectRejected,
-                    DiagnosticSeverity.Error,
-                    DiagnosticPhase.Admission,
-                    $"Callable '{profileReference.Name}@{profileReference.Version}' has an effect outside the conservative compilation matrix.",
-                    path: location.Node.StructuralPath,
-                    actual: contract.Effect.ToString()));
-            if (!Enum.IsDefined(contract.Idempotency) || contract.Idempotency != CallableIdempotency.Idempotent ||
-                !Enum.IsDefined(contract.RetrySafety) || contract.RetrySafety != CallableRetrySafety.Safe)
-                diagnostics.Add(new CompilerDiagnostic(
-                    CompilerDiagnosticCodes.CallableRetryRejected,
-                    DiagnosticSeverity.Error,
-                    DiagnosticPhase.Admission,
-                    $"Callable '{profileReference.Name}@{profileReference.Version}' is not conservatively retry-safe.",
-                    path: location.Node.StructuralPath,
-                    actual: $"{contract.Idempotency}/{contract.RetrySafety}"));
+            ValidateConservativeEffect(
+                contract,
+                $"Callable '{profileReference.Name}@{profileReference.Version}'",
+                location.Node.StructuralPath,
+                diagnostics);
         }
 
         var definition = plan.Prompts?.FirstOrDefault(
@@ -842,6 +830,31 @@ internal static class WorkflowBindingValidator
         }
     }
 
+    private static void ValidateConservativeEffect(
+        CallableContract contract,
+        string subject,
+        string path,
+        List<CompilerDiagnostic> diagnostics)
+    {
+        if (!Enum.IsDefined(contract.Effect) || contract.Effect is CallableEffect.External or CallableEffect.Destructive)
+            diagnostics.Add(new CompilerDiagnostic(
+                CompilerDiagnosticCodes.CallableEffectRejected,
+                DiagnosticSeverity.Error,
+                DiagnosticPhase.Admission,
+                $"{subject} has an effect outside the conservative compilation matrix.",
+                path: path,
+                actual: contract.Effect.ToString()));
+        if (!Enum.IsDefined(contract.Idempotency) || contract.Idempotency != CallableIdempotency.Idempotent ||
+            !Enum.IsDefined(contract.RetrySafety) || contract.RetrySafety != CallableRetrySafety.Safe)
+            diagnostics.Add(new CompilerDiagnostic(
+                CompilerDiagnosticCodes.CallableRetryRejected,
+                DiagnosticSeverity.Error,
+                DiagnosticPhase.Admission,
+                $"{subject} is not conservatively retry-safe.",
+                path: path,
+                actual: $"{contract.Idempotency}/{contract.RetrySafety}"));
+    }
+
     private static void ValidateCallableNode(
         DescriptorReference descriptorReference,
         DescriptorKind expectedKind,
@@ -876,23 +889,11 @@ internal static class WorkflowBindingValidator
             return;
         }
 
-        if (!Enum.IsDefined(contract.Effect) || contract.Effect is CallableEffect.External or CallableEffect.Destructive)
-            diagnostics.Add(new CompilerDiagnostic(
-                CompilerDiagnosticCodes.CallableEffectRejected,
-                DiagnosticSeverity.Error,
-                DiagnosticPhase.Admission,
-                $"Callable '{descriptorReference.Name}@{descriptorReference.Version}' has an effect outside the conservative compilation matrix.",
-                path: location.Node.StructuralPath,
-                actual: contract.Effect.ToString()));
-        if (!Enum.IsDefined(contract.Idempotency) || contract.Idempotency != CallableIdempotency.Idempotent ||
-            !Enum.IsDefined(contract.RetrySafety) || contract.RetrySafety != CallableRetrySafety.Safe)
-            diagnostics.Add(new CompilerDiagnostic(
-                CompilerDiagnosticCodes.CallableRetryRejected,
-                DiagnosticSeverity.Error,
-                DiagnosticPhase.Admission,
-                $"Callable '{descriptorReference.Name}@{descriptorReference.Version}' is not conservatively retry-safe.",
-                path: location.Node.StructuralPath,
-                actual: $"{contract.Idempotency}/{contract.RetrySafety}"));
+        ValidateConservativeEffect(
+            contract,
+            $"Callable '{descriptorReference.Name}@{descriptorReference.Version}'",
+            location.Node.StructuralPath,
+            diagnostics);
 
         var expected = contract.Signature.Parameters.ToDictionary(static parameter => parameter.Name, StringComparer.Ordinal);
         var supplied = arguments.GroupBy(static argument => argument.Name, StringComparer.Ordinal)
@@ -1457,6 +1458,20 @@ internal static class PlanUsage
         {
             AddText(capability.Name, ref bytes);
             AddText(capability.ScopeClass, ref bytes);
+        }
+        if (plan.Prompts is not null)
+        {
+            foreach (var prompt in plan.Prompts)
+            {
+                AddText(prompt.Name, ref bytes);
+                foreach (var parameter in prompt.Parameters)
+                {
+                    AddText(parameter.Name, ref bytes);
+                    AddTypeText(parameter.Type, ref bytes);
+                }
+                foreach (var message in prompt.Messages)
+                    AddText(message.Template, ref bytes);
+            }
         }
         AddNodeText(plan.Nodes, ref bytes);
         if (plan.ExecutionOrder is not null)

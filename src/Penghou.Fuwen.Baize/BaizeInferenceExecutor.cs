@@ -332,15 +332,22 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
-        var binding = request.Prompt is null
-            ? bindings.FirstOrDefault(candidate =>
+        BaizeInferenceBinding? binding;
+        if (request.Prompt is null)
+        {
+            binding = bindings.FirstOrDefault(candidate =>
                 candidate.Prompt is null &&
                 candidate.Profile == request.Profile &&
-                candidate.PromptTemplate == request.PromptTemplate)
-            : bindings.FirstOrDefault(candidate =>
+                candidate.PromptTemplate == request.PromptTemplate);
+        }
+        else
+        {
+            var requestedDigest = request.Prompt.GetSemanticDigest();
+            binding = bindings.FirstOrDefault(candidate =>
                 candidate.Profile == request.Profile &&
                 candidate.PromptDigest is not null &&
-                string.Equals(candidate.PromptDigest, request.Prompt!.GetSemanticDigest(), StringComparison.Ordinal));
+                string.Equals(candidate.PromptDigest, requestedDigest, StringComparison.Ordinal));
+        }
         if (binding is null)
             return InferenceExecutionResult.Failed(new ExecutionFailure(ExecutionFailureKind.Admission, ExecutionFailureCode.DescriptorUnavailable, "No exact Baize binding matched the admitted profile and prompt."));
         var started = Stopwatch.GetTimestamp();

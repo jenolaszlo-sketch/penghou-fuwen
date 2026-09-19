@@ -228,6 +228,27 @@ public sealed class FuwenSourcePromptTests
     }
 
     [Fact]
+    public void Formatter_is_idempotent_over_prompt_declarations()
+    {
+        const string source = """"
+            prompt implement_component(component_name: string) {
+              system """
+              You implement one component.
+              Preserve contracts.
+              """;
+              user "Implement component {{ component_name }}.";
+            }
+            workflow demo(input: string) -> string { return input; }
+            """";
+
+        var once = FuwenFormatter.Format(source);
+        var twice = FuwenFormatter.Format(once);
+
+        twice.Should().Be(once);
+        once.Should().Contain("implement_component");
+    }
+
+    [Fact]
     public void Plan_comparison_detects_prompt_text_changes()
     {
         var str = new PrimitiveType(FuwenPrimitiveKind.String);

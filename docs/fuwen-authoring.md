@@ -3,11 +3,13 @@
 `fuwen-grammar.json` is the machine-readable syntax catalogue and
 `fuwen-catalogue.json` describes the trusted descriptor pins and callable
 metadata consumed by the compiler. Source is deliberately small: schemas,
-enums, capabilities, typed workflows, named context/activity/inference nodes,
+enums, capabilities, workflow-owned prompt declarations with typed parameters,
+typed workflows, named context/activity/inference nodes (inference either with
+a registered template or with a prompt reference plus typed bindings),
 restricted bindings, control-only `if/else` with an optional explicit
 `merge <then>, <else> -> <type>` for one value-producing result, bounded
 keyed `fanout` regions with activity/conditional bodies, and a complete
-`return`.
+`return`. Prompt declarations require IR v8.
 
 Use exact descriptor pins (`name@version#sha256-value`) when source must compile
 against a catalogue that is not the in-memory test catalogue. The catalogue is

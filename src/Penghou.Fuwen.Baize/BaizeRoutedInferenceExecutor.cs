@@ -57,7 +57,15 @@ public sealed class BaizeRoutedInferenceExecutor : IInferenceExecutor
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
-        return routes.TryGetValue((request.Profile, request.PromptTemplate), out var executor)
+        if (request.Prompt is not null)
+        {
+            return ValueTask.FromResult(InferenceExecutionResult.Failed(new ExecutionFailure(
+                ExecutionFailureKind.Admission,
+                ExecutionFailureCode.DescriptorUnavailable,
+                "Routed inference does not support workflow-owned prompts; bind the profile to BaizeInferenceExecutor.")));
+        }
+        return request.PromptTemplate is not null &&
+            routes.TryGetValue((request.Profile, request.PromptTemplate), out var executor)
             ? executor.ExecuteAsync(request, cancellationToken)
             : ValueTask.FromResult(InferenceExecutionResult.Failed(new ExecutionFailure(
                 ExecutionFailureKind.Admission,

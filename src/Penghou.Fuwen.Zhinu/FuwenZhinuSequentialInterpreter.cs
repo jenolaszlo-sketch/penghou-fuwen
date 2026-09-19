@@ -28,9 +28,10 @@ internal static class FuwenZhinuSequentialInterpreter
             !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) &&
             !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) &&
             !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal) &&
-            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV7, StringComparison.Ordinal))
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV7, StringComparison.Ordinal) &&
+            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV8, StringComparison.Ordinal))
             throw new FuwenZhinuAdapterException(
-                $"The sequential adapter supports '{FuwenContracts.IrVersionV3}'–'{FuwenContracts.IrVersionV7}', not '{plan.IrVersion}'.");
+                $"The sequential adapter supports '{FuwenContracts.IrVersionV3}'–'{FuwenContracts.IrVersionV8}', not '{plan.IrVersion}'.");
         WorkflowPlanIdentity.ValidateExecutionFingerprint(executionFingerprint);
         if (input.ValueKind == JsonValueKind.Undefined)
             throw new FuwenZhinuExecutionException("Workflow input is undefined JSON.");
@@ -220,6 +221,56 @@ internal static class FuwenZhinuSequentialInterpreter
         return envelope.Output!;
     }
 
+    private static (JsonElement RequestJson, Func<ExecutionInvocation, InferenceExecutionRequest> CreateRequest)
+        BuildInferenceRequest(
+            InferenceNode node,
+            WorkflowPlan plan,
+            InterpreterState state,
+            IReadOnlyList<RuntimeArgument> arguments,
+            IReadOnlyList<InferenceContextInput> contextInputs,
+            string? nodePathOverride = null)
+    {
+        var nodePath = nodePathOverride ?? node.StructuralPath;
+        if (node.PromptName is null)
+        {
+            var identity = new NodeRequestIdentity("inference", nodePath, node.Profile, node.PromptTemplate, arguments, contextInputs);
+            var requestJson = RuntimeValueWire.Serialize(identity);
+            return (requestJson, invocation => new InferenceExecutionRequest(
+                invocation,
+                node.Profile,
+                node.PromptTemplate,
+                arguments,
+                contextInputs,
+                node.OutputType));
+        }
+
+        var definition = plan.Prompts?.FirstOrDefault(
+            prompt => string.Equals(prompt.Name, node.PromptName, StringComparison.Ordinal))
+            ?? throw new FuwenZhinuExecutionException(
+                $"Inference node '{node.StructuralPath}' references unknown prompt '{node.PromptName}'.");
+        var values = new Dictionary<string, RuntimeValue>(StringComparer.Ordinal);
+        foreach (var binding in node.PromptBindings ?? [])
+            values[binding.ParameterName] = EvaluateBinding(binding.Value, plan, state);
+        var rendered = PromptRenderer.Render(definition, values);
+        var promptIdentity = new PromptNodeRequestIdentity(
+            "inference-prompt",
+            nodePath,
+            node.Profile,
+            definition.GetSemanticDigest(),
+            values.Select(pair => new RuntimeArgument(pair.Key, pair.Value)).ToArray(),
+            contextInputs);
+        var promptJson = RuntimeValueWire.Serialize(promptIdentity);
+        return (promptJson, invocation => new InferenceExecutionRequest(
+            invocation,
+            node.Profile,
+            null,
+            arguments,
+            contextInputs,
+            node.OutputType,
+            definition,
+            rendered));
+    }
+
     private static async Task<RuntimeValue> ExecuteInferenceAsync(
         InferenceNode node,
         WorkflowPlan plan,
@@ -230,9 +281,6 @@ internal static class FuwenZhinuSequentialInterpreter
         IReadOnlyCollection<string> inheritedDependencies,
         CancellationToken cancellationToken)
     {
-        if (node.PromptName is not null)
-            throw new FuwenZhinuAdapterException(
-                $"Inference node '{node.StructuralPath}' uses a workflow-owned prompt, which requires IR v8 execution support that has not shipped.");
         var arguments = EvaluateArguments(node.Arguments, plan, state);
         var contextInputs = new List<InferenceContextInput>(node.ContextRequirements!.Count);
         foreach (var requirement in node.ContextRequirements)
@@ -250,8 +298,7 @@ internal static class FuwenZhinuSequentialInterpreter
                 snapshot));
         }
 
-        var identity = new NodeRequestIdentity("inference", node.StructuralPath, node.Profile, node.PromptTemplate, arguments, contextInputs);
-        var requestJson = RuntimeValueWire.Serialize(identity);
+        var (requestJson, createRequest) = BuildInferenceRequest(node, plan, state, arguments, contextInputs);
         var envelopeJson = await context.StepAsync<JsonElement, JsonElement>(
             node.StructuralPath,
             requestJson,
@@ -262,14 +309,7 @@ internal static class FuwenZhinuSequentialInterpreter
                     ports,
                     invocation,
                     node.StructuralPath,
-                    token => ports.InferenceExecutor.ExecuteAsync(
-                        new InferenceExecutionRequest(
-                            invocation,
-                            node.Profile,
-                            node.PromptTemplate!,
-                            arguments,
-                            contextInputs,
-                            node.OutputType), token),
+                    token => ports.InferenceExecutor.ExecuteAsync(createRequest(invocation), token),
                     async result =>
                     {
                         EnsureType(result.Output!, node.OutputType, plan.Schemas, $"inference node '{node.StructuralPath}' output");
@@ -855,9 +895,6 @@ internal static class FuwenZhinuSequentialInterpreter
         InterpreterState state,
         CancellationToken cancellationToken)
     {
-        if (node.PromptName is not null)
-            throw new FuwenZhinuAdapterException(
-                $"Repeat inference node '{node.StructuralPath}' uses a workflow-owned prompt, which requires IR v8 execution support that has not shipped.");
         var arguments = EvaluateArguments(node.Arguments, plan, state);
         var contextInputs = new List<InferenceContextInput>(node.ContextRequirements!.Count);
         foreach (var requirement in node.ContextRequirements)
@@ -876,8 +913,7 @@ internal static class FuwenZhinuSequentialInterpreter
         }
 
         var stepSuffix = RepeatStepSuffix(node.StructuralPath, repeat.StructuralPath);
-        var identity = new NodeRequestIdentity("inference", node.StructuralPath, node.Profile, node.PromptTemplate, arguments, contextInputs);
-        var requestJson = RuntimeValueWire.Serialize(identity);
+        var (requestJson, createRequest) = BuildInferenceRequest(node, plan, state, arguments, contextInputs);
         var runtimePath = RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, iteration.Iteration, stepSuffix);
         var result = await iteration.StepAsync(
             stepSuffix,
@@ -887,8 +923,7 @@ internal static class FuwenZhinuSequentialInterpreter
                 var inv = CreateInvocation(executionFingerprint, node.StructuralPath, runtimePath, requestJson, step);
                 var envelope = await ExecuteProviderAsync(
                     ports, inv, node.StructuralPath,
-                    t => ports.InferenceExecutor.ExecuteAsync(new InferenceExecutionRequest(
-                        inv, node.Profile, node.PromptTemplate!, arguments, contextInputs, node.OutputType), t),
+                    t => ports.InferenceExecutor.ExecuteAsync(createRequest(inv), t),
                     async r =>
                     {
                         EnsureType(r.Output!, node.OutputType, plan.Schemas, $"repeat inference '{node.StructuralPath}' output");
@@ -1101,9 +1136,6 @@ internal static class FuwenZhinuSequentialInterpreter
         string runtimePath,
         CancellationToken cancellationToken)
     {
-        if (node.PromptName is not null)
-            throw new FuwenZhinuAdapterException(
-                $"Fan-out inference node '{node.StructuralPath}' uses a workflow-owned prompt, which requires IR v8 execution support that has not shipped.");
         var arguments = EvaluateArguments(node.Arguments, plan, state);
         var contextInputs = new List<InferenceContextInput>(node.ContextRequirements!.Count);
         foreach (var requirement in node.ContextRequirements)
@@ -1124,8 +1156,7 @@ internal static class FuwenZhinuSequentialInterpreter
         var bodyMarker = node.StructuralPath.IndexOf("/$body/", StringComparison.Ordinal);
         var bodySuffix = bodyMarker >= 0 ? node.StructuralPath[(bodyMarker + "/$body/".Length)..] : node.Name;
         var runtimeInferencePath = $"{runtimePath}/{bodySuffix}";
-        var identity = new NodeRequestIdentity("inference", runtimeInferencePath, node.Profile, node.PromptTemplate, arguments, contextInputs);
-        var requestJson = RuntimeValueWire.Serialize(identity);
+        var (requestJson, createRequest) = BuildInferenceRequest(node, plan, state, arguments, contextInputs, runtimeInferencePath);
         var invocation = CreateInvocation(
             executionFingerprint,
             node.StructuralPath,
@@ -1136,8 +1167,7 @@ internal static class FuwenZhinuSequentialInterpreter
             ports,
             invocation,
             node.StructuralPath,
-            token => ports.InferenceExecutor.ExecuteAsync(new InferenceExecutionRequest(
-                invocation, node.Profile, node.PromptTemplate!, arguments, contextInputs, node.OutputType), token),
+            token => ports.InferenceExecutor.ExecuteAsync(createRequest(invocation), token),
             async result =>
             {
                 EnsureType(result.Output!, node.OutputType, plan.Schemas, $"fan-out inference '{node.StructuralPath}' output");
@@ -1773,6 +1803,14 @@ internal static class FuwenZhinuSequentialInterpreter
         DescriptorReference Descriptor,
         DescriptorReference? SecondaryDescriptor,
         IReadOnlyList<RuntimeArgument> Arguments,
+        IReadOnlyList<InferenceContextInput>? ContextInputs);
+
+    private sealed record PromptNodeRequestIdentity(
+        string Kind,
+        string NodePath,
+        DescriptorReference Profile,
+        string PromptDigest,
+        IReadOnlyList<RuntimeArgument> PromptBindings,
         IReadOnlyList<InferenceContextInput>? ContextInputs);
 
     private sealed record ConditionRequestIdentity(

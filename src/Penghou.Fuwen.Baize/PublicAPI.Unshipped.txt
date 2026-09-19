@@ -70,13 +70,15 @@ Penghou.Fuwen.Baize.BaizeInferencePolicy.Rejection.get -> System.Func<Penghou.Fu
 Penghou.Fuwen.Baize.BaizeInferencePolicy.RetryRepresentationFailures.get -> bool
 Penghou.Fuwen.Baize.BaizeInferencePolicy.RoutingPolicyRevision.get -> string?
 Penghou.Fuwen.Baize.BaizeInferenceBinding
-Penghou.Fuwen.Baize.BaizeInferenceBinding.BaizeInferenceBinding(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference! promptTemplate, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeEndpointBinding!>! endpoints, string! userPromptTemplate = "{arguments}", string? systemPrompt = null, Penghou.Fuwen.Baize.BaizeInferenceOutputMode outputMode = Penghou.Fuwen.Baize.BaizeInferenceOutputMode.StructuredContent, string? expectedToolName = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeToolBinding!>? tools = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>? schemas = null, Penghou.Fuwen.Baize.BaizeInferencePolicy? policy = null) -> void
+Penghou.Fuwen.Baize.BaizeInferenceBinding.BaizeInferenceBinding(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference? promptTemplate, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeEndpointBinding!>! endpoints, string! userPromptTemplate = "{arguments}", string? systemPrompt = null, Penghou.Fuwen.Baize.BaizeInferenceOutputMode outputMode = Penghou.Fuwen.Baize.BaizeInferenceOutputMode.StructuredContent, string? expectedToolName = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeToolBinding!>? tools = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>? schemas = null, Penghou.Fuwen.Baize.BaizeInferencePolicy? policy = null, Penghou.Fuwen.PromptDefinition? prompt = null) -> void
 Penghou.Fuwen.Baize.BaizeInferenceBinding.Endpoints.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeEndpointBinding!>!
 Penghou.Fuwen.Baize.BaizeInferenceBinding.ExpectedToolName.get -> string?
 Penghou.Fuwen.Baize.BaizeInferenceBinding.OutputMode.get -> Penghou.Fuwen.Baize.BaizeInferenceOutputMode
 Penghou.Fuwen.Baize.BaizeInferenceBinding.Policy.get -> Penghou.Fuwen.Baize.BaizeInferencePolicy!
 Penghou.Fuwen.Baize.BaizeInferenceBinding.Profile.get -> Penghou.Fuwen.DescriptorReference!
-Penghou.Fuwen.Baize.BaizeInferenceBinding.PromptTemplate.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.Baize.BaizeInferenceBinding.PromptTemplate.get -> Penghou.Fuwen.DescriptorReference?
+Penghou.Fuwen.Baize.BaizeInferenceBinding.Prompt.get -> Penghou.Fuwen.PromptDefinition?
+Penghou.Fuwen.Baize.BaizeInferenceBinding.PromptDigest.get -> string?
 Penghou.Fuwen.Baize.BaizeInferenceBinding.Schemas.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>!
 Penghou.Fuwen.Baize.BaizeInferenceBinding.SystemPrompt.get -> string?
 Penghou.Fuwen.Baize.BaizeInferenceBinding.Tools.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeToolBinding!>!

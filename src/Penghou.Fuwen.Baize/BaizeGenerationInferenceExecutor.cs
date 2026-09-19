@@ -205,8 +205,15 @@ public sealed class BaizeGenerationInferenceExecutor : IInferenceExecutor
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
-        var binding = bindings.FirstOrDefault(candidate =>
-            candidate.Profile == request.Profile && candidate.PromptTemplate == request.PromptTemplate);
+        if (request.Prompt is not null)
+        {
+            return InferenceExecutionResult.Failed(new ExecutionFailure(
+                ExecutionFailureKind.Admission,
+                ExecutionFailureCode.DescriptorUnavailable,
+                "Generation inference does not support workflow-owned prompts; bind the profile to BaizeInferenceExecutor."));
+        }
+        var binding = request.PromptTemplate is not null ? bindings.FirstOrDefault(candidate =>
+            candidate.Profile == request.Profile && candidate.PromptTemplate == request.PromptTemplate) : null;
         if (binding is null)
             return InferenceExecutionResult.Failed(new ExecutionFailure(
                 ExecutionFailureKind.Admission,

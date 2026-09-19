@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 namespace Penghou.Fuwen;
 
@@ -173,4 +174,140 @@ public sealed record PromptDefinition(
     private sealed record PromptParameterCanonicalForm(string Name, string Type);
 
     private sealed record PromptMessageCanonicalForm(string Role, string Template);
+}
+
+/// <summary>A prompt message rendered with bound values, ready for a model request.</summary>
+public sealed record RenderedPromptMessage(PromptMessageRole Role, string Text);
+
+/// <summary>
+/// Deterministically renders workflow-owned prompt definitions with evaluated
+/// bindings. Substitution is single-pass: replacement text is never rescanned,
+/// so bound values containing placeholder-like text are preserved verbatim.
+/// </summary>
+public static class PromptRenderer
+{
+    /// <summary>
+    /// Renders every message of <paramref name="definition"/> using
+    /// <paramref name="values"/> keyed by parameter name. Every required
+    /// parameter must be present; omitted optional parameters render as empty
+    /// strings; extra values are ignored.
+    /// </summary>
+    public static IReadOnlyList<RenderedPromptMessage> Render(
+        PromptDefinition definition,
+        IReadOnlyDictionary<string, RuntimeValue> values)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(values);
+        var renderedValues = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var parameter in definition.Parameters)
+        {
+            if (values.TryGetValue(parameter.Name, out var value))
+            {
+                renderedValues[parameter.Name] = RenderValue(value);
+            }
+            else if (parameter.Type is OptionalType)
+            {
+                renderedValues[parameter.Name] = string.Empty;
+            }
+            else
+            {
+                throw new ArgumentException(
+                    $"Prompt '{definition.Name}' requires a value for parameter '{parameter.Name}'.",
+                    nameof(values));
+            }
+        }
+        var messages = new List<RenderedPromptMessage>(definition.Messages.Count);
+        foreach (var message in definition.Messages)
+            messages.Add(new RenderedPromptMessage(
+                message.Role, RenderTemplate(definition.Name, message.Template, renderedValues)));
+        return messages;
+    }
+
+    private static string RenderTemplate(
+        string promptName,
+        string template,
+        IReadOnlyDictionary<string, string> renderedValues)
+    {
+        var builder = new StringBuilder(template.Length);
+        var offset = 0;
+        while (offset < template.Length)
+        {
+            var open = template.IndexOf("{{", offset, StringComparison.Ordinal);
+            if (open < 0)
+            {
+                builder.Append(template, offset, template.Length - offset);
+                break;
+            }
+            var cursor = open + 2;
+            while (cursor < template.Length && char.IsWhiteSpace(template[cursor]))
+                cursor++;
+            var start = cursor;
+            if (cursor < template.Length &&
+                (char.IsLetter(template[cursor]) || template[cursor] is '_' or '$'))
+            {
+                cursor++;
+                while (cursor < template.Length &&
+                    (char.IsLetterOrDigit(template[cursor]) || template[cursor] is '_' or '$'))
+                {
+                    cursor++;
+                }
+            }
+            var name = template[start..cursor];
+            var tail = cursor;
+            while (tail < template.Length && char.IsWhiteSpace(template[tail]))
+                tail++;
+            if (name.Length == 0 || !template.AsSpan(tail).StartsWith("}}", StringComparison.Ordinal))
+                throw new ArgumentException(
+                    $"Prompt '{promptName}' has a malformed placeholder starting at offset {open}.",
+                    nameof(template));
+            if (!renderedValues.TryGetValue(name, out var replacement))
+                throw new ArgumentException(
+                    $"Prompt '{promptName}' references unbound parameter '{{{{ {name} }}}}'.",
+                    nameof(template));
+            builder.Append(template, offset, open - offset);
+            builder.Append(replacement);
+            offset = tail + 2;
+        }
+        return builder.ToString();
+    }
+
+    /// <summary>The semantic content contract for rendered prompt instances.</summary>
+    public const string RenderedDigestContract = "rendered-prompt/v1";
+
+    /// <summary>
+    /// Computes the content digest of rendered messages for runtime evidence:
+    /// roles and text joined deterministically, so the same rendering always
+    /// yields the same digest without storing prompt text.
+    /// </summary>
+    public static string GetRenderedDigest(IReadOnlyList<RenderedPromptMessage> messages)
+    {
+        ArgumentNullException.ThrowIfNull(messages);
+        var builder = new StringBuilder();
+        foreach (var message in messages)
+        {
+            ArgumentNullException.ThrowIfNull(message);
+            builder.Append(message.Role.ToString());
+            builder.Append('\n');
+            builder.Append(message.Text);
+            builder.Append('\n');
+        }
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString()));
+        return $"sha256:{RenderedDigestContract}:{Convert.ToHexString(hash).ToLowerInvariant()}";
+    }
+
+    /// <summary>
+    /// Renders one bound value for prompt prose: strings contribute raw text,
+    /// every other value contributes its canonical JSON representation.
+    /// </summary>
+    public static string RenderValue(RuntimeValue value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        var element = value is JsonRuntimeValue json
+            ? json.Value
+            : RuntimeValueJson.ToJsonElement(value);
+        if (element.ValueKind == JsonValueKind.String && element.GetString() is string text)
+            return text;
+        return Encoding.UTF8.GetString(CanonicalJson.Canonicalize(element));
+    }
+
 }

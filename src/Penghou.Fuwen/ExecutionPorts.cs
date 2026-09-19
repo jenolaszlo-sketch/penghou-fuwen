@@ -132,14 +132,37 @@ public sealed class InferenceExecutionRequest : ExecutionRequest
     public InferenceExecutionRequest(
         ExecutionInvocation invocation,
         DescriptorReference profile,
-        DescriptorReference promptTemplate,
+        DescriptorReference? promptTemplate,
         IReadOnlyList<RuntimeArgument> arguments,
         IReadOnlyList<InferenceContextInput> contextInputs,
-        FuwenType outputType)
+        FuwenType outputType,
+        PromptDefinition? prompt = null,
+        IReadOnlyList<RenderedPromptMessage>? renderedPrompt = null)
         : base(invocation, arguments, outputType)
     {
         Profile = ExecutionPortValidation.Descriptor(profile, DescriptorKind.InferenceProfile, nameof(profile));
-        PromptTemplate = ExecutionPortValidation.Descriptor(promptTemplate, DescriptorKind.PromptTemplate, nameof(promptTemplate));
+        if (prompt is null)
+        {
+            ArgumentNullException.ThrowIfNull(promptTemplate);
+            PromptTemplate = ExecutionPortValidation.Descriptor(promptTemplate, DescriptorKind.PromptTemplate, nameof(promptTemplate));
+        }
+        else
+        {
+            if (promptTemplate is not null)
+                throw new ArgumentException("An inference request carries either a prompt template or a workflow-owned prompt, not both.", nameof(promptTemplate));
+            if (renderedPrompt is null || renderedPrompt.Count == 0)
+                throw new ArgumentException("A workflow-owned prompt request requires rendered messages.", nameof(renderedPrompt));
+            PromptTemplate = null;
+            Prompt = prompt;
+            RenderedPrompt = Array.AsReadOnly(renderedPrompt.Select(static message =>
+            {
+                ArgumentNullException.ThrowIfNull(message);
+                if (!Enum.IsDefined(message.Role))
+                    throw new ArgumentException("Rendered prompt messages require a defined role.", nameof(renderedPrompt));
+                ArgumentException.ThrowIfNullOrWhiteSpace(message.Text);
+                return new RenderedPromptMessage(message.Role, message.Text);
+            }).ToArray());
+        }
         ArgumentNullException.ThrowIfNull(contextInputs);
         if (contextInputs.Count > MaximumContextInputs)
             throw new ArgumentOutOfRangeException(nameof(contextInputs), $"An inference request supports at most {MaximumContextInputs} context inputs.");
@@ -159,8 +182,12 @@ public sealed class InferenceExecutionRequest : ExecutionRequest
 
     /// <summary>The exact admitted inference requirements profile.</summary>
     public DescriptorReference Profile { get; }
-    /// <summary>The exact admitted prompt-template descriptor.</summary>
-    public DescriptorReference PromptTemplate { get; }
+    /// <summary>The exact admitted prompt-template descriptor, or null for workflow-owned prompts.</summary>
+    public DescriptorReference? PromptTemplate { get; }
+    /// <summary>The workflow-owned prompt definition, or null for template-driven requests.</summary>
+    public PromptDefinition? Prompt { get; }
+    /// <summary>The deterministically rendered prompt messages, or null for template-driven requests.</summary>
+    public IReadOnlyList<RenderedPromptMessage>? RenderedPrompt { get; }
     /// <summary>The required typed context inputs and their snapshot evidence.</summary>
     public IReadOnlyList<InferenceContextInput> ContextInputs => contextInputs;
     /// <summary>Alias for <see cref="ContextInputs"/>.</summary>
@@ -497,7 +524,7 @@ public sealed class InferenceExecutionEvidence
     /// <summary>Creates detached evidence for one inference execution.</summary>
     public InferenceExecutionEvidence(
         DescriptorReference profile,
-        DescriptorReference promptTemplate,
+        DescriptorReference? promptTemplate,
         IReadOnlyList<InferenceAttemptEvidence> attempts,
         int? promptTokens = null,
         int? completionTokens = null,
@@ -509,14 +536,19 @@ public sealed class InferenceExecutionEvidence
         string? routingPolicyRevision = null,
         long? durationMilliseconds = null,
         InferenceModality modality = InferenceModality.StructuredText,
-        InferenceCostEvidence? cost = null)
+        InferenceCostEvidence? cost = null,
+        string? promptDigest = null,
+        string? renderedPromptDigest = null)
     {
         ArgumentNullException.ThrowIfNull(profile);
-        ArgumentNullException.ThrowIfNull(promptTemplate);
         if (profile.Kind != DescriptorKind.InferenceProfile)
             throw new ArgumentException("Inference evidence profile must be an InferenceProfile descriptor.", nameof(profile));
-        if (promptTemplate.Kind != DescriptorKind.PromptTemplate)
+        if (promptTemplate is null == promptDigest is null)
+            throw new ArgumentException("Evidence carries either a prompt template or a workflow-owned prompt digest, not both or neither.", nameof(promptTemplate));
+        if (promptTemplate is not null && promptTemplate.Kind != DescriptorKind.PromptTemplate)
             throw new ArgumentException("Inference evidence prompt template must be a PromptTemplate descriptor.", nameof(promptTemplate));
+        if (promptDigest is not null && renderedPromptDigest is null)
+            throw new ArgumentException("A workflow-owned prompt digest requires its rendered prompt digest.", nameof(renderedPromptDigest));
         ArgumentNullException.ThrowIfNull(attempts);
         if (attempts.Count > MaximumAttempts)
             throw new ArgumentOutOfRangeException(nameof(attempts));
@@ -544,7 +576,9 @@ public sealed class InferenceExecutionEvidence
         }
 
         Profile = RuntimeValueSnapshot.CloneDescriptor(profile);
-        PromptTemplate = RuntimeValueSnapshot.CloneDescriptor(promptTemplate);
+        PromptTemplate = promptTemplate is null ? null : RuntimeValueSnapshot.CloneDescriptor(promptTemplate);
+        PromptDigest = promptDigest;
+        RenderedPromptDigest = renderedPromptDigest;
         Attempts = Array.AsReadOnly(attempts.Select(static attempt => new InferenceAttemptEvidence(
             attempt.Attempt,
             attempt.Provider,
@@ -574,8 +608,12 @@ public sealed class InferenceExecutionEvidence
 
     /// <summary>The exact admitted logical profile descriptor.</summary>
     public DescriptorReference Profile { get; }
-    /// <summary>The exact admitted prompt-template descriptor.</summary>
-    public DescriptorReference PromptTemplate { get; }
+    /// <summary>The exact admitted prompt-template descriptor, or null for workflow-owned prompts.</summary>
+    public DescriptorReference? PromptTemplate { get; }
+    /// <summary>The workflow-owned prompt semantic digest, or null for template-driven evidence.</summary>
+    public string? PromptDigest { get; }
+    /// <summary>The rendered prompt instance digest, or null for template-driven evidence.</summary>
+    public string? RenderedPromptDigest { get; }
     /// <summary>The ordered provider/model attempts made by the adapter.</summary>
     public IReadOnlyList<InferenceAttemptEvidence> Attempts { get; }
     /// <summary>Input tokens reported by the provider, when available.</summary>

@@ -198,7 +198,7 @@ public sealed class BaizeInferenceBinding
     /// <summary>Creates a descriptor-bound inference binding.</summary>
     public BaizeInferenceBinding(
         DescriptorReference profile,
-        DescriptorReference promptTemplate,
+        DescriptorReference? promptTemplate,
         IReadOnlyList<BaizeEndpointBinding> endpoints,
         string userPromptTemplate = "{arguments}",
         string? systemPrompt = null,
@@ -206,14 +206,29 @@ public sealed class BaizeInferenceBinding
         string? expectedToolName = null,
         IReadOnlyList<BaizeToolBinding>? tools = null,
         IReadOnlyList<ResolvedSchemaDefinition>? schemas = null,
-        BaizeInferencePolicy? policy = null)
+        BaizeInferencePolicy? policy = null,
+        PromptDefinition? prompt = null)
     {
         ArgumentNullException.ThrowIfNull(profile);
-        ArgumentNullException.ThrowIfNull(promptTemplate);
         if (profile.Kind != DescriptorKind.InferenceProfile)
             throw new ArgumentException("Inference bindings require an InferenceProfile descriptor.", nameof(profile));
-        if (promptTemplate.Kind != DescriptorKind.PromptTemplate)
-            throw new ArgumentException("Inference bindings require a PromptTemplate descriptor.", nameof(promptTemplate));
+        if (prompt is null)
+        {
+            ArgumentNullException.ThrowIfNull(promptTemplate);
+            if (promptTemplate.Kind != DescriptorKind.PromptTemplate)
+                throw new ArgumentException("Inference bindings require a PromptTemplate descriptor.", nameof(promptTemplate));
+        }
+        else
+        {
+            if (promptTemplate is not null)
+                throw new ArgumentException("A workflow-owned prompt binding carries no prompt template.", nameof(promptTemplate));
+            foreach (var error in PromptDefinition.ValidateDefinition(prompt))
+                throw new ArgumentException($"Invalid workflow-owned prompt binding: {error}", nameof(prompt));
+            if (!string.Equals(userPromptTemplate, "{arguments}", StringComparison.Ordinal))
+                throw new ArgumentException("A workflow-owned prompt binding uses rendered messages, not a user prompt template.", nameof(userPromptTemplate));
+            if (systemPrompt is not null)
+                throw new ArgumentException("A workflow-owned prompt binding uses rendered messages, not a host system prompt.", nameof(systemPrompt));
+        }
         ArgumentNullException.ThrowIfNull(endpoints);
         if (endpoints.Count == 0 || endpoints.Count > BaizeInferencePolicy.MaximumAllowedAttempts)
             throw new ArgumentOutOfRangeException(nameof(endpoints));
@@ -245,6 +260,8 @@ public sealed class BaizeInferenceBinding
 
         Profile = profile;
         PromptTemplate = promptTemplate;
+        Prompt = prompt;
+        PromptDigest = prompt?.GetSemanticDigest();
         Endpoints = Array.AsReadOnly(endpointCopy);
         UserPromptTemplate = userPromptTemplate ?? throw new ArgumentNullException(nameof(userPromptTemplate));
         SystemPrompt = systemPrompt;
@@ -257,8 +274,12 @@ public sealed class BaizeInferenceBinding
 
     /// <summary>The exact admitted logical inference profile descriptor.</summary>
     public DescriptorReference Profile { get; }
-    /// <summary>The exact admitted prompt-template descriptor.</summary>
-    public DescriptorReference PromptTemplate { get; }
+    /// <summary>The exact admitted prompt-template descriptor, or null for workflow-owned prompts.</summary>
+    public DescriptorReference? PromptTemplate { get; }
+    /// <summary>The workflow-owned prompt definition, or null for template-driven bindings.</summary>
+    public PromptDefinition? Prompt { get; }
+    /// <summary>The workflow-owned prompt semantic digest, or null for template-driven bindings.</summary>
+    public string? PromptDigest { get; }
     /// <summary>Trusted endpoint bindings in host-selected fallback order.</summary>
     public IReadOnlyList<BaizeEndpointBinding> Endpoints { get; }
     /// <summary>Host-owned user prompt with optional argument placeholders.</summary>
@@ -300,8 +321,8 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
         ArgumentNullException.ThrowIfNull(bindings);
         if (bindings.Count == 0) throw new ArgumentException("At least one inference binding is required.", nameof(bindings));
         this.bindings = Array.AsReadOnly(bindings.Select(binding => binding ?? throw new ArgumentException("Bindings cannot contain null values.", nameof(bindings))).ToArray());
-        if (this.bindings.Select(binding => (binding.Profile, binding.PromptTemplate)).Distinct().Count() != this.bindings.Count)
-            throw new ArgumentException("Profile and prompt-template descriptor pairs must be unique.", nameof(bindings));
+        if (this.bindings.Select(binding => (binding.Profile, binding.PromptTemplate, binding.PromptDigest)).Distinct().Count() != this.bindings.Count)
+            throw new ArgumentException("Profile, prompt-template, and prompt-digest triples must be unique.", nameof(bindings));
         this.repairPipeline = repairPipeline ?? JsonRepairPipeline.Create();
         this.provenanceSink = provenanceSink;
     }
@@ -311,9 +332,17 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
-        var binding = bindings.FirstOrDefault(candidate => candidate.Profile == request.Profile && candidate.PromptTemplate == request.PromptTemplate);
+        var binding = request.Prompt is null
+            ? bindings.FirstOrDefault(candidate =>
+                candidate.Prompt is null &&
+                candidate.Profile == request.Profile &&
+                candidate.PromptTemplate == request.PromptTemplate)
+            : bindings.FirstOrDefault(candidate =>
+                candidate.Profile == request.Profile &&
+                candidate.PromptDigest is not null &&
+                string.Equals(candidate.PromptDigest, request.Prompt!.GetSemanticDigest(), StringComparison.Ordinal));
         if (binding is null)
-            return InferenceExecutionResult.Failed(new ExecutionFailure(ExecutionFailureKind.Admission, ExecutionFailureCode.DescriptorUnavailable, "No exact Baize binding matched the admitted profile and prompt template."));
+            return InferenceExecutionResult.Failed(new ExecutionFailure(ExecutionFailureKind.Admission, ExecutionFailureCode.DescriptorUnavailable, "No exact Baize binding matched the admitted profile and prompt."));
 
         var started = Stopwatch.GetTimestamp();
         string? policyMessage;
@@ -477,11 +506,25 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
             ? CreateSchemaJson(request.OutputType, binding.Schemas)
             : null;
         var messages = new List<LlmMessage>();
-        if (!string.IsNullOrWhiteSpace(binding.SystemPrompt)) messages.Add(LlmMessage.Text("system", binding.SystemPrompt));
-        var arguments = ToJsonObject(request.Arguments.ToDictionary(argument => argument.Name, argument => ToJsonNode(argument.Value), StringComparer.Ordinal));
-        var context = ToJsonObject(request.ContextInputs.ToDictionary(input => input.Name, input => ToJsonNode(input.Value), StringComparer.Ordinal));
-        var prompt = RenderUserPrompt(binding.UserPromptTemplate, arguments.ToJsonString(), context.ToJsonString());
-        messages.Add(LlmMessage.Text("user", prompt));
+        if (binding.Prompt is not null)
+        {
+            if (request.RenderedPrompt is null || request.RenderedPrompt.Count == 0)
+                throw new InvalidOperationException("A workflow-owned prompt request requires rendered messages.");
+            foreach (var rendered in request.RenderedPrompt)
+            {
+                messages.Add(LlmMessage.Text(
+                    rendered.Role == PromptMessageRole.System ? "system" : "user",
+                    rendered.Text));
+            }
+        }
+        else
+        {
+            if (!string.IsNullOrWhiteSpace(binding.SystemPrompt)) messages.Add(LlmMessage.Text("system", binding.SystemPrompt));
+            var arguments = ToJsonObject(request.Arguments.ToDictionary(argument => argument.Name, argument => ToJsonNode(argument.Value), StringComparer.Ordinal));
+            var context = ToJsonObject(request.ContextInputs.ToDictionary(input => input.Name, input => ToJsonNode(input.Value), StringComparer.Ordinal));
+            var prompt = RenderUserPrompt(binding.UserPromptTemplate, arguments.ToJsonString(), context.ToJsonString());
+            messages.Add(LlmMessage.Text("user", prompt));
+        }
         var tools = binding.Tools.Select(tool => tool.Tool).ToList();
         var responseFormat = binding.OutputMode == BaizeInferenceOutputMode.StructuredContent
             ? LlmResponseFormat.JsonSchema(schemaJson!)
@@ -714,7 +757,9 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
             binding.Policy.PolicyRevision, binding.Policy.RoutingPolicyRevision,
             (long)(Stopwatch.GetElapsedTime(started).TotalMilliseconds),
             InferenceModality.StructuredText,
-            cost);
+            cost,
+            request.Prompt?.GetSemanticDigest(),
+            request.RenderedPrompt is null ? null : PromptRenderer.GetRenderedDigest(request.RenderedPrompt));
     }
 
     private static string BoundMessage(string? message)

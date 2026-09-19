@@ -208,7 +208,10 @@ internal static class WorkflowPlanSnapshot
                     value.PromptName,
                     value.PromptBindings is null
                         ? null
-                        : SnapshotList(value.PromptBindings, "prompt bindings", ClonePromptBinding, state)),
+                        : SnapshotList(value.PromptBindings, "prompt bindings", ClonePromptBinding, state),
+                    value.Tools is null
+                        ? null
+                        : SnapshotList(value.Tools, "inference tools", CloneDescriptor, state)),
                 ActivityNode value => new ActivityNode(
                     value.Name,
                     value.StructuralPath,

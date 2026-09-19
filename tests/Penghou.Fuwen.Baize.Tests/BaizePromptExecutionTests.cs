@@ -22,17 +22,30 @@ public sealed class BaizePromptExecutionTests
             new PromptMessage(PromptMessageRole.User, "Greet {{ name }}."),
         ]);
 
+    private static RuntimeValue Json(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        return RuntimeValue.FromJson(document.RootElement.Clone());
+    }
+
     private static IReadOnlyList<RenderedPromptMessage> Rendered() =>
         PromptRenderer.Render(
             Greet(),
             new Dictionary<string, RuntimeValue>(StringComparer.Ordinal)
             {
-                ["name"] = RuntimeValue.FromJson(JsonDocument.Parse("\"Alice\"").RootElement),
+                ["name"] = Json("\"Alice\""),
             });
 
     private static DescriptorReference Profile() =>
         new(DescriptorKind.InferenceProfile, "profile", "1",
             new ContentDigest("sha256", "test", new string('a', 64)));
+
+    private static DescriptorReference ToolDescriptor(string name, char digest) =>
+        new(DescriptorKind.Tool, name, "1",
+            new ContentDigest("sha256", "descriptor/v1", new string(digest, 64)));
+
+    private static BaizeToolBinding ToolBinding(string name, char digest) =>
+        new(ToolDescriptor(name, digest), new LlmTool(name, name, "{\"type\":\"string\"}"));
 
     private static ExecutionInvocation Invocation() =>
         new("sha256:fuwen-execution/v8:" + new string('a', 64), "workflow/infer", "run/infer", "1", "sha256:req:" + new string('b', 64));
@@ -95,11 +108,64 @@ public sealed class BaizePromptExecutionTests
             other,
             new Dictionary<string, RuntimeValue>(StringComparer.Ordinal)
             {
-                ["name"] = RuntimeValue.FromJson(JsonDocument.Parse("\"Alice\"").RootElement),
+                ["name"] = Json("\"Alice\""),
             });
 
         var result = await executor.ExecuteAsync(
             Request(other, otherRendered), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Failure!.Code.Should().Be(ExecutionFailureCode.DescriptorUnavailable);
+        client.Calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Declared_tools_bound_the_model_call_and_appear_in_evidence()
+    {
+        var definition = Greet();
+        var rendered = Rendered();
+        var search = ToolDescriptor("search", 'c');
+        var client = new FakeClient(new LlmResponse("\"hi\""));
+        var executor = new BaizeInferenceExecutor([
+            new BaizeInferenceBinding(
+                Profile(),
+                null,
+                [new BaizeEndpointBinding("primary", "provider", "model", client)],
+                prompt: definition,
+                tools: [ToolBinding("search", 'c'), ToolBinding("read", 'd')]),
+        ]);
+        var request = new InferenceExecutionRequest(
+            Invocation(), Profile(), null, [], [],
+            new PrimitiveType(FuwenPrimitiveKind.String), definition, rendered,
+            [search]);
+
+        var result = await executor.ExecuteAsync(request, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        client.LastRequest!.Tools.Should().ContainSingle().Which.Name.Should().Be("search");
+        result.Evidence!.AdmittedTools.Should().ContainSingle().Which.Should().Be(search);
+    }
+
+    [Fact]
+    public async Task Declared_tool_missing_from_binding_fails_closed()
+    {
+        var definition = Greet();
+        var rendered = Rendered();
+        var client = new FakeClient(new LlmResponse("\"hi\""));
+        var executor = new BaizeInferenceExecutor([
+            new BaizeInferenceBinding(
+                Profile(),
+                null,
+                [new BaizeEndpointBinding("primary", "provider", "model", client)],
+                prompt: definition,
+                tools: [ToolBinding("search", 'c')]),
+        ]);
+        var request = new InferenceExecutionRequest(
+            Invocation(), Profile(), null, [], [],
+            new PrimitiveType(FuwenPrimitiveKind.String), definition, rendered,
+            [ToolDescriptor("read", 'd')]);
+
+        var result = await executor.ExecuteAsync(request, TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeFalse();
         result.Failure!.Code.Should().Be(ExecutionFailureCode.DescriptorUnavailable);

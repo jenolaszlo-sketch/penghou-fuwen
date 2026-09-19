@@ -118,6 +118,85 @@ public sealed class FuwenZhinuPromptExecutionTests
     }
 
     [Fact]
+    public async Task Declared_tools_flow_into_the_request_and_evidence()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tool = new DescriptorReference(DescriptorKind.Tool, "sample.search", "1", Digest('b'));
+        var str = new PrimitiveType(FuwenPrimitiveKind.String);
+        var greetPath = StructuralNodeIdentity.Create("greet", "greet");
+        var returnPath = StructuralNodeIdentity.Create("greet", "return_result");
+        var plan = new WorkflowPlanBuilder("greet", "1", str, str, "routing/1")
+            .AddCatalogueBinding(new DescriptorReference(DescriptorKind.InferenceProfile, "sample.profile", "1", Digest('a')))
+            .AddCatalogueBinding(tool)
+            .AddPrompt(Greet())
+            .AddNode(new InferenceNode(
+                "greet",
+                greetPath,
+                new DescriptorReference(DescriptorKind.InferenceProfile, "sample.profile", "1", Digest('a')),
+                null,
+                [],
+                [],
+                str,
+                [],
+                "greet",
+                [new PromptBinding("name", new InputBinding([]))],
+                [tool]))
+            .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(greetPath, [])))
+            .SetExecutionOrder(new WorkflowExecutionOrder([
+                new WorkflowExecutionRegion("greet", [
+                    new WorkflowExecutionPhase([greetPath]),
+                    new WorkflowExecutionPhase([returnPath]),
+                ]),
+            ]))
+            .BuildV8();
+        var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
+                new InMemoryTrustedCatalogue([
+                    new TrustedCatalogueDescriptor(
+                        new DescriptorReference(DescriptorKind.InferenceProfile, "sample.profile", "1", Digest('a')),
+                        callableContract: new CallableContract(
+                            new CallableSignature([new CallableParameter("request", str)], str),
+                            CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+                    new TrustedCatalogueDescriptor(
+                        tool,
+                        callableContract: new CallableContract(
+                            new CallableSignature([new CallableParameter("query", str)], str),
+                            CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+                ]),
+                capabilityPolicy: new CapabilityGrantPolicy("policy/1", [])))
+            .AdmitAsync(plan, cancellationToken: ct);
+        admission.Succeeded.Should().BeTrue(
+            string.Join("; ", admission.Diagnostics.Select(item => $"{item.Code}:{item.Message}")));
+
+        var inference = new CapturingInference();
+        var registration = await new FuwenZhinuWorkflowFactory(
+                new InMemoryWorkflowDefinitionStore(),
+                new FuwenZhinuProviderRuntimeIdentity(
+                    admission.Receipt!.CatalogueSnapshotRevision,
+                    admission.Receipt.ResolvedDescriptorSetFingerprint),
+                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), inference))
+            .CreateAsync("greet", "1", admission, ct);
+        var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            await using var engine = CreateEngine(root, registration);
+            using var inputDocument = JsonDocument.Parse("\"Alice\"");
+            var runId = await engine.StartAsync(
+                "greet", "1", inputDocument.RootElement.Clone(), cancellationToken: ct);
+            await engine.ExecuteAsync(runId, ct);
+            await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: ct);
+
+            var request = inference.Requests.Should().ContainSingle().Subject;
+            request.Tools.Should().ContainSingle().Which.Should().Be(tool);
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
     public async Task Prompt_request_identity_is_input_sensitive_across_runs()
     {
         var ct = TestContext.Current.CancellationToken;

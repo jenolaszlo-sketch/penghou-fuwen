@@ -173,6 +173,11 @@ public static class WorkflowPlanIdentity
                         NormalizeBinding(binding.Value)))
                     .OrderBy(binding => binding.ParameterName, StringComparer.Ordinal)
                     .ToArray(),
+            Tools = inference.Tools is null
+                ? null
+                : inference.Tools
+                    .OrderBy(DescriptorSortKey, StringComparer.Ordinal)
+                    .ToArray(),
         },
         ActivityNode activity => activity with { Arguments = NormalizeArguments(activity.Arguments) },
         ConditionalNode conditional => conditional with

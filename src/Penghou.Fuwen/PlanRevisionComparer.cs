@@ -189,6 +189,11 @@ public static class PlanRevisionComparer
                 (value.PromptBindings ?? Enumerable.Empty<PromptBinding>())
                     .Select(binding => binding.ParameterName)
                     .OrderBy(name => name, StringComparer.Ordinal)),
+            Tools = string.Join(
+                "|",
+                (value.Tools ?? Enumerable.Empty<DescriptorReference>())
+                    .Select(tool => $"{tool.Kind:D}|{tool.Name}|{tool.Version}|{tool.ContentDigest.Value}")
+                    .OrderBy(key => key, StringComparer.Ordinal)),
         },
         ActivityNode value => new { Kind = "activity", value.Activity, value.OutputType },
         ConditionalNode value => new { Kind = "conditional", value.Condition.Operator, MergeResultType = value.Merge?.ResultType },

@@ -100,6 +100,8 @@ public sealed record ContextRequirement(
 /// with a workflow-owned prompt reference and typed prompt bindings.
 /// Exactly one prompt source is set: <see cref="PromptTemplate"/> is null
 /// if and only if <see cref="PromptName"/> names a plan prompt definition.
+/// <see cref="Tools"/> lists the admitted model-callable tool descriptors;
+/// null or empty means no model-callable tools.
 /// </summary>
 public sealed record InferenceNode(
     string Name,
@@ -114,7 +116,9 @@ public sealed record InferenceNode(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     string? PromptName = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    IReadOnlyList<PromptBinding>? PromptBindings = null) : WorkflowNode(Name, StructuralPath);
+    IReadOnlyList<PromptBinding>? PromptBindings = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    IReadOnlyList<DescriptorReference>? Tools = null) : WorkflowNode(Name, StructuralPath);
 
 /// <summary>Executes one trusted catalogue activity.</summary>
 public sealed record ActivityNode(

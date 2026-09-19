@@ -575,6 +575,7 @@ internal static class WorkflowBindingValidator
                         ValidatePromptInference(inference, location, plan, locations, descriptors, diagnostics);
                     else
                         ValidateCallableNode(inference.Profile, DescriptorKind.InferenceProfile, inference.Arguments, inference.OutputType, location, plan, locations, descriptors, diagnostics);
+                    ValidateInferenceTools(inference, location, descriptors, diagnostics);
                     if (IrVersions.SupportsTypedContextRequirements(plan.IrVersion))
                     {
                         var contextNames = new HashSet<string>(StringComparer.Ordinal);
@@ -787,6 +788,57 @@ internal static class WorkflowBindingValidator
                 diagnostics,
                 CompilerDiagnosticCodes.BindingTypeMismatch,
                 exact: true);
+        }
+    }
+
+    private static void ValidateInferenceTools(
+        InferenceNode inference,
+        NodeLocation location,
+        IReadOnlyDictionary<DescriptorReference, TrustedCatalogueDescriptor> descriptors,
+        List<CompilerDiagnostic> diagnostics)
+    {
+        if (inference.Tools is null || inference.Tools.Count == 0)
+            return;
+        foreach (var tool in inference.Tools)
+        {
+            if (!descriptors.TryGetValue(tool, out var descriptor) || descriptor.Descriptor.Kind != DescriptorKind.Tool)
+            {
+                diagnostics.Add(new CompilerDiagnostic(
+                    CompilerDiagnosticCodes.CatalogueCallableContractMissing,
+                    DiagnosticSeverity.Error,
+                    DiagnosticPhase.Binding,
+                    $"Inference node '{inference.StructuralPath}' declares tool '{tool.Name}@{tool.Version}' that is not a resolved Tool descriptor.",
+                    path: location.Node.StructuralPath));
+                continue;
+            }
+            var contract = descriptor.CallableContract;
+            if (contract is null)
+            {
+                diagnostics.Add(new CompilerDiagnostic(
+                    CompilerDiagnosticCodes.CatalogueCallableContractMissing,
+                    DiagnosticSeverity.Error,
+                    DiagnosticPhase.Binding,
+                    $"Trusted tool descriptor '{tool.Name}@{tool.Version}' does not provide a callable contract.",
+                    path: location.Node.StructuralPath));
+                continue;
+            }
+            if (!Enum.IsDefined(contract.Effect) || contract.Effect is not CallableEffect.Read)
+                diagnostics.Add(new CompilerDiagnostic(
+                    CompilerDiagnosticCodes.CallableEffectRejected,
+                    DiagnosticSeverity.Error,
+                    DiagnosticPhase.Admission,
+                    $"Tool '{tool.Name}@{tool.Version}' has effect '{contract.Effect}'; only read-only tools are admitted.",
+                    path: location.Node.StructuralPath,
+                    actual: contract.Effect.ToString()));
+            if (!Enum.IsDefined(contract.Idempotency) || contract.Idempotency != CallableIdempotency.Idempotent ||
+                !Enum.IsDefined(contract.RetrySafety) || contract.RetrySafety != CallableRetrySafety.Safe)
+                diagnostics.Add(new CompilerDiagnostic(
+                    CompilerDiagnosticCodes.CallableRetryRejected,
+                    DiagnosticSeverity.Error,
+                    DiagnosticPhase.Admission,
+                    $"Tool '{tool.Name}@{tool.Version}' is not conservatively retry-safe.",
+                    path: location.Node.StructuralPath,
+                    actual: $"{contract.Idempotency}/{contract.RetrySafety}"));
         }
     }
 
@@ -1438,6 +1490,11 @@ internal static class PlanUsage
                     AddDescriptorText(inference.Profile, ref bytes);
                     if (inference.PromptTemplate is not null)
                         AddDescriptorText(inference.PromptTemplate, ref bytes);
+                    if (inference.PromptName is not null)
+                        AddText(inference.PromptName, ref bytes);
+                    if (inference.Tools is not null)
+                        foreach (var tool in inference.Tools)
+                            AddDescriptorText(tool, ref bytes);
                     AddTypeText(inference.OutputType, ref bytes);
                     AddArgumentsText(inference.Arguments, ref bytes);
                     foreach (var snapshot in inference.ContextSnapshots)
@@ -1664,6 +1721,9 @@ internal static class PlanUsage
                     result.Add(inference.Profile);
                     if (inference.PromptTemplate is not null)
                         result.Add(inference.PromptTemplate);
+                    if (inference.Tools is not null)
+                        foreach (var tool in inference.Tools)
+                            result.Add(tool);
                     AddType(inference.OutputType, result);
                     if (inference.ContextRequirements is not null)
                         foreach (var requirement in inference.ContextRequirements)

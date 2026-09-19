@@ -343,8 +343,22 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
                 string.Equals(candidate.PromptDigest, request.Prompt!.GetSemanticDigest(), StringComparison.Ordinal));
         if (binding is null)
             return InferenceExecutionResult.Failed(new ExecutionFailure(ExecutionFailureKind.Admission, ExecutionFailureCode.DescriptorUnavailable, "No exact Baize binding matched the admitted profile and prompt."));
-
         var started = Stopwatch.GetTimestamp();
+        if (request.Tools is not null)
+        {
+            var missing = request.Tools.FirstOrDefault(
+                declared => binding.Tools.All(bound => bound.Descriptor != declared));
+            if (missing is not null)
+            {
+                var failure = new ExecutionFailure(ExecutionFailureKind.Admission, ExecutionFailureCode.DescriptorUnavailable,
+                    $"Declared tool '{missing.Name}@{missing.Version}' is not bound by the host inference binding.");
+                var evidence = BuildEvidence(request, binding, [], null, wasRepaired: false, repairAttempts: 0, repairStrategy: null, started,
+                    promptTokens: null, completionTokens: null, totalTokens: null, cost: null);
+                await RecordAsync(evidence, cancellationToken).ConfigureAwait(false);
+                return InferenceExecutionResult.Failed(failure, evidence);
+            }
+        }
+
         string? policyMessage;
         try
         {
@@ -506,6 +520,7 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
             ? CreateSchemaJson(request.OutputType, binding.Schemas)
             : null;
         var messages = new List<LlmMessage>();
+        List<LlmTool> tools;
         if (binding.Prompt is not null)
         {
             if (request.RenderedPrompt is null || request.RenderedPrompt.Count == 0)
@@ -516,6 +531,7 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
                     rendered.Role == PromptMessageRole.System ? "system" : "user",
                     rendered.Text));
             }
+            tools = SelectDeclaredTools(binding, request);
         }
         else
         {
@@ -524,13 +540,40 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
             var context = ToJsonObject(request.ContextInputs.ToDictionary(input => input.Name, input => ToJsonNode(input.Value), StringComparer.Ordinal));
             var prompt = RenderUserPrompt(binding.UserPromptTemplate, arguments.ToJsonString(), context.ToJsonString());
             messages.Add(LlmMessage.Text("user", prompt));
+            tools = binding.Tools.Select(tool => tool.Tool).ToList();
         }
-        var tools = binding.Tools.Select(tool => tool.Tool).ToList();
         var responseFormat = binding.OutputMode == BaizeInferenceOutputMode.StructuredContent
             ? LlmResponseFormat.JsonSchema(schemaJson!)
             : null;
         var metadata = new Dictionary<string, object?>(StringComparer.Ordinal) { ["fuwen.operation.key"] = request.Invocation.OperationKey };
         return new LlmRequest(messages, maxTokens: binding.Policy.MaximumTokens, tools: tools, responseFormat: responseFormat, metadata: metadata);
+    }
+
+    /// <summary>
+    /// Bounds the model-visible tools to the workflow-declared set: every
+    /// declared tool must be bound by the host, and the model sees only the
+    /// declared tools. A request declaring no tools yields no model tools,
+    /// never the binding default.
+    /// </summary>
+    private static List<LlmTool> SelectDeclaredTools(
+        BaizeInferenceBinding binding,
+        InferenceExecutionRequest request)
+    {
+        if (request.Tools is null || request.Tools.Count == 0)
+            return [];
+        var selected = new List<LlmTool>(request.Tools.Count);
+        foreach (var declared in request.Tools)
+        {
+            var match = binding.Tools.FirstOrDefault(
+                tool => tool.Descriptor == declared);
+            if (match is null)
+            {
+                throw new InvalidOperationException(
+                    $"Declared tool '{declared.Name}@{declared.Version}' is not bound by the host inference binding.");
+            }
+            selected.Add(match.Tool);
+        }
+        return selected;
     }
 
     /// <summary>
@@ -759,7 +802,8 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
             InferenceModality.StructuredText,
             cost,
             request.Prompt?.GetSemanticDigest(),
-            request.RenderedPrompt is null ? null : PromptRenderer.GetRenderedDigest(request.RenderedPrompt));
+            request.RenderedPrompt is null ? null : PromptRenderer.GetRenderedDigest(request.RenderedPrompt),
+            request.Tools);
     }
 
     private static string BoundMessage(string? message)

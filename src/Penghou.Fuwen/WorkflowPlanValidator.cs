@@ -23,7 +23,7 @@ public static class WorkflowPlanValidator
         ValidateDescriptors(plan.CatalogueBindings);
         ValidateCapabilities(plan.CapabilityManifest);
         ValidatePrompts(plan);
-        ValidateInferencePrompts(plan);
+        ValidateInferenceContracts(plan);
         var nodes = new Dictionary<string, NodeLocation>(StringComparer.Ordinal);
         ValidateNodes(
             plan.Name,
@@ -1057,6 +1057,9 @@ public static class WorkflowPlanValidator
                     descriptors.Add(inference.Profile);
                     if (inference.PromptTemplate is not null)
                         descriptors.Add(inference.PromptTemplate);
+                    if (inference.Tools is not null)
+                        foreach (var tool in inference.Tools)
+                            descriptors.Add(tool);
                     CollectTypeDescriptors(inference.OutputType, descriptors);
                     if (inference.ContextRequirements is not null)
                         foreach (var requirement in inference.ContextRequirements)
@@ -1177,12 +1180,13 @@ public static class WorkflowPlanValidator
         }
     }
 
-    private static void ValidateInferencePrompts(WorkflowPlan plan)
+    private static void ValidateInferenceContracts(WorkflowPlan plan)
     {
         var prompts = (plan.Prompts ?? Enumerable.Empty<PromptDefinition>())
             .ToDictionary(static prompt => prompt.Name, StringComparer.Ordinal);
         foreach (var inference in FlattenNodes(plan.Nodes).OfType<InferenceNode>())
         {
+            ValidateInferenceTools(plan, inference);
             if (inference.PromptName is null)
             {
                 if (inference.PromptTemplate is null)
@@ -1232,6 +1236,29 @@ public static class WorkflowPlanValidator
                         $"Inference node '{inference.StructuralPath}' does not bind required prompt parameter '{parameter.Name}' for prompt '{definition.Name}'.",
                         nameof(plan.Nodes));
             }
+        }
+    }
+
+    private static void ValidateInferenceTools(WorkflowPlan plan, InferenceNode inference)
+    {
+        if (inference.Tools is null || inference.Tools.Count == 0)
+            return;
+        if (!IrVersions.SupportsWorkflowPrompts(plan.IrVersion))
+            throw new ArgumentException(
+                $"Declared inference tools require IR v8 or later, not '{plan.IrVersion}'.",
+                nameof(plan.Nodes));
+        var seen = new HashSet<DescriptorReference>();
+        foreach (var tool in inference.Tools)
+        {
+            ArgumentNullException.ThrowIfNull(tool);
+            if (tool.Kind != DescriptorKind.Tool)
+                throw new ArgumentException(
+                    $"Inference node '{inference.StructuralPath}' declares '{tool.Name}@{tool.Version}' as a tool, but its kind is '{tool.Kind}'.",
+                    nameof(plan.Nodes));
+            if (!seen.Add(tool))
+                throw new ArgumentException(
+                    $"Inference node '{inference.StructuralPath}' declares tool '{tool.Name}@{tool.Version}' more than once.",
+                    nameof(plan.Nodes));
         }
     }
 

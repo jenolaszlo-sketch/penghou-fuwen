@@ -252,12 +252,14 @@ internal static class FuwenZhinuSequentialInterpreter
         foreach (var binding in node.PromptBindings ?? [])
             values[binding.ParameterName] = EvaluateBinding(binding.Value, plan, state);
         var rendered = PromptRenderer.Render(definition, values);
+        var tools = node.Tools is null || node.Tools.Count == 0 ? null : node.Tools.ToArray();
         var promptIdentity = new PromptNodeRequestIdentity(
             "inference-prompt",
             nodePath,
             node.Profile,
             definition.GetSemanticDigest(),
             values.Select(pair => new RuntimeArgument(pair.Key, pair.Value)).ToArray(),
+            tools,
             contextInputs);
         var promptJson = RuntimeValueWire.Serialize(promptIdentity);
         return (promptJson, invocation => new InferenceExecutionRequest(
@@ -268,7 +270,8 @@ internal static class FuwenZhinuSequentialInterpreter
             contextInputs,
             node.OutputType,
             definition,
-            rendered));
+            rendered,
+            tools));
     }
 
     private static async Task<RuntimeValue> ExecuteInferenceAsync(
@@ -1811,6 +1814,7 @@ internal static class FuwenZhinuSequentialInterpreter
         DescriptorReference Profile,
         string PromptDigest,
         IReadOnlyList<RuntimeArgument> PromptBindings,
+        IReadOnlyList<DescriptorReference>? Tools,
         IReadOnlyList<InferenceContextInput>? ContextInputs);
 
     private sealed record ConditionRequestIdentity(

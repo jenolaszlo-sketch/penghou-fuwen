@@ -5,11 +5,13 @@
 metadata consumed by the compiler. Source is deliberately small: schemas,
 enums, capabilities, workflow-owned prompt declarations with typed parameters,
 typed workflows, named context/activity/inference nodes (inference either with
-a registered template or with a prompt reference plus typed bindings),
+a registered template or with a prompt reference plus typed bindings, plus an
+optional `tools` clause naming a toolset, an inline tool list, or `none`),
 restricted bindings, control-only `if/else` with an optional explicit
 `merge <then>, <else> -> <type>` for one value-producing result, bounded
 keyed `fanout` regions with activity/conditional bodies, and a complete
-`return`. Prompt declarations require IR v8.
+`return`. Prompt declarations and inference tools require IR v8; only
+read-only idempotent retry-safe tools admit.
 
 Use exact descriptor pins (`name@version#sha256-value`) when source must compile
 against a catalogue that is not the in-memory test catalogue. The catalogue is

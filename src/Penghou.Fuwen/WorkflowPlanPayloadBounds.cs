@@ -192,6 +192,9 @@ internal sealed class WorkflowPlanPayloadBounds
                         Text(value.PromptName, "prompt reference");
                     if (value.PromptBindings is not null)
                         List(value.PromptBindings, PromptBindingValue, "prompt bindings");
+                    if (value.Tools is not null)
+                        foreach (var tool in value.Tools)
+                            Descriptor(tool);
                     Type(value.OutputType);
                     break;
                 case ActivityNode value:

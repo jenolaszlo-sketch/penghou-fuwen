@@ -186,6 +186,9 @@ public sealed class WorkflowPlanBuilder
                     AddDescriptor(bindings, inference.Profile);
                     if (inference.PromptTemplate is not null)
                         AddDescriptor(bindings, inference.PromptTemplate);
+                    if (inference.Tools is not null)
+                        foreach (var tool in inference.Tools)
+                            AddDescriptor(bindings, tool);
                     CollectType(inference.OutputType, bindings);
                     if (inference.ContextRequirements is not null)
                         foreach (var requirement in inference.ContextRequirements)

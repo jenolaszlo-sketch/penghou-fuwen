@@ -137,7 +137,8 @@ public sealed class InferenceExecutionRequest : ExecutionRequest
         IReadOnlyList<InferenceContextInput> contextInputs,
         FuwenType outputType,
         PromptDefinition? prompt = null,
-        IReadOnlyList<RenderedPromptMessage>? renderedPrompt = null)
+        IReadOnlyList<RenderedPromptMessage>? renderedPrompt = null,
+        IReadOnlyList<DescriptorReference>? tools = null)
         : base(invocation, arguments, outputType)
     {
         Profile = ExecutionPortValidation.Descriptor(profile, DescriptorKind.InferenceProfile, nameof(profile));
@@ -162,6 +163,19 @@ public sealed class InferenceExecutionRequest : ExecutionRequest
                 ArgumentException.ThrowIfNullOrWhiteSpace(message.Text);
                 return new RenderedPromptMessage(message.Role, message.Text);
             }).ToArray());
+        }
+        if (tools is not null)
+        {
+            var seen = new HashSet<DescriptorReference>();
+            foreach (var tool in tools)
+            {
+                ArgumentNullException.ThrowIfNull(tool);
+                if (tool.Kind != DescriptorKind.Tool)
+                    throw new ArgumentException($"Admitted tool '{tool.Name}@{tool.Version}' must be a Tool descriptor.", nameof(tools));
+                if (!seen.Add(tool))
+                    throw new ArgumentException($"Admitted tool '{tool.Name}@{tool.Version}' is declared more than once.", nameof(tools));
+            }
+            Tools = Array.AsReadOnly(tools.ToArray());
         }
         ArgumentNullException.ThrowIfNull(contextInputs);
         if (contextInputs.Count > MaximumContextInputs)
@@ -188,6 +202,8 @@ public sealed class InferenceExecutionRequest : ExecutionRequest
     public PromptDefinition? Prompt { get; }
     /// <summary>The deterministically rendered prompt messages, or null for template-driven requests.</summary>
     public IReadOnlyList<RenderedPromptMessage>? RenderedPrompt { get; }
+    /// <summary>The admitted model-callable tool descriptors, or null when no tools were declared.</summary>
+    public IReadOnlyList<DescriptorReference>? Tools { get; }
     /// <summary>The required typed context inputs and their snapshot evidence.</summary>
     public IReadOnlyList<InferenceContextInput> ContextInputs => contextInputs;
     /// <summary>Alias for <see cref="ContextInputs"/>.</summary>
@@ -538,7 +554,8 @@ public sealed class InferenceExecutionEvidence
         InferenceModality modality = InferenceModality.StructuredText,
         InferenceCostEvidence? cost = null,
         string? promptDigest = null,
-        string? renderedPromptDigest = null)
+        string? renderedPromptDigest = null,
+        IReadOnlyList<DescriptorReference>? admittedTools = null)
     {
         ArgumentNullException.ThrowIfNull(profile);
         if (profile.Kind != DescriptorKind.InferenceProfile)
@@ -579,6 +596,11 @@ public sealed class InferenceExecutionEvidence
         PromptTemplate = promptTemplate is null ? null : RuntimeValueSnapshot.CloneDescriptor(promptTemplate);
         PromptDigest = promptDigest;
         RenderedPromptDigest = renderedPromptDigest;
+        AdmittedTools = admittedTools is null
+            ? null
+            : Array.AsReadOnly(admittedTools.Select(static tool =>
+                RuntimeValueSnapshot.CloneDescriptor(
+                    tool ?? throw new ArgumentException("Admitted tools cannot contain null values.", nameof(admittedTools)))).ToArray());
         Attempts = Array.AsReadOnly(attempts.Select(static attempt => new InferenceAttemptEvidence(
             attempt.Attempt,
             attempt.Provider,
@@ -614,6 +636,8 @@ public sealed class InferenceExecutionEvidence
     public string? PromptDigest { get; }
     /// <summary>The rendered prompt instance digest, or null for template-driven evidence.</summary>
     public string? RenderedPromptDigest { get; }
+    /// <summary>The admitted model-callable tool descriptors, or null when no tools were declared.</summary>
+    public IReadOnlyList<DescriptorReference>? AdmittedTools { get; }
     /// <summary>The ordered provider/model attempts made by the adapter.</summary>
     public IReadOnlyList<InferenceAttemptEvidence> Attempts { get; }
     /// <summary>Input tokens reported by the provider, when available.</summary>

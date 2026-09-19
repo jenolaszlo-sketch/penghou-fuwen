@@ -511,6 +511,7 @@ internal sealed class SourceParser
     private readonly Dictionary<string, DescriptorReference> schemaAliases = new(StringComparer.Ordinal);
     private readonly List<ResolvedSchemaDefinition> schemas = [];
     private readonly List<PromptDefinition> prompts = [];
+    private readonly Dictionary<string, List<DescriptorReference>> toolsets = new(StringComparer.Ordinal);
     private readonly List<WorkflowNode> nodes = [];
     private readonly List<CapabilityRequirement> capabilities = [];
     private readonly List<SourceMapEntry> sourceEntries = [];
@@ -526,6 +527,7 @@ internal sealed class SourceParser
     private int conditionalOrdinal;
     private bool workflowSeen;
     private bool promptSeen;
+    private bool toolsetSeen;
     private bool fanOutSeen;
     private bool conditionalMergeSeen;
     private bool repeatSeen;
@@ -555,12 +557,13 @@ internal sealed class SourceParser
             else if (Match("enum")) ParseEnum();
             else if (Match("capability")) ParseCapability();
             else if (Match("prompt")) ParsePrompt();
+            else if (Match("toolset")) ParseToolset();
             else if (Match("workflow"))
             {
                 if (workflowSeen)
                 {
                     Error(CompilerDiagnosticCodes.ParseUnexpectedToken, "A source document may declare only one workflow.", Previous);
-                    Recover("schema", "enum", "prompt", "workflow", "capability");
+                    Recover("schema", "enum", "prompt", "toolset", "workflow", "capability");
                 }
                 else
                 {
@@ -568,7 +571,7 @@ internal sealed class SourceParser
                     ParseWorkflow();
                 }
             }
-            else { Error(CompilerDiagnosticCodes.ParseUnexpectedToken, "Expected a top-level declaration.", Current); Recover("schema", "enum", "prompt", "workflow", "capability"); }
+            else { Error(CompilerDiagnosticCodes.ParseUnexpectedToken, "Expected a top-level declaration.", Current); Recover("schema", "enum", "prompt", "toolset", "workflow", "capability"); }
         }
         WorkflowPlan? plan = null;
         if (!workflowSeen)
@@ -583,7 +586,7 @@ internal sealed class SourceParser
                 foreach (var prompt in prompts) builder.AddPrompt(prompt);
                 foreach (var node in nodes) builder.AddNode(node);
                 builder.SetExecutionOrder(new WorkflowExecutionOrder(BuildRegions(workflowName, nodes)));
-                plan = promptSeen ? builder.BuildV8() : interactionGateSeen ? builder.BuildV7() : repeatSeen ? builder.BuildV6() : conditionalMergeSeen ? builder.BuildV5() : fanOutSeen ? builder.BuildV4() : builder.BuildV3();
+                plan = promptSeen || toolsetSeen ? builder.BuildV8() : interactionGateSeen ? builder.BuildV7() : repeatSeen ? builder.BuildV6() : conditionalMergeSeen ? builder.BuildV5() : fanOutSeen ? builder.BuildV4() : builder.BuildV3();
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
             {
@@ -747,6 +750,32 @@ internal sealed class SourceParser
         return string.Empty;
     }
 
+    private void ParseToolset()
+    {
+        var name = ReadIdentifier("toolset name");
+        Expect("{");
+        var tools = new List<DescriptorReference>();
+        while (!AtEnd && Current.Text != "}")
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!MatchIdentifier("use"))
+            {
+                Error(CompilerDiagnosticCodes.ParseUnexpectedToken, "Expected 'use' in toolset.", Current);
+                Recover("use", "}");
+                continue;
+            }
+            tools.Add(ParseDescriptor(DescriptorKind.Tool, name));
+            Ast();
+            Match(";");
+        }
+        Expect("}");
+        if (toolsets.ContainsKey(name))
+            Error(CompilerDiagnosticCodes.SemanticValidationFailed, $"Duplicate toolset definition '{name}'.", Previous);
+        else
+            toolsets[name] = tools;
+        toolsetSeen = true;
+    }
+
     private void ParseWorkflow()
     {
         workflowName = ReadIdentifier("workflow name");
@@ -847,6 +876,35 @@ internal sealed class SourceParser
             template = ParseDescriptor(DescriptorKind.PromptTemplate, name);
             arguments = new List<ArgumentBinding>(ParseArguments());
         }
+        List<DescriptorReference>? tools = null;
+        if (Match("tools"))
+        {
+            toolsetSeen = true;
+            if (Match("none"))
+            {
+                tools = [];
+            }
+            else if (Match("["))
+            {
+                tools = [];
+                while (!AtEnd && Current.Text != "]")
+                {
+                    tools.Add(ParseDescriptor(DescriptorKind.Tool, name));
+                    Ast();
+                    if (Current.Text != "]" && !Match(","))
+                        Expect(";");
+                }
+                Expect("]");
+            }
+            else
+            {
+                var toolsetName = ReadIdentifier("toolset name");
+                if (!toolsets.TryGetValue(toolsetName, out var toolsetTools))
+                    Error(CompilerDiagnosticCodes.SemanticValidationFailed, $"Unknown toolset '{toolsetName}'.", Previous);
+                else
+                    tools = new List<DescriptorReference>(toolsetTools);
+            }
+        }
         var requirements = new List<ContextRequirement>();
         if (Match("with") || Match("context"))
         {
@@ -865,7 +923,8 @@ internal sealed class SourceParser
         if (declared is null) inferredOutputPaths.Add(path);
         var node = new InferenceNode(
             name, path, profile, template, arguments, [], type, requirements,
-            promptName, promptBindings is null || promptBindings.Count == 0 ? null : promptBindings);
+            promptName, promptBindings is null || promptBindings.Count == 0 ? null : promptBindings,
+            tools is null || tools.Count == 0 ? null : tools);
         nodeTypes[name] = type; nodePaths[name] = path; AddSpan(path, start, Previous); Ast(); return node;
     }
 

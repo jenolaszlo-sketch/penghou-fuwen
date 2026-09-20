@@ -339,6 +339,43 @@ public sealed class PlanRevisionComparerTests
         comparison.Changes.Should().Contain(new PlanChange("answer/infer", PlanChangeKind.Changed));
     }
 
+    [Fact]
+    public void Compare_reports_prompt_binding_input_projection_change_as_dependency_change()
+    {
+        var first = new LiteralBinding(System.Text.Json.JsonDocument.Parse("\"first\"").RootElement.Clone());
+        var beforePlan = PromptPlan(first, new InputBinding(["question"]));
+        var afterPlan = PromptPlan(first, new InputBinding(["alternate"]));
+        var beforeDefinition = WorkflowDefinitionDocument.Create(beforePlan);
+        var afterDefinition = WorkflowDefinitionDocument.Create(afterPlan);
+        var before = PlanRevisionDocument.Create(beforeDefinition, "revision/1", null, Semantics());
+        var after = PlanRevisionDocument.Create(afterDefinition, "revision/2", "revision/1", Semantics());
+
+        var comparison = PlanRevisionComparer.Compare(before, beforeDefinition, after, afterDefinition);
+
+        comparison.ExecutionFingerprintEqual.Should().BeFalse();
+        comparison.Changes.Should().Contain(new PlanChange("answer/infer", PlanChangeKind.DependencyChanged));
+        comparison.Changes.Should().NotContain(new PlanChange("answer/infer", PlanChangeKind.Changed));
+    }
+
+    [Fact]
+    public void Compare_reports_prompt_binding_source_node_change_without_claiming_downstream_reuse()
+    {
+        var beforePlan = PromptPlanWithNodeSource("prompt_source_a");
+        var afterPlan = PromptPlanWithNodeSource("prompt_source_b");
+        var beforeDefinition = WorkflowDefinitionDocument.Create(beforePlan);
+        var afterDefinition = WorkflowDefinitionDocument.Create(afterPlan);
+        var before = PlanRevisionDocument.Create(beforeDefinition, "revision/1", null, Semantics());
+        var after = PlanRevisionDocument.Create(afterDefinition, "revision/2", "revision/1", Semantics());
+
+        var comparison = PlanRevisionComparer.Compare(before, beforeDefinition, after, afterDefinition);
+
+        comparison.ExecutionFingerprintEqual.Should().BeFalse();
+        comparison.Changes.Should().Contain(new PlanChange("answer/infer", PlanChangeKind.DependencyChanged));
+        comparison.Changes.Should().Contain(new PlanChange("answer/return_result", PlanChangeKind.Unchanged));
+        comparison.Changes.Should().Contain(new PlanChange("answer/prompt_source_a", PlanChangeKind.Unchanged));
+        comparison.Changes.Should().Contain(new PlanChange("answer/prompt_source_b", PlanChangeKind.Unchanged));
+    }
+
     private static WorkflowPlan PromptPlan(
         Binding first,
         Binding second,
@@ -346,6 +383,7 @@ public sealed class PlanRevisionComparerTests
         string promptMessage = "{{ first }} {{ second }}")
     {
         var source = PlanFixture.CreateV2();
+        var inputSchema = ((NamedTypeReference)source.InputType).Schema;
         var prompt = new PromptDefinition(
             "answer_prompt",
             [
@@ -359,6 +397,12 @@ public sealed class PlanRevisionComparerTests
             IrVersion = FuwenContracts.IrVersionV8,
             CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV8,
             FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV8,
+            Schemas = source.Schemas.Select(schema => schema is ObjectSchemaDefinition value && value.Descriptor == inputSchema
+                ? value with
+                {
+                    Fields = [.. value.Fields, new SchemaField("alternate", new PrimitiveType(FuwenPrimitiveKind.String))],
+                }
+                : schema).ToArray(),
             Prompts = [prompt],
             Nodes = source.Nodes.Select(node => node == inference
                 ? inference with
@@ -373,6 +417,53 @@ public sealed class PlanRevisionComparerTests
                         : [new PromptBinding("first", first), new PromptBinding("second", second)],
                 }
                 : node).ToArray(),
+        };
+    }
+
+    private static WorkflowPlan PromptPlanWithNodeSource(string sourceName)
+    {
+        var source = PlanFixture.CreateV2();
+        var inference = source.Nodes.OfType<InferenceNode>().Single();
+        var activity = source.Nodes.OfType<ActivityNode>().First().Activity;
+        var sourceAPath = StructuralNodeIdentity.Create(source.Name, "prompt_source_a");
+        var sourceBPath = StructuralNodeIdentity.Create(source.Name, "prompt_source_b");
+        var prompt = new PromptDefinition(
+            "answer_prompt",
+            [new PromptParameter("value", new PrimitiveType(FuwenPrimitiveKind.String))],
+            [new PromptMessage(PromptMessageRole.User, "{{ value }}")]);
+        var sourceNodes = new WorkflowNode[]
+        {
+            new ActivityNode("prompt_source_a", sourceAPath, activity, [], new PrimitiveType(FuwenPrimitiveKind.String)),
+            new ActivityNode("prompt_source_b", sourceBPath, activity, [], new PrimitiveType(FuwenPrimitiveKind.String)),
+        };
+        var phases = source.ExecutionOrder!.Regions.Single().Phases;
+        return source with
+        {
+            IrVersion = FuwenContracts.IrVersionV8,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV8,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV8,
+            Prompts = [prompt],
+            Nodes = source.Nodes.Select(node => node == inference
+                ? inference with
+                {
+                    PromptTemplate = null,
+                    Arguments = [],
+                    ContextSnapshots = [],
+                    ContextRequirements = [],
+                    PromptName = prompt.Name,
+                    PromptBindings = [new PromptBinding("value", new NodeOutputBinding($"answer/{sourceName}", []))],
+                }
+                : node).Concat(sourceNodes).ToArray(),
+            ExecutionOrder = source.ExecutionOrder with
+            {
+                Regions =
+                [
+                    source.ExecutionOrder.Regions.Single() with
+                    {
+                        Phases = [phases[0], new WorkflowExecutionPhase([sourceAPath, sourceBPath]), .. phases.Skip(1)],
+                    },
+                ],
+            },
         };
     }
 

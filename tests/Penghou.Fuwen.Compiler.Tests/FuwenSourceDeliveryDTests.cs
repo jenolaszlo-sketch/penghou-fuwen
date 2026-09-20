@@ -172,6 +172,7 @@ public sealed class FuwenSourceDeliveryDTests
         result.Plan!.Nodes.OfType<InferenceNode>().Single().Profile.Should().Be(descriptor);
         result.Compilation.AdmissionEvidence!.CatalogueSnapshotRevision.Should().Be(catalogue.SnapshotRevision);
         catalogue.Calls.Should().Be(1);
+        result.Usage.CatalogueLookups.Should().Be(1);
     }
 
     [Fact]
@@ -187,6 +188,39 @@ public sealed class FuwenSourceDeliveryDTests
         result.Succeeded.Should().BeFalse();
         result.Diagnostics.Select(item => item.Code)
             .Should().Contain(CompilerDiagnosticCodes.SourceDescriptorUnresolved);
+    }
+
+    [Fact]
+    public async Task Binding_cache_preserves_exact_resolution_failure()
+    {
+        var available = Descriptor(DescriptorKind.Activity, "sample.available");
+        var missing = Descriptor(DescriptorKind.Activity, "sample.missing");
+        var catalogue = new DelegatingCatalogue(Callable(available, new PrimitiveType(FuwenPrimitiveKind.Boolean)));
+        var source = $"workflow demo() -> bool {{ activity run = activity \"{Pin(missing)}\"; return run; }}";
+
+        var result = await new FuwenSourceCompiler(catalogue)
+            .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Select(item => item.Code)
+            .Should().Contain(CompilerDiagnosticCodes.CatalogueDescriptorNotFound);
+        catalogue.Calls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Binding_cache_forwards_catalogue_cancellation()
+    {
+        var descriptor = Descriptor(DescriptorKind.Activity, "sample.activity");
+        using var cancellation = new CancellationTokenSource();
+        var catalogue = new CancellingCatalogue(cancellation);
+        var source = $"workflow demo() -> bool {{ activity run = activity \"{Pin(descriptor)}\"; return run; }}";
+
+        var act = () => new FuwenSourceCompiler(catalogue)
+            .CompileAsync(source, cancellationToken: cancellation.Token)
+            .AsTask();
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        catalogue.Calls.Should().Be(1);
     }
 
     [Theory]
@@ -401,8 +435,30 @@ public sealed class FuwenSourceDeliveryDTests
             Calls++;
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(descriptor.Equals(entry.Descriptor)
-                ? new DescriptorResolutionResult(descriptor, DescriptorResolutionStatus.Resolved, entry)
-                : new DescriptorResolutionResult(descriptor, DescriptorResolutionStatus.NotFound));
+                ? new DescriptorResolutionResult(
+                    descriptor,
+                    DescriptorResolutionStatus.Resolved,
+                    entry,
+                    usage: new CompilationUsageSummary(catalogueLookups: 1))
+                : new DescriptorResolutionResult(
+                    descriptor,
+                    DescriptorResolutionStatus.NotFound,
+                    usage: new CompilationUsageSummary(catalogueLookups: 1)));
+        }
+    }
+
+    private sealed class CancellingCatalogue(CancellationTokenSource cancellation) : ITrustedCatalogue
+    {
+        public int Calls { get; private set; }
+
+        public ValueTask<DescriptorResolutionResult> ResolveAsync(
+            DescriptorReference descriptor,
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            cancellation.Cancel();
+            cancellationToken.ThrowIfCancellationRequested();
+            throw new InvalidOperationException("Cancellation should have interrupted catalogue resolution.");
         }
     }
 }

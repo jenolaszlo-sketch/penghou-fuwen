@@ -181,9 +181,11 @@ consumption and which bounded representation was actually supplied.
   Keep root semantic changes visible while making the affected execution path
   understandable. Completed 2026-09-20 by including the referenced prompt's
   semantic digest in inference-node semantics.
-- [ ] **M2.3 — Add comparison fixtures.** Cover literals, input/node
+- [x] **M2.3 — Add comparison fixtures.** Cover literals, input/node
   projections, source-node changes, equivalent binding order, and downstream
   effects. Confirm that comparison remains explanatory, not authorization.
+  Completed 2026-09-21 with node-level dependency assertions and an explicit
+  unchanged downstream result that makes no reuse claim.
 
 Exit criteria: every execution-fingerprint change caused by prompt content or
 bindings has an accurate node-level explanation.
@@ -196,9 +198,10 @@ bindings has an accurate node-level explanation.
   2026-09-20. The optional interfaces are discovery and immutable snapshot
   identity; capability-specific cache decorators now preserve either or both
   without adding them to catalogues that do not implement them.
-- [ ] **M2.6 — Test custom catalogues and budgets.** Cover discovery-capable,
+- [x] **M2.6 — Test custom catalogues and budgets.** Cover discovery-capable,
   exact-only, in-memory, cache-hit, failure, cancellation, and lookup-accounting
-  paths.
+  paths. Completed 2026-09-21 across the source-compiler and resolver suites;
+  diagnostic-free custom-catalogue failures now receive a stable fallback.
 
 Exit criteria: author-friendly shorthand resolves through declared catalogue
 capabilities while compiled plans remain exactly pinned.
@@ -368,6 +371,7 @@ Add one entry per completed parent task or milestone:
 | --- | --- | --- | --- | --- |
 | 2026-09-20 | M0.1 tool regression subtask; M1.1–M1.4 | Working tree; commit pending | Format clean; Release build 0 warnings/errors; 475 tests pass on each of .NET 8 and .NET 10; independent canonical JSON vector passes | R31 remains in progress until M1.5 cross-region and replay coverage is complete |
 | 2026-09-20 | M0.1 comparer/catalogue subtasks; M0.2 duplicate-key subtask; M0.3; M1.5; M2.1–M2.2; M2.4–M2.5; M2.7 | Working tree; commit pending | Format clean; Release build 0 warnings/errors; 483 tests pass on each of .NET 8 and .NET 10 (966 executions); independent canonical JSON vector passes | R31 resolved; R33 and R36 core defects resolved; broader M2.3, M2.6, and R37 documentation work remains |
+| 2026-09-21 | M2.3; M2.6 | Working tree after `4e2b07e`; commit pending | Format clean; Release build 0 warnings/errors; 488 tests pass on each of .NET 8 and .NET 10 (976 executions); independent canonical JSON vector passes | R33 and R36 acceptance matrices complete; custom catalogues cannot produce silent exact-resolution failures |
 
 ## Deferred decisions
 

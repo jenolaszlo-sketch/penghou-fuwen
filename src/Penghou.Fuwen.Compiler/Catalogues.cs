@@ -468,7 +468,7 @@ public class TrustedCatalogueResolver
                 result.Requested,
                 result.Status,
                 result.Descriptor,
-                result.Diagnostics,
+                ResolutionDiagnostics(result),
                 Usage(tracker, elapsedTotalStopwatchTicks)));
         }
 
@@ -525,9 +525,23 @@ public class TrustedCatalogueResolver
             result.Requested,
             result.Status,
             result.Descriptor,
-            result.Diagnostics,
+            ResolutionDiagnostics(result),
             Usage(tracker, outcome.ElapsedStopwatchTicks),
             budget.MaxDiagnostics);
+    }
+
+    private static IReadOnlyList<CompilerDiagnostic> ResolutionDiagnostics(DescriptorResolutionResult result)
+    {
+        if (result.Diagnostics.Count != 0 || result.Status == DescriptorResolutionStatus.Resolved)
+            return result.Diagnostics;
+
+        return result.Status switch
+        {
+            DescriptorResolutionStatus.NotFound => [CatalogueDiagnostics.NotFound(result.Requested)],
+            DescriptorResolutionStatus.DigestMismatch when result.Descriptor is not null =>
+                [CatalogueDiagnostics.DigestMismatch(result.Requested, result.Descriptor.Descriptor)],
+            _ => [CatalogueDiagnostics.InvalidResult()],
+        };
     }
 
     private async ValueTask<LookupOutcome> ResolveCatalogueAsync(

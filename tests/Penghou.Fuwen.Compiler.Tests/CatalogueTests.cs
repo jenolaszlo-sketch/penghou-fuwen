@@ -275,6 +275,25 @@ public sealed class CatalogueTests
     }
 
     [Fact]
+    public async Task Resolver_supplies_stable_diagnostic_when_catalogue_omits_failure_details()
+    {
+        var descriptor = Descriptor(DescriptorKind.Activity, "sample.missing", "1", 'a');
+        var catalogue = new CountingCatalogue();
+        var resolver = new TrustedCatalogueResolver(catalogue);
+
+        var single = await resolver.ResolveAsync(descriptor, TestContext.Current.CancellationToken);
+        var batch = await resolver.ResolveManyAsync([descriptor], TestContext.Current.CancellationToken);
+
+        single.Status.Should().Be(DescriptorResolutionStatus.NotFound);
+        single.Diagnostics.Select(static diagnostic => diagnostic.Code)
+            .Should().Equal(CompilerDiagnosticCodes.CatalogueDescriptorNotFound);
+        batch.Results.Should().ContainSingle();
+        batch.Results[0].Diagnostics.Select(static diagnostic => diagnostic.Code)
+            .Should().Equal(CompilerDiagnosticCodes.CatalogueDescriptorNotFound);
+        catalogue.Calls.Should().Be(2);
+    }
+
+    [Fact]
     public async Task Resolver_NormalizesRecoverableProviderFault()
     {
         var descriptor = Descriptor(DescriptorKind.Activity, "sample.fault", "1", 'a');

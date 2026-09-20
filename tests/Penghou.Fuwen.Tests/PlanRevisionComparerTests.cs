@@ -281,6 +281,101 @@ public sealed class PlanRevisionComparerTests
         comparison.Changes.Should().NotContain(new PlanChange(conditional.StructuralPath, PlanChangeKind.Changed));
     }
 
+    [Fact]
+    public void Compare_reports_prompt_binding_literal_change_as_dependency_change()
+    {
+        var beforePlan = PromptPlan(
+            new LiteralBinding(System.Text.Json.JsonDocument.Parse("\"before\"").RootElement.Clone()),
+            new InputBinding(["question"]));
+        var afterPlan = PromptPlan(
+            new LiteralBinding(System.Text.Json.JsonDocument.Parse("\"after\"").RootElement.Clone()),
+            new InputBinding(["question"]));
+        var beforeDefinition = WorkflowDefinitionDocument.Create(beforePlan);
+        var afterDefinition = WorkflowDefinitionDocument.Create(afterPlan);
+        var before = PlanRevisionDocument.Create(beforeDefinition, "revision/1", null, Semantics());
+        var after = PlanRevisionDocument.Create(afterDefinition, "revision/2", "revision/1", Semantics());
+
+        var comparison = PlanRevisionComparer.Compare(before, beforeDefinition, after, afterDefinition);
+
+        comparison.ExecutionFingerprintEqual.Should().BeFalse();
+        comparison.Changes.Should().Contain(new PlanChange("answer/infer", PlanChangeKind.DependencyChanged));
+        comparison.Changes.Should().NotContain(new PlanChange("answer/infer", PlanChangeKind.Changed));
+    }
+
+    [Fact]
+    public void Compare_treats_prompt_binding_order_as_canonical_equivalence()
+    {
+        var first = new LiteralBinding(System.Text.Json.JsonDocument.Parse("{\"a\":1,\"b\":2}").RootElement.Clone());
+        var second = new InputBinding(["question"]);
+        var beforePlan = PromptPlan(first, second);
+        var afterPlan = PromptPlan(first, second, reverseBindingOrder: true);
+        var beforeDefinition = WorkflowDefinitionDocument.Create(beforePlan);
+        var afterDefinition = WorkflowDefinitionDocument.Create(afterPlan);
+        var before = PlanRevisionDocument.Create(beforeDefinition, "revision/1", null, Semantics());
+        var after = PlanRevisionDocument.Create(afterDefinition, "revision/2", "revision/1", Semantics());
+
+        var comparison = PlanRevisionComparer.Compare(before, beforeDefinition, after, afterDefinition);
+
+        comparison.ExecutionFingerprintEqual.Should().BeTrue();
+        comparison.Changes.Should().Contain(new PlanChange("answer/infer", PlanChangeKind.Unchanged));
+    }
+
+    [Fact]
+    public void Compare_attributes_prompt_definition_change_to_referencing_inference_node()
+    {
+        var first = new LiteralBinding(System.Text.Json.JsonDocument.Parse("\"first\"").RootElement.Clone());
+        var second = new InputBinding(["question"]);
+        var beforePlan = PromptPlan(first, second, promptMessage: "{{ first }} {{ second }}");
+        var afterPlan = PromptPlan(first, second, promptMessage: "Answer: {{ first }} {{ second }}");
+        var beforeDefinition = WorkflowDefinitionDocument.Create(beforePlan);
+        var afterDefinition = WorkflowDefinitionDocument.Create(afterPlan);
+        var before = PlanRevisionDocument.Create(beforeDefinition, "revision/1", null, Semantics());
+        var after = PlanRevisionDocument.Create(afterDefinition, "revision/2", "revision/1", Semantics());
+
+        var comparison = PlanRevisionComparer.Compare(before, beforeDefinition, after, afterDefinition);
+
+        comparison.ExecutionFingerprintEqual.Should().BeFalse();
+        comparison.Changes.Should().Contain(new PlanChange(null, PlanChangeKind.Changed));
+        comparison.Changes.Should().Contain(new PlanChange("answer/infer", PlanChangeKind.Changed));
+    }
+
+    private static WorkflowPlan PromptPlan(
+        Binding first,
+        Binding second,
+        bool reverseBindingOrder = false,
+        string promptMessage = "{{ first }} {{ second }}")
+    {
+        var source = PlanFixture.CreateV2();
+        var prompt = new PromptDefinition(
+            "answer_prompt",
+            [
+                new PromptParameter("first", new PrimitiveType(FuwenPrimitiveKind.String)),
+                new PromptParameter("second", new PrimitiveType(FuwenPrimitiveKind.String)),
+            ],
+            [new PromptMessage(PromptMessageRole.User, promptMessage)]);
+        var inference = source.Nodes.OfType<InferenceNode>().Single();
+        return source with
+        {
+            IrVersion = FuwenContracts.IrVersionV8,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV8,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV8,
+            Prompts = [prompt],
+            Nodes = source.Nodes.Select(node => node == inference
+                ? inference with
+                {
+                    PromptTemplate = null,
+                    Arguments = [],
+                    ContextSnapshots = [],
+                    ContextRequirements = [],
+                    PromptName = prompt.Name,
+                    PromptBindings = reverseBindingOrder
+                        ? [new PromptBinding("second", second), new PromptBinding("first", first)]
+                        : [new PromptBinding("first", first), new PromptBinding("second", second)],
+                }
+                : node).ToArray(),
+        };
+    }
+
     private static PlanRevisionSemantics Semantics(
         char objective = 'a',
         char acceptance = 'b',

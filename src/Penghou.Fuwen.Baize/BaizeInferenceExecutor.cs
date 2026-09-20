@@ -542,7 +542,6 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
             ? CreateSchemaJson(request.OutputType, binding.Schemas)
             : null;
         var messages = new List<LlmMessage>();
-        List<LlmTool> tools;
         if (binding.Prompt is not null)
         {
             if (request.RenderedPrompt is null || request.RenderedPrompt.Count == 0)
@@ -553,7 +552,6 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
                     rendered.Role == PromptMessageRole.System ? "system" : "user",
                     rendered.Text));
             }
-            tools = SelectDeclaredTools(binding, request);
         }
         else
         {
@@ -562,8 +560,8 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
             var context = ToJsonObject(request.ContextInputs.ToDictionary(input => input.Name, input => ToJsonNode(input.Value), StringComparer.Ordinal));
             var prompt = RenderUserPrompt(binding.UserPromptTemplate, arguments.ToJsonString(), context.ToJsonString());
             messages.Add(LlmMessage.Text("user", prompt));
-            tools = binding.Tools.Select(tool => tool.Tool).ToList();
         }
+        var tools = SelectModelVisibleTools(binding, request);
         var responseFormat = binding.OutputMode == BaizeInferenceOutputMode.StructuredContent
             ? LlmResponseFormat.JsonSchema(schemaJson!)
             : null;
@@ -644,6 +642,26 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
         }
         return selected;
     }
+
+    /// <summary>
+    /// Selects the exact tool surface exposed to the model. A null tool set on
+    /// a registered-template request preserves the pre-v8 host-binding default;
+    /// v8 requests carry an explicit (possibly empty) set. Workflow-owned
+    /// prompts are always v8 and therefore never inherit host defaults.
+    /// </summary>
+    private static List<LlmTool> SelectModelVisibleTools(
+        BaizeInferenceBinding binding,
+        InferenceExecutionRequest request) =>
+        request.Prompt is null && request.Tools is null
+            ? binding.Tools.Select(static tool => tool.Tool).ToList()
+            : SelectDeclaredTools(binding, request);
+
+    private static IReadOnlyList<DescriptorReference> ModelVisibleToolDescriptors(
+        InferenceExecutionRequest request,
+        BaizeInferenceBinding binding) =>
+        request.Prompt is null && request.Tools is null
+            ? binding.Tools.Select(static tool => tool.Descriptor).ToArray()
+            : request.Tools?.ToArray() ?? [];
 
     /// <summary>
     /// Expands the two admitted placeholders in one pass over the template.
@@ -872,7 +890,7 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
             cost,
             request.Prompt?.GetSemanticDigest(),
             request.RenderedPrompt is null ? null : PromptRenderer.GetRenderedDigest(request.RenderedPrompt),
-            request.Tools);
+            ModelVisibleToolDescriptors(request, binding));
     }
 
     private static string BoundMessage(string? message)

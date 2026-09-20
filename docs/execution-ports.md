@@ -22,6 +22,15 @@ Inference context inputs keep four things together: the declared requirement
 name, its expected type, the detached runtime value, and the immutable context
 snapshot evidence. A snapshot reference never substitutes for the value.
 
+IR v8 inference requests carry an explicit tool allowlist. A non-null empty
+`InferenceExecutionRequest.Tools` collection means `tools none`; a non-empty
+collection is the exact model-visible set. Null is reserved at the execution
+port for pre-v8 registered-template requests, which retain their host-binding
+tool defaults for compatibility. Workflow-owned prompts never inherit those
+defaults. An inference adapter records the effective model-visible descriptors
+in `InferenceExecutionEvidence.AdmittedTools`, including legacy defaults, so
+provider requests and evidence cannot describe different tool surfaces.
+
 Execution results contain exactly one successful output or one failure.
 Activity and inference successes may include deeply snapshotted artifact
 publication receipts; context successes instead require snapshot evidence.

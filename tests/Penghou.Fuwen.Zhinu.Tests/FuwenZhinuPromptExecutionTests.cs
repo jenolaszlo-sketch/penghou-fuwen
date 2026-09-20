@@ -197,6 +197,72 @@ public sealed class FuwenZhinuPromptExecutionTests
     }
 
     [Fact]
+    public async Task V8_registered_template_tools_none_remains_explicit_at_execution_boundary()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var profile = new DescriptorReference(DescriptorKind.InferenceProfile, "sample.profile", "1", Digest('a'));
+        var template = new DescriptorReference(DescriptorKind.PromptTemplate, "sample.template", "1", Digest('b'));
+        var str = new PrimitiveType(FuwenPrimitiveKind.String);
+        var inferPath = StructuralNodeIdentity.Create("template", "infer");
+        var returnPath = StructuralNodeIdentity.Create("template", "return_result");
+        var plan = new WorkflowPlanBuilder("template", "1", str, str, "routing/1")
+            .AddCatalogueBinding(profile)
+            .AddCatalogueBinding(template)
+            .AddNode(new InferenceNode(
+                "infer", inferPath, profile, template, [], [], str, []))
+            .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(inferPath, [])))
+            .SetExecutionOrder(new WorkflowExecutionOrder([
+                new WorkflowExecutionRegion("template", [
+                    new WorkflowExecutionPhase([inferPath]),
+                    new WorkflowExecutionPhase([returnPath]),
+                ]),
+            ]))
+            .BuildV8();
+        var catalogue = new InMemoryTrustedCatalogue([
+            new TrustedCatalogueDescriptor(
+                profile,
+                callableContract: new CallableContract(
+                    new CallableSignature([], str),
+                    CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+            new TrustedCatalogueDescriptor(template),
+        ]);
+        var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
+                catalogue,
+                capabilityPolicy: new CapabilityGrantPolicy("policy/1", [])))
+            .AdmitAsync(plan, cancellationToken: ct);
+        admission.Succeeded.Should().BeTrue(
+            string.Join("; ", admission.Diagnostics.Select(item => $"{item.Code}:{item.Message}")));
+        var inference = new TemplateCapturingInference();
+        var registration = await new FuwenZhinuWorkflowFactory(
+                new InMemoryWorkflowDefinitionStore(),
+                new FuwenZhinuProviderRuntimeIdentity(
+                    admission.Receipt!.CatalogueSnapshotRevision,
+                    admission.Receipt.ResolvedDescriptorSetFingerprint),
+                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), inference))
+            .CreateAsync("template", "1", admission, ct);
+        var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            await using var engine = CreateEngine(root, registration);
+            using var inputDocument = JsonDocument.Parse("\"input\"");
+            var runId = await engine.StartAsync(
+                "template", "1", inputDocument.RootElement.Clone(), cancellationToken: ct);
+            await engine.ExecuteAsync(runId, ct);
+            await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: ct);
+
+            var request = inference.Requests.Should().ContainSingle().Subject;
+            request.PromptTemplate.Should().Be(template);
+            request.Tools.Should().NotBeNull().And.BeEmpty();
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
     public async Task Prompt_request_identity_is_input_sensitive_across_runs()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -275,6 +341,20 @@ public sealed class FuwenZhinuPromptExecutionTests
             using var document = JsonDocument.Parse(JsonSerializer.Serialize("Hello, " + name
                 .Replace("Greet ", string.Empty, StringComparison.Ordinal)
                 .TrimEnd('.') + "."));
+            return ValueTask.FromResult(InferenceExecutionResult.Succeeded(
+                RuntimeValue.FromJson(document.RootElement)));
+        }
+    }
+
+    private sealed class TemplateCapturingInference : IInferenceExecutor
+    {
+        public List<InferenceExecutionRequest> Requests { get; } = [];
+
+        public ValueTask<InferenceExecutionResult> ExecuteAsync(
+            InferenceExecutionRequest request, CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            using var document = JsonDocument.Parse("\"done\"");
             return ValueTask.FromResult(InferenceExecutionResult.Succeeded(
                 RuntimeValue.FromJson(document.RootElement)));
         }

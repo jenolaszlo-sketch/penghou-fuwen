@@ -154,7 +154,39 @@ public sealed class FuwenSourceDeliveryDTests
 
         result.Succeeded.Should().BeTrue(string.Join(", ", result.Diagnostics.Select(d => d.Code + ":" + d.Message)));
         result.Plan!.Nodes.OfType<ActivityNode>().Single().Activity.Should().Be(descriptor);
+        result.Compilation.AdmissionEvidence!.CatalogueSnapshotRevision.Should().Be(catalogue.SnapshotRevision);
         catalogue.Calls.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task Compiler_preserves_optional_catalogue_discovery_through_binding_cache()
+    {
+        var descriptor = Descriptor(DescriptorKind.InferenceProfile, "sample.profile");
+        var catalogue = new DiscoveringCatalogue(Callable(descriptor, new PrimitiveType(FuwenPrimitiveKind.String)));
+        const string source = "prompt greet() { user \"Hello\"; } workflow demo() -> string { infer answer = infer \"sample.profile\" prompt greet() -> string; return answer; }";
+
+        var result = await new FuwenSourceCompiler(catalogue)
+            .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeTrue(string.Join(" | ", result.Diagnostics.Select(d => d.Code + ":" + d.Message)));
+        result.Plan!.Nodes.OfType<InferenceNode>().Single().Profile.Should().Be(descriptor);
+        result.Compilation.AdmissionEvidence!.CatalogueSnapshotRevision.Should().Be(catalogue.SnapshotRevision);
+        catalogue.Calls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Exact_only_catalogue_does_not_gain_unpinned_discovery_from_binding_cache()
+    {
+        var descriptor = Descriptor(DescriptorKind.InferenceProfile, "sample.profile");
+        const string source = "prompt greet() { user \"Hello\"; } workflow demo() -> string { infer answer = infer \"sample.profile\" prompt greet() -> string; return answer; }";
+
+        var result = await new FuwenSourceCompiler(
+                new DelegatingCatalogue(Callable(descriptor, new PrimitiveType(FuwenPrimitiveKind.String))))
+            .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+        result.Diagnostics.Select(item => item.Code)
+            .Should().Contain(CompilerDiagnosticCodes.SourceDescriptorUnresolved);
     }
 
     [Theory]
@@ -322,9 +354,45 @@ public sealed class FuwenSourceDeliveryDTests
     private static string Pin(DescriptorReference descriptor) =>
         $"{descriptor.Name}@{descriptor.Version}#{descriptor.ContentDigest.Value}";
 
-    private sealed class DelegatingCatalogue(TrustedCatalogueDescriptor entry) : ITrustedCatalogue
+    private sealed class DelegatingCatalogue(TrustedCatalogueDescriptor entry) : ITrustedCatalogue, ITrustedCatalogueSnapshot
     {
+        public string SnapshotRevision => "catalogue/delegating/1";
+
         public int Calls { get; private set; }
+
+        public ValueTask<DescriptorResolutionResult> ResolveAsync(
+            DescriptorReference descriptor,
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(descriptor.Equals(entry.Descriptor)
+                ? new DescriptorResolutionResult(descriptor, DescriptorResolutionStatus.Resolved, entry)
+                : new DescriptorResolutionResult(descriptor, DescriptorResolutionStatus.NotFound));
+        }
+    }
+
+    private sealed class DiscoveringCatalogue(TrustedCatalogueDescriptor entry) : ITrustedCatalogue, ITrustedCatalogueDiscovery, ITrustedCatalogueSnapshot
+    {
+        public string SnapshotRevision => "catalogue/discovering/1";
+
+        public int Calls { get; private set; }
+
+        public bool TryGetDescriptor(DescriptorKind kind, string name, string version, out TrustedCatalogueDescriptor? descriptor)
+        {
+            descriptor = entry.Descriptor.Kind == kind &&
+                string.Equals(entry.Descriptor.Name, name, StringComparison.Ordinal) &&
+                string.Equals(entry.Descriptor.Version, version, StringComparison.Ordinal)
+                ? entry
+                : null;
+            return descriptor is not null;
+        }
+
+        public bool TryGetDescriptor(DescriptorReference descriptor, out TrustedCatalogueDescriptor? result)
+        {
+            result = descriptor.Equals(entry.Descriptor) ? entry : null;
+            return result is not null;
+        }
 
         public ValueTask<DescriptorResolutionResult> ResolveAsync(
             DescriptorReference descriptor,

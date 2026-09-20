@@ -89,6 +89,8 @@ public static class PlanRevisionComparer
         if (!BytesEqual(before.ExecutionOrder, after.ExecutionOrder))
             changes.Add(new PlanChange(null, PlanChangeKind.DependencyChanged));
 
+        var beforePromptDigests = PromptDigests(before);
+        var afterPromptDigests = PromptDigests(after);
         var beforeNodes = Flatten(before.Nodes).ToDictionary(static node => node.StructuralPath, StringComparer.Ordinal);
         var afterNodes = Flatten(after.Nodes).ToDictionary(static node => node.StructuralPath, StringComparer.Ordinal);
         foreach (var path in beforeNodes.Keys.Concat(afterNodes.Keys).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
@@ -97,7 +99,7 @@ public static class PlanRevisionComparer
                 changes.Add(new PlanChange(path, PlanChangeKind.Added));
             else if (!afterNodes.TryGetValue(path, out var newNode))
                 changes.Add(new PlanChange(path, PlanChangeKind.Removed));
-            else if (!BytesEqual(NodeSemantics(oldNode), NodeSemantics(newNode)))
+            else if (!BytesEqual(NodeSemantics(oldNode, beforePromptDigests), NodeSemantics(newNode, afterPromptDigests)))
                 changes.Add(new PlanChange(path, PlanChangeKind.Changed));
             else if (!BytesEqual(NodeDependencies(oldNode), NodeDependencies(newNode)))
                 changes.Add(new PlanChange(path, PlanChangeKind.DependencyChanged));
@@ -174,43 +176,64 @@ public static class PlanRevisionComparer
                 .OrderBy(digest => digest, StringComparer.Ordinal)),
     };
 
-    private static object NodeSemantics(WorkflowNode node) => node switch
-    {
-        ContextNode value => new { Kind = "context", value.Provider, value.OutputType },
-        InferenceNode value => new
+    private static IReadOnlyDictionary<string, string> PromptDigests(WorkflowPlan plan) =>
+        (plan.Prompts ?? Enumerable.Empty<PromptDefinition>())
+            .ToDictionary(static prompt => prompt.Name, static prompt => prompt.GetSemanticDigest(), StringComparer.Ordinal);
+
+    private static object NodeSemantics(
+        WorkflowNode node,
+        IReadOnlyDictionary<string, string> promptDigests) => node switch
         {
-            Kind = "inference",
-            value.Profile,
-            value.PromptTemplate,
-            value.OutputType,
-            value.PromptName,
-            PromptBindings = string.Join(
-                "|",
-                (value.PromptBindings ?? Enumerable.Empty<PromptBinding>())
-                    .Select(binding => binding.ParameterName)
-                    .OrderBy(name => name, StringComparer.Ordinal)),
-            Tools = string.Join(
-                "|",
-                (value.Tools ?? Enumerable.Empty<DescriptorReference>())
-                    .Select(tool => $"{tool.Kind:D}|{tool.Name}|{tool.Version}|{tool.ContentDigest.Value}")
-                    .OrderBy(key => key, StringComparer.Ordinal)),
-            MaxTokens = value.Limits?.MaxTokens,
-            TimeoutSeconds = value.Limits?.TimeoutSeconds,
-        },
-        ActivityNode value => new { Kind = "activity", value.Activity, value.OutputType },
-        ConditionalNode value => new { Kind = "conditional", value.Condition.Operator, MergeResultType = value.Merge?.ResultType },
-        FanOutNode value => new { Kind = "fan-out", value.Item.Type, value.ResultType, value.MaximumItems, value.MaximumConcurrency },
-        RepeatNode value => new { Kind = "repeat", value.MaxIterations, value.StateType, value.BreakWhen, value.ResultType },
-        CheckpointNode value => new { Kind = "checkpoint", value.OutputType },
-        WaitNode value => new { Kind = "wait", value.SignalName, value.OutputType, value.TimeoutSeconds },
-        ReturnNode => new { Kind = "return" },
-        _ => throw new NotSupportedException($"Unsupported workflow node '{node.GetType().Name}'."),
-    };
+            ContextNode value => new { Kind = "context", value.Provider, value.OutputType },
+            InferenceNode value => new
+            {
+                Kind = "inference",
+                value.Profile,
+                value.PromptTemplate,
+                value.OutputType,
+                value.PromptName,
+                PromptDigest = value.PromptName is not null && promptDigests.TryGetValue(value.PromptName, out var promptDigest)
+                    ? promptDigest
+                    : null,
+                PromptBindings = string.Join(
+                    "|",
+                    (value.PromptBindings ?? Enumerable.Empty<PromptBinding>())
+                        .Select(binding => binding.ParameterName)
+                        .OrderBy(name => name, StringComparer.Ordinal)),
+                Tools = string.Join(
+                    "|",
+                    (value.Tools ?? Enumerable.Empty<DescriptorReference>())
+                        .Select(tool => $"{tool.Kind:D}|{tool.Name}|{tool.Version}|{tool.ContentDigest.Value}")
+                        .OrderBy(key => key, StringComparer.Ordinal)),
+                MaxTokens = value.Limits?.MaxTokens,
+                TimeoutSeconds = value.Limits?.TimeoutSeconds,
+            },
+            ActivityNode value => new { Kind = "activity", value.Activity, value.OutputType },
+            ConditionalNode value => new { Kind = "conditional", value.Condition.Operator, MergeResultType = value.Merge?.ResultType },
+            FanOutNode value => new { Kind = "fan-out", value.Item.Type, value.ResultType, value.MaximumItems, value.MaximumConcurrency },
+            RepeatNode value => new { Kind = "repeat", value.MaxIterations, value.StateType, value.BreakWhen, value.ResultType },
+            CheckpointNode value => new { Kind = "checkpoint", value.OutputType },
+            WaitNode value => new { Kind = "wait", value.SignalName, value.OutputType, value.TimeoutSeconds },
+            ReturnNode => new { Kind = "return" },
+            _ => throw new NotSupportedException($"Unsupported workflow node '{node.GetType().Name}'."),
+        };
 
     private static object NodeDependencies(WorkflowNode node) => node switch
     {
         ContextNode value => new { value.Arguments },
-        InferenceNode value => new { value.Arguments, value.ContextSnapshots, value.ContextRequirements },
+        InferenceNode value => new
+        {
+            value.Arguments,
+            value.ContextSnapshots,
+            value.ContextRequirements,
+            // Prompt binding values are evaluated inputs to the prompt, not
+            // node shape. Normalize the unordered binding collection while
+            // retaining each value's complete canonical binding structure.
+            PromptBindings = (value.PromptBindings ?? Enumerable.Empty<PromptBinding>())
+                .Select(binding => new { binding.ParameterName, binding.Value })
+                .OrderBy(binding => binding.ParameterName, StringComparer.Ordinal)
+                .ToArray(),
+        },
         ActivityNode value => new { value.Arguments },
         ConditionalNode value => new
         {

@@ -9,8 +9,10 @@ a registered template or with a prompt reference plus typed bindings, plus an
 optional `tools` clause naming a toolset, an inline tool list, or `none`),
 restricted bindings, control-only `if/else` with an optional explicit
 `merge <then>, <else> -> <type>` for one value-producing result, bounded
-keyed `fanout` regions with activity/conditional bodies, and a complete
-`return`. Prompt declarations, inference tools, and inference `limits`
+keyed `fanout` regions with context/activity/inference/conditional bodies,
+bounded state-carrying `repeat` regions, `checkpoint` and external `wait`
+interaction gates, and a complete `return`. Prompt declarations, inference
+tools, and inference `limits`
 (`maxTokens` and/or `timeout`, either or both) require IR v8; only
 effect-free, read-only, and idempotent retry-safe write tools admit.
 `maxTokens` participates in execution fingerprints; `timeout` bounds

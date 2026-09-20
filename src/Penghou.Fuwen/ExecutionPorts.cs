@@ -209,7 +209,11 @@ public sealed class InferenceExecutionRequest : ExecutionRequest
     public PromptDefinition? Prompt { get; }
     /// <summary>The deterministically rendered prompt messages, or null for template-driven requests.</summary>
     public IReadOnlyList<RenderedPromptMessage>? RenderedPrompt { get; }
-    /// <summary>The admitted model-callable tool descriptors, or null when no tools were declared.</summary>
+    /// <summary>
+    /// The admitted model-callable tool descriptors. An empty collection is an
+    /// explicit v8 declaration of no tools; null is reserved for a historical
+    /// registered-template request whose host binding supplies legacy defaults.
+    /// </summary>
     public IReadOnlyList<DescriptorReference>? Tools { get; }
     /// <summary>Optional per-inference execution bounds declared by the plan.</summary>
     public InferenceLimits? Limits { get; }
@@ -645,7 +649,10 @@ public sealed class InferenceExecutionEvidence
     public string? PromptDigest { get; }
     /// <summary>The rendered prompt instance digest, or null for template-driven evidence.</summary>
     public string? RenderedPromptDigest { get; }
-    /// <summary>The admitted model-callable tool descriptors, or null when no tools were declared.</summary>
+    /// <summary>
+    /// The exact effective model-callable tool descriptors recorded by the
+    /// adapter. An empty collection means the model saw no tools.
+    /// </summary>
     public IReadOnlyList<DescriptorReference>? AdmittedTools { get; }
     /// <summary>The ordered provider/model attempts made by the adapter.</summary>
     public IReadOnlyList<InferenceAttemptEvidence> Attempts { get; }

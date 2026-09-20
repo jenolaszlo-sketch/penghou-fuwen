@@ -69,6 +69,101 @@ public sealed class BaizeInferenceExecutorTests
             .Be("A {\"arg\":\"literal {context}\"} B {\"ctx\":\"literal {arguments}\"} C {\"ctx\":\"literal {arguments}\"}");
     }
 
+    [Theory]
+    [InlineData("none")]
+    [InlineData("subset")]
+    [InlineData("full")]
+    public async Task Registered_template_exposes_only_explicit_tools_and_evidence_matches_provider_request(string mode)
+    {
+        var (profile, prompt) = Descriptors();
+        var search = Descriptor(DescriptorKind.Tool, "search");
+        var write = Descriptor(DescriptorKind.Tool, "write");
+        var boundTools = new[]
+        {
+            new BaizeToolBinding(search, new LlmTool("search", "Search", "{\"type\":\"object\"}")),
+            new BaizeToolBinding(write, new LlmTool("write", "Write", "{\"type\":\"object\"}")),
+        };
+        IReadOnlyList<DescriptorReference> declared = mode switch
+        {
+            "none" => [],
+            "subset" => [search],
+            "full" => [search, write],
+            _ => throw new InvalidOperationException("Unknown test case."),
+        };
+        var client = new FakeClient(new LlmResponse("\"answer\""));
+        var sink = new RecordingSink();
+        var executor = new BaizeInferenceExecutor([
+            new BaizeInferenceBinding(
+                profile,
+                prompt,
+                [new BaizeEndpointBinding("primary", "provider", "model", client)],
+                tools: boundTools),
+        ], provenanceSink: sink);
+        var request = new InferenceExecutionRequest(
+            Invocation(), profile, prompt, [], [],
+            new PrimitiveType(FuwenPrimitiveKind.String), tools: declared);
+
+        var result = await executor.ExecuteAsync(request, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        client.LastRequest!.Tools.Select(tool => tool.Name)
+            .Should().Equal(declared.Select(tool => tool.Name));
+        result.Evidence!.AdmittedTools.Should().NotBeNull();
+        result.Evidence.AdmittedTools!.Should().Equal(declared);
+        sink.Items.Should().ContainSingle();
+        sink.Items.Single().AdmittedTools.Should().Equal(declared);
+    }
+
+    [Fact]
+    public async Task Registered_template_missing_declared_tool_fails_before_provider_call_with_evidence()
+    {
+        var (profile, prompt) = Descriptors();
+        var search = Descriptor(DescriptorKind.Tool, "search");
+        var missing = Descriptor(DescriptorKind.Tool, "missing");
+        var client = new FakeClient(new LlmResponse("\"never\""));
+        var executor = new BaizeInferenceExecutor([
+            new BaizeInferenceBinding(
+                profile,
+                prompt,
+                [new BaizeEndpointBinding("primary", "provider", "model", client)],
+                tools: [new BaizeToolBinding(search, new LlmTool("search", "Search", "{\"type\":\"object\"}"))]),
+        ]);
+        var request = new InferenceExecutionRequest(
+            Invocation(), profile, prompt, [], [],
+            new PrimitiveType(FuwenPrimitiveKind.String), tools: [missing]);
+
+        var result = await executor.ExecuteAsync(request, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Failure!.Code.Should().Be(ExecutionFailureCode.DescriptorUnavailable);
+        client.Calls.Should().Be(0);
+        result.Evidence!.AdmittedTools.Should().ContainSingle().Which.Should().Be(missing);
+        result.Evidence.Attempts.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Legacy_template_defaults_remain_model_visible_and_are_recorded_in_evidence()
+    {
+        var (profile, prompt) = Descriptors();
+        var search = Descriptor(DescriptorKind.Tool, "search");
+        var client = new FakeClient(new LlmResponse("\"answer\""));
+        var executor = new BaizeInferenceExecutor([
+            new BaizeInferenceBinding(
+                profile,
+                prompt,
+                [new BaizeEndpointBinding("primary", "provider", "model", client)],
+                tools: [new BaizeToolBinding(search, new LlmTool("search", "Search", "{\"type\":\"object\"}"))]),
+        ]);
+
+        var result = await executor.ExecuteAsync(
+            Request(profile, prompt, new PrimitiveType(FuwenPrimitiveKind.String)),
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        client.LastRequest!.Tools.Should().ContainSingle().Which.Name.Should().Be("search");
+        result.Evidence!.AdmittedTools.Should().ContainSingle().Which.Should().Be(search);
+    }
+
     [Fact]
     public async Task Malformed_output_is_typed_and_repair_success_does_not_skip_final_schema_validation()
     {

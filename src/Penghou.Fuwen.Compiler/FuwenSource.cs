@@ -335,7 +335,7 @@ public sealed class FuwenSourceCompiler
         cancellationToken.ThrowIfCancellationRequested();
         var lex = FuwenLexer.Lex(source, documentId, budget);
         var formatted = FuwenFormatter.FormatTokens(lex.Tokens);
-        var bindingCatalogue = new CachingCatalogue(catalogue);
+        var bindingCatalogue = CachingCatalogue.Create(catalogue);
         var parser = new SourceParser(lex.Tokens, documentId, bindingCatalogue, budget, cancellationToken);
         var parsed = parser.Parse();
         var parseDiagnostics = lex.Diagnostics.Concat(parsed.Diagnostics).ToList();
@@ -459,10 +459,23 @@ public sealed class FuwenSourceCompiler
 
     private sealed record BindingOutputResult(WorkflowPlan Plan, IReadOnlyList<CompilerDiagnostic> Diagnostics, CompilationUsageSummary Usage);
 
-    private sealed class CachingCatalogue(ITrustedCatalogue inner) : ITrustedCatalogue
+    private class CachingCatalogue(ITrustedCatalogue inner) : ITrustedCatalogue
     {
         private readonly object gate = new();
         private readonly Dictionary<DescriptorReference, DescriptorResolutionResult> cache = new();
+
+        internal static ITrustedCatalogue Create(ITrustedCatalogue inner)
+        {
+            var discovery = inner as ITrustedCatalogueDiscovery;
+            var snapshot = inner as ITrustedCatalogueSnapshot;
+            return (discovery, snapshot) switch
+            {
+                (not null, not null) => new DiscoverySnapshotCachingCatalogue(inner, discovery, snapshot),
+                (not null, null) => new DiscoveryCachingCatalogue(inner, discovery),
+                (null, not null) => new SnapshotCachingCatalogue(inner, snapshot),
+                _ => new CachingCatalogue(inner),
+            };
+        }
 
         public async ValueTask<DescriptorResolutionResult> ResolveAsync(DescriptorReference descriptor, CancellationToken cancellationToken = default)
         {
@@ -482,6 +495,42 @@ public sealed class FuwenSourceCompiler
             result.Descriptor,
             result.Diagnostics,
             new CompilationUsageSummary());
+    }
+
+    /// <summary>
+    /// Preserves optional discovery only when the wrapped catalogue provides it;
+    /// exact-only catalogues continue to expose only exact resolution.
+    /// </summary>
+    private class DiscoveryCachingCatalogue(
+        ITrustedCatalogue inner,
+        ITrustedCatalogueDiscovery discovery) : CachingCatalogue(inner), ITrustedCatalogueDiscovery
+    {
+        public bool TryGetDescriptor(
+            DescriptorKind kind,
+            string name,
+            string version,
+            out TrustedCatalogueDescriptor? descriptor) =>
+            discovery.TryGetDescriptor(kind, name, version, out descriptor);
+
+        public bool TryGetDescriptor(
+            DescriptorReference descriptor,
+            out TrustedCatalogueDescriptor? result) =>
+            discovery.TryGetDescriptor(descriptor, out result);
+    }
+
+    private class SnapshotCachingCatalogue(
+        ITrustedCatalogue inner,
+        ITrustedCatalogueSnapshot snapshot) : CachingCatalogue(inner), ITrustedCatalogueSnapshot
+    {
+        public string SnapshotRevision => snapshot.SnapshotRevision;
+    }
+
+    private sealed class DiscoverySnapshotCachingCatalogue(
+        ITrustedCatalogue inner,
+        ITrustedCatalogueDiscovery discovery,
+        ITrustedCatalogueSnapshot snapshot) : DiscoveryCachingCatalogue(inner, discovery), ITrustedCatalogueSnapshot
+    {
+        public string SnapshotRevision => snapshot.SnapshotRevision;
     }
 
     private static ContentDigest SourceDigest(string fingerprint)

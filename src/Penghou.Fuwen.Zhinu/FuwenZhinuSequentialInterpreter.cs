@@ -234,6 +234,9 @@ internal static class FuwenZhinuSequentialInterpreter
         if (node.PromptName is null)
         {
             var toolList = node.Tools is null || node.Tools.Count == 0 ? null : node.Tools.ToArray();
+            var templateRequestTools = IrVersions.SupportsWorkflowPrompts(plan.IrVersion)
+                ? node.Tools?.ToArray() ?? []
+                : toolList;
             var identity = new NodeRequestIdentity("inference", nodePath, node.Profile, node.PromptTemplate, arguments, contextInputs, toolList, node.Limits);
             var requestJson = RuntimeValueWire.Serialize(identity);
             return (requestJson, invocation => new InferenceExecutionRequest(
@@ -245,7 +248,7 @@ internal static class FuwenZhinuSequentialInterpreter
                 node.OutputType,
                 null,
                 null,
-                toolList,
+                templateRequestTools,
                 node.Limits));
         }
 
@@ -258,6 +261,7 @@ internal static class FuwenZhinuSequentialInterpreter
             values[binding.ParameterName] = EvaluateBinding(binding.Value, plan, state);
         var rendered = PromptRenderer.Render(definition, values);
         var tools = node.Tools is null || node.Tools.Count == 0 ? null : node.Tools.ToArray();
+        var requestTools = node.Tools?.ToArray() ?? [];
         var promptIdentity = new PromptNodeRequestIdentity(
             "inference-prompt",
             nodePath,
@@ -277,7 +281,7 @@ internal static class FuwenZhinuSequentialInterpreter
             node.OutputType,
             definition,
             rendered,
-            tools,
+            requestTools,
             node.Limits));
     }
 

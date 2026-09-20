@@ -211,7 +211,10 @@ internal static class WorkflowPlanSnapshot
                         : SnapshotList(value.PromptBindings, "prompt bindings", ClonePromptBinding, state),
                     value.Tools is null
                         ? null
-                        : SnapshotList(value.Tools, "inference tools", CloneDescriptor, state)),
+                        : SnapshotList(value.Tools, "inference tools", CloneDescriptor, state),
+                    value.Limits is null
+                        ? null
+                        : new InferenceLimits(value.Limits.MaxTokens, value.Limits.TimeoutSeconds)),
                 ActivityNode value => new ActivityNode(
                     value.Name,
                     value.StructuralPath,

@@ -118,7 +118,9 @@ public sealed record InferenceNode(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     IReadOnlyList<PromptBinding>? PromptBindings = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    IReadOnlyList<DescriptorReference>? Tools = null) : WorkflowNode(Name, StructuralPath);
+    IReadOnlyList<DescriptorReference>? Tools = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    InferenceLimits? Limits = null) : WorkflowNode(Name, StructuralPath);
 
 /// <summary>Executes one trusted catalogue activity.</summary>
 public sealed record ActivityNode(
@@ -127,6 +129,11 @@ public sealed record ActivityNode(
     DescriptorReference Activity,
     IReadOnlyList<ArgumentBinding> Arguments,
     FuwenType OutputType) : WorkflowNode(Name, StructuralPath);
+
+/// <summary>Optional per-inference execution bounds. Null means unbounded.</summary>
+/// <param name="MaxTokens">Maximum model output tokens.</param>
+/// <param name="TimeoutSeconds">Wall-clock ceiling per attempt.</param>
+public sealed record InferenceLimits(int? MaxTokens, int? TimeoutSeconds);
 
 /// <summary>The explicit merge declaration for a value-producing conditional.</summary>
 public sealed record ConditionalMerge(

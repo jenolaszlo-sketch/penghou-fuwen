@@ -576,6 +576,7 @@ internal static class WorkflowBindingValidator
                     else
                         ValidateCallableNode(inference.Profile, DescriptorKind.InferenceProfile, inference.Arguments, inference.OutputType, location, plan, locations, descriptors, diagnostics);
                     ValidateInferenceTools(inference, location, descriptors, diagnostics);
+                    ValidateInferenceLimits(inference, plan, diagnostics);
                     if (IrVersions.SupportsTypedContextRequirements(plan.IrVersion))
                     {
                         var contextNames = new HashSet<string>(StringComparer.Ordinal);
@@ -810,12 +811,13 @@ internal static class WorkflowBindingValidator
                     path: location.Node.StructuralPath));
                 continue;
             }
-            if (!Enum.IsDefined(contract.Effect) || contract.Effect is not CallableEffect.Read)
+            if (!Enum.IsDefined(contract.Effect) ||
+                contract.Effect is not (CallableEffect.None or CallableEffect.Read or CallableEffect.Write))
                 diagnostics.Add(new CompilerDiagnostic(
                     CompilerDiagnosticCodes.CallableEffectRejected,
                     DiagnosticSeverity.Error,
                     DiagnosticPhase.Admission,
-                    $"Tool '{tool.Name}@{tool.Version}' has effect '{contract.Effect}'; only read-only tools are admitted.",
+                    $"Tool '{tool.Name}@{tool.Version}' has effect '{contract.Effect}'; only effect-free, read-only, and idempotent retry-safe writes are admitted.",
                     path: location.Node.StructuralPath,
                     actual: contract.Effect.ToString()));
             if (!Enum.IsDefined(contract.Idempotency) || contract.Idempotency != CallableIdempotency.Idempotent ||
@@ -853,6 +855,46 @@ internal static class WorkflowBindingValidator
                 $"{subject} is not conservatively retry-safe.",
                 path: path,
                 actual: $"{contract.Idempotency}/{contract.RetrySafety}"));
+    }
+
+    private static void ValidateInferenceLimits(
+        InferenceNode inference,
+        WorkflowPlan plan,
+        List<CompilerDiagnostic> diagnostics)
+    {
+        if (inference.Limits is null)
+            return;
+        if (!IrVersions.SupportsWorkflowPrompts(plan.IrVersion))
+        {
+            diagnostics.Add(new CompilerDiagnostic(
+                CompilerDiagnosticCodes.SemanticValidationFailed,
+                DiagnosticSeverity.Error,
+                DiagnosticPhase.Validation,
+                $"Inference limits require IR v8 or later, not '{plan.IrVersion}'.",
+                path: inference.StructuralPath));
+        }
+
+        if (inference.Limits.MaxTokens is not null &&
+            (inference.Limits.MaxTokens < 1 || inference.Limits.MaxTokens > 1_000_000))
+        {
+            diagnostics.Add(new CompilerDiagnostic(
+                CompilerDiagnosticCodes.SemanticValidationFailed,
+                DiagnosticSeverity.Error,
+                DiagnosticPhase.Validation,
+                $"Inference node '{inference.StructuralPath}' maxTokens must be between 1 and 1000000.",
+                path: inference.StructuralPath));
+        }
+
+        if (inference.Limits.TimeoutSeconds is not null &&
+            (inference.Limits.TimeoutSeconds < 1 || inference.Limits.TimeoutSeconds > 3600))
+        {
+            diagnostics.Add(new CompilerDiagnostic(
+                CompilerDiagnosticCodes.SemanticValidationFailed,
+                DiagnosticSeverity.Error,
+                DiagnosticPhase.Validation,
+                $"Inference node '{inference.StructuralPath}' timeout must be between 1 and 3600 seconds.",
+                path: inference.StructuralPath));
+        }
     }
 
     private static void ValidateCallableNode(

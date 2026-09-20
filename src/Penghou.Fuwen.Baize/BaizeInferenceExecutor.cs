@@ -418,7 +418,22 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
                     continue;
                 }
 
-                lastResponse = await endpoint.Client.CompleteAsync(requestToProvider, cancellationToken).ConfigureAwait(false);
+                lastResponse = (await CompleteWithTimeoutAsync(
+                    endpoint, requestToProvider, request, cancellationToken).ConfigureAwait(false))
+                    .Response;
+                if (lastResponse is null)
+                {
+                    lastFailure = new ExecutionFailure(
+                        ExecutionFailureKind.Timeout,
+                        ExecutionFailureCode.Timeout,
+                        BoundMessage(
+                            $"Inference exceeded its {request.Limits!.TimeoutSeconds}s timeout."));
+                    attempts.Add(FailedAttempt(
+                        attempt, metadata, endpoint,
+                        lastFailure.Code.ToString(), lastFailure.Message,
+                        duration: Stopwatch.GetElapsedTime(attemptStarted)));
+                    break;
+                }
                 AddUsage(lastResponse.Usage?.PromptTokens, ref promptTokens, ref hasPromptTokens);
                 AddUsage(lastResponse.Usage?.CompletionTokens, ref completionTokens, ref hasCompletionTokens);
                 AddUsage(lastResponse.Usage?.TotalTokens, ref totalTokens, ref hasTotalTokens);
@@ -553,7 +568,54 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
             ? LlmResponseFormat.JsonSchema(schemaJson!)
             : null;
         var metadata = new Dictionary<string, object?>(StringComparer.Ordinal) { ["fuwen.operation.key"] = request.Invocation.OperationKey };
-        return new LlmRequest(messages, maxTokens: binding.Policy.MaximumTokens, tools: tools, responseFormat: responseFormat, metadata: metadata);
+        return new LlmRequest(messages, maxTokens: EffectiveMaxTokens(request, binding), tools: tools, responseFormat: responseFormat, metadata: metadata);
+    }
+
+    /// <summary>
+    /// Completes one attempt under the plan-declared timeout when present.
+    /// A timeout fails the node without retry: limits are budgets, not
+    /// retryable errors.
+    /// </summary>
+    private static async Task<(LlmResponse? Response, bool TimedOut)> CompleteWithTimeoutAsync(
+        BaizeEndpointBinding endpoint,
+        LlmRequest requestToProvider,
+        InferenceExecutionRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.Limits?.TimeoutSeconds is not int seconds)
+        {
+            return (await endpoint.Client.CompleteAsync(requestToProvider, cancellationToken)
+                .ConfigureAwait(false), false);
+        }
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(seconds));
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+        try
+        {
+            return (await endpoint.Client.CompleteAsync(requestToProvider, linked.Token)
+                .ConfigureAwait(false), false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return (null, true);
+        }
+    }
+
+    /// <summary>
+    /// Effective token ceiling: the plan-declared limit capped by the host
+    /// binding policy. The host ceiling always wins; the plan can only ask
+    /// for less.
+    /// </summary>
+    private static int? EffectiveMaxTokens(
+        InferenceExecutionRequest request, BaizeInferenceBinding binding)
+    {
+        var policy = binding.Policy.MaximumTokens;
+        var planned = request.Limits?.MaxTokens;
+        if (planned is null)
+            return policy;
+        if (policy is null)
+            return planned;
+        return Math.Min(planned.Value, policy.Value);
     }
 
     /// <summary>

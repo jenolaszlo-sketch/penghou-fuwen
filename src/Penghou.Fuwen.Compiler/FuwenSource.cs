@@ -528,6 +528,7 @@ internal sealed class SourceParser
     private bool workflowSeen;
     private bool promptSeen;
     private bool toolsetSeen;
+    private bool limitsSeen;
     private bool fanOutSeen;
     private bool conditionalMergeSeen;
     private bool repeatSeen;
@@ -586,7 +587,7 @@ internal sealed class SourceParser
                 foreach (var prompt in prompts) builder.AddPrompt(prompt);
                 foreach (var node in nodes) builder.AddNode(node);
                 builder.SetExecutionOrder(new WorkflowExecutionOrder(BuildRegions(workflowName, nodes)));
-                plan = promptSeen || toolsetSeen ? builder.BuildV8() : interactionGateSeen ? builder.BuildV7() : repeatSeen ? builder.BuildV6() : conditionalMergeSeen ? builder.BuildV5() : fanOutSeen ? builder.BuildV4() : builder.BuildV3();
+                plan = promptSeen || toolsetSeen || limitsSeen ? builder.BuildV8() : interactionGateSeen ? builder.BuildV7() : repeatSeen ? builder.BuildV6() : conditionalMergeSeen ? builder.BuildV5() : fanOutSeen ? builder.BuildV4() : builder.BuildV3();
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
             {
@@ -917,6 +918,36 @@ internal sealed class SourceParser
             }
             while (Match(","));
         }
+        InferenceLimits? limits = null;
+        if (Match("limits"))
+        {
+            int? maxTokens = null;
+            int? timeoutSeconds = null;
+            for (var seen = 0; seen < 2; seen++)
+            {
+                if (Match("maxTokens"))
+                {
+                    if (maxTokens is not null)
+                        Error(CompilerDiagnosticCodes.SemanticValidationFailed, "Duplicate 'maxTokens' limit.", Previous);
+                    maxTokens = ParsePositiveInt();
+                }
+                else if (Match("timeout"))
+                {
+                    if (timeoutSeconds is not null)
+                        Error(CompilerDiagnosticCodes.SemanticValidationFailed, "Duplicate 'timeout' limit.", Previous);
+                    timeoutSeconds = ParsePositiveInt();
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            if (maxTokens is null && timeoutSeconds is null)
+                Error(CompilerDiagnosticCodes.SemanticValidationFailed, "Inference limits require 'maxTokens' and/or 'timeout'.", Previous);
+            limits = new InferenceLimits(maxTokens, timeoutSeconds);
+            limitsSeen = true;
+        }
         if (Match("->") || Match(":")) declared = ParseType();
         Match(";");
         var type = declared ?? CallableOutput(profile); var path = parentPath + "/" + name;
@@ -924,7 +955,8 @@ internal sealed class SourceParser
         var node = new InferenceNode(
             name, path, profile, template, arguments, [], type, requirements,
             promptName, promptBindings is null || promptBindings.Count == 0 ? null : promptBindings,
-            tools is null || tools.Count == 0 ? null : tools);
+            tools is null || tools.Count == 0 ? null : tools,
+            limits);
         nodeTypes[name] = type; nodePaths[name] = path; AddSpan(path, start, Previous); Ast(); return node;
     }
 

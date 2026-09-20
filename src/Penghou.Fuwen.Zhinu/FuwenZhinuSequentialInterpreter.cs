@@ -234,7 +234,7 @@ internal static class FuwenZhinuSequentialInterpreter
         if (node.PromptName is null)
         {
             var toolList = node.Tools is null || node.Tools.Count == 0 ? null : node.Tools.ToArray();
-            var identity = new NodeRequestIdentity("inference", nodePath, node.Profile, node.PromptTemplate, arguments, contextInputs, toolList);
+            var identity = new NodeRequestIdentity("inference", nodePath, node.Profile, node.PromptTemplate, arguments, contextInputs, toolList, node.Limits);
             var requestJson = RuntimeValueWire.Serialize(identity);
             return (requestJson, invocation => new InferenceExecutionRequest(
                 invocation,
@@ -245,7 +245,8 @@ internal static class FuwenZhinuSequentialInterpreter
                 node.OutputType,
                 null,
                 null,
-                toolList));
+                toolList,
+                node.Limits));
         }
 
         var definition = plan.Prompts?.FirstOrDefault(
@@ -264,7 +265,8 @@ internal static class FuwenZhinuSequentialInterpreter
             definition.GetSemanticDigest(),
             values.Select(pair => new RuntimeArgument(pair.Key, pair.Value)).ToArray(),
             tools,
-            contextInputs);
+            contextInputs,
+            node.Limits);
         var promptJson = RuntimeValueWire.Serialize(promptIdentity);
         return (promptJson, invocation => new InferenceExecutionRequest(
             invocation,
@@ -275,7 +277,8 @@ internal static class FuwenZhinuSequentialInterpreter
             node.OutputType,
             definition,
             rendered,
-            tools));
+            tools,
+            node.Limits));
     }
 
     private static async Task<RuntimeValue> ExecuteInferenceAsync(
@@ -1812,7 +1815,9 @@ internal static class FuwenZhinuSequentialInterpreter
         IReadOnlyList<RuntimeArgument> Arguments,
         IReadOnlyList<InferenceContextInput>? ContextInputs,
         [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        IReadOnlyList<DescriptorReference>? Tools = null);
+        IReadOnlyList<DescriptorReference>? Tools = null,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        InferenceLimits? Limits = null);
 
     private sealed record PromptNodeRequestIdentity(
         string Kind,
@@ -1821,7 +1826,9 @@ internal static class FuwenZhinuSequentialInterpreter
         string PromptDigest,
         IReadOnlyList<RuntimeArgument> PromptBindings,
         IReadOnlyList<DescriptorReference>? Tools,
-        IReadOnlyList<InferenceContextInput>? ContextInputs);
+        IReadOnlyList<InferenceContextInput>? ContextInputs,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        InferenceLimits? Limits = null);
 
     private sealed record ConditionRequestIdentity(
         string NodePath,

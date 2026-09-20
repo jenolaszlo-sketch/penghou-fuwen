@@ -138,7 +138,8 @@ public sealed class InferenceExecutionRequest : ExecutionRequest
         FuwenType outputType,
         PromptDefinition? prompt = null,
         IReadOnlyList<RenderedPromptMessage>? renderedPrompt = null,
-        IReadOnlyList<DescriptorReference>? tools = null)
+        IReadOnlyList<DescriptorReference>? tools = null,
+        InferenceLimits? limits = null)
         : base(invocation, arguments, outputType)
     {
         Profile = ExecutionPortValidation.Descriptor(profile, DescriptorKind.InferenceProfile, nameof(profile));
@@ -177,6 +178,12 @@ public sealed class InferenceExecutionRequest : ExecutionRequest
             }
             Tools = Array.AsReadOnly(tools.ToArray());
         }
+
+        if (limits?.MaxTokens is < 1)
+            throw new ArgumentOutOfRangeException(nameof(limits), "MaxTokens must be positive.");
+        if (limits?.TimeoutSeconds is < 1)
+            throw new ArgumentOutOfRangeException(nameof(limits), "TimeoutSeconds must be positive.");
+        Limits = limits;
         ArgumentNullException.ThrowIfNull(contextInputs);
         if (contextInputs.Count > MaximumContextInputs)
             throw new ArgumentOutOfRangeException(nameof(contextInputs), $"An inference request supports at most {MaximumContextInputs} context inputs.");
@@ -204,6 +211,8 @@ public sealed class InferenceExecutionRequest : ExecutionRequest
     public IReadOnlyList<RenderedPromptMessage>? RenderedPrompt { get; }
     /// <summary>The admitted model-callable tool descriptors, or null when no tools were declared.</summary>
     public IReadOnlyList<DescriptorReference>? Tools { get; }
+    /// <summary>Optional per-inference execution bounds declared by the plan.</summary>
+    public InferenceLimits? Limits { get; }
     /// <summary>The required typed context inputs and their snapshot evidence.</summary>
     public IReadOnlyList<InferenceContextInput> ContextInputs => contextInputs;
     /// <summary>Alias for <see cref="ContextInputs"/>.</summary>

@@ -10,8 +10,11 @@ optional `tools` clause naming a toolset, an inline tool list, or `none`),
 restricted bindings, control-only `if/else` with an optional explicit
 `merge <then>, <else> -> <type>` for one value-producing result, bounded
 keyed `fanout` regions with activity/conditional bodies, and a complete
-`return`. Prompt declarations and inference tools require IR v8; only
-read-only idempotent retry-safe tools admit.
+`return`. Prompt declarations, inference tools, and inference `limits`
+(`maxTokens` and/or `timeout`, either or both) require IR v8; only
+effect-free, read-only, and idempotent retry-safe write tools admit.
+`maxTokens` participates in execution fingerprints; `timeout` bounds
+wall-clock time per attempt without retry.
 
 Use exact descriptor pins (`name@version#sha256-value`) when source must compile
 against a catalogue that is not the in-memory test catalogue. The catalogue is

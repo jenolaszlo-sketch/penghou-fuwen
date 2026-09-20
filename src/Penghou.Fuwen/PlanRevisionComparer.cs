@@ -194,6 +194,8 @@ public static class PlanRevisionComparer
                 (value.Tools ?? Enumerable.Empty<DescriptorReference>())
                     .Select(tool => $"{tool.Kind:D}|{tool.Name}|{tool.Version}|{tool.ContentDigest.Value}")
                     .OrderBy(key => key, StringComparer.Ordinal)),
+            MaxTokens = value.Limits?.MaxTokens,
+            TimeoutSeconds = value.Limits?.TimeoutSeconds,
         },
         ActivityNode value => new { Kind = "activity", value.Activity, value.OutputType },
         ConditionalNode value => new { Kind = "conditional", value.Condition.Operator, MergeResultType = value.Merge?.ResultType },

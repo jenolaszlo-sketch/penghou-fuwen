@@ -149,6 +149,64 @@ public sealed class FuwenSourceToolTests
         result.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.CallableEffectRejected);
     }
 
+    [Theory]
+    [InlineData(CallableEffect.None)]
+    [InlineData(CallableEffect.Read)]
+    [InlineData(CallableEffect.Write)]
+    public async Task Retry_safe_effects_admit_with_idempotent_contracts(CallableEffect effect)
+    {
+        var catalogue = new InMemoryTrustedCatalogue([
+            new TrustedCatalogueDescriptor(
+                new DescriptorReference(DescriptorKind.InferenceProfile, "sample.profile", "1", Digest('d')),
+                callableContract: new CallableContract(
+                    new CallableSignature(
+                        [new CallableParameter("request", new PrimitiveType(FuwenPrimitiveKind.String))],
+                        new PrimitiveType(FuwenPrimitiveKind.String)),
+                    CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+            ToolDescriptor("sample.store", 'b', effect: effect),
+        ]);
+        var source = PromptPrelude +
+            "workflow demo(input: string) -> string {\n" +
+            $"  infer hello = infer \"{ProfileRef}\" prompt greet(name: input;) tools [\"sample.store@1#bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"] -> string;\n" +
+            "  return hello;\n" +
+            "}";
+
+        var result = await new FuwenSourceCompiler(catalogue)
+            .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeTrue(
+            string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message}")));
+    }
+
+    [Theory]
+    [InlineData(CallableEffect.Write, CallableIdempotency.NonIdempotent, CallableRetrySafety.Safe)]
+    [InlineData(CallableEffect.Write, CallableIdempotency.Idempotent, CallableRetrySafety.Unsafe)]
+    [InlineData(CallableEffect.External, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)]
+    public async Task Unsafe_effects_are_rejected(
+        CallableEffect effect, CallableIdempotency idempotency, CallableRetrySafety safety)
+    {
+        var catalogue = new InMemoryTrustedCatalogue([
+            new TrustedCatalogueDescriptor(
+                new DescriptorReference(DescriptorKind.InferenceProfile, "sample.profile", "1", Digest('d')),
+                callableContract: new CallableContract(
+                    new CallableSignature(
+                        [new CallableParameter("request", new PrimitiveType(FuwenPrimitiveKind.String))],
+                        new PrimitiveType(FuwenPrimitiveKind.String)),
+                    CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+            ToolDescriptor("sample.store", 'b', effect: effect, idempotency: idempotency, safety: safety),
+        ]);
+        var source = PromptPrelude +
+            "workflow demo(input: string) -> string {\n" +
+            $"  infer hello = infer \"{ProfileRef}\" prompt greet(name: input;) tools [\"sample.store@1#bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"] -> string;\n" +
+            "  return hello;\n" +
+            "}";
+
+        var result = await new FuwenSourceCompiler(catalogue)
+            .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Succeeded.Should().BeFalse();
+    }
+
     [Fact]
     public async Task Unregistered_tool_is_rejected_at_admission()
     {

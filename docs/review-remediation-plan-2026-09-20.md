@@ -67,8 +67,9 @@ evidence before changing behavior.
   - [x] Compare plans whose only change is a prompt-binding value and assert the
     node-level dependency explanation. Completed 2026-09-20 with literal-value
     and canonical binding-order regressions on .NET 8 and .NET 10.
-  - [ ] Exercise media generation with a cooperative provider where the plan
-    timeout is stricter than the host timeout.
+  - [x] Exercise media generation with a cooperative provider where the plan
+    timeout is stricter than the host timeout. Completed 2026-09-21 with a
+    cancellation-aware delayed submission and exact deadline provenance.
   - [ ] Capture a workflow-owned prompt request with a unique context value and
     prove whether that value reaches the fake model.
   - [x] Compile descriptor shorthand through both discovery-capable and
@@ -139,18 +140,19 @@ run begins.
 
 ### R34 — Enforce inference limits consistently
 
-- [ ] **M1.10 — Specify deadline coverage.** Define whether submission,
+- [x] **M1.10 — Specify deadline coverage.** Define whether submission,
   polling, publication, and recovery are inside the plan timeout and how an
-  unknown remote outcome is represented.
-- [ ] **M1.11 — Apply the stricter effective deadline.** Media generation uses
+  unknown remote outcome is represented. Completed 2026-09-21 in ADR 0006.
+- [x] **M1.11 — Apply the stricter effective deadline.** Media generation uses
   the tighter supported host/plan limit and does not silently ignore a declared
-  limit.
-- [ ] **M1.12 — Preserve honest cancellation evidence.** Distinguish caller
+  limit. Unsupported token limits now fail before provider invocation.
+- [x] **M1.12 — Preserve honest cancellation evidence.** Distinguish caller
   cancellation, local deadline, provider timeout, and possibly committed remote
-  work; do not imply remote rollback.
-- [ ] **M1.13 — Add timeout tests.** Cover plan stricter than host, host stricter
+  work; do not imply remote rollback. Completed 2026-09-21 with distinct
+  provider codes and conservative committed-effect evidence.
+- [x] **M1.13 — Add timeout tests.** Cover plan stricter than host, host stricter
   than plan, submission, polling, caller cancellation, publication boundary,
-  and non-retry behavior.
+  and non-retry behavior. Completed 2026-09-21 on .NET 8 and .NET 10.
 
 Exit criteria: all supported inference modalities enforce or explicitly reject
 each declared limit, and failures accurately describe commitment uncertainty.
@@ -372,6 +374,7 @@ Add one entry per completed parent task or milestone:
 | 2026-09-20 | M0.1 tool regression subtask; M1.1–M1.4 | Working tree; commit pending | Format clean; Release build 0 warnings/errors; 475 tests pass on each of .NET 8 and .NET 10; independent canonical JSON vector passes | R31 remains in progress until M1.5 cross-region and replay coverage is complete |
 | 2026-09-20 | M0.1 comparer/catalogue subtasks; M0.2 duplicate-key subtask; M0.3; M1.5; M2.1–M2.2; M2.4–M2.5; M2.7 | Working tree; commit pending | Format clean; Release build 0 warnings/errors; 483 tests pass on each of .NET 8 and .NET 10 (966 executions); independent canonical JSON vector passes | R31 resolved; R33 and R36 core defects resolved; broader M2.3, M2.6, and R37 documentation work remains |
 | 2026-09-21 | M2.3; M2.6 | Working tree after `4e2b07e`; commit pending | Format clean; Release build 0 warnings/errors; 488 tests pass on each of .NET 8 and .NET 10 (976 executions); independent canonical JSON vector passes | R33 and R36 acceptance matrices complete; custom catalogues cannot produce silent exact-resolution failures |
+| 2026-09-21 | M0.1 media-timeout subtask; M1.10–M1.13 | Working tree after `2bfe03b`; commit pending | Format clean; Release build 0 warnings/errors; 495 tests pass on each of .NET 8 and .NET 10 (990 executions); independent canonical JSON vector passes | R34 resolved; ADR 0006 defines one effective deadline across submission, polling, and publication |
 
 ## Deferred decisions
 

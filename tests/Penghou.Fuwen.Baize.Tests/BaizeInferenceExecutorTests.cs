@@ -522,6 +522,166 @@ public sealed class BaizeInferenceExecutorTests
     }
 
     [Fact]
+    public async Task Generation_uses_plan_deadline_when_it_is_stricter_than_host_policy()
+    {
+        var (profile, prompt) = Descriptors();
+        var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "generated-image");
+        var generation = new DelayedGenerationClient(submissionDelay: TimeSpan.FromSeconds(5));
+        var binding = new BaizeGenerationBinding(
+            profile, prompt, artifactDescriptor, BaizeGenerationModality.Image,
+            "endpoint", "provider", "model", generation,
+            request => new ImageGenerationRequest { Prompt = "draw", IdempotencyKey = request.Invocation.OperationKey },
+            new FakeGeneratedAssetPublisher(),
+            new BaizeGenerationPolicy(
+                pollingInterval: TimeSpan.FromMilliseconds(1),
+                timeout: TimeSpan.FromSeconds(5)));
+
+        var result = await new BaizeGenerationInferenceExecutor([binding]).ExecuteAsync(
+            Request(profile, prompt, new ArtifactType(artifactDescriptor), new InferenceLimits(null, 1)),
+            TestContext.Current.CancellationToken);
+
+        result.Failure!.Code.Should().Be(ExecutionFailureCode.Timeout);
+        result.Failure.ProviderCode.Should().Be("PlanDeadlineExceeded");
+        result.Failure.MayHaveCommittedEffect.Should().BeTrue();
+        result.Failure.RetryDisposition.Should().Be(ExecutionRetryDisposition.Never);
+        generation.SubmissionCalls.Should().Be(1);
+        generation.PollingCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Generation_uses_host_deadline_when_it_is_stricter_than_plan()
+    {
+        var (profile, prompt) = Descriptors();
+        var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "generated-image");
+        var generation = new DelayedGenerationClient(
+            pollingDelay: TimeSpan.FromSeconds(5),
+            initiallyQueued: true);
+        var binding = new BaizeGenerationBinding(
+            profile, prompt, artifactDescriptor, BaizeGenerationModality.Image,
+            "endpoint", "provider", "model", generation,
+            request => new ImageGenerationRequest { Prompt = "draw", IdempotencyKey = request.Invocation.OperationKey },
+            new FakeGeneratedAssetPublisher(),
+            new BaizeGenerationPolicy(
+                pollingInterval: TimeSpan.FromMilliseconds(1),
+                timeout: TimeSpan.FromMilliseconds(50)));
+
+        var result = await new BaizeGenerationInferenceExecutor([binding]).ExecuteAsync(
+            Request(profile, prompt, new ArtifactType(artifactDescriptor), new InferenceLimits(null, 5)),
+            TestContext.Current.CancellationToken);
+
+        result.Failure!.Code.Should().Be(ExecutionFailureCode.Timeout);
+        result.Failure.ProviderCode.Should().Be("HostDeadlineExceeded");
+        result.Failure.MayHaveCommittedEffect.Should().BeTrue();
+        result.Failure.RetryDisposition.Should().Be(ExecutionRetryDisposition.Never);
+        generation.SubmissionCalls.Should().Be(1);
+        generation.PollingCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Generation_deadline_covers_durable_publication()
+    {
+        var (profile, prompt) = Descriptors();
+        var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "generated-image");
+        var generation = new DelayedGenerationClient();
+        var publisher = new DelayedGeneratedAssetPublisher(TimeSpan.FromSeconds(5));
+        var binding = new BaizeGenerationBinding(
+            profile, prompt, artifactDescriptor, BaizeGenerationModality.Image,
+            "endpoint", "provider", "model", generation,
+            request => new ImageGenerationRequest { Prompt = "draw", IdempotencyKey = request.Invocation.OperationKey },
+            publisher,
+            new BaizeGenerationPolicy(
+                pollingInterval: TimeSpan.FromMilliseconds(1),
+                timeout: TimeSpan.FromMilliseconds(50)));
+
+        var result = await new BaizeGenerationInferenceExecutor([binding]).ExecuteAsync(
+            Request(profile, prompt, new ArtifactType(artifactDescriptor), new InferenceLimits(null, 5)),
+            TestContext.Current.CancellationToken);
+
+        result.Failure!.Code.Should().Be(ExecutionFailureCode.Timeout);
+        result.Failure.ProviderCode.Should().Be("HostDeadlineExceeded");
+        result.Failure.MayHaveCommittedEffect.Should().BeTrue();
+        result.Failure.RetryDisposition.Should().Be(ExecutionRetryDisposition.Never);
+        result.Evidence!.Attempts.Should().ContainSingle().Which.Succeeded.Should().BeTrue();
+        publisher.Calls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Generation_rejects_unsupported_token_limit_before_provider_call()
+    {
+        var (profile, prompt) = Descriptors();
+        var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "generated-image");
+        var generation = new DelayedGenerationClient();
+        var binding = new BaizeGenerationBinding(
+            profile, prompt, artifactDescriptor, BaizeGenerationModality.Image,
+            "endpoint", "provider", "model", generation,
+            request => new ImageGenerationRequest { Prompt = "draw", IdempotencyKey = request.Invocation.OperationKey },
+            new FakeGeneratedAssetPublisher());
+
+        var result = await new BaizeGenerationInferenceExecutor([binding]).ExecuteAsync(
+            Request(profile, prompt, new ArtifactType(artifactDescriptor), new InferenceLimits(100, null)),
+            TestContext.Current.CancellationToken);
+
+        result.Failure!.Kind.Should().Be(ExecutionFailureKind.Contract);
+        result.Failure.Code.Should().Be(ExecutionFailureCode.InvalidInput);
+        result.Failure.ProviderCode.Should().Be("UnsupportedTokenLimit");
+        result.Evidence!.Attempts.Should().BeEmpty();
+        generation.SubmissionCalls.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Generation_preserves_caller_cancellation_instead_of_reporting_local_timeout(bool duringPolling)
+    {
+        var (profile, prompt) = Descriptors();
+        var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "generated-image");
+        var generation = new DelayedGenerationClient(
+            submissionDelay: duringPolling ? null : TimeSpan.FromSeconds(5),
+            pollingDelay: duringPolling ? TimeSpan.FromSeconds(5) : null,
+            initiallyQueued: duringPolling);
+        var binding = new BaizeGenerationBinding(
+            profile, prompt, artifactDescriptor, BaizeGenerationModality.Image,
+            "endpoint", "provider", "model", generation,
+            request => new ImageGenerationRequest { Prompt = "draw", IdempotencyKey = request.Invocation.OperationKey },
+            new FakeGeneratedAssetPublisher(),
+            new BaizeGenerationPolicy(
+                pollingInterval: TimeSpan.FromMilliseconds(1),
+                timeout: TimeSpan.FromSeconds(5)));
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+
+        var act = () => new BaizeGenerationInferenceExecutor([binding]).ExecuteAsync(
+            Request(profile, prompt, new ArtifactType(artifactDescriptor), new InferenceLimits(null, 5)),
+            cancellation.Token).AsTask();
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        generation.SubmissionCalls.Should().Be(1);
+        generation.PollingCalls.Should().Be(duringPolling ? 1 : 0);
+    }
+
+    [Fact]
+    public async Task Generation_keeps_provider_timeout_distinct_from_local_deadline()
+    {
+        var (profile, prompt) = Descriptors();
+        var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "generated-image");
+        var generation = new TerminalGenerationClient(GenerationErrorKind.TimeoutExceeded);
+        var binding = new BaizeGenerationBinding(
+            profile, prompt, artifactDescriptor, BaizeGenerationModality.Image,
+            "endpoint", "provider", "model", generation,
+            request => new ImageGenerationRequest { Prompt = "draw", IdempotencyKey = request.Invocation.OperationKey },
+            new FakeGeneratedAssetPublisher(),
+            new BaizeGenerationPolicy(timeout: TimeSpan.FromSeconds(5)));
+
+        var result = await new BaizeGenerationInferenceExecutor([binding]).ExecuteAsync(
+            Request(profile, prompt, new ArtifactType(artifactDescriptor), new InferenceLimits(null, 5)),
+            TestContext.Current.CancellationToken);
+
+        result.Failure!.Code.Should().Be(ExecutionFailureCode.Timeout);
+        result.Failure.ProviderCode.Should().Be(GenerationErrorKind.TimeoutExceeded.ToString());
+        result.Failure.MayHaveCommittedEffect.Should().BeTrue();
+        result.Failure.RetryDisposition.Should().Be(ExecutionRetryDisposition.Never);
+    }
+
+    [Fact]
     public async Task Generation_can_resume_a_partial_publication_with_the_same_operation_identity()
     {
         var (profile, prompt) = Descriptors();
@@ -827,8 +987,12 @@ public sealed class BaizeInferenceExecutorTests
     private static BaizeInferenceBinding Binding(DescriptorReference profile, DescriptorReference prompt, FakeClient client, BaizeInferencePolicy? policy = null) =>
         new(profile, prompt, [new BaizeEndpointBinding("primary", "provider", "model", client)], policy: policy);
 
-    private static InferenceExecutionRequest Request(DescriptorReference profile, DescriptorReference prompt, FuwenType output) =>
-        new(Invocation(), profile, prompt, [], [], output);
+    private static InferenceExecutionRequest Request(
+        DescriptorReference profile,
+        DescriptorReference prompt,
+        FuwenType output,
+        InferenceLimits? limits = null) =>
+        new(Invocation(), profile, prompt, [], [], output, limits: limits);
 
     private static InferenceExecutionRequest Request(
         DescriptorReference profile,
@@ -1000,6 +1164,106 @@ public sealed class BaizeInferenceExecutorTests
                     Calls == 1 ? PublicationDisposition.Created : PublicationDisposition.Replayed)).ToArray();
             return ValueTask.FromResult(receipts);
         }
+    }
+
+    private sealed class DelayedGenerationClient(
+        TimeSpan? submissionDelay = null,
+        TimeSpan? pollingDelay = null,
+        bool initiallyQueued = false) : IGenerationClient
+    {
+        private readonly GenerationOperationHandle handle = new(
+            "provider", "endpoint", "delayed-operation", "model", new Dictionary<string, string>());
+
+        public int SubmissionCalls { get; private set; }
+        public int PollingCalls { get; private set; }
+        public GenerationCapabilities Capabilities { get; } = new()
+        {
+            Features = GenerationFeature.IdempotentSubmission | GenerationFeature.OperationRetrieval,
+        };
+
+        public async Task<GenerationOperation> SubmitAsync(
+            GenerationRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            SubmissionCalls++;
+            if (submissionDelay is { } delay)
+                await Task.Delay(delay, cancellationToken);
+            return initiallyQueued
+                ? new GenerationOperation(handle, GenerationOperationState.Queued, ProviderMetadata: new Dictionary<string, object?>())
+                : Completed();
+        }
+
+        public async Task<GenerationOperation> GetAsync(
+            GenerationOperationHandle operationHandle,
+            CancellationToken cancellationToken = default)
+        {
+            PollingCalls++;
+            if (pollingDelay is { } delay)
+                await Task.Delay(delay, cancellationToken);
+            return Completed();
+        }
+
+        public Task<GenerationOperation> CancelAsync(
+            GenerationOperationHandle operationHandle,
+            CancellationToken cancellationToken = default) => Task.FromResult(new GenerationOperation(
+                handle,
+                GenerationOperationState.Canceled,
+                Error: new GenerationError(GenerationErrorKind.Canceled, "cancelled"),
+                ProviderMetadata: new Dictionary<string, object?>()));
+
+        private GenerationOperation Completed() => new(
+            handle,
+            GenerationOperationState.Succeeded,
+            new GenerationResult(
+                [new GeneratedAsset(new ProviderGeneratedAssetSource("asset-1", "provider"), "image/png")]),
+            ProviderMetadata: new Dictionary<string, object?>());
+    }
+
+    private sealed class DelayedGeneratedAssetPublisher(TimeSpan delay) : IBaizeGeneratedAssetPublisher
+    {
+        public int Calls { get; private set; }
+
+        public async ValueTask<IReadOnlyList<ArtifactPublicationReceipt>> PublishAsync(
+            InferenceExecutionRequest request,
+            IReadOnlyList<GeneratedAsset> assets,
+            DescriptorReference artifactDescriptor,
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            await Task.Delay(delay, cancellationToken);
+            return [];
+        }
+    }
+
+    private sealed class TerminalGenerationClient(GenerationErrorKind errorKind) : IGenerationClient
+    {
+        private readonly GenerationOperationHandle handle = new(
+            "provider", "endpoint", "terminal-operation", "model", new Dictionary<string, string>());
+
+        public GenerationCapabilities Capabilities { get; } = new()
+        {
+            Features = GenerationFeature.IdempotentSubmission | GenerationFeature.OperationRetrieval,
+        };
+
+        public Task<GenerationOperation> SubmitAsync(
+            GenerationRequest request,
+            CancellationToken cancellationToken = default) => Task.FromResult(new GenerationOperation(
+                handle,
+                GenerationOperationState.Failed,
+                Error: new GenerationError(errorKind, "provider deadline"),
+                ProviderMetadata: new Dictionary<string, object?>()));
+
+        public Task<GenerationOperation> GetAsync(
+            GenerationOperationHandle operationHandle,
+            CancellationToken cancellationToken = default) => throw new InvalidOperationException("Terminal operations are not polled.");
+
+        public Task<GenerationOperation> CancelAsync(
+            GenerationOperationHandle operationHandle,
+            CancellationToken cancellationToken = default) => Task.FromResult(new GenerationOperation(
+                handle,
+                GenerationOperationState.Canceled,
+                Error: new GenerationError(GenerationErrorKind.Canceled, "cancelled"),
+                ProviderMetadata: new Dictionary<string, object?>()));
     }
 
     private sealed class ResumeAfterPartialPublisher : IBaizeGeneratedAssetPublisher

@@ -222,6 +222,13 @@ public sealed class BaizeGenerationInferenceExecutor : IInferenceExecutor
 
         var started = Stopwatch.GetTimestamp();
         var modality = ToInferenceModality(binding.Modality);
+        if (request.Limits?.MaxTokens is not null)
+        {
+            return await FailAsync(request, binding, modality, started, ExecutionFailureKind.Contract,
+                ExecutionFailureCode.InvalidInput,
+                "Token limits are not supported for media generation; omit max tokens from this inference request.",
+                "UnsupportedTokenLimit", cancellationToken).ConfigureAwait(false);
+        }
         string? rejection;
         try
         {
@@ -261,14 +268,23 @@ public sealed class BaizeGenerationInferenceExecutor : IInferenceExecutor
                 "The generation request must use the Fuwen operation key as its idempotency key.",
                 "IdempotencyKeyMismatch", cancellationToken).ConfigureAwait(false);
 
+        var deadline = EffectiveDeadline(binding.Policy.Timeout, request.Limits?.TimeoutSeconds);
+        using var deadlineCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadlineCancellation.CancelAfter(deadline.Timeout);
         GenerationResult result;
         try
         {
-            result = await ExecuteDurablyAsync(binding, generationRequest, cancellationToken).ConfigureAwait(false);
+            result = await ExecuteDurablyAsync(binding, generationRequest, deadlineCancellation.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
+        }
+        catch (OperationCanceledException) when (deadlineCancellation.IsCancellationRequested)
+        {
+            return await FailAsync(request, binding, modality, started, ExecutionFailureKind.Timeout,
+                ExecutionFailureCode.Timeout, deadline.Message, deadline.ProviderCode, cancellationToken,
+                mayHaveCommittedEffect: true, attemptSucceeded: false).ConfigureAwait(false);
         }
         catch (GenerationTerminalException exception)
         {
@@ -276,13 +292,6 @@ public sealed class BaizeGenerationInferenceExecutor : IInferenceExecutor
             return await FailAsync(request, binding, modality, started, mapped.Kind, mapped.Code,
                 exception.Error.Message, exception.Error.Kind.ToString(), cancellationToken,
                 mapped.MayHaveCommittedEffect, attemptSucceeded: false).ConfigureAwait(false);
-        }
-        catch (GenerationPollingTimeoutException)
-        {
-            return await FailAsync(request, binding, modality, started, ExecutionFailureKind.Timeout,
-                ExecutionFailureCode.Timeout, "Baize generation exceeded the trusted polling timeout.",
-                GenerationErrorKind.TimeoutExceeded.ToString(), cancellationToken,
-                mayHaveCommittedEffect: true, attemptSucceeded: false).ConfigureAwait(false);
         }
         catch (Exception exception)
         {
@@ -315,13 +324,21 @@ public sealed class BaizeGenerationInferenceExecutor : IInferenceExecutor
         IReadOnlyList<ArtifactPublicationReceipt> publications;
         try
         {
+            deadlineCancellation.Token.ThrowIfCancellationRequested();
             publications = await binding.Publisher.PublishAsync(
-                request, assets, binding.ArtifactDescriptor, cancellationToken).ConfigureAwait(false);
+                request, assets, binding.ArtifactDescriptor, deadlineCancellation.Token).ConfigureAwait(false);
             ValidatePublications(publications, assets.Length, request.Invocation.OperationKey, binding.ArtifactDescriptor);
+            deadlineCancellation.Token.ThrowIfCancellationRequested();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
+        }
+        catch (OperationCanceledException) when (deadlineCancellation.IsCancellationRequested)
+        {
+            return await FailAsync(request, binding, modality, started, ExecutionFailureKind.Timeout,
+                ExecutionFailureCode.Timeout, deadline.Message, deadline.ProviderCode, cancellationToken,
+                mayHaveCommittedEffect: true, cost: cost, attemptSucceeded: true).ConfigureAwait(false);
         }
         catch (Exception exception)
         {
@@ -454,41 +471,54 @@ public sealed class BaizeGenerationInferenceExecutor : IInferenceExecutor
         GenerationRequest request,
         CancellationToken cancellationToken)
     {
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(binding.Policy.Timeout);
-        try
+        var operation = await binding.Client.SubmitAsync(request, cancellationToken).ConfigureAwait(false);
+        var submittedHandle = operation?.Handle ?? throw new InvalidOperationException(
+            "Baize generation submission did not include an operation handle.");
+        EnsureSubmittedOperationIdentity(binding, submittedHandle);
+        while (true)
         {
-            var operation = await binding.Client.SubmitAsync(request, timeout.Token).ConfigureAwait(false);
-            var submittedHandle = operation?.Handle ?? throw new InvalidOperationException(
-                "Baize generation submission did not include an operation handle.");
-            EnsureSubmittedOperationIdentity(binding, submittedHandle);
-            while (true)
+            var currentHandle = operation.Handle ?? throw new InvalidOperationException(
+                "Baize generation polling returned an operation without a handle.");
+            EnsureStableOperationIdentity(submittedHandle, currentHandle);
+            switch (operation.State)
             {
-                var currentHandle = operation.Handle ?? throw new InvalidOperationException(
-                    "Baize generation polling returned an operation without a handle.");
-                EnsureStableOperationIdentity(submittedHandle, currentHandle);
-                switch (operation.State)
-                {
-                    case GenerationOperationState.Succeeded:
-                        return operation.Result ?? throw new InvalidOperationException(
-                            "A successful Baize generation operation did not include a result.");
-                    case GenerationOperationState.Failed:
-                    case GenerationOperationState.Canceled:
-                        throw new GenerationTerminalException(operation.Error ?? new GenerationError(
-                            operation.State == GenerationOperationState.Canceled
-                                ? GenerationErrorKind.Canceled
-                                : GenerationErrorKind.GenerationFailed,
-                            $"Baize generation ended in state '{operation.State}'."));
-                }
-
-                await Task.Delay(binding.Policy.PollingInterval, timeout.Token).ConfigureAwait(false);
-                operation = await binding.Client.GetAsync(currentHandle, timeout.Token).ConfigureAwait(false);
+                case GenerationOperationState.Succeeded:
+                    return operation.Result ?? throw new InvalidOperationException(
+                        "A successful Baize generation operation did not include a result.");
+                case GenerationOperationState.Failed:
+                case GenerationOperationState.Canceled:
+                    throw new GenerationTerminalException(operation.Error ?? new GenerationError(
+                        operation.State == GenerationOperationState.Canceled
+                            ? GenerationErrorKind.Canceled
+                            : GenerationErrorKind.GenerationFailed,
+                        $"Baize generation ended in state '{operation.State}'."));
             }
+
+            await Task.Delay(binding.Policy.PollingInterval, cancellationToken).ConfigureAwait(false);
+            operation = await binding.Client.GetAsync(currentHandle, cancellationToken).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && timeout.IsCancellationRequested)
+    }
+
+    private static EffectiveGenerationDeadline EffectiveDeadline(TimeSpan hostTimeout, int? planTimeoutSeconds)
+    {
+        if (planTimeoutSeconds is null)
         {
-            throw new GenerationPollingTimeoutException();
+            return new EffectiveGenerationDeadline(
+                hostTimeout,
+                "Baize generation exceeded the trusted host deadline.",
+                "HostDeadlineExceeded");
         }
+
+        var planTimeout = TimeSpan.FromSeconds(planTimeoutSeconds.Value);
+        return planTimeout <= hostTimeout
+            ? new EffectiveGenerationDeadline(
+                planTimeout,
+                "Baize generation exceeded the plan-declared deadline.",
+                "PlanDeadlineExceeded")
+            : new EffectiveGenerationDeadline(
+                hostTimeout,
+                "Baize generation exceeded the trusted host deadline.",
+                "HostDeadlineExceeded");
     }
 
     private static void EnsureStableOperationIdentity(
@@ -560,5 +590,5 @@ public sealed class BaizeGenerationInferenceExecutor : IInferenceExecutor
         public GenerationError Error { get; } = error;
     }
 
-    private sealed class GenerationPollingTimeoutException : Exception;
+    private sealed record EffectiveGenerationDeadline(TimeSpan Timeout, string Message, string ProviderCode);
 }

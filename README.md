@@ -1,145 +1,204 @@
 # Penghou.Fuwen
 
-Penghou.Fuwen is a proposed typed language and compiler for portable,
-artifact-driven AI workflows. It turns bounded, capability-reviewed source into
-a canonical immutable executable plan. Penghou.Zhinu executes that plan;
-Fuwen does not replace the workflow engine.
+[![CI](https://github.com/jenolaszlo-sketch/penghou-fuwen/actions/workflows/ci.yml/badge.svg)](https://github.com/jenolaszlo-sketch/penghou-fuwen/actions/workflows/ci.yml)
+[![NuGet Compiler](https://img.shields.io/nuget/vpre/Penghou.Fuwen.Compiler?label=NuGet%20Compiler)](https://www.nuget.org/packages/Penghou.Fuwen.Compiler)
+[![License](https://img.shields.io/github/license/jenolaszlo-sketch/penghou-fuwen)](LICENSE)
 
-The same language is intended to coordinate code, documents, datasets,
-research, images, audio, video, model outputs, manifests, and validation
-evidence. These are represented by typed immutable artifact references rather
-than domain-specific grammar or filesystem paths.
+Penghou.Fuwen is a typed workflow language, compiler, and immutable intermediate
+representation for portable, artifact-driven AI workflows. It turns bounded,
+capability-reviewed source into a canonical executable plan. Penghou.Zhinu
+executes that plan durably; Fuwen does not replace the workflow engine.
+
+Fuwen treats code, documents, datasets, research, media, model outputs,
+manifests, and validation evidence as typed immutable artifact references.
+Workflow source never embeds C#, Python, JavaScript, shell, credentials, or
+unrestricted filesystem access.
+
+```text
+.fuwen source
+    -> bounded parser and semantic compiler
+    -> exact catalogue resolution and capability review
+    -> immutable canonical WorkflowPlan + execution fingerprint
+    -> host admission receipt
+    -> durable execution through Penghou.Fuwen.Zhinu
+```
 
 ## Why Fuwen
 
-Applications currently need substantial custom code to connect inference,
-context, activities, artifacts, retries, validation, and durable workflow
-execution. Fuwen makes those relationships explicit and reviewable before a
-workflow runs:
+Fuwen makes the parts of an AI workflow that affect safety, reproducibility,
+and replay visible before execution:
 
-- typed inputs, outputs, bindings, and artifact references;
-- trusted activity, context, inference-profile, template, and tool catalogues;
-- capability and resource-budget analysis;
-- stable structural node identities and execution fingerprints;
-- canonical immutable IR suitable for durable execution and audit;
-- portable semantics without embedded C#, Python, JavaScript, or shell.
+- typed inputs, outputs, bindings, schemas, enums, and artifact references;
+- exact version-and-digest pins for activities, contexts, inference profiles,
+  prompt templates, and tools;
+- workflow-owned prompts with typed parameters and canonical rendering;
+- capability, resource-budget, callable-effect, idempotency, and retry checks;
+- stable structural node identities, source maps, and execution fingerprints;
+- bounded conditionals, keyed fan-out, repeat regions, checkpoints, and waits;
+- immutable plan revisions and deterministic change explanations.
 
-## Ecosystem responsibilities
+The host remains responsible for trusted catalogues, credentials, artifact
+storage, authorization, admission policy, and resource limits. Provider output
+is untrusted until it passes the declared Fuwen type.
 
-- **Fuwen** owns source syntax, binding, typing, capability analysis, canonical
-  IR, fingerprints, source maps, and diagnostics.
-- **Zhinu** owns durable execution, scheduling, retries, fencing, signals,
-  fan-out, restart, cancellation, child workflows, and compensation.
-- **Baize** owns provider-neutral inference and records the provider/model,
-  tools, usage, and execution provenance actually used.
-- **Nuwa** repairs malformed JSON; successful repair never replaces final
-  schema validation.
-- **Cangjie and Hetu** provide memory and code/context knowledge. Fuwen carries
-  immutable snapshot references.
-- **Hongxian** may correlate long-lived sessions later but is not workflow
-  state or execution.
-- **Artifact providers and hosts** own bytes, storage, authorization, routing,
-  resource handles, policies, and budgets.
+## Packages
 
-## Initial packages
+All packages target .NET 8 and .NET 10.
 
-- `Penghou.Fuwen` — provider-neutral executable-plan, type, identity, artifact,
-  descriptor, capability, and diagnostic contracts.
-- `Penghou.Fuwen.Compiler` — bounded validation and compilation into canonical
-  Fuwen IR.
-- `Penghou.Fuwen.Zhinu` — admission-bound registration and, incrementally,
-  durable interpretation of immutable Fuwen plans on Zhinu.
-- `Penghou.Fuwen.Baize` — exact descriptor-bound structured inference through
-  Baize, with bounded trusted retries, Nuwa repair, final type validation, and
-  provider-neutral provenance.
+| Package | Responsibility |
+| --- | --- |
+| `Penghou.Fuwen` | Immutable IR, type system, bindings, artifacts, identities, runtime values, execution ports, and evidence contracts |
+| `Penghou.Fuwen.Compiler` | Bounded source parsing, formatting, catalogue resolution, validation, compilation, diagnostics, admission, and plan comparison |
+| `Penghou.Fuwen.Zhinu` | Admission-bound durable interpretation of Fuwen plans on Penghou.Zhinu |
+| `Penghou.Fuwen.Baize` | Exact descriptor-bound structured and media inference through Penghou.Baize |
 
-## Current status
+Install only the layers your host needs:
 
-The executable-plan identity and storage foundation is complete. Fuwen now has
-an IR v2 structured execution schedule, a pre-release IR v3 typed context-request
-contract, immutable canonical definitions,
-trusted catalogue resolution, and a constrained programmatic builder/compiler
-that rejects invalid references, projections, return types, untrusted schema
-changes, capability mismatches, missing host grants, callable signature
-mismatches, and unsafe callable retry/effect combinations.
+```bash
+dotnet add package Penghou.Fuwen.Compiler --prerelease
+dotnet add package Penghou.Fuwen.Zhinu --prerelease
+dotnet add package Penghou.Fuwen.Baize --prerelease
+```
 
-The bounded `.fuwen` source compiler now covers the minimal Delivery D
-language: schemas, enums, typed workflows, named context/activity/inference
-nodes, restricted bindings and conditions, control-only `if/else`, complete
-typed returns, canonical formatting, source maps, and stable diagnostics.
+## Current language and IR
 
-The compiler deliberately separates three boundaries: canonical-definition
-integrity, semantic compilation, and host admission. Trusted callable signatures
-and conservative side-effect/idempotency/retry checks are implemented.
-`WorkflowAdmissionService` can now issue an opaque in-process receipt bound to
-the exact execution fingerprint, immutable catalogue snapshot, resolved trusted
-metadata, finite capability grants, policy revision, and effective limits.
-Unversioned catalogues and policies—and the test-only `AllowAll` policy—cannot
-issue a receipt. Immutable plan-revision documents
-now bind host-issued lineage IDs and parentage to one verified definition plus
-content-addressed objective, acceptance, validation, and supporting artifact
-evidence. Their fingerprints prove integrity only; they do not authorize or
-activate execution. Deterministic plan comparison reports exact structural-path,
-dependency, descriptor, execution-order, objective, acceptance, and validation
-changes. It is an explanation surface, not permission to reuse runtime artifacts.
-`WorkflowExplanation` now projects completed compilation or admission results
-into a deterministic, side-effect-free view of the plan, descriptor pins,
-required capabilities, trusted callable effect summaries, repair-oriented
-guidance, limits, usage, and bounded diagnostics. Effect summaries and repair
-guidance are descriptive evidence only: the projection cannot issue an
-admission receipt, grant capabilities, or execute workflow work.
-Trusted catalogue results are also charged cumulatively against the existing
-structural and UTF-8 text budgets, preventing many individually valid descriptor
-payloads from amplifying compiler memory beyond the admitted limits.
-Caller-controlled plan text and JSON literals are preflighted before snapshot
-allocation, artifact references enforce artifact descriptor kinds, and every
-supported IR version now requires its exact compiler-semantics contract.
-Recursive named-schema graphs are rejected deterministically, enum literals are
-checked against resolved serialized member values, and the canonical JSON v1
-number domain now rejects lossy floating-point fallback. Matching .NET and
-independent Python vectors cover decimal boundaries, negative zero, Unicode
-escaping, non-BMP text, and ordinal property ordering.
-Provider results can now cross a bounded, provider-neutral runtime boundary as
-detached JSON, artifact identities, and bounded list/object composites. Strict
-runtime validation covers optional, list, object, enum, numeric, and nominal
-artifact types, while immutable context
-snapshot references preserve selection evidence without storing context content
-or granting artifact access. IR v3 inference nodes declare exactly which typed
-context-node outputs they consume; runtime snapshot evidence remains separate
-from that compiled request. See [runtime evidence](docs/runtime-evidence.md).
-Provider-neutral execution ports now carry these values, exact descriptor
-identities, declared output types, canonical operation keys, typed failures,
-and non-authoritative observations without taking ownership of admission,
-retry, scheduling, credentials, or artifact access. See
-[execution ports](docs/execution-ports.md).
-`Penghou.Fuwen.Zhinu` now verifies admission, provider-runtime identity,
-immutable definition storage, and exact Zhinu workflow fingerprinting before
-registration. Its first executable slice interprets IR v3 context, inference,
-activity, conditional, and return nodes through stable durable Zhinu steps,
-validates provider outputs at their declared Fuwen types, and preserves context
-snapshot evidence. SQLite-backed tests prove crash recovery, selective restart,
-run-scoped operation keys, definition-drift rejection, cancellation, corrupt
-evidence rejection, and idempotent step-owned artifact publication. See
-[the Zhinu adapter boundary](docs/zhinu-adapter.md).
-`Penghou.Fuwen.Baize` now maps exact host-owned logical profile/template
-bindings to Baize endpoints without leaking application profile names into the
-provider layer. Recorded tests distinguish malformed, repaired-but-invalid,
-schema-mismatched, truncated, tool-mapping, policy, and provider failures;
-only explicitly classified fallback or representation-retry cases may cause
-another model call. Evidence records modality, attempt-level and aggregate
-usage, duration, host-priced cost, and pricing revision. Descriptor-bound image,
-video, and audio generation requires crash-safe idempotent submission, polls a
-pinned provider operation, and returns host-verified artifact publication
-receipts. Exact routing composes structured-text and media inference in one
-workflow executor.
+The current source compiler emits the smallest IR version required by the
+authored features, up to `fuwen-ir/v8`.
 
-IR v4 also contains the first programmatic keyed fan-out contract. It validates
-all stable item keys before child work, persists one durable item outcome per
-key, aggregates in source order, and supports focused item restart without
-repeating successful siblings. The `.fuwen` source syntax and Guyabano pilot
-for fan-out remain roadmap work, so this surface should be treated as preview.
+| IR | Added contract |
+| --- | --- |
+| v2 | Explicit structured execution order |
+| v3 | Typed context requirements and runtime snapshot evidence |
+| v4 | Bounded keyed fan-out with stable item identities |
+| v5 | Value-producing conditional merges |
+| v6 | Bounded state-carrying repeat regions |
+| v7 | Checkpoint and external wait interaction gates |
+| v8 | Workflow-owned prompts and declared inference tools |
 
-See [the roadmap](docs/roadmap.md) and
-[the first implementation batch](docs/first-batch.md). Adapter authors should
-also follow the [execution-port conformance matrix](docs/execution-conformance.md)
-and the [generated-asset publisher contract](docs/generated-asset-publisher.md).
+The source language supports schemas, enums, capability declarations, typed
+workflows, context/activity/inference nodes, restricted bindings, conditionals,
+fan-out, repeat, checkpoints, waits, prompt declarations, toolsets, and complete
+typed returns.
+
+A minimal IR v8 workflow looks like this:
+
+```fuwen
+prompt greet(name: string) {
+  system "Answer briefly."
+  user "Greet {{ name}}."
+}
+
+workflow greeting(input: string) -> string {
+  infer answer = infer
+    "sample.profile@1#dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    prompt greet(name: input;)
+    tools none
+    -> string;
+
+  return answer;
+}
+```
+
+Descriptor pins are resolved against the host's trusted catalogue. Prompt and
+tool declarations are part of plan identity: changing their semantic content
+changes the execution fingerprint. Only read-only, idempotent, retry-safe tools
+are currently admitted for inference.
+
+See the [authoring contract](docs/fuwen-authoring.md) for the complete compact
+syntax and catalogue inputs.
+
+## Compile, admit, execute
+
+`FuwenSourceCompiler` lexes, parses, binds, resolves exact descriptors, applies
+host and caller budgets, and lowers source through the same semantic validator
+used for programmatic plans. A successful compilation returns a canonical
+`WorkflowPlan`, diagnostics, source map, and resource-usage summary.
+
+Compilation alone does not authorize execution. `WorkflowAdmissionService`
+binds the exact execution fingerprint to:
+
+- an immutable trusted-catalogue snapshot;
+- resolved callable metadata and capabilities;
+- the host policy revision and finite grants;
+- the effective compilation limits.
+
+The resulting opaque receipt is process-bound authority. Plan-revision
+documents and fingerprints prove identity and lineage; they do not grant
+capabilities or activate work.
+
+`Penghou.Fuwen.Zhinu` supports IR v3 through v8. Its sequential interpreter
+executes context, inference, activity, conditional, fan-out, repeat, checkpoint,
+wait, and return semantics as stable Zhinu work. It verifies admission,
+definition storage, runtime identity, and workflow fingerprints before
+registration. Durable tests cover crash recovery, selective restart, focused
+fan-out recovery, bounded loop replay, interaction gates, cancellation,
+definition drift, corrupt evidence, and idempotent artifact publication.
+
+`Penghou.Fuwen.Baize` resolves host-owned logical bindings to exact Baize
+endpoints. It records provider/model identity, attempts, usage, duration,
+pricing revision, tools, and artifact-publication evidence. Retries occur only
+for explicitly classified representation or fallback failures.
+
+## Identity and evolution
+
+Fuwen keeps three concepts separate:
+
+1. the canonical executable-plan fingerprint;
+2. the authored source identity and source map;
+3. the plan-revision lineage and supporting evidence.
+
+This separation lets a host explain why a revision exists without allowing
+prose, timestamps, or source formatting to perturb executable identity.
+`WorkflowExplanation` and `PlanRevisionComparer` are deterministic inspection
+surfaces; neither can authorize execution or reuse runtime artifacts.
+
+The canonical formatter is idempotent. Comments and whitespace may change
+during formatting, while the executable plan remains identical. Stable
+diagnostic codes (`FWN-*`) and UTF-8 source spans are intended for bounded
+machine-assisted repair.
+
+## Ecosystem boundaries
+
+- **Fuwen** owns source syntax, typing, validation, immutable IR, fingerprints,
+  source maps, admission, and diagnostics.
+- **Zhinu** owns durable scheduling, retries, fencing, signals, restart,
+  cancellation, child workflows, compensation, loops, and persistence.
+- **Baize** owns provider-neutral model execution and provider provenance.
+- **Nuwa** may repair malformed JSON; final Fuwen type validation still decides
+  whether the value is accepted.
+- **Cangjie and Hetu** provide memory and code/context knowledge through
+  immutable references.
+- **Hongxian** owns long-lived session continuity and correlation, not workflow
+  execution.
+- **Hosts and artifact providers** own bytes, storage, authorization, routing,
+  credentials, and budgets.
+
+## Development
+
+```powershell
+dotnet build Penghou.Fuwen.slnx --configuration Release
+dotnet test Penghou.Fuwen.slnx --configuration Release --no-build
+dotnet pack Penghou.Fuwen.slnx --configuration Release --no-build --output artifacts
+```
+
+Useful design references:
+
+- [Roadmap and delivery status](docs/roadmap.md)
+- [Execution ports](docs/execution-ports.md)
+- [Zhinu adapter boundary](docs/zhinu-adapter.md)
+- [Runtime values and evidence](docs/runtime-evidence.md)
+- [Keyed fan-out](docs/keyed-fanout.md)
+- [Execution-port conformance](docs/execution-conformance.md)
+- [Generated-asset publication](docs/generated-asset-publisher.md)
+- [Identity and fingerprints](docs/identity-and-fingerprints.md)
+- [Threat model](docs/threat-model.md)
+
+The packages are preview software. Source syntax and public APIs may still
+change between preview releases; persisted plans remain governed by their
+explicit IR, compiler-semantics, canonicalization, and fingerprint versions.
+
+## License
+
+[Apache-2.0](LICENSE)
+
+Copyright (c) 2026 Jenő Konrád László

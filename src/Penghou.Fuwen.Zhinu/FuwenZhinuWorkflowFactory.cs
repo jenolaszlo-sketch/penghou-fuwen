@@ -146,13 +146,13 @@ public sealed class FuwenZhinuExecutionPorts
     /// <summary>The validated bounded execution options.</summary>
     public Options ExecutionOptions { get; }
     /// <summary>
-    /// Previously admitted execution fingerprints whose durable step evidence
-    /// this registration accepts alongside its own fingerprint. The host sets
-    /// this when migrating a run across admitted plan versions (workflow
-    /// mutation): reused steps keep their original evidence, which the
-    /// interpreter admits only when the fingerprint is listed here, the
-    /// structural path matches, and the request fingerprint matches. Empty
-    /// by default, preserving strict single-plan evidence checks.
+    /// Admitted execution fingerprints whose durable step evidence this
+    /// registration accepts from a different source run. The host sets this
+    /// when migrating across plan versions, or includes the current
+    /// fingerprint when an identical-plan fork may reuse copied evidence.
+    /// Reused steps keep their original invocation evidence; exact structural
+    /// paths and request fingerprints are still required. Empty by default,
+    /// preserving strict run fencing.
     /// </summary>
     public IReadOnlySet<string> PriorExecutionFingerprints { get; init; } =
         new HashSet<string>(StringComparer.Ordinal);

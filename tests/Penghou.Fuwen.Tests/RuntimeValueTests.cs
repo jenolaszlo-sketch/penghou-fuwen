@@ -50,6 +50,38 @@ public sealed class RuntimeValueTests
     }
 
     [Fact]
+    public void RuntimeValueJson_normalizes_json_and_typed_values_through_one_boundary()
+    {
+        var schema = PlanFixture.Descriptor(DescriptorKind.Schema, "sample.payload");
+        ResolvedSchemaDefinition[] schemas =
+        [
+            new ObjectSchemaDefinition(schema,
+            [
+                new SchemaField("items", new ListType(new PrimitiveType(FuwenPrimitiveKind.Integer), 4)),
+                new SchemaField("artifact", new ArtifactType(PlanFixture.Descriptor(DescriptorKind.Artifact, "sample.file"))),
+            ]),
+        ];
+        var artifact = new ArtifactReference(
+            "store", "artifact-1", PlanFixture.Descriptor(DescriptorKind.Artifact, "sample.file"),
+            new ContentDigest("sha256", "content/v1", new string('d', 64)));
+        var source = RuntimeValue.FromObject(new Dictionary<string, RuntimeValue>
+        {
+            ["items"] = RuntimeValue.FromJson(JsonSerializer.SerializeToElement(new[] { 1, 2 })),
+            ["artifact"] = RuntimeValue.FromArtifact(artifact),
+        });
+
+        var normalized = RuntimeValueJson.Normalize(source, new NamedTypeReference(schema), schemas)
+            .Should().BeOfType<ObjectRuntimeValue>().Subject;
+
+        normalized.Properties["items"].Should().BeOfType<ListRuntimeValue>()
+            .Which.Items.Should().HaveCount(2).And.OnlyContain(item => item is JsonRuntimeValue);
+        normalized.Properties["artifact"].Should().BeOfType<ArtifactRuntimeValue>()
+            .Which.Artifact.Should().Be(artifact);
+        RuntimeValueJson.NormalizeList(normalized.Properties["items"], new PrimitiveType(FuwenPrimitiveKind.Integer), 4, schemas)
+            .Items.Should().HaveCount(2);
+    }
+
+    [Fact]
     public void CompositeRuntimeValues_deeply_snapshot_children_and_round_trip()
     {
         using var document = JsonDocument.Parse("\"before\"");

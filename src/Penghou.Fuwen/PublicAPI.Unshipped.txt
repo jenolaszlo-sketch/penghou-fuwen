@@ -1,5 +1,8 @@
 #nullable enable
 Penghou.Fuwen.RuntimeValueJson
+static Penghou.Fuwen.RuntimeValueJson.Normalize(Penghou.Fuwen.RuntimeValue! value, Penghou.Fuwen.FuwenType! expectedType, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>! schemas) -> Penghou.Fuwen.RuntimeValue!
+static Penghou.Fuwen.RuntimeValueJson.Normalize(System.Text.Json.JsonElement value, Penghou.Fuwen.FuwenType! expectedType, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>! schemas) -> Penghou.Fuwen.RuntimeValue!
+static Penghou.Fuwen.RuntimeValueJson.NormalizeList(Penghou.Fuwen.RuntimeValue! value, Penghou.Fuwen.FuwenType! itemType, int maximumItems, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>! schemas) -> Penghou.Fuwen.ListRuntimeValue!
 static Penghou.Fuwen.RuntimeValueJson.ToJsonElement(Penghou.Fuwen.RuntimeValue! value) -> System.Text.Json.JsonElement
 Penghou.Fuwen.IrVersions
 const Penghou.Fuwen.IrVersions.V1 = 1 -> int

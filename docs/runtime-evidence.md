@@ -68,3 +68,10 @@ artifact fields; a JSON array/object never masquerades as an artifact-bearing
 composite. It returns stable `FWN-RUNTIME-*` diagnostics suitable for a caller
 or an LLM repair loop. Validation does not grant execution permission and does
 not replace host policy or provider authorization.
+
+`RuntimeValueJson.Normalize` is the shared representation-neutral conversion
+boundary for execution ports and adapters. It recursively materializes admitted
+lists, named objects, and artifact references from detached JSON, and can
+re-normalize any `RuntimeValue` through the same contract. Adapter code should
+not cast provider results to `JsonRuntimeValue` or maintain a second type
+conversion table.

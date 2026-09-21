@@ -2,7 +2,8 @@
 
 Date created: 2026-09-20
 
-Status: active planning document; no remediation tasks completed yet
+Status: stability remediation (Milestones 0–2) complete; product evolution
+(Milestones 3–5) remains planned
 
 Source review: [Fuwen product, design, and implementation review](review-2026-09-20.md)
 
@@ -55,7 +56,7 @@ work then makes the resulting system easy to try, diagnose, operate, and adopt.
 Purpose: convert the review's isolated reproductions into repository-owned
 evidence before changing behavior.
 
-- [ ] **M0.1 — Add regression fixtures for R31–R36.**
+- [x] **M0.1 — Add regression fixtures for R31–R36.**
   - [x] Capture the exact provider request and evidence for registered-template
     tools: none, subset, full set, and a missing host binding. Completed
     2026-09-20 in the working tree; verified by
@@ -78,12 +79,14 @@ evidence before changing behavior.
   - [x] Compile descriptor shorthand through both discovery-capable and
     exact-resolution-only catalogues. Completed 2026-09-20; the former emits an
     exact descriptor and the latter fails without acquiring discovery.
-- [ ] **M0.2 — Add documentation/release contract checks for R37–R38.**
+- [x] **M0.2 — Add documentation/release contract checks for R37–R38.**
   - [x] Reject duplicate JSON object keys in `docs/fuwen-grammar.json`.
     Completed 2026-09-20 with a recursive documentation-contract test.
-  - [ ] Compile every checked-in `.fuwen` documentation example.
-  - [ ] Add a non-publishing validation test for release tag/project-version
-    equality and release-job prerequisites.
+  - [x] Compile every checked-in `.fuwen` documentation example. Completed
+    2026-09-21 via `DocumentationContractTests` and README fence compilation.
+  - [x] Add a non-publishing validation test for release tag/project-version
+    equality and release-job prerequisites. Completed 2026-09-21 via
+    `ReleaseWorkflowContractTests`.
 - [x] **M0.3 — Record baseline results.** Completed 2026-09-20 after the current
   changes: Release build clean; 483 tests pass on each of .NET 8 and .NET 10
   (966 target-framework executions); independent canonical JSON vector passes.
@@ -279,6 +282,12 @@ for the exact commit and artifacts being published.
   current implementation without erasing history. Completed 2026-09-21: R24
   and the IR v8 R29 scope are resolved, R20–R21 are partially resolved with
   explicit remaining work, and R22–R23 are reconfirmed open.
+- [x] **M2.19 — Close the pre-complex stability follow-ups.** Completed
+  2026-09-21. R06 now has a shared public typed runtime-value normalization
+  boundary; R07 has cohesive internal binding, condition, schedule, wire,
+  repeat, fan-out, and envelope collaborators; R08's current single-call
+  accounting/generation recovery contract is reconciled; and identical-plan
+  fork reuse is explicit, fenced, and covered by SQLite-backed evidence.
 
 Exit criteria: README, changelog, authoring reference, threat model, review,
 roadmap, and package version describe the same shipped surface.
@@ -413,6 +422,7 @@ Add one entry per completed parent task or milestone:
 | 2026-09-21 | M2.16 | Working tree after `b6a82af`; commit pending | Format clean; Release build 0 warnings/errors; 509 tests pass on each of .NET 8 and .NET 10 (1,018 executions); independent canonical JSON vector passes | Preview.3–preview.10 history, current capability boundaries, roadmap status, README links, and version/document conformance are reconciled |
 | 2026-09-21 | M2.17 | Working tree after `7e428eb`; commit pending | Format clean; Release build 0 warnings/errors; 510 tests pass on each of .NET 8 and .NET 10 (1,020 executions); independent canonical JSON vector passes | Threat model now records concrete assets, trust boundaries, controls, residual risks, host duties, exclusions, and review triggers without implying an audit |
 | 2026-09-21 | M2.18 | Working tree after `05908af`; commit pending | Format clean; Release build 0 warnings/errors; 511 tests pass on each of .NET 8 and .NET 10 (1,022 executions); independent canonical JSON vector passes | Historical R20–R24/R29 statuses now match current evidence while retaining original observations and explicit remaining product work |
+| 2026-09-21 | M0.1–M0.2 parent closure; M2.19 | Working tree after `ebfa3a1`; commit pending | Format clean; Release build 0 warnings/errors; 514 tests pass on each of .NET 8 and .NET 10 (1,028 executions); independent canonical JSON vector and local package validation pass | R06–R08 and the same-fingerprint fork edge are closed for the current surface; complex-activity reconciliation remains intentionally versioned future work |
 
 ## Deferred decisions
 

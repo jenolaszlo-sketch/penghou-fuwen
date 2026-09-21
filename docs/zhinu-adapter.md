@@ -81,3 +81,13 @@ Zhinu lease generation is fencing evidence and is intentionally not part of the
 Fuwen operation key. A lease may change when another worker safely takes over
 the same step revision; the downstream idempotency identity must not change in
 that case.
+
+## Fork evidence
+
+Durable steps copied by a Zhinu fork retain their source invocation identity.
+The host must explicitly list every accepted source execution fingerprint in
+`FuwenZhinuExecutionPorts.PriorExecutionFingerprints`. This includes the current
+fingerprint when a fingerprint-identical fork is allowed to reuse earlier
+steps. An empty set keeps strict run fencing. The adapter still requires the
+exact structural path and effective request fingerprint, so this setting does
+not authorize unrelated evidence or changed inputs.

@@ -1165,9 +1165,10 @@ Release hardening also closes the bounded raw and repaired provider-response
 budget (review R09), publishes a compact cross-adapter conformance matrix
 (R11), and documents/tests the trusted generated-asset publisher contract for
 ordered, exact-byte-verified, atomic-or-resumable idempotent batches (R12).
-Interpreter decomposition, richer setup diagnostics, and broader accounting
-and recovery refinements (R06-R08 and R10) remain post-preview improvements
-unless the consumer pilot exposes them as correctness blockers.
+Interpreter decomposition, shared runtime normalization, and the current
+inference/generation accounting and recovery contracts (R06-R08) are complete.
+Richer setup diagnostics and authoring feedback (R10) remain product work and
+do not block the complex-activities phase.
 
 The minimal text grammar is now implemented. Recursive schemas, enum literals,
 numeric/Unicode portability, runtime-value validation, and context-snapshot

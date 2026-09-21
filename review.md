@@ -160,15 +160,29 @@ Recommendation: implement `ExecuteRepeatInferenceAsync` in `FuwenZhinuSequential
 
 ### R06 — Normalize runtime values through a shared typed boundary
 
-Status: partially resolved. Fan-out now normalizes lists; new public `RuntimeValueJson.ToJsonElement` lets hosts convert any representation (JSON, nominal composites, artifacts) without assuming `JsonRuntimeValue` — proven by Guyabano stage executors consuming normalized outputs. A comprehensive shared normalization helper across all ports and interpreters remains open.
+Status: resolved (2026-09-21). `RuntimeValueJson.Normalize` and `NormalizeList`
+provide the shared typed boundary for detached JSON and every runtime-value
+representation. Zhinu delegates to that core contract, and regression coverage
+includes nested nominal objects, lists, and artifacts.
 
 ### R07 — Separate interpreter responsibilities internally
 
-Status: open. `FuwenZhinuSequentialInterpreter.cs` has grown to ~1,700 lines. It combines workflow scheduling, execution phase barriers, condition evaluation, wire serialization (`RuntimeValueWire`), fan-out coordination, loop state management, and envelope validation. Extract cohesive internal collaborators (`FuwenConditionEvaluator`, `FuwenRuntimeValueWire`, `FuwenRepeatCoordinator`, `FuwenFanOutCoordinator`).
+Status: resolved for the current adapter (2026-09-21). The interpreter remains
+the private orchestration entry point, while typed binding and condition
+evaluation, execution-order indexing, runtime wire conversion, repeat and
+bounded fan-out coordination, and durable envelope validation now live in
+cohesive internal collaborators. Further extraction is feature-driven under
+M5.3 rather than a prerequisite for complex activities.
 
 ### R08 — Make accounting and generation recovery contracts explicit
 
-Status: open. Tracked for provider durable reconciliation.
+Status: resolved for the current single-call inference and generation surface
+(2026-09-21). Attempt-level and aggregate usage/cost evidence distinguish
+unknown values from zero; unknown priced usage stops further paid fallbacks;
+ADR 0006 defines the generation deadline; and the publisher contract requires
+operation-key idempotency plus resumable partial-batch progress. Durable
+multi-round model/tool reconciliation belongs to complex activities and is not
+claimed by this finding.
 
 ### R09 — Bound raw provider output before parsing and repair
 
@@ -176,7 +190,8 @@ Status: resolved. Trusted profiles now enforce raw and repaired response ceiling
 
 ### R10 — Improve host setup and authoring feedback
 
-Status: open. See R22 and R23 below.
+Status: open as usability work, not a remaining stability gate. See R22 and
+R23 below.
 
 ### R11 — Extend cross-adapter conformance
 
@@ -347,7 +362,11 @@ Phase B tools done (2026-09-19): `toolset` declarations expand to exact tool lis
 
 R30 - inference limits and write-capable tools done (2026-09-20): optional per-node `limits maxTokens N timeout S` (either or both, v8-gated, ranged 1–1000000 tokens and 1–3600 seconds); the full limits object rides requests, identity, snapshots, and comparisons, and Baize enforces min(plan, host-ceiling) tokens plus non-retried timeouts. Tool admission now accepts effect-free and idempotent retry-safe writes alongside read-only tools; external, destructive, non-idempotent, and unsafe tools stay rejected. Verified by parser/validation/fingerprint/comparer/snapshot and Baize enforcement tests.
 
-Known edge (no code change): forking to a fingerprint-identical plan hard-fails evidence reuse, because same-fingerprint evidence names the source run while the check expects the current one. Guyabano's host guards this with executable no-op detection (identical fingerprints never fork), so the edge is unreachable through the planning stack; direct Zhinu users forking identical plans get a loud failure, not silent reuse. Fixing the interpreter check needs fencing analysis and is deferred until a real caller needs identical-plan forks.
+Same-fingerprint fork edge resolved (2026-09-21): copied evidence from another
+run is accepted only when the host explicitly includes the current fingerprint
+in `PriorExecutionFingerprints`. Empty/default configuration retains strict run
+fencing. Structural paths and effective request fingerprints remain exact, and
+a SQLite-backed regression proves selective reuse plus re-execution.
 
 Original evidence (before IR v8): `InferenceNode` carried
 `ProfileDescriptor` + `TemplateDescriptor` only; `FuwenSource.cs` parsed no

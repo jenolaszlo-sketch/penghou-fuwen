@@ -50,6 +50,34 @@ public sealed class DocumentationContractTests
     }
 
     [Fact]
+    public async Task Historical_review_statuses_match_current_product_evidence()
+    {
+        var review = await File.ReadAllTextAsync(
+            Path.Combine(FindRepositoryRoot(), "review.md"),
+            TestContext.Current.CancellationToken);
+
+        Section(review, "R20", "R21").Should().Contain("Status: partially resolved");
+        Section(review, "R21", "R22").Should().Contain("Status: partially resolved");
+        Section(review, "R22", "R23").Should().Contain("Status: open (reconfirmed");
+        Section(review, "R23", "R24").Should().Contain("Status: open (reconfirmed");
+        Section(review, "R24", "R25").Should().Contain("Status: resolved");
+        Section(review, "R29", "Suggested implementation order").Should()
+            .Contain("Status: resolved for the declared IR v8 scope");
+    }
+
+    private static string Section(string document, string heading, string nextHeading)
+    {
+        var start = document.IndexOf($"### {heading} ", StringComparison.Ordinal);
+        var nextMarker = nextHeading == "Suggested implementation order"
+            ? $"## {nextHeading}"
+            : $"### {nextHeading} ";
+        var end = document.IndexOf(nextMarker, start, StringComparison.Ordinal);
+        start.Should().BeGreaterThanOrEqualTo(0);
+        end.Should().BeGreaterThan(start);
+        return document[start..end];
+    }
+
+    [Fact]
     public async Task Checked_in_language_corpus_compiles_formats_and_covers_documented_constructs()
     {
         var fixtureDirectory = Path.Combine(FindRepositoryRoot(), "tests", "fixtures", "documentation");

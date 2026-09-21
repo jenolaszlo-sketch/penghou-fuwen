@@ -2,6 +2,8 @@
 
 Reviewed: 2026-09-13 (initial delivery and Baize integration).
 Updated: 2026-09-17 (Stages 1–4 review: IR v4–v7 evolution, repeat loops, value-producing conditionals, interaction gates, and Guyabano pilot readiness).
+Reconciled: 2026-09-21 (R20–R24 and R29 status checked against current code,
+tests, and documentation; original observations retained as historical evidence).
 
 Scope: correctness, compiler/runtime contracts, Baize adapters, Zhinu durable execution, artifact publication, OOP/design patterns, usability, usefulness, and test coverage across all current features.
 
@@ -12,7 +14,7 @@ Release-hardening status (2026-09-17, second pass):
 - R06–R12 remain tracked follow-up items; several parts were hardened (R09 bounded raw provider output, R11 cross-adapter matrix, R12 publisher contract).
 - Recent work delivered Stage 1 (fan-out DSL), Stage 2 (IR v5 value-producing conditionals with `merge`), Stage 3 (IR v6 bounded `repeat` loops), and Stage 4 (IR v7 `checkpoint` and `wait` interaction gates).
 - Full solution tests pass: 388 logical tests on both .NET 8 and .NET 10, totaling 776 passing executions with zero failures or skips (Core: 160, Compiler: 156, Baize: 33, Zhinu: 39).
-- The blocking cross-feature correctness defects R13–R16 are now resolved with regression fixtures, and the abstraction/performance/versioning items R17–R19 are resolved. R07 and R20–R23 remain tracked follow-up items.
+- The blocking cross-feature correctness defects R13–R16 are now resolved with regression fixtures, and the abstraction/performance/versioning items R17–R19 are resolved. R07 and R22–R23 remain open; R20–R21 are partially resolved, with lockfile tooling and a runnable reference host still outstanding.
 
 ## Correctness findings
 
@@ -238,9 +240,12 @@ Recommendation: model IR versions with an ordinal enum (`IrVersion.V7`) or featu
 
 ### R20 — Usability: DSL mandates 64-character hex digests in source text
 
-Status: open.
+Status: partially resolved (reconciled 2026-09-21). Discovery-capable
+catalogues accept `name@version` shorthand and compilation emits exact pins;
+exact-only catalogues fail closed. Cache/discovery and lookup-budget regressions
+cover the boundary. A reviewed lockfile/manifest workflow remains open.
 
-Evidence: `src/Penghou.Fuwen.Compiler/FuwenSource.cs`, lines 1153–1178.
+Original evidence (2026-09-17): `src/Penghou.Fuwen.Compiler/FuwenSource.cs`, lines 1153–1178.
 
 When authoring `.fuwen` files without an in-memory catalogue that pre-indexes digests, authors are forced to write:
 `activity step = activity "sample.echo@1#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" (value: s;) -> string;`
@@ -250,9 +255,14 @@ Recommendation: allow human-authored `.fuwen` files to reference logical names (
 
 ### R21 — Usability: Sparse authoring documentation and lack of end-to-end samples
 
-Status: open.
+Status: partially resolved (reconciled 2026-09-21). The authoring contract,
+strict grammar, capability matrix, nine compiler-backed source fixtures, and
+README example conformance now document the language. A credential-free
+runnable reference host covering compile/admit/execute/fail/resume is absent.
 
-Evidence: `docs/fuwen-authoring.md` is only 21 lines long, and the repository contains no `samples/` directory.
+Original evidence (2026-09-17): `docs/fuwen-authoring.md` was only 21 lines
+long, and the repository contained no `samples/` directory. The missing sample
+remains current.
 
 External consumers attempting to integrate Fuwen (such as Guyabano, Qingniao, or Marang developers) have no comprehensive grammar specification, syntax guide, or runnable sample demonstrating how to take a `.fuwen` file, compile it against a catalogue, obtain an admission receipt, and execute it with Baize and Zhinu.
 
@@ -260,7 +270,8 @@ Recommendation: expand `docs/fuwen-authoring.md` into a complete syntax and keyw
 
 ### R22 — Usability / Host Integration: Heavy host setup ceremony
 
-Status: open.
+Status: open (reconfirmed 2026-09-21). No `FuwenHostBuilder` or supported
+dependency-injection setup layer exists.
 
 Evidence: executing a single Fuwen workflow currently requires manually instantiating and wiring ~8 low-level abstractions:
 `ITrustedCatalogue`, `CapabilityGrantPolicy`, `WorkflowCompiler`, `WorkflowAdmissionService`, `FuwenZhinuExecutionPorts`, `FuwenZhinuProviderRuntimeIdentity`, `FuwenZhinuWorkflowFactory`, `WorkflowRegistry`, and `WorkflowEngine`.
@@ -269,7 +280,8 @@ Recommendation: provide a fluent host builder (`FuwenHostBuilder`) and `Microsof
 
 ### R23 — Usability: Lack of formatted diagnostic reporting for CLI/terminal
 
-Status: open.
+Status: open (reconfirmed 2026-09-21). No supported source-excerpt/caret or ANSI
+terminal diagnostic renderer exists.
 
 Evidence: `CompilerDiagnostic` produces structured codes, severity, message, and `SourceSpan`, but the compiler provides no standard ANSI or source-excerpt formatter (like Rust or Roslyn-style caret underlines: `^^^`). Diagnosing syntax or type errors in authored `.fuwen` files from logs or terminal outputs requires manual offset calculation.
 
@@ -277,9 +289,12 @@ Recommendation: add a `DiagnosticFormatter` that renders source lines with conte
 
 ### R24 — P2: Object literals cannot satisfy named object schemas in bindings
 
-Status: open (found 2026-09-17 during Guyabano real-planning slice 2).
+Status: resolved (2026-09-17; reconciled 2026-09-21).
+`ObjectLiteralMatches` recursively validates named object schemas, permits
+omitted optional fields, and rejects unknown, missing, or incompatible fields.
+The parameterized regression covers valid and adversarial shapes.
 
-Evidence: `src/Penghou.Fuwen.Compiler/WorkflowCompiler.cs`, `LiteralMatches` — the `NamedTypeReference` branch only accepts enum schemas; object literals against `ObjectSchemaDefinition` fall through to `_ => false`. A repeat loop carrying a typed envelope state (`{ok, domain, error}`) therefore cannot seed its initial state from an inline literal and must use a field-wise `ObjectBinding` instead. The same wall blocks DSL-authored object literals against named schemas.
+Original evidence (before fix): `src/Penghou.Fuwen.Compiler/WorkflowCompiler.cs`, `LiteralMatches` — the `NamedTypeReference` branch only accepted enum schemas; object literals against `ObjectSchemaDefinition` fell through to `_ => false`. A repeat loop carrying a typed envelope state (`{ok, domain, error}`) therefore could not seed its initial state from an inline literal and had to use a field-wise `ObjectBinding` instead. The same wall blocked DSL-authored object literals against named schemas.
 
 Recommendation: extend `LiteralMatches` to validate object literals field-wise against `ObjectSchemaDefinition` (required-field presence, recursive field matching, unknown-field rejection), mirroring the `ObjectBinding` branch of `ValidateBinding`. Add compiler fixtures for valid/invalid object literals.
 
@@ -315,7 +330,12 @@ Recommendation: accept host-declared prior execution fingerprints plus run-prefi
 
 ### R29 — P1: Inference nodes do not describe their own contract (architectural pivot)
 
-Status: in progress (2026-09-19). Inference nodes reference host-registered prompt templates and profiles by digest, so the workflow carries no instructions and no tool surface. Generated workflows describe the graph without the work; supervisor-authored workflows cannot be understood, compared, or executed without the authoring host's hidden configuration. Recorded as ADR 0005 (`docs/decisions/0005-inference-contracts-are-self-describing.md`).
+Status: resolved for the declared IR v8 scope (reconciled 2026-09-21).
+Workflow-owned prompts, typed bindings, registered aliases, declared tools,
+context requirements, and limits participate in validation, identity,
+comparison, snapshots, execution requests, evidence, and durable replay. The
+stock Baize adapter still lacks a general model/tool/result loop; that explicit
+capability limitation does not reopen the self-describing-plan defect.
 
 Phase A steps 1–2 done (2026-09-19): canonical `PromptDefinition` with typed parameters, message roles, `{{ name }}` placeholder validation, and `sha256:prompt-definition/v1` semantic digests; top-level `prompt` declarations with triple-quoted raw text; `WorkflowPlan.Prompts` carriage with null-omitted canonical JSON (v3–v7 fingerprints byte-identical); IR v8 gating end to end (validator, fingerprint v8, `BuildV8`, source `promptSeen` selection, `SupportsWorkflowPrompts`); prompt digests in plan comparison; `WorkflowPlanSnapshot` deep-clones prompts. Verified by `tests/Penghou.Fuwen.Compiler.Tests/FuwenSourcePromptTests.cs`.
 
@@ -329,7 +349,10 @@ R30 - inference limits and write-capable tools done (2026-09-20): optional per-n
 
 Known edge (no code change): forking to a fingerprint-identical plan hard-fails evidence reuse, because same-fingerprint evidence names the source run while the check expects the current one. Guyabano's host guards this with executable no-op detection (identical fingerprints never fork), so the edge is unreachable through the planning stack; direct Zhinu users forking identical plans get a loud failure, not silent reuse. Fixing the interpreter check needs fencing analysis and is deferred until a real caller needs identical-plan forks.
 
-Evidence: `InferenceNode` carries `ProfileDescriptor` + `TemplateDescriptor` only; `FuwenSource.cs` parses no prompt text; execution identity covers descriptor digests but not prompt semantics; there is no tool concept anywhere in the language.
+Original evidence (before IR v8): `InferenceNode` carried
+`ProfileDescriptor` + `TemplateDescriptor` only; `FuwenSource.cs` parsed no
+prompt text; execution identity covered descriptor digests but not prompt
+semantics; there was no tool concept in the language.
 
 Recommendation: implement in phases under a new IR version (v3–v7 keep current semantics). Phase A (prompts): canonical `PromptDefinition` with typed parameters and message roles, top-level workflow-owned `prompt` declarations, typed bindings with compile-time validation, node-region binding evaluation (same scope as `Arguments`), and prompt semantics in execution fingerprints and plan comparison. Phase B (tools): `DescriptorKind.Tool` with side-effect/idempotency metadata, `tools none` default, inline lists and `toolset` declarations, exact admission, and tool semantics in fingerprints. Restrict Phase B initially to none/read-only/idempotent. Guyabano generation guidance and Marang authoring requirements follow Fuwen, not interleaved.
 
@@ -345,8 +368,8 @@ Recommendation: implement in phases under a new IR version (v3–v7 keep current
     - Eliminate concrete `InMemoryTrustedCatalogue` cast in `FuwenSource.cs` (R17).
     - Add scalar fast-path for condition evaluation (R18).
     - Replace string-based IR checks with ordinal/feature checks (R19).
-4. **Developer Experience & Architecture** (still open):
+4. **Developer Experience & Architecture** (partially open):
     - Refactor `FuwenZhinuSequentialInterpreter.cs` into cohesive collaborators (R07).
-    - Relax 64-character hex digests in authored source via lockfile/manifest (R20).
-    - Expand `docs/fuwen-authoring.md` and provide runnable samples (R21).
+    - Add reviewed lockfile/manifest tooling beyond catalogue shorthand (R20).
+    - Provide a runnable credential-free reference host (remaining R21 work).
     - Add fluent host configuration / DI extensions (R22) and CLI diagnostic formatter (R23).

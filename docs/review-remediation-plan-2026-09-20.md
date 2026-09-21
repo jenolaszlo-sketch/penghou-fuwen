@@ -274,9 +274,11 @@ for the exact commit and artifacts being published.
   without implying an external audit. Completed 2026-09-21 with a scoped model,
   concrete threat/control/residual-risk matrix, deployment checklist, explicit
   exclusions, and documentation contract coverage.
-- [ ] **M2.18 — Reconcile historical findings.** Verify R24 regression coverage
+- [x] **M2.18 — Reconcile historical findings.** Verify R24 regression coverage
   and mark its historical record accurately; review R20–R23 and R29 against the
-  current implementation without erasing history.
+  current implementation without erasing history. Completed 2026-09-21: R24
+  and the IR v8 R29 scope are resolved, R20–R21 are partially resolved with
+  explicit remaining work, and R22–R23 are reconfirmed open.
 
 Exit criteria: README, changelog, authoring reference, threat model, review,
 roadmap, and package version describe the same shipped surface.
@@ -403,6 +405,7 @@ Add one entry per completed parent task or milestone:
 | 2026-09-21 | M2.11–M2.15 | Working tree after `fdd0b71`; commit pending | Format clean; Release build 0 warnings/errors; 508 tests pass on each of .NET 8 and .NET 10 (1,016 executions); independent canonical JSON vector passes | R38 resolved; publication depends on validation and transfers only commit-keyed complete package artifacts |
 | 2026-09-21 | M2.16 | Working tree after `b6a82af`; commit pending | Format clean; Release build 0 warnings/errors; 509 tests pass on each of .NET 8 and .NET 10 (1,018 executions); independent canonical JSON vector passes | Preview.3–preview.10 history, current capability boundaries, roadmap status, README links, and version/document conformance are reconciled |
 | 2026-09-21 | M2.17 | Working tree after `7e428eb`; commit pending | Format clean; Release build 0 warnings/errors; 510 tests pass on each of .NET 8 and .NET 10 (1,020 executions); independent canonical JSON vector passes | Threat model now records concrete assets, trust boundaries, controls, residual risks, host duties, exclusions, and review triggers without implying an audit |
+| 2026-09-21 | M2.18 | Working tree after `05908af`; commit pending | Format clean; Release build 0 warnings/errors; 511 tests pass on each of .NET 8 and .NET 10 (1,022 executions); independent canonical JSON vector passes | Historical R20–R24/R29 statuses now match current evidence while retaining original observations and explicit remaining product work |
 
 ## Deferred decisions
 

@@ -259,6 +259,32 @@ internal static class FuwenZhinuSequentialInterpreter
         var values = new Dictionary<string, RuntimeValue>(StringComparer.Ordinal);
         foreach (var binding in node.PromptBindings ?? [])
             values[binding.ParameterName] = EvaluateBinding(binding.Value, plan, state);
+        var registeredArguments = definition.Parameters
+            .Where(parameter => values.ContainsKey(parameter.Name))
+            .Select(parameter => new RuntimeArgument(parameter.Name, values[parameter.Name]))
+            .ToArray();
+        if (definition.RegisteredSource is not null)
+        {
+            var aliasIdentity = new PromptNodeRequestIdentity(
+                "inference-registered-prompt",
+                nodePath,
+                node.Profile,
+                definition.GetSemanticDigest(),
+                registeredArguments,
+                node.Tools is null || node.Tools.Count == 0 ? null : node.Tools.ToArray(),
+                contextInputs,
+                node.Limits);
+            var aliasJson = RuntimeValueWire.Serialize(aliasIdentity);
+            return (aliasJson, invocation => new InferenceExecutionRequest(
+                invocation,
+                node.Profile,
+                definition.RegisteredSource,
+                registeredArguments,
+                contextInputs,
+                node.OutputType,
+                tools: node.Tools?.ToArray() ?? [],
+                limits: node.Limits));
+        }
         var rendered = PromptRenderer.Render(definition, values);
         var tools = node.Tools is null || node.Tools.Count == 0 ? null : node.Tools.ToArray();
         var requestTools = node.Tools?.ToArray() ?? [];
@@ -1702,12 +1728,23 @@ internal static class FuwenZhinuSequentialInterpreter
             var inferenceNode = FlattenNodes(plan.Nodes)
                 .OfType<InferenceNode>()
                 .FirstOrDefault(inference => string.Equals(inference.StructuralPath, nodePath, StringComparison.Ordinal));
+            DescriptorReference? expectedPromptTemplate = inferenceNode?.PromptTemplate;
+            string? expectedPromptDigest = null;
+            if (inferenceNode?.PromptName is not null)
+            {
+                var prompt = plan.Prompts!.Single(candidate =>
+                    string.Equals(candidate.Name, inferenceNode.PromptName, StringComparison.Ordinal));
+                expectedPromptTemplate = prompt.RegisteredSource;
+                if (expectedPromptTemplate is null)
+                    expectedPromptDigest = prompt.GetSemanticDigest();
+            }
             if (envelope.Evidence is not null &&
                 (inferenceNode is null ||
                  envelope.Evidence.Profile != inferenceNode.Profile ||
-                 envelope.Evidence.PromptTemplate != inferenceNode.PromptTemplate))
+                 envelope.Evidence.PromptTemplate != expectedPromptTemplate ||
+                 !string.Equals(envelope.Evidence.PromptDigest, expectedPromptDigest, StringComparison.Ordinal)))
                 throw new FuwenZhinuExecutionException(
-                    $"Persisted inference evidence for '{nodePath}' does not match the admitted profile and prompt template.");
+                    $"Persisted inference evidence for '{nodePath}' does not match the admitted profile and prompt identity.");
 
             if (envelope.Failure is not null && envelope.Publications.Count != 0)
                 throw new FuwenZhinuExecutionException($"Persisted failed result for '{nodePath}' contains publication evidence.");

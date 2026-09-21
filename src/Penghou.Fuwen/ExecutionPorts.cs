@@ -766,6 +766,50 @@ public interface IInferenceExecutor
     ValueTask<InferenceExecutionResult> ExecuteAsync(InferenceExecutionRequest request, CancellationToken cancellationToken = default);
 }
 
+/// <summary>An exact inference binding requirement that can be checked before workflow registration.</summary>
+public sealed class InferenceExecutionRequirement
+{
+    /// <summary>Creates one detached requirement for either a registered template or a workflow-owned prompt.</summary>
+    public InferenceExecutionRequirement(
+        DescriptorReference profile,
+        DescriptorReference? promptTemplate,
+        string? promptDigest,
+        IReadOnlyList<DescriptorReference>? tools = null)
+    {
+        Profile = ExecutionPortValidation.Descriptor(profile, DescriptorKind.InferenceProfile, nameof(profile));
+        if ((promptTemplate is null) == (promptDigest is null))
+            throw new ArgumentException("An inference requirement carries either an exact prompt template or a workflow-owned prompt digest.");
+        PromptTemplate = promptTemplate is null
+            ? null
+            : ExecutionPortValidation.Descriptor(promptTemplate, DescriptorKind.PromptTemplate, nameof(promptTemplate));
+        PromptDigest = RuntimeValueSnapshot.OptionalText(
+            promptDigest,
+            nameof(promptDigest),
+            InferenceExecutionEvidence.MaximumDiagnosticUtf8Bytes);
+        var copy = (tools ?? []).Select(tool =>
+            ExecutionPortValidation.Descriptor(tool, DescriptorKind.Tool, nameof(tools))).ToArray();
+        if (copy.Distinct().Count() != copy.Length)
+            throw new ArgumentException("Inference requirement tools must be unique.", nameof(tools));
+        Tools = Array.AsReadOnly(copy);
+    }
+
+    /// <summary>The exact admitted logical inference profile.</summary>
+    public DescriptorReference Profile { get; }
+    /// <summary>The exact registered prompt template, when applicable.</summary>
+    public DescriptorReference? PromptTemplate { get; }
+    /// <summary>The workflow-owned prompt semantic digest, when applicable.</summary>
+    public string? PromptDigest { get; }
+    /// <summary>The exact admitted model-callable tool descriptors.</summary>
+    public IReadOnlyList<DescriptorReference> Tools { get; }
+}
+
+/// <summary>Optional host capability for rejecting unavailable inference bindings before registration.</summary>
+public interface IInferenceExecutorPreflight
+{
+    /// <summary>Returns a provider-neutral admission failure, or null when the exact requirement is executable.</summary>
+    ExecutionFailure? Preflight(InferenceExecutionRequirement requirement);
+}
+
 /// <summary>Receives non-authoritative lifecycle observations from the host.</summary>
 public interface IExecutionObserver
 {

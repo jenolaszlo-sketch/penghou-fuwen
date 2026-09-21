@@ -279,6 +279,10 @@ public sealed class FuwenZhinuWorkflowFactory
         }
         if (executionPorts is not null)
             ValidateExecutableSubset(admittedPlan.Nodes, insideFanOut: false, insideRepeat: false);
+        if (executionPorts is not null)
+            ValidateInferenceBindings(
+                admittedPlan,
+                executionPorts.InferenceExecutor as IInferenceExecutorPreflight);
 
         await definitionStore.StoreAsync(definition, cancellationToken).ConfigureAwait(false);
         var stored = await definitionStore.ReadAsync(receipt.ExecutionFingerprint, cancellationToken).ConfigureAwait(false);
@@ -343,6 +347,63 @@ public sealed class FuwenZhinuWorkflowFactory
                     ValidateExecutableSubset(repeat.Body, insideFanOut: false, insideRepeat: true);
                     break;
             }
+        }
+    }
+
+    private static void ValidateInferenceBindings(
+        WorkflowPlan plan,
+        IInferenceExecutorPreflight? preflight)
+    {
+        foreach (var node in EnumerateNodes(plan.Nodes).OfType<InferenceNode>())
+        {
+            DescriptorReference? promptTemplate = node.PromptTemplate;
+            string? promptDigest = null;
+            if (node.PromptName is not null)
+            {
+                var prompt = plan.Prompts!.Single(candidate =>
+                    string.Equals(candidate.Name, node.PromptName, StringComparison.Ordinal));
+                promptTemplate = prompt.RegisteredSource;
+                if (promptTemplate is null)
+                    promptDigest = prompt.GetSemanticDigest();
+                else if (preflight is null)
+                {
+                    throw new FuwenZhinuAdmissionException(
+                        $"Inference node '{node.StructuralPath}' uses registered prompt alias '{prompt.Name}', " +
+                        "but the configured inference executor cannot preflight exact prompt-template bindings.");
+                }
+            }
+
+            if (preflight is null)
+                continue;
+
+            var failure = preflight.Preflight(new InferenceExecutionRequirement(
+                node.Profile,
+                promptTemplate,
+                promptDigest,
+                node.Tools));
+            if (failure is not null)
+            {
+                throw new FuwenZhinuAdmissionException(
+                    $"Inference node '{node.StructuralPath}' failed executor preflight " +
+                    $"[{failure.Code}]: {failure.Message}");
+            }
+        }
+    }
+
+    private static IEnumerable<WorkflowNode> EnumerateNodes(IEnumerable<WorkflowNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            yield return node;
+            var children = node switch
+            {
+                ConditionalNode conditional => conditional.Then.Concat(conditional.Else),
+                FanOutNode fanOut => fanOut.Body,
+                RepeatNode repeat => repeat.Body,
+                _ => [],
+            };
+            foreach (var child in EnumerateNodes(children))
+                yield return child;
         }
     }
 

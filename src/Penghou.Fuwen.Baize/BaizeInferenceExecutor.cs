@@ -306,7 +306,7 @@ public interface IBaizeInferenceProvenanceSink
 }
 
 /// <summary>Executes admitted Fuwen inference requests through Baize.</summary>
-public sealed class BaizeInferenceExecutor : IInferenceExecutor
+public sealed class BaizeInferenceExecutor : IInferenceExecutor, IInferenceExecutorPreflight
 {
     private readonly IReadOnlyList<BaizeInferenceBinding> bindings;
     private readonly IJsonRepairPipeline repairPipeline;
@@ -332,22 +332,12 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
-        BaizeInferenceBinding? binding;
-        if (request.Prompt is null)
-        {
-            binding = bindings.FirstOrDefault(candidate =>
-                candidate.Prompt is null &&
-                candidate.Profile == request.Profile &&
-                candidate.PromptTemplate == request.PromptTemplate);
-        }
-        else
-        {
-            var requestedDigest = request.Prompt.GetSemanticDigest();
-            binding = bindings.FirstOrDefault(candidate =>
-                candidate.Profile == request.Profile &&
-                candidate.PromptDigest is not null &&
-                string.Equals(candidate.PromptDigest, requestedDigest, StringComparison.Ordinal));
-        }
+        var requirement = new InferenceExecutionRequirement(
+            request.Profile,
+            request.PromptTemplate,
+            request.Prompt?.GetSemanticDigest(),
+            request.Tools);
+        var binding = FindBinding(requirement);
         if (binding is null)
             return InferenceExecutionResult.Failed(new ExecutionFailure(ExecutionFailureKind.Admission, ExecutionFailureCode.DescriptorUnavailable, "No exact Baize binding matched the admitted profile and prompt."));
         var started = Stopwatch.GetTimestamp();
@@ -501,6 +491,40 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor
         await RecordAsync(failureEvidence, cancellationToken).ConfigureAwait(false);
         return InferenceExecutionResult.Failed(lastFailure ?? new ExecutionFailure(ExecutionFailureKind.Provider, ExecutionFailureCode.ProviderError, "Baize inference did not produce a result."), failureEvidence);
     }
+
+    /// <inheritdoc />
+    public ExecutionFailure? Preflight(InferenceExecutionRequirement requirement)
+    {
+        ArgumentNullException.ThrowIfNull(requirement);
+        var binding = FindBinding(requirement);
+        if (binding is null)
+        {
+            return new ExecutionFailure(
+                ExecutionFailureKind.Admission,
+                ExecutionFailureCode.DescriptorUnavailable,
+                "No exact Baize binding matched the admitted profile and prompt.");
+        }
+
+        var missing = requirement.Tools.FirstOrDefault(
+            declared => binding.Tools.All(bound => bound.Descriptor != declared));
+        return missing is null
+            ? null
+            : new ExecutionFailure(
+                ExecutionFailureKind.Admission,
+                ExecutionFailureCode.DescriptorUnavailable,
+                $"Declared tool '{missing.Name}@{missing.Version}' is not bound by the host inference binding.");
+    }
+
+    private BaizeInferenceBinding? FindBinding(InferenceExecutionRequirement requirement) =>
+        requirement.PromptTemplate is not null
+            ? bindings.FirstOrDefault(candidate =>
+                candidate.Prompt is null &&
+                candidate.Profile == requirement.Profile &&
+                candidate.PromptTemplate == requirement.PromptTemplate)
+            : bindings.FirstOrDefault(candidate =>
+                candidate.Profile == requirement.Profile &&
+                candidate.PromptDigest is not null &&
+                string.Equals(candidate.PromptDigest, requirement.PromptDigest, StringComparison.Ordinal));
 
     private static LlmClientMetadata Metadata(BaizeEndpointBinding endpoint)
     {

@@ -984,6 +984,22 @@ public sealed class BaizeInferenceExecutorTests
         unmatched.Failure!.Code.Should().Be(ExecutionFailureCode.DescriptorUnavailable);
     }
 
+    [Fact]
+    public void Exact_router_preflight_rejects_an_unbound_registered_prompt()
+    {
+        var (profile, prompt) = Descriptors();
+        var router = new BaizeRoutedInferenceExecutor([
+            new BaizeInferenceRoute(profile, prompt, new RecordingInferenceExecutor()),
+        ]);
+        var changedPrompt = Descriptor(DescriptorKind.PromptTemplate, "changed-prompt");
+
+        var matched = router.Preflight(new InferenceExecutionRequirement(profile, prompt, null));
+        var unmatched = router.Preflight(new InferenceExecutionRequirement(profile, changedPrompt, null));
+
+        matched.Should().BeNull();
+        unmatched!.Code.Should().Be(ExecutionFailureCode.DescriptorUnavailable);
+    }
+
     private static BaizeInferenceBinding Binding(DescriptorReference profile, DescriptorReference prompt, FakeClient client, BaizeInferencePolicy? policy = null) =>
         new(profile, prompt, [new BaizeEndpointBinding("primary", "provider", "model", client)], policy: policy);
 

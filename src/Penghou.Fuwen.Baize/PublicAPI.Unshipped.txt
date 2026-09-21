@@ -7,6 +7,7 @@ Penghou.Fuwen.Baize.BaizeInferenceRoute.PromptTemplate.get -> Penghou.Fuwen.Desc
 Penghou.Fuwen.Baize.BaizeRoutedInferenceExecutor
 Penghou.Fuwen.Baize.BaizeRoutedInferenceExecutor.BaizeRoutedInferenceExecutor(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeInferenceRoute!>! routes) -> void
 Penghou.Fuwen.Baize.BaizeRoutedInferenceExecutor.ExecuteAsync(Penghou.Fuwen.InferenceExecutionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceExecutionResult!>
+Penghou.Fuwen.Baize.BaizeRoutedInferenceExecutor.Preflight(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.ExecutionFailure?
 Penghou.Fuwen.Baize.BaizeEndpointBinding.BaizeEndpointBinding(string! endpointId, string! provider, string! model, Penghou.Baize.ILlmClient! client, Penghou.Fuwen.Baize.BaizeTokenPricing? pricing = null) -> void
 Penghou.Fuwen.Baize.BaizeEndpointBinding.Pricing.get -> Penghou.Fuwen.Baize.BaizeTokenPricing?
 Penghou.Fuwen.Baize.BaizeGenerationBinding
@@ -90,3 +91,4 @@ Penghou.Fuwen.Baize.IBaizeInferenceProvenanceSink.RecordAsync(Penghou.Fuwen.Infe
 Penghou.Fuwen.Baize.BaizeInferenceExecutor
 Penghou.Fuwen.Baize.BaizeInferenceExecutor.BaizeInferenceExecutor(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeInferenceBinding!>! bindings, Penghou.Nuwa.IJsonRepairPipeline? repairPipeline = null, Penghou.Fuwen.Baize.IBaizeInferenceProvenanceSink? provenanceSink = null) -> void
 Penghou.Fuwen.Baize.BaizeInferenceExecutor.ExecuteAsync(Penghou.Fuwen.InferenceExecutionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceExecutionResult!>
+Penghou.Fuwen.Baize.BaizeInferenceExecutor.Preflight(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.ExecutionFailure?

@@ -62,8 +62,10 @@ evidence before changing behavior.
     `Registered_template_exposes_only_explicit_tools_and_evidence_matches_provider_request`
     and `Registered_template_missing_declared_tool_fails_before_provider_call_with_evidence`
     on .NET 8 and .NET 10.
-  - [ ] Compile and admit a registered prompt alias, then prove its current
-    request-construction failure before implementing R32.
+  - [x] Compile, admit, and execute a registered prompt alias through Zhinu and
+    Baize. Completed 2026-09-21; the regression first exposed the empty-render
+    and persisted-evidence seams, then verified the corrected exact-template
+    path on .NET 8 and .NET 10.
   - [x] Compare plans whose only change is a prompt-binding value and assert the
     node-level dependency explanation. Completed 2026-09-20 with literal-value
     and canonical binding-order regressions on .NET 8 and .NET 10.
@@ -122,17 +124,21 @@ request, and the evidence reports exactly what the model could see.
 
 ### R32 — Make registered prompt aliases executable or fail early
 
-- [ ] **M1.6 — Define the runtime contract in an ADR.** Choose an exact,
-  host-bound registered-prompt resolution/mapping mechanism with typed
-  parameters and immutable source identity.
-- [ ] **M1.7 — Add adapter preflight.** Missing or unsupported registered-prompt
-  bindings fail before workflow registration or provider work, with an
-  actionable diagnostic.
-- [ ] **M1.8 — Implement the supported resolution path.** Avoid rendering an
-  alias as an empty inline prompt and retain its exact descriptor evidence.
-- [ ] **M1.9 — Add end-to-end tests.** Execute through source compiler,
-  admission, Zhinu, and a fake Baize provider; cover parameter mapping, missing
-  binding, changed descriptor, and no-provider-call failure behavior.
+- [x] **M1.6 — Define the runtime contract in an ADR.** Completed 2026-09-21 in
+  ADR 0007: alias parameter names map directly to ordered host arguments, the
+  registered descriptor remains immutable identity, and inline prompt digests
+  remain a distinct evidence shape.
+- [x] **M1.7 — Add adapter preflight.** Completed 2026-09-21. Zhinu checks
+  executor requirements before definition storage; Baize and its exact router
+  reject unavailable descriptors and tools with an actionable node-path
+  diagnostic. Executors without preflight cannot accept registered aliases.
+- [x] **M1.8 — Implement the supported resolution path.** Completed 2026-09-21.
+  Registered aliases bypass inline rendering, pass typed arguments in declared
+  order, preserve replay identity, and emit exact prompt-template evidence.
+- [x] **M1.9 — Add end-to-end tests.** Completed 2026-09-21. Source compilation,
+  admission, Zhinu persistence/execution, captured Baize requests, parameter
+  mapping, required-binding validation, changed descriptors, exact-router
+  preflight, and zero-provider-work failure are covered on both frameworks.
 
 Exit criteria: every admitted alias accepted by adapter preflight executes with
 the exact registered identity, and unsupported aliases are rejected before a
@@ -375,6 +381,7 @@ Add one entry per completed parent task or milestone:
 | 2026-09-20 | M0.1 comparer/catalogue subtasks; M0.2 duplicate-key subtask; M0.3; M1.5; M2.1–M2.2; M2.4–M2.5; M2.7 | Working tree; commit pending | Format clean; Release build 0 warnings/errors; 483 tests pass on each of .NET 8 and .NET 10 (966 executions); independent canonical JSON vector passes | R31 resolved; R33 and R36 core defects resolved; broader M2.3, M2.6, and R37 documentation work remains |
 | 2026-09-21 | M2.3; M2.6 | Working tree after `4e2b07e`; commit pending | Format clean; Release build 0 warnings/errors; 488 tests pass on each of .NET 8 and .NET 10 (976 executions); independent canonical JSON vector passes | R33 and R36 acceptance matrices complete; custom catalogues cannot produce silent exact-resolution failures |
 | 2026-09-21 | M0.1 media-timeout subtask; M1.10–M1.13 | Working tree after `2bfe03b`; commit pending | Format clean; Release build 0 warnings/errors; 495 tests pass on each of .NET 8 and .NET 10 (990 executions); independent canonical JSON vector passes | R34 resolved; ADR 0006 defines one effective deadline across submission, polling, and publication |
+| 2026-09-21 | M0.1 registered-alias subtask; M1.6–M1.9 | Working tree after `a4881cf`; commit pending | Format clean; Release build 0 warnings/errors; 499 tests pass on each of .NET 8 and .NET 10 (998 executions); independent canonical JSON vector passes | R32 resolved; ADR 0007 defines exact host-owned identity, typed parameter mapping, and pre-registration failure |
 
 ## Deferred decisions
 

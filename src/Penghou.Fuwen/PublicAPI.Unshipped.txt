@@ -835,6 +835,14 @@ Penghou.Fuwen.IContextProvider
 Penghou.Fuwen.IContextProvider.ExecuteAsync(Penghou.Fuwen.ContextExecutionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.ContextExecutionResult!>
 Penghou.Fuwen.IInferenceExecutor
 Penghou.Fuwen.IInferenceExecutor.ExecuteAsync(Penghou.Fuwen.InferenceExecutionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceExecutionResult!>
+Penghou.Fuwen.IInferenceExecutorPreflight
+Penghou.Fuwen.IInferenceExecutorPreflight.Preflight(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.ExecutionFailure?
+Penghou.Fuwen.InferenceExecutionRequirement
+Penghou.Fuwen.InferenceExecutionRequirement.InferenceExecutionRequirement(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference? promptTemplate, string? promptDigest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? tools = null) -> void
+Penghou.Fuwen.InferenceExecutionRequirement.Profile.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.InferenceExecutionRequirement.PromptTemplate.get -> Penghou.Fuwen.DescriptorReference?
+Penghou.Fuwen.InferenceExecutionRequirement.PromptDigest.get -> string?
+Penghou.Fuwen.InferenceExecutionRequirement.Tools.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>!
 Penghou.Fuwen.InferenceExecutionEvidence
 const Penghou.Fuwen.InferenceExecutionEvidence.MaximumAttempts = 32 -> int
 const Penghou.Fuwen.InferenceExecutionEvidence.MaximumDiagnosticUtf8Bytes = 1024 -> int

@@ -29,7 +29,7 @@ public sealed class BaizeInferenceRoute
 }
 
 /// <summary>Routes mixed structured-text and media inference by exact descriptors.</summary>
-public sealed class BaizeRoutedInferenceExecutor : IInferenceExecutor
+public sealed class BaizeRoutedInferenceExecutor : IInferenceExecutor, IInferenceExecutorPreflight
 {
     private readonly IReadOnlyDictionary<(DescriptorReference Profile, DescriptorReference Prompt), IInferenceExecutor> routes;
 
@@ -71,5 +71,28 @@ public sealed class BaizeRoutedInferenceExecutor : IInferenceExecutor
                 ExecutionFailureKind.Admission,
                 ExecutionFailureCode.DescriptorUnavailable,
                 "No exact Baize inference route matched the admitted profile and prompt template.")));
+    }
+
+    /// <inheritdoc />
+    public ExecutionFailure? Preflight(InferenceExecutionRequirement requirement)
+    {
+        ArgumentNullException.ThrowIfNull(requirement);
+        if (requirement.PromptTemplate is null)
+        {
+            return new ExecutionFailure(
+                ExecutionFailureKind.Admission,
+                ExecutionFailureCode.DescriptorUnavailable,
+                "Routed inference does not support workflow-owned prompts; bind the profile to BaizeInferenceExecutor.");
+        }
+        if (!routes.TryGetValue((requirement.Profile, requirement.PromptTemplate), out var executor))
+        {
+            return new ExecutionFailure(
+                ExecutionFailureKind.Admission,
+                ExecutionFailureCode.DescriptorUnavailable,
+                "No exact Baize inference route matched the admitted profile and prompt template.");
+        }
+        return executor is IInferenceExecutorPreflight preflight
+            ? preflight.Preflight(requirement)
+            : null;
     }
 }

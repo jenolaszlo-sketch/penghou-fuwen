@@ -1,6 +1,8 @@
 using System.Text.Json;
 using FluentAssertions;
+using Penghou.Baize;
 using Penghou.Fuwen.Compiler;
+using Penghou.Fuwen.Baize;
 using Penghou.Zhinu;
 using Penghou.Zhinu.Sqlite;
 
@@ -301,6 +303,153 @@ public sealed class FuwenZhinuPromptExecutionTests
         }
     }
 
+    [Fact]
+    public async Task Registered_prompt_alias_executes_end_to_end_through_exact_Baize_binding()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var (admission, catalogue, profile, template) = await AdmitRegisteredAliasAsync(ct);
+        var client = new AliasLlmClient();
+        var evidence = new CapturingProvenanceSink();
+        var inference = new BaizeInferenceExecutor(
+            [new BaizeInferenceBinding(
+                profile,
+                template,
+                [new BaizeEndpointBinding("alias-endpoint", "alias-provider", "alias-model", client)],
+                userPromptTemplate: "Registered template arguments: {arguments}")],
+            provenanceSink: evidence);
+        var registration = await new FuwenZhinuWorkflowFactory(
+                new InMemoryWorkflowDefinitionStore(),
+                new FuwenZhinuProviderRuntimeIdentity(
+                    catalogue.SnapshotRevision,
+                    admission.Receipt!.ResolvedDescriptorSetFingerprint),
+                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), inference))
+            .CreateAsync("alias", "1", admission, ct);
+        var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            await using var engine = CreateEngine(root, registration);
+            using var inputDocument = JsonDocument.Parse("\"Alice\"");
+            var runId = await engine.StartAsync(
+                "alias", "1", inputDocument.RootElement.Clone(), cancellationToken: ct);
+            await engine.ExecuteAsync(runId, ct);
+            var output = await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: ct);
+
+            output.GetString().Should().Be("Hello, Alice.");
+            client.Requests.Should().ContainSingle();
+            client.Requests[0].Messages.Should().ContainSingle()
+                .Which.Parts.Should().ContainSingle()
+                .Which.Should().BeOfType<LlmTextContent>()
+                .Which.Text.Should().Contain("\"name\":\"Alice\"");
+            evidence.Items.Should().ContainSingle()
+                .Which.PromptTemplate.Should().Be(template);
+            evidence.Items[0].PromptDigest.Should().BeNull();
+        }
+        finally
+        {
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task Registered_prompt_alias_with_changed_source_is_rejected_before_storage_or_provider_work()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var (admission, catalogue, profile, _) = await AdmitRegisteredAliasAsync(ct);
+        var changedTemplate = new DescriptorReference(
+            DescriptorKind.PromptTemplate,
+            "sample.template",
+            "1",
+            Digest('c'));
+        var client = new AliasLlmClient();
+        var inference = new BaizeInferenceExecutor([
+            new BaizeInferenceBinding(
+                profile,
+                changedTemplate,
+                [new BaizeEndpointBinding("alias-endpoint", "alias-provider", "alias-model", client)]),
+        ]);
+        var store = new CountingDefinitionStore();
+        var factory = new FuwenZhinuWorkflowFactory(
+            store,
+            new FuwenZhinuProviderRuntimeIdentity(
+                catalogue.SnapshotRevision,
+                admission.Receipt!.ResolvedDescriptorSetFingerprint),
+            new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), inference));
+
+        var act = () => factory.CreateAsync("alias", "1", admission, ct).AsTask();
+
+        await act.Should().ThrowAsync<FuwenZhinuAdmissionException>()
+            .WithMessage("*answer/infer*DescriptorUnavailable*");
+        store.Writes.Should().Be(0);
+        client.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Registered_prompt_alias_requires_preflight_capable_executor_before_storage()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var (admission, catalogue, _, _) = await AdmitRegisteredAliasAsync(ct);
+        var inference = new TemplateCapturingInference();
+        var store = new CountingDefinitionStore();
+        var factory = new FuwenZhinuWorkflowFactory(
+            store,
+            new FuwenZhinuProviderRuntimeIdentity(
+                catalogue.SnapshotRevision,
+                admission.Receipt!.ResolvedDescriptorSetFingerprint),
+            new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), inference));
+
+        var act = () => factory.CreateAsync("alias", "1", admission, ct).AsTask();
+
+        await act.Should().ThrowAsync<FuwenZhinuAdmissionException>()
+            .WithMessage("*answer/infer*cannot preflight exact prompt-template bindings*");
+        store.Writes.Should().Be(0);
+        inference.Requests.Should().BeEmpty();
+    }
+
+    private static async Task<(
+        WorkflowAdmissionResult Admission,
+        InMemoryTrustedCatalogue Catalogue,
+        DescriptorReference Profile,
+        DescriptorReference Template)> AdmitRegisteredAliasAsync(CancellationToken cancellationToken)
+    {
+        var profile = new DescriptorReference(
+            DescriptorKind.InferenceProfile,
+            "sample.profile",
+            "1",
+            Digest('a'));
+        var template = new DescriptorReference(
+            DescriptorKind.PromptTemplate,
+            "sample.template",
+            "1",
+            Digest('b'));
+        var str = new PrimitiveType(FuwenPrimitiveKind.String);
+        var catalogue = new InMemoryTrustedCatalogue([
+            new TrustedCatalogueDescriptor(
+                profile,
+                callableContract: new CallableContract(
+                    new CallableSignature([new CallableParameter("request", str)], str),
+                    CallableEffect.Read,
+                    CallableIdempotency.Idempotent,
+                    CallableRetrySafety.Safe)),
+            new TrustedCatalogueDescriptor(template),
+        ]);
+        var source =
+            $"prompt standard_greeting(name: string) uses registered \"sample.template@1#{new string('b', 64)}\";\n" +
+            $"workflow answer(input: string) -> string {{ infer infer = infer \"sample.profile@1#{new string('a', 64)}\" prompt standard_greeting(name: input;) -> string; return infer; }}";
+        var compiled = await new FuwenSourceCompiler(catalogue)
+            .CompileAsync(source, cancellationToken: cancellationToken);
+        compiled.Succeeded.Should().BeTrue(
+            string.Join("; ", compiled.Diagnostics.Select(item => $"{item.Code}:{item.Message}")));
+        var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
+                catalogue,
+                capabilityPolicy: new CapabilityGrantPolicy("policy/1", [])))
+            .AdmitAsync(compiled.Plan!, cancellationToken: cancellationToken);
+        admission.Succeeded.Should().BeTrue(
+            string.Join("; ", admission.Diagnostics.Select(item => $"{item.Code}:{item.Message}")));
+        return (admission, catalogue, profile, template);
+    }
+
     private static WorkflowEngine CreateEngine(
         string root,
         FuwenZhinuWorkflowRegistration registration) =>
@@ -358,6 +507,61 @@ public sealed class FuwenZhinuPromptExecutionTests
             return ValueTask.FromResult(InferenceExecutionResult.Succeeded(
                 RuntimeValue.FromJson(document.RootElement)));
         }
+    }
+
+    private sealed class AliasLlmClient : ILlmClient, ILlmCompletionClient
+    {
+        public List<LlmRequest> Requests { get; } = [];
+        public LlmEndpointCapabilities Capabilities { get; } = new()
+        {
+            NativeStructuredOutput = true,
+        };
+
+        public Task<LlmResponse> CompleteAsync(
+            LlmRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            return Task.FromResult(new LlmResponse("\"Hello, Alice.\""));
+        }
+
+        public async IAsyncEnumerable<LlmStreamEvent> StreamAsync(
+            LlmRequest request,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await Task.CompletedTask;
+            yield break;
+        }
+    }
+
+    private sealed class CapturingProvenanceSink : IBaizeInferenceProvenanceSink
+    {
+        public List<InferenceExecutionEvidence> Items { get; } = [];
+
+        public ValueTask RecordAsync(
+            InferenceExecutionEvidence evidence,
+            CancellationToken cancellationToken = default)
+        {
+            Items.Add(evidence);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class CountingDefinitionStore : IWorkflowDefinitionStore
+    {
+        public int Writes { get; private set; }
+
+        public ValueTask<WorkflowDefinitionWriteDisposition> StoreAsync(
+            WorkflowDefinitionDocument definition,
+            CancellationToken cancellationToken = default)
+        {
+            Writes++;
+            return ValueTask.FromResult(WorkflowDefinitionWriteDisposition.Created);
+        }
+
+        public ValueTask<WorkflowDefinitionDocument?> ReadAsync(
+            string executionFingerprint,
+            CancellationToken cancellationToken = default) => ValueTask.FromResult<WorkflowDefinitionDocument?>(null);
     }
 
     private sealed class UnusedActivity : IActivityExecutor

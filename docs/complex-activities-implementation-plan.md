@@ -2,7 +2,7 @@
 
 Date created: 2026-09-21
 
-Status: implementation in progress; CI-0 contract decisions frozen
+Status: implementation in progress; CI-0 and CI-1 complete
 
 Primary consumer: Marang supervisor-authored Fuwen workflows
 
@@ -220,10 +220,11 @@ reviewable before any new public or persisted contract is added.
   report in the provider-neutral core.
 - [x] Extend exact inference requirements with prompt form, modality, context,
   tools/effects, limits, protocol revision, and recovery requirements.
-- [ ] Implement manifests/preflight for Baize structured text, media, exact
+- [x] Implement manifests/preflight for Baize structured text, media, exact
   routing, and deterministic fakes. Unsupported combinations fail closed.
-- [ ] Make Zhinu registration require successful complex-inference preflight
-  before storing/registering an IR v9 definition.
+- [x] Make Zhinu registration require successful structured preflight before
+  definition storage, carry the admitted IR version into the requirement, and
+  fail closed when an adapter cannot report the requested protocol/IR support.
 - [x] Add a human-readable and JSON explanation renderer for the report.
 
 Evidence: unit matrices for supported/unsupported combinations, missing exact
@@ -406,4 +407,8 @@ protocol feature.
 
 | Date | Task | Commit/PR | Verification | Notes |
 | --- | --- | --- | --- | --- |
-| — | — | — | — | — |
+| 2026-09-21 | CI-0 contract decisions and compatibility baseline | `ec8a11c` | Full .NET 8/.NET 10 suite remains green through CI-1 | Three ADRs, v8 baseline, and deterministic Marang scenario |
+| 2026-09-21 | CI-1 provider-neutral manifest and report foundation | `8153962` | Core public API, renderer, package, and matrix tests | Legacy constructor retained; write-tool gate closed |
+| 2026-09-21 | CI-1 Zhinu pre-registration enforcement | `b9e35d7` | Zhinu tests on .NET 8/.NET 10 | Structured rejection precedes storage/provider work; v3-v8 failure vocabulary retained |
+| 2026-09-21 | CI-1 Baize structured-text manifest | `30443a1` | Baize tests and package on .NET 8/.NET 10 | Conservative evidence/recovery claims and exact bindings |
+| 2026-09-21 | CI-1 media, exact routing, and deterministic matrix | `95872c3` | 548 tests per framework; format; core/Baize pack; canonical JSON | Legacy modality remains unspecified; explicit mismatches fail closed |

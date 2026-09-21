@@ -355,8 +355,11 @@ test fixtures or hidden host configuration.
   and focused restart.
 
 Design constraints and acceptance criteria are recorded in
-`docs/complex-activities.md`. The existing `infer` node evolves first; no public
-generic complex-activity plugin surface is authorized by this plan.
+`docs/complex-activities.md`; milestone ordering, contracts, tests, and the
+Marang consumer proof are recorded in
+`docs/complex-activities-implementation-plan.md`. The existing `infer` node
+evolves first; no public generic complex-activity plugin surface is authorized
+by this plan.
 
 Exit criteria: the reference workflow performs a useful admitted tool call with
 bounded, durable, explainable behavior and survives recovery correctly.

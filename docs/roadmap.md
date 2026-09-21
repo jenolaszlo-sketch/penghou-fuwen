@@ -263,7 +263,8 @@ are durably journaled and replay-safe; preflight rejects unsupported adapters;
 read tools remain capability-scoped and privacy-sensitive; external mutations
 stay explicit workflow nodes; material protocol changes invalidate admission;
 and Fuwen does not expose a generic activity-plugin escape hatch before a second
-protocol proves the abstraction. See [bounded complex activities](complex-activities.md).
+protocol proves the abstraction. See [bounded complex activities](complex-activities.md)
+and the [implementation plan](complex-activities-implementation-plan.md).
 
 Delivery order:
 

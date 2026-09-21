@@ -187,6 +187,7 @@ Useful design references:
 - [Roadmap and delivery status](docs/roadmap.md)
 - [Current capability matrix](docs/capability-matrix.md)
 - [Bounded complex-activity direction](docs/complex-activities.md)
+- [Complex-inference implementation plan](docs/complex-activities-implementation-plan.md)
 - [Execution ports](docs/execution-ports.md)
 - [Zhinu adapter boundary](docs/zhinu-adapter.md)
 - [Runtime values and evidence](docs/runtime-evidence.md)

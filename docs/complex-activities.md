@@ -1,5 +1,10 @@
 # Bounded complex activities
 
+Implementation work is tracked in the
+[bounded complex inference implementation plan](complex-activities-implementation-plan.md).
+The plan makes Marang the first consumer proof while keeping all contracts
+product-neutral.
+
 Status: accepted product and architecture direction; not yet implemented.
 
 ## Direction

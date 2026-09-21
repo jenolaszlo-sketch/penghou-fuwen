@@ -242,18 +242,22 @@ syntax form is exercised against the actual compiler.
 
 ### R38 — Enforce release integrity
 
-- [ ] **M2.11 — Reuse validation in publication.** Build, format, multi-target
+- [x] **M2.11 — Reuse validation in publication.** Build, format, multi-target
   tests, golden vectors, and packaging run for the exact release commit before
-  publishing.
-- [ ] **M2.12 — Reject version disagreement.** A tag must exactly equal the
-  checked-in package version; it must not silently override it.
-- [ ] **M2.13 — Define manual-dispatch policy.** Manual releases receive the
-  same validation and an explicit version/ref contract.
-- [ ] **M2.14 — Publish validated artifacts only.** The packages pushed are the
-  packages produced by the successful validation job.
-- [ ] **M2.15 — Test failure paths without publishing.** Prove that bad tags,
+  publishing. Completed 2026-09-21 in the validation job.
+- [x] **M2.12 — Reject version disagreement.** A tag must exactly equal the
+  checked-in package version; it must not silently override it. Completed
+  2026-09-21 with an exact `v<Version>` gate.
+- [x] **M2.13 — Define manual-dispatch policy.** Manual releases receive the
+  same validation and an explicit version/ref contract. Completed 2026-09-21;
+  dispatch must select an existing version tag and repeat it as confirmation.
+- [x] **M2.14 — Publish validated artifacts only.** The packages pushed are the
+  packages produced by the successful validation job. Completed 2026-09-21
+  using a commit-keyed artifact transferred to the dependent publish job.
+- [x] **M2.15 — Test failure paths without publishing.** Prove that bad tags,
   failing tests, missing artifacts, and wrong commits cannot reach the push
-  step.
+  step. Completed 2026-09-21 with workflow contract coverage for gates, job
+  dependency, artifact completeness, commit identity, and step ordering.
 
 Exit criteria: the checked-in workflow enforces the preview release checklist
 for the exact commit and artifacts being published.
@@ -392,6 +396,7 @@ Add one entry per completed parent task or milestone:
 | 2026-09-21 | M0.1 registered-alias subtask; M1.6–M1.9 | Working tree after `a4881cf`; commit pending | Format clean; Release build 0 warnings/errors; 499 tests pass on each of .NET 8 and .NET 10 (998 executions); independent canonical JSON vector passes | R32 resolved; ADR 0007 defines exact host-owned identity, typed parameter mapping, and pre-registration failure |
 | 2026-09-21 | M0.1 context subtask; M1.14–M1.16 | Working tree after `bbaede3`; commit pending | Format clean; Release build 0 warnings/errors; 505 tests pass on each of .NET 8 and .NET 10 (1,010 executions); independent canonical JSON vector passes | R35 resolved; ADR 0008 defines explicit bounded context mapping and snapshot/payload evidence |
 | 2026-09-21 | M2.8–M2.10 | Working tree after `8c6e671`; commit pending | Format clean; Release build 0 warnings/errors; 507 tests pass on each of .NET 8 and .NET 10 (1,014 executions); independent canonical JSON vector passes | R37 resolved; nine compiler-backed source fixtures and README fence compilation make language-reference drift test-visible |
+| 2026-09-21 | M2.11–M2.15 | Working tree after `fdd0b71`; commit pending | Format clean; Release build 0 warnings/errors; 508 tests pass on each of .NET 8 and .NET 10 (1,016 executions); independent canonical JSON vector passes | R38 resolved; publication depends on validation and transfers only commit-keyed complete package artifacts |
 
 ## Deferred decisions
 

@@ -43,6 +43,13 @@ not satisfy a semantic release gate.
 
 ## Publication
 
+The publish workflow enforces the mechanical subset of this checklist on the
+exact tagged commit. Manual dispatch is a deliberate retry path only: select an
+existing `v<version>` tag and enter that same tag as confirmation. It cannot
+publish a branch, invent a version, or bypass validation. The NuGet job consumes
+the complete commit-keyed package artifact produced by the validation job; it
+does not rebuild packages.
+
 - [ ] `CHANGELOG.md`, `README.md`, API documentation, security guidance, and
   package descriptions agree with the shipped surface.
 - [ ] The version in `Directory.Build.props` is the intended preview version.

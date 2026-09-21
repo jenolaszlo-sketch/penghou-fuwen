@@ -5,18 +5,20 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing version tag to validate and publish
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
-  publish:
+  validate:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     steps:
-      - name: Checkout
+      - name: Checkout exact release ref
         uses: actions/checkout@v6
 
       - name: Setup .NET
@@ -26,13 +28,43 @@ jobs:
             8.0.x
             10.0.x
 
-      - name: Pack
+      - name: Verify release ref and checked-in version
+        shell: bash
+        env:
+          MANUAL_RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          version=$(dotnet msbuild src/Penghou.Fuwen/Penghou.Fuwen.csproj -getProperty:Version -nologo)
+          expected_tag="v${version}"
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+            echo "Release workflows must run from an existing version tag; got $GITHUB_REF." >&2
+            exit 1
+          fi
+          if [ "$GITHUB_REF_NAME" != "$expected_tag" ]; then
+            echo "Tag $GITHUB_REF_NAME does not equal checked-in version tag $expected_tag." >&2
+            exit 1
+          fi
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$MANUAL_RELEASE_TAG" != "$GITHUB_REF_NAME" ]; then
+            echo "Manual release tag $MANUAL_RELEASE_TAG does not equal selected ref $GITHUB_REF_NAME." >&2
+            exit 1
+          fi
+
+      - name: Build
+        run: dotnet build Penghou.Fuwen.slnx --configuration Release
+
+      - name: Verify formatting
+        run: dotnet format Penghou.Fuwen.slnx --verify-no-changes --no-restore
+
+      - name: Test
+        run: dotnet test Penghou.Fuwen.slnx --configuration Release --no-build
+
+      - name: Verify independent canonical JSON vector
+        run: python3 tests/golden/canonical_json_v1.py
+
+      - name: Pack validated commit
         shell: bash
         run: |
-          version=$(dotnet msbuild src/Penghou.Fuwen/Penghou.Fuwen.csproj -getProperty:Version -nologo)
-          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
-            version="${GITHUB_REF_NAME#v}"
-          fi
+          set -euo pipefail
           for csproj in \
             src/Penghou.Fuwen/Penghou.Fuwen.csproj \
             src/Penghou.Fuwen.Compiler/Penghou.Fuwen.Compiler.csproj \
@@ -40,9 +72,42 @@ jobs:
             src/Penghou.Fuwen.Baize/Penghou.Fuwen.Baize.csproj; do
             dotnet pack "$csproj" \
               --configuration Release \
-              --output ./artifacts \
-              --property:PackageVersion="$version"
+              --no-build \
+              --output ./artifacts
           done
+          test "$(find artifacts -maxdepth 1 -name '*.nupkg' ! -name '*.snupkg' | wc -l)" -eq 4
+          test "$(find artifacts -maxdepth 1 -name '*.snupkg' | wc -l)" -eq 4
+
+      - name: Upload validated packages
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-packages-${{ github.sha }}
+          path: |
+            artifacts/*.nupkg
+            artifacts/*.snupkg
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: nuget
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Download validated packages
+        uses: actions/download-artifact@v7
+        with:
+          name: release-packages-${{ github.sha }}
+          path: artifacts
+
+      - name: Require complete package set
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find artifacts -maxdepth 1 -name '*.nupkg' ! -name '*.snupkg' | wc -l)" -eq 4
+          test "$(find artifacts -maxdepth 1 -name '*.snupkg' | wc -l)" -eq 4
 
       - name: NuGet login (OIDC -> temp API key)
         id: login

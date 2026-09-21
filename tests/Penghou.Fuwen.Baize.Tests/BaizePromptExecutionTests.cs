@@ -90,6 +90,129 @@ public sealed class BaizePromptExecutionTests
     }
 
     [Fact]
+    public async Task Workflow_owned_prompt_delivers_canonical_context_and_records_snapshot_evidence()
+    {
+        var definition = Greet();
+        var client = new FakeClient(new LlmResponse("\"hi\""));
+        var contextProvider = new DescriptorReference(
+            DescriptorKind.ContextProvider, "research", "1",
+            new ContentDigest("sha256", "test", new string('c', 64)));
+        var snapshot = Snapshot(
+            contextProvider,
+            "snapshot-redacted",
+            new ContextSnapshotBudgetEvidence(true, null, 2048, null, 4096));
+        var request = new InferenceExecutionRequest(
+            Invocation(), Profile(), null, [],
+            [new InferenceContextInput(
+                "research",
+                new PrimitiveType(FuwenPrimitiveKind.Json),
+                Json("{\"uniqueFact\":\"orchids bloom at night\",\"secret\":\"[REDACTED]\"}"),
+                snapshot)],
+            new PrimitiveType(FuwenPrimitiveKind.String), definition, Rendered());
+        var executor = new BaizeInferenceExecutor([
+            new BaizeInferenceBinding(
+                Profile(), null,
+                [new BaizeEndpointBinding("primary", "provider", "model", client)],
+                prompt: definition,
+                contextDeliveryPolicy: new BaizeContextDeliveryPolicy("context-map/2", 1024)),
+        ]);
+
+        var result = await executor.ExecuteAsync(request, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        var text = client.LastRequest!.Messages[^1].Parts.OfType<LlmTextContent>().Single().Text;
+        text.Should().Contain("\"uniqueFact\":\"orchids bloom at night\"")
+            .And.Contain("\"secret\":\"[REDACTED]\"")
+            .And.NotContain("raw-secret");
+        result.Evidence!.ContextInputs.Should().ContainSingle();
+        result.Evidence.ContextInputs[0].Name.Should().Be("research");
+        result.Evidence.ContextInputs[0].ContextSnapshot.SnapshotId.Should().Be("snapshot-redacted");
+        result.Evidence.ContextInputs[0].ContextSnapshot.Budget.WasTruncated.Should().BeTrue();
+        result.Evidence.ContextDeliveryPolicyRevision.Should().Be("context-map/2");
+        result.Evidence.ContextPayloadDigest!.Contract.Should().Be("fuwen-context-payload/v1");
+        result.Evidence.ContextPayloadUtf8Bytes.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task Workflow_owned_prompt_rejects_unmapped_or_oversized_context_before_provider_call()
+    {
+        var definition = Greet();
+        var provider = new DescriptorReference(
+            DescriptorKind.ContextProvider, "research", "1",
+            new ContentDigest("sha256", "test", new string('c', 64)));
+        var context = new InferenceContextInput(
+            "research",
+            new PrimitiveType(FuwenPrimitiveKind.String),
+            Json("\"a value that exceeds the tiny policy\""),
+            Snapshot(provider, "snapshot-1"));
+        var unmappedClient = new FakeClient(new LlmResponse("\"never\""));
+        var oversizedClient = new FakeClient(new LlmResponse("\"never\""));
+        var unmapped = new BaizeInferenceExecutor([
+            new BaizeInferenceBinding(
+                Profile(), null,
+                [new BaizeEndpointBinding("primary", "provider", "model", unmappedClient)],
+                prompt: definition),
+        ]);
+        var oversized = new BaizeInferenceExecutor([
+            new BaizeInferenceBinding(
+                Profile(), null,
+                [new BaizeEndpointBinding("primary", "provider", "model", oversizedClient)],
+                prompt: definition,
+                contextDeliveryPolicy: new BaizeContextDeliveryPolicy("context-map/1", 8)),
+        ]);
+        var request = new InferenceExecutionRequest(
+            Invocation(), Profile(), null, [], [context],
+            new PrimitiveType(FuwenPrimitiveKind.String), definition, Rendered());
+
+        var unmappedResult = await unmapped.ExecuteAsync(request, TestContext.Current.CancellationToken);
+        var oversizedResult = await oversized.ExecuteAsync(request, TestContext.Current.CancellationToken);
+
+        unmappedResult.Failure!.Code.Should().Be(ExecutionFailureCode.PolicyRejected);
+        oversizedResult.Failure!.Code.Should().Be(ExecutionFailureCode.PolicyRejected);
+        oversizedResult.Failure.Message.Should().Contain("never silently truncated");
+        unmappedClient.Calls.Should().Be(0);
+        oversizedClient.Calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Artifact_context_exposes_only_its_detached_identity()
+    {
+        var definition = Greet();
+        var client = new FakeClient(new LlmResponse("\"hi\""));
+        var provider = new DescriptorReference(
+            DescriptorKind.ContextProvider, "assets", "1",
+            new ContentDigest("sha256", "test", new string('c', 64)));
+        var artifactDescriptor = new DescriptorReference(
+            DescriptorKind.Artifact, "document", "1",
+            new ContentDigest("sha256", "test", new string('d', 64)));
+        var artifact = new ArtifactReference(
+            "artifact-store", "artifact-42", artifactDescriptor,
+            new ContentDigest("sha256", "artifact/v1", new string('e', 64)),
+            123, "report.pdf");
+        var request = new InferenceExecutionRequest(
+            Invocation(), Profile(), null, [],
+            [new InferenceContextInput(
+                "document",
+                new ArtifactType(artifactDescriptor),
+                RuntimeValue.FromArtifact(artifact),
+                Snapshot(provider, "snapshot-artifact"))],
+            new PrimitiveType(FuwenPrimitiveKind.String), definition, Rendered());
+        var executor = new BaizeInferenceExecutor([
+            new BaizeInferenceBinding(
+                Profile(), null,
+                [new BaizeEndpointBinding("primary", "provider", "model", client)],
+                prompt: definition,
+                contextDeliveryPolicy: new BaizeContextDeliveryPolicy("context-map/1")),
+        ]);
+
+        var result = await executor.ExecuteAsync(request, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        var text = client.LastRequest!.Messages[^1].Parts.OfType<LlmTextContent>().Single().Text;
+        text.Should().Contain("artifact-42").And.Contain("artifact-store").And.Contain("report.pdf");
+    }
+
+    [Fact]
     public async Task Prompt_binding_mismatch_fails_closed()
     {
         var client = new FakeClient(new LlmResponse("\"hi\""));
@@ -198,6 +321,20 @@ public sealed class BaizePromptExecutionTests
         result.Failure!.Code.Should().Be(ExecutionFailureCode.DescriptorUnavailable);
         result.Failure.Message.Should().Contain("workflow-owned prompts");
     }
+
+    private static ContextSnapshotReference Snapshot(
+        DescriptorReference provider,
+        string snapshotId,
+        ContextSnapshotBudgetEvidence? budget = null) =>
+        new(
+            provider,
+            snapshotId,
+            new ContentDigest("sha256", "request/v1", new string('e', 64)),
+            new ContentDigest("sha256", "content/v1", new string('f', 64)),
+            [],
+            "redaction/3",
+            budget ?? new ContextSnapshotBudgetEvidence(false, null, null, null, null),
+            DateTimeOffset.UnixEpoch.AddDays(1));
 
     private sealed class FakeClient : ILlmClient, ILlmCompletionClient
     {

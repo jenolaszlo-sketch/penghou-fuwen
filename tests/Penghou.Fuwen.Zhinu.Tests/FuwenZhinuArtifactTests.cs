@@ -13,6 +13,32 @@ namespace Penghou.Fuwen.Zhinu.Tests;
 public sealed partial class FuwenZhinuSequentialInterpreterTests
 {
     [Fact]
+    public async Task Context_inference_without_delivery_policy_is_rejected_before_registration()
+    {
+        var fixture = await AdmitVerticalAsync();
+        var client = new VerticalBaizeClient();
+        var inference = new BaizeInferenceExecutor([
+            new BaizeInferenceBinding(
+                fixture.Profile,
+                fixture.PromptTemplate,
+                [new BaizeEndpointBinding("primary", "provider", "model", client)],
+                userPromptTemplate: "{arguments}\n{context}"),
+        ]);
+        var factory = new FuwenZhinuWorkflowFactory(
+            new InMemoryWorkflowDefinitionStore(),
+            IdentityFor(fixture.Admission),
+            new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), inference));
+
+        var act = () => factory.CreateAsync(
+            "fuwen.context-policy", "1", fixture.Admission,
+            TestContext.Current.CancellationToken).AsTask();
+
+        await act.Should().ThrowAsync<FuwenZhinuAdmissionException>()
+            .WithMessage("*PolicyRejected*context-delivery policy*");
+        client.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Sqlite_v3_vertical_slice_publishes_selected_activity_artifact_with_fuwen_identity()
     {
         var fixture = await AdmitVerticalAsync();
@@ -33,7 +59,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 userPromptTemplate: "{arguments}\n{context}",
                 policy: new BaizeInferencePolicy(
                     policyRevision: "inference/1",
-                    routingPolicyRevision: "routing/1")),
+                    routingPolicyRevision: "routing/1"),
+                contextDeliveryPolicy: new BaizeContextDeliveryPolicy("context-map/1")),
         ], provenanceSink: provenance);
         var registration = await new FuwenZhinuWorkflowFactory(
                 new InMemoryWorkflowDefinitionStore(),

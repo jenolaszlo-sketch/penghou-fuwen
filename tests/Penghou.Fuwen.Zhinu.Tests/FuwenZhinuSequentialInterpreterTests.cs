@@ -140,6 +140,9 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             inference.Requests.Should().ContainSingle();
             inference.Requests[0].ContextInputs.Should().ContainSingle();
             inference.Requests[0].ContextInputs[0].ContextSnapshot.SnapshotId.Should().Be("snapshot-1");
+            inference.Requests[0].ContextInputs[0].Value.Should().BeOfType<ArtifactRuntimeValue>()
+                .Which.Artifact.ArtifactId.Should().Be("artifact-1");
+            inference.Requests[0].Invocation.EffectiveRequestFingerprint.Should().NotBeNullOrWhiteSpace();
         }
         finally
         {

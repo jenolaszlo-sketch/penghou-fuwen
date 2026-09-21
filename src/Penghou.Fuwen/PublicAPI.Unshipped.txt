@@ -838,19 +838,28 @@ Penghou.Fuwen.IInferenceExecutor.ExecuteAsync(Penghou.Fuwen.InferenceExecutionRe
 Penghou.Fuwen.IInferenceExecutorPreflight
 Penghou.Fuwen.IInferenceExecutorPreflight.Preflight(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.ExecutionFailure?
 Penghou.Fuwen.InferenceExecutionRequirement
-Penghou.Fuwen.InferenceExecutionRequirement.InferenceExecutionRequirement(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference? promptTemplate, string? promptDigest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? tools = null) -> void
+Penghou.Fuwen.InferenceExecutionRequirement.InferenceExecutionRequirement(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference? promptTemplate, string? promptDigest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? tools = null, bool hasContextInputs = false) -> void
+Penghou.Fuwen.InferenceExecutionRequirement.HasContextInputs.get -> bool
 Penghou.Fuwen.InferenceExecutionRequirement.Profile.get -> Penghou.Fuwen.DescriptorReference!
 Penghou.Fuwen.InferenceExecutionRequirement.PromptTemplate.get -> Penghou.Fuwen.DescriptorReference?
 Penghou.Fuwen.InferenceExecutionRequirement.PromptDigest.get -> string?
 Penghou.Fuwen.InferenceExecutionRequirement.Tools.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>!
+Penghou.Fuwen.InferenceContextDeliveryEvidence
+Penghou.Fuwen.InferenceContextDeliveryEvidence.InferenceContextDeliveryEvidence(string! name, Penghou.Fuwen.ContextSnapshotReference! contextSnapshot) -> void
+Penghou.Fuwen.InferenceContextDeliveryEvidence.ContextSnapshot.get -> Penghou.Fuwen.ContextSnapshotReference!
+Penghou.Fuwen.InferenceContextDeliveryEvidence.Name.get -> string!
 Penghou.Fuwen.InferenceExecutionEvidence
 const Penghou.Fuwen.InferenceExecutionEvidence.MaximumAttempts = 32 -> int
 const Penghou.Fuwen.InferenceExecutionEvidence.MaximumDiagnosticUtf8Bytes = 1024 -> int
 const Penghou.Fuwen.InferenceExecutionEvidence.MaximumIdentityUtf8Bytes = 256 -> int
-Penghou.Fuwen.InferenceExecutionEvidence.InferenceExecutionEvidence(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference? promptTemplate, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceAttemptEvidence!>! attempts, int? promptTokens = null, int? completionTokens = null, int? totalTokens = null, bool wasRepaired = false, int repairAttempts = 0, string? repairStrategy = null, string? policyRevision = null, string? routingPolicyRevision = null, long? durationMilliseconds = null, Penghou.Fuwen.InferenceModality modality = Penghou.Fuwen.InferenceModality.StructuredText, Penghou.Fuwen.InferenceCostEvidence? cost = null, string? promptDigest = null, string? renderedPromptDigest = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? admittedTools = null) -> void
+Penghou.Fuwen.InferenceExecutionEvidence.InferenceExecutionEvidence(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference? promptTemplate, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceAttemptEvidence!>! attempts, int? promptTokens = null, int? completionTokens = null, int? totalTokens = null, bool wasRepaired = false, int repairAttempts = 0, string? repairStrategy = null, string? policyRevision = null, string? routingPolicyRevision = null, long? durationMilliseconds = null, Penghou.Fuwen.InferenceModality modality = Penghou.Fuwen.InferenceModality.StructuredText, Penghou.Fuwen.InferenceCostEvidence? cost = null, string? promptDigest = null, string? renderedPromptDigest = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? admittedTools = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceContextDeliveryEvidence!>? contextInputs = null, Penghou.Fuwen.ContentDigest? contextPayloadDigest = null, int? contextPayloadUtf8Bytes = null, string? contextDeliveryPolicyRevision = null) -> void
 Penghou.Fuwen.InferenceExecutionEvidence.AdmittedTools.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>?
 Penghou.Fuwen.InferenceExecutionEvidence.Attempts.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceAttemptEvidence!>!
 Penghou.Fuwen.InferenceExecutionEvidence.CompletionTokens.get -> int?
+Penghou.Fuwen.InferenceExecutionEvidence.ContextDeliveryPolicyRevision.get -> string?
+Penghou.Fuwen.InferenceExecutionEvidence.ContextInputs.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceContextDeliveryEvidence!>!
+Penghou.Fuwen.InferenceExecutionEvidence.ContextPayloadDigest.get -> Penghou.Fuwen.ContentDigest?
+Penghou.Fuwen.InferenceExecutionEvidence.ContextPayloadUtf8Bytes.get -> int?
 Penghou.Fuwen.InferenceExecutionEvidence.Cost.get -> Penghou.Fuwen.InferenceCostEvidence?
 Penghou.Fuwen.InferenceExecutionEvidence.DurationMilliseconds.get -> long?
 Penghou.Fuwen.InferenceExecutionEvidence.Modality.get -> Penghou.Fuwen.InferenceModality

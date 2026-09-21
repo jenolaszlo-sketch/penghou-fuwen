@@ -540,6 +540,22 @@ public sealed class InferenceCostEvidence
     public string? PricingRevision { get; }
 }
 
+/// <summary>Evidence that one named context snapshot was mapped for inference.</summary>
+public sealed class InferenceContextDeliveryEvidence
+{
+    /// <summary>Creates detached context-delivery evidence without retaining the context value.</summary>
+    public InferenceContextDeliveryEvidence(string name, ContextSnapshotReference contextSnapshot)
+    {
+        Name = RuntimeValueSnapshot.Text(name, nameof(name), InferenceContextInput.MaximumNameUtf8Bytes);
+        ContextSnapshot = RuntimeValueSnapshot.CloneContextSnapshot(contextSnapshot);
+    }
+
+    /// <summary>The admitted context requirement name.</summary>
+    public string Name { get; }
+    /// <summary>The immutable snapshot that attests selection, redaction, and truncation.</summary>
+    public ContextSnapshotReference ContextSnapshot { get; }
+}
+
 /// <summary>A bounded, detached provider-neutral inference provenance record.</summary>
 public sealed class InferenceExecutionEvidence
 {
@@ -568,7 +584,11 @@ public sealed class InferenceExecutionEvidence
         InferenceCostEvidence? cost = null,
         string? promptDigest = null,
         string? renderedPromptDigest = null,
-        IReadOnlyList<DescriptorReference>? admittedTools = null)
+        IReadOnlyList<DescriptorReference>? admittedTools = null,
+        IReadOnlyList<InferenceContextDeliveryEvidence>? contextInputs = null,
+        ContentDigest? contextPayloadDigest = null,
+        int? contextPayloadUtf8Bytes = null,
+        string? contextDeliveryPolicyRevision = null)
     {
         ArgumentNullException.ThrowIfNull(profile);
         if (profile.Kind != DescriptorKind.InferenceProfile)
@@ -588,8 +608,26 @@ public sealed class InferenceExecutionEvidence
             throw new ArgumentOutOfRangeException(nameof(totalTokens));
         if (durationMilliseconds is < 0)
             throw new ArgumentOutOfRangeException(nameof(durationMilliseconds));
+        if ((contextPayloadDigest is null) != (contextPayloadUtf8Bytes is null))
+            throw new ArgumentException("Context payload digest and byte count must be reported together.", nameof(contextPayloadDigest));
+        if (contextPayloadUtf8Bytes is < 1)
+            throw new ArgumentOutOfRangeException(nameof(contextPayloadUtf8Bytes));
         if (!Enum.IsDefined(modality))
             throw new ArgumentOutOfRangeException(nameof(modality));
+
+        var contextCopy = (contextInputs ?? []).Select(item =>
+        {
+            ArgumentNullException.ThrowIfNull(item);
+            return new InferenceContextDeliveryEvidence(item.Name, item.ContextSnapshot);
+        }).ToArray();
+        if (contextCopy.Length > InferenceExecutionRequest.MaximumContextInputs)
+            throw new ArgumentOutOfRangeException(nameof(contextInputs));
+        if (contextCopy.Select(static item => item.Name).Distinct(StringComparer.Ordinal).Count() != contextCopy.Length)
+            throw new ArgumentException("Inference context evidence names must be unique.", nameof(contextInputs));
+        if (contextPayloadDigest is not null && contextCopy.Length == 0)
+            throw new ArgumentException("A context payload digest requires context input evidence.", nameof(contextPayloadDigest));
+        if (contextPayloadDigest is not null && contextDeliveryPolicyRevision is null)
+            throw new ArgumentException("A context payload digest requires a delivery-policy revision.", nameof(contextDeliveryPolicyRevision));
 
         for (var index = 0; index < attempts.Count; index++)
         {
@@ -614,6 +652,15 @@ public sealed class InferenceExecutionEvidence
             : Array.AsReadOnly(admittedTools.Select(static tool =>
                 RuntimeValueSnapshot.CloneDescriptor(
                     tool ?? throw new ArgumentException("Admitted tools cannot contain null values.", nameof(admittedTools)))).ToArray());
+        ContextInputs = Array.AsReadOnly(contextCopy);
+        ContextPayloadDigest = contextPayloadDigest is null
+            ? null
+            : RuntimeValueSnapshot.CloneDigest(contextPayloadDigest, nameof(contextPayloadDigest));
+        ContextPayloadUtf8Bytes = contextPayloadUtf8Bytes;
+        ContextDeliveryPolicyRevision = RuntimeValueSnapshot.OptionalText(
+            contextDeliveryPolicyRevision,
+            nameof(contextDeliveryPolicyRevision),
+            MaximumIdentityUtf8Bytes);
         Attempts = Array.AsReadOnly(attempts.Select(static attempt => new InferenceAttemptEvidence(
             attempt.Attempt,
             attempt.Provider,
@@ -654,6 +701,14 @@ public sealed class InferenceExecutionEvidence
     /// adapter. An empty collection means the model saw no tools.
     /// </summary>
     public IReadOnlyList<DescriptorReference>? AdmittedTools { get; }
+    /// <summary>The named immutable snapshots intended for inference, without their sensitive values.</summary>
+    public IReadOnlyList<InferenceContextDeliveryEvidence> ContextInputs { get; }
+    /// <summary>Digest of the canonical model-visible context JSON, when a mapping was produced.</summary>
+    public ContentDigest? ContextPayloadDigest { get; }
+    /// <summary>UTF-8 length of the canonical model-visible context JSON.</summary>
+    public int? ContextPayloadUtf8Bytes { get; }
+    /// <summary>The trusted host mapping-policy revision, when context delivery was configured.</summary>
+    public string? ContextDeliveryPolicyRevision { get; }
     /// <summary>The ordered provider/model attempts made by the adapter.</summary>
     public IReadOnlyList<InferenceAttemptEvidence> Attempts { get; }
     /// <summary>Input tokens reported by the provider, when available.</summary>
@@ -774,7 +829,8 @@ public sealed class InferenceExecutionRequirement
         DescriptorReference profile,
         DescriptorReference? promptTemplate,
         string? promptDigest,
-        IReadOnlyList<DescriptorReference>? tools = null)
+        IReadOnlyList<DescriptorReference>? tools = null,
+        bool hasContextInputs = false)
     {
         Profile = ExecutionPortValidation.Descriptor(profile, DescriptorKind.InferenceProfile, nameof(profile));
         if ((promptTemplate is null) == (promptDigest is null))
@@ -791,6 +847,7 @@ public sealed class InferenceExecutionRequirement
         if (copy.Distinct().Count() != copy.Length)
             throw new ArgumentException("Inference requirement tools must be unique.", nameof(tools));
         Tools = Array.AsReadOnly(copy);
+        HasContextInputs = hasContextInputs;
     }
 
     /// <summary>The exact admitted logical inference profile.</summary>
@@ -801,6 +858,8 @@ public sealed class InferenceExecutionRequirement
     public string? PromptDigest { get; }
     /// <summary>The exact admitted model-callable tool descriptors.</summary>
     public IReadOnlyList<DescriptorReference> Tools { get; }
+    /// <summary>Whether the admitted inference expects one or more context inputs.</summary>
+    public bool HasContextInputs { get; }
 }
 
 /// <summary>Optional host capability for rejecting unavailable inference bindings before registration.</summary>

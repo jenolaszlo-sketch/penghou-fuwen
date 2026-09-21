@@ -22,6 +22,13 @@ Inference context inputs keep four things together: the declared requirement
 name, its expected type, the detached runtime value, and the immutable context
 snapshot evidence. A snapshot reference never substitutes for the value.
 
+Model delivery is a separate trusted-host decision. Baize requires an explicit
+revisioned `BaizeContextDeliveryPolicy`, canonicalizes named values as bounded
+JSON, and rejects missing mappings or oversized payloads before provider work.
+Context-provider snapshots remain authoritative for selection, redaction, and
+source truncation. Artifact context carries detached identity only; adapters do
+not dereference bytes implicitly. See ADR 0008.
+
 IR v8 inference requests carry an explicit tool allowlist. A non-null empty
 `InferenceExecutionRequest.Tools` collection means `tools none`; a non-empty
 collection is the exact model-visible set. Null is reserved at the execution

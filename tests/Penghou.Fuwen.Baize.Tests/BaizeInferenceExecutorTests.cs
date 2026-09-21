@@ -48,7 +48,8 @@ public sealed class BaizeInferenceExecutorTests
             profile,
             prompt,
             [new BaizeEndpointBinding("primary", "provider", "model", client)],
-            userPromptTemplate: "A {arguments} B {context} C {context}");
+            userPromptTemplate: "A {arguments} B {context} C {context}",
+            contextDeliveryPolicy: new BaizeContextDeliveryPolicy("context/1"));
         var request = Request(
             profile,
             prompt,
@@ -67,6 +68,26 @@ public sealed class BaizeInferenceExecutorTests
         client.LastRequest.Messages[0].Parts.Should().ContainSingle();
         client.LastRequest.Messages[0].Parts[0].Should().BeOfType<LlmTextContent>().Which.Text.Should()
             .Be("A {\"arg\":\"literal {context}\"} B {\"ctx\":\"literal {arguments}\"} C {\"ctx\":\"literal {arguments}\"}");
+    }
+
+    [Fact]
+    public void Registered_template_context_requires_an_explicit_placeholder_at_preflight()
+    {
+        var (profile, prompt) = Descriptors();
+        var executor = new BaizeInferenceExecutor([
+            new BaizeInferenceBinding(
+                profile,
+                prompt,
+                [new BaizeEndpointBinding(
+                    "primary", "provider", "model", new FakeClient(new LlmResponse("\"never\"")))],
+                contextDeliveryPolicy: new BaizeContextDeliveryPolicy("context/1")),
+        ]);
+
+        var failure = executor.Preflight(new InferenceExecutionRequirement(
+            profile, prompt, null, hasContextInputs: true));
+
+        failure!.Code.Should().Be(ExecutionFailureCode.PolicyRejected);
+        failure.Message.Should().Contain("{context} placeholder");
     }
 
     [Theory]

@@ -497,6 +497,13 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             inference.Calls.Should().Be(2);
             inference.Requests.Should().HaveCount(2)
                 .And.OnlyContain(request => request.ContextInputs.Count == 1 && request.ContextInputs[0].Name == "cx");
+            inference.Requests.Select(request =>
+                    ((JsonRuntimeValue)request.ContextInputs[0].Value).Value.GetString())
+                .Should().BeEquivalentTo(["a.ctx", "b.ctx"]);
+            inference.Requests.Select(request => request.ContextInputs[0].ContextSnapshot.SnapshotId)
+                .Should().OnlyHaveUniqueItems();
+            inference.Requests.Select(request => request.Invocation.EffectiveRequestFingerprint)
+                .Should().OnlyHaveUniqueItems();
 
             await engine.ExecuteAsync(runId, TestContext.Current.CancellationToken);
             context.Calls.Should().Be(2);

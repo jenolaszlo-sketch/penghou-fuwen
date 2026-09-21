@@ -170,6 +170,37 @@ public sealed class ExecutionPortContractTests
     }
 
     [Fact]
+    public void Inference_context_evidence_requires_a_complete_bounded_mapping_identity()
+    {
+        var profile = Descriptor(DescriptorKind.InferenceProfile, "profile");
+        var prompt = Descriptor(DescriptorKind.PromptTemplate, "prompt");
+        var snapshot = Snapshot();
+        var context = new InferenceContextDeliveryEvidence("research", snapshot);
+        var digest = Digest("model-context");
+        var evidence = new InferenceExecutionEvidence(
+            profile,
+            prompt,
+            [],
+            contextInputs: [context],
+            contextPayloadDigest: digest,
+            contextPayloadUtf8Bytes: 42,
+            contextDeliveryPolicyRevision: "context-map/1");
+
+        evidence.ContextInputs.Should().ContainSingle();
+        evidence.ContextInputs[0].Should().NotBeSameAs(context);
+        evidence.ContextInputs[0].ContextSnapshot.Should().NotBeSameAs(snapshot);
+        evidence.ContextPayloadDigest.Should().NotBeSameAs(digest);
+        evidence.ContextPayloadUtf8Bytes.Should().Be(42);
+        ((Action)(() => new InferenceExecutionEvidence(
+            profile, prompt, [], contextInputs: [context], contextPayloadDigest: digest)))
+            .Should().Throw<ArgumentException>().WithMessage("*digest and byte count*");
+        ((Action)(() => new InferenceExecutionEvidence(
+            profile, prompt, [], contextPayloadDigest: digest, contextPayloadUtf8Bytes: 42,
+            contextDeliveryPolicyRevision: "context-map/1")))
+            .Should().Throw<ArgumentException>().WithMessage("*requires context input evidence*");
+    }
+
+    [Fact]
     public void Successful_execution_results_preserve_every_supported_runtime_value_shape()
     {
         var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "asset");

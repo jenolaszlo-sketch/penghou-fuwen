@@ -380,7 +380,8 @@ public sealed class FuwenZhinuWorkflowFactory
                 node.Profile,
                 promptTemplate,
                 promptDigest,
-                node.Tools));
+                node.Tools,
+                node.ContextRequirements is { Count: > 0 }));
             if (failure is not null)
             {
                 throw new FuwenZhinuAdmissionException(

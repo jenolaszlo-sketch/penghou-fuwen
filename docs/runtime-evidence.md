@@ -43,6 +43,12 @@ unknown rather than being treated as zero. When a host configures a cost ceiling
 unknown cost stops further representation retries or endpoint fallbacks so the
 adapter cannot authorize another call from an undercounted accumulator.
 
+When context is mapped for a model, inference evidence records each named
+immutable snapshot plus the context-delivery policy revision, canonical payload
+digest, and UTF-8 byte count. Raw context values are deliberately absent from
+evidence. The snapshot retains the context provider's redaction and truncation
+attestation; the payload digest identifies the representation Baize prepared.
+
 Structured responses are subject to the trusted profile's UTF-8 byte ceiling
 before JSON parsing or repair. Repaired JSON is checked against the same ceiling
 before Fuwen creates a runtime value. An oversized response or a repair-pipeline

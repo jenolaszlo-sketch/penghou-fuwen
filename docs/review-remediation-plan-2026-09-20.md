@@ -72,8 +72,9 @@ evidence before changing behavior.
   - [x] Exercise media generation with a cooperative provider where the plan
     timeout is stricter than the host timeout. Completed 2026-09-21 with a
     cancellation-aware delayed submission and exact deadline provenance.
-  - [ ] Capture a workflow-owned prompt request with a unique context value and
-    prove whether that value reaches the fake model.
+  - [x] Capture a workflow-owned prompt request with a unique context value.
+    Completed 2026-09-21: the initial probe confirmed silent omission; the
+    regression now proves canonical bounded delivery to the captured model.
   - [x] Compile descriptor shorthand through both discovery-capable and
     exact-resolution-only catalogues. Completed 2026-09-20; the former emits an
     exact descriptor and the latter fails without acquiring discovery.
@@ -165,15 +166,18 @@ each declared limit, and failures accurately describe commitment uncertainty.
 
 ### R35 — Define context delivery for workflow-owned prompts
 
-- [ ] **M1.14 — Decide the context contract in an ADR.** Distinguish evidence-
-  only dependencies from model-consumed context and define bounded mapping,
-  redaction, artifact handling, identity, and evidence.
-- [ ] **M1.15 — Implement explicit delivery or rejection.** Context must reach
-  the intended model input through the defined mapping, or preflight must reject
-  the unsupported request. Never silently discard it.
-- [ ] **M1.16 — Add cross-region tests.** Verify unique context data, snapshot
-  identity, truncation/redaction, no implicit artifact dereference, and the same
-  behavior in sequential, repeat, and fan-out inference.
+- [x] **M1.14 — Decide the context contract in an ADR.** Completed 2026-09-21
+  in ADR 0008. Context-provider selection/redaction/truncation remains distinct
+  from Baize's explicit canonical model-delivery policy; evidence retains no raw
+  context values and artifacts remain detached references.
+- [x] **M1.15 — Implement explicit delivery or rejection.** Completed
+  2026-09-21. Zhinu preflight rejects missing host mappings, workflow-owned
+  prompts receive a separate bounded JSON data message, registered templates
+  require `{context}`, and oversized payloads fail without provider work.
+- [x] **M1.16 — Add cross-region tests.** Completed 2026-09-21. Tests cover a
+  unique fact, redaction/truncation attestations, snapshot and payload evidence,
+  oversized and unmapped failures, reference-only artifact handling, and
+  distinct sequential/repeat/fan-out context identities on both frameworks.
 
 Exit criteria: operators can determine which context was intended for model
 consumption and which bounded representation was actually supplied.
@@ -382,6 +386,7 @@ Add one entry per completed parent task or milestone:
 | 2026-09-21 | M2.3; M2.6 | Working tree after `4e2b07e`; commit pending | Format clean; Release build 0 warnings/errors; 488 tests pass on each of .NET 8 and .NET 10 (976 executions); independent canonical JSON vector passes | R33 and R36 acceptance matrices complete; custom catalogues cannot produce silent exact-resolution failures |
 | 2026-09-21 | M0.1 media-timeout subtask; M1.10–M1.13 | Working tree after `2bfe03b`; commit pending | Format clean; Release build 0 warnings/errors; 495 tests pass on each of .NET 8 and .NET 10 (990 executions); independent canonical JSON vector passes | R34 resolved; ADR 0006 defines one effective deadline across submission, polling, and publication |
 | 2026-09-21 | M0.1 registered-alias subtask; M1.6–M1.9 | Working tree after `a4881cf`; commit pending | Format clean; Release build 0 warnings/errors; 499 tests pass on each of .NET 8 and .NET 10 (998 executions); independent canonical JSON vector passes | R32 resolved; ADR 0007 defines exact host-owned identity, typed parameter mapping, and pre-registration failure |
+| 2026-09-21 | M0.1 context subtask; M1.14–M1.16 | Working tree after `bbaede3`; commit pending | Format clean; Release build 0 warnings/errors; 505 tests pass on each of .NET 8 and .NET 10 (1,010 executions); independent canonical JSON vector passes | R35 resolved; ADR 0008 defines explicit bounded context mapping and snapshot/payload evidence |
 
 ## Deferred decisions
 

@@ -426,6 +426,7 @@ public sealed class FuwenZhinuPromptExecutionTests
         await act.Should().ThrowAsync<FuwenZhinuAdmissionException>()
             .WithMessage("*failed executor preflight*");
         inference.StructuredPreflightCalls.Should().Be(1);
+        inference.RequiredIrVersion.Should().Be(FuwenContracts.IrVersionV8);
         inference.ProviderCalls.Should().Be(0);
         store.Writes.Should().Be(0);
     }
@@ -571,12 +572,14 @@ public sealed class FuwenZhinuPromptExecutionTests
             pricingQuality: InferencePricingQuality.Unknown);
 
         public int StructuredPreflightCalls { get; private set; }
+        public string? RequiredIrVersion { get; private set; }
         public int ProviderCalls { get; private set; }
         public InferenceFeatureManifest FeatureManifest => Manifest;
 
         public InferencePreflightReport PreflightDetailed(InferenceExecutionRequirement requirement)
         {
             StructuredPreflightCalls++;
+            RequiredIrVersion = requirement.IrVersion;
             return InferencePreflight.Evaluate(requirement, Manifest);
         }
 

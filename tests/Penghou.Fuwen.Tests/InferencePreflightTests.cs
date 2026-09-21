@@ -124,6 +124,23 @@ public sealed class InferencePreflightTests
             .Should().Throw<ArgumentException>().WithMessage("*read-only*");
     }
 
+    [Fact]
+    public void Legacy_requirement_leaves_modality_unspecified()
+    {
+        var profile = Descriptor(DescriptorKind.InferenceProfile, "media");
+        var prompt = Descriptor(DescriptorKind.PromptTemplate, "generate");
+        var requirement = new InferenceExecutionRequirement(profile, prompt, null);
+        var manifest = new InferenceFeatureManifest(
+            "fuwen-inference/v1", ["ir/v8"], [InferencePromptForm.RegisteredTemplate], [InferenceModality.Image],
+            false, null, [], [], InferenceRecoveryQuality.Unsupported, InferenceUsageQuality.Unknown,
+            InferencePricingQuality.Unknown, profiles: [profile], promptTemplates: [prompt]);
+
+        requirement.Modality.Should().BeNull();
+        manifest.Preflight(requirement).IsExecutable.Should().BeTrue();
+        InferencePreflightReportRenderer.RenderJson(manifest.Preflight(requirement))
+            .Should().Contain("\"modality\":\"unspecified\"");
+    }
+
     private static InferenceFeatureManifest Manifest(DescriptorReference profile, DescriptorReference prompt, DescriptorReference? tool,
         IReadOnlyList<InferenceLimit>? supportedLimits = null) => new(
         "fuwen-inference/v1", ["ir/v1"], [InferencePromptForm.RegisteredTemplate], [InferenceModality.StructuredText],

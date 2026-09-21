@@ -509,6 +509,85 @@ public sealed class BaizeInferenceExecutorTests
     }
 
     [Fact]
+    public void Generation_manifest_advertises_only_exact_media_bindings_and_bounded_capabilities()
+    {
+        var imageProfile = Descriptor(DescriptorKind.InferenceProfile, "image-profile");
+        var videoProfile = Descriptor(DescriptorKind.InferenceProfile, "video-profile");
+        var audioProfile = Descriptor(DescriptorKind.InferenceProfile, "audio-profile");
+        var prompt = Descriptor(DescriptorKind.PromptTemplate, "media-prompt");
+        static DescriptorReference Artifact(string name) => Descriptor(DescriptorKind.Artifact, name);
+        static BaizeGenerationBinding Binding(
+            DescriptorReference profile,
+            DescriptorReference prompt,
+            DescriptorReference artifact,
+            BaizeGenerationModality modality,
+            TimeSpan timeout) => new(
+                profile,
+                prompt,
+                artifact,
+                modality,
+                "endpoint",
+                "provider",
+                "model",
+                new FakeGenerationClient(new GenerationResult([])),
+                request => new ImageGenerationRequest { Prompt = "unused", IdempotencyKey = request.Invocation.OperationKey },
+                new FakeGeneratedAssetPublisher(),
+                new BaizeGenerationPolicy(timeout: timeout));
+
+        var executor = new BaizeGenerationInferenceExecutor([
+            Binding(imageProfile, prompt, Artifact("image"), BaizeGenerationModality.Image, TimeSpan.FromSeconds(5)),
+            Binding(videoProfile, prompt, Artifact("video"), BaizeGenerationModality.Video, TimeSpan.FromSeconds(10)),
+            Binding(audioProfile, prompt, Artifact("audio"), BaizeGenerationModality.Audio, TimeSpan.FromSeconds(15)),
+        ]);
+
+        executor.FeatureManifest.SupportedModalities.Should().BeEquivalentTo(
+            [InferenceModality.Image, InferenceModality.Video, InferenceModality.Audio]);
+        executor.FeatureManifest.SupportedPromptForms.Should().ContainSingle()
+            .Which.Should().Be(InferencePromptForm.RegisteredTemplate);
+        executor.FeatureManifest.SupportedLimits.GetMaximum(InferenceLimitDimension.Turns).Should().Be(1);
+        executor.FeatureManifest.SupportedLimits.GetMaximum(InferenceLimitDimension.ModelCalls).Should().Be(1);
+        executor.FeatureManifest.SupportedLimits.GetMaximum(InferenceLimitDimension.DurationMilliseconds).Should().Be(15_000);
+        executor.FeatureManifest.SupportsContextDelivery.Should().BeFalse();
+        executor.FeatureManifest.Tools.Should().BeEmpty();
+        executor.FeatureManifest.RecoveryQuality.Should().Be(InferenceRecoveryQuality.Unsupported);
+        executor.FeatureManifest.UsageQuality.Should().Be(InferenceUsageQuality.Unknown);
+        executor.FeatureManifest.PricingQuality.Should().Be(InferencePricingQuality.Unknown);
+        executor.FeatureManifest.Profiles.Should().BeEquivalentTo([imageProfile, videoProfile, audioProfile]);
+    }
+
+    [Fact]
+    public async Task Generation_preflight_rejects_context_before_provider_submission()
+    {
+        var (profile, prompt) = Descriptors();
+        var artifact = Descriptor(DescriptorKind.Artifact, "generated-image");
+        var client = new FakeGenerationClient(new GenerationResult([]));
+        var binding = new BaizeGenerationBinding(
+            profile, prompt, artifact, BaizeGenerationModality.Image,
+            "endpoint", "provider", "model", client,
+            request => new ImageGenerationRequest { Prompt = "draw", IdempotencyKey = request.Invocation.OperationKey },
+            new FakeGeneratedAssetPublisher());
+        var executor = new BaizeGenerationInferenceExecutor([binding]);
+        var contextProvider = Descriptor(DescriptorKind.ContextProvider, "context-provider");
+        var request = Request(
+            profile,
+            prompt,
+            new ArtifactType(artifact),
+            [],
+            [new InferenceContextInput(
+                "subject",
+                new PrimitiveType(FuwenPrimitiveKind.String),
+                RuntimeValue.FromJson(JsonSerializer.SerializeToElement("value")),
+                Snapshot(contextProvider))]);
+
+        var result = await executor.ExecuteAsync(request, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Failure!.Kind.Should().Be(ExecutionFailureKind.Admission);
+        result.Failure.Code.Should().Be(ExecutionFailureCode.PolicyRejected);
+        client.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Generation_preserves_asset_order_in_receipts_and_list_output()
     {
         var (profile, prompt) = Descriptors();
@@ -1019,6 +1098,110 @@ public sealed class BaizeInferenceExecutorTests
 
         matched.Should().BeNull();
         unmatched!.Code.Should().Be(ExecutionFailureCode.DescriptorUnavailable);
+    }
+
+    [Fact]
+    public void Exact_router_detailed_preflight_delegates_to_the_selected_route_manifest()
+    {
+        var (profile, prompt) = Descriptors();
+        var client = new FakeClient("\"must-not-run\"");
+        var target = new BaizeInferenceExecutor([Binding(profile, prompt, client)]);
+        var router = new BaizeRoutedInferenceExecutor([
+            new BaizeInferenceRoute(profile, prompt, target),
+        ]);
+
+        var report = router.PreflightDetailed(new InferenceExecutionRequirement(profile, prompt, null));
+
+        report.IsExecutable.Should().BeTrue();
+        report.Manifest.Profiles.Should().ContainSingle().Which.Should().Be(profile);
+        report.Manifest.PromptTemplates.Should().ContainSingle().Which.Should().Be(prompt);
+    }
+
+    [Fact]
+    public void Exact_router_preserves_legacy_media_modality_and_rejects_an_explicit_mismatch()
+    {
+        var (profile, prompt) = Descriptors();
+        var artifact = Descriptor(DescriptorKind.Artifact, "generated-image");
+        var client = new FakeGenerationClient(new GenerationResult([]));
+        var generation = new BaizeGenerationInferenceExecutor([
+            new BaizeGenerationBinding(
+                profile, prompt, artifact, BaizeGenerationModality.Image,
+                "endpoint", "provider", "model", client,
+                request => new ImageGenerationRequest { Prompt = "draw", IdempotencyKey = request.Invocation.OperationKey },
+                new FakeGeneratedAssetPublisher()),
+        ]);
+        var router = new BaizeRoutedInferenceExecutor([
+            new BaizeInferenceRoute(profile, prompt, generation),
+        ]);
+
+        var legacy = router.PreflightDetailed(new InferenceExecutionRequirement(profile, prompt, null));
+        var mismatched = router.PreflightDetailed(new InferenceExecutionRequirement(
+            profile, prompt, null, tools: null, hasContextInputs: false, modality: InferenceModality.Video));
+
+        legacy.IsExecutable.Should().BeTrue();
+        legacy.Requirement.Modality.Should().BeNull();
+        mismatched.IsExecutable.Should().BeFalse();
+        mismatched.Diagnostics.Select(static diagnostic => diagnostic.Code)
+            .Should().Contain(InferencePreflightDiagnosticCode.UnsupportedModality);
+        client.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Exact_router_detailed_preflight_does_not_form_a_cross_route_cartesian_union()
+    {
+        var (profile, prompt) = Descriptors();
+        var otherProfile = Descriptor(DescriptorKind.InferenceProfile, "other-profile");
+        var otherPrompt = Descriptor(DescriptorKind.PromptTemplate, "other-prompt");
+        var firstClient = new FakeClient("\"must-not-run\"");
+        var secondClient = new FakeClient("\"must-not-run\"");
+        var router = new BaizeRoutedInferenceExecutor([
+            new BaizeInferenceRoute(profile, prompt,
+                new BaizeInferenceExecutor([Binding(profile, prompt, firstClient)])),
+            new BaizeInferenceRoute(otherProfile, otherPrompt,
+                new BaizeInferenceExecutor([Binding(otherProfile, otherPrompt, secondClient)])),
+        ]);
+
+        var report = router.PreflightDetailed(new InferenceExecutionRequirement(profile, otherPrompt, null));
+
+        report.IsExecutable.Should().BeFalse();
+        report.Diagnostics.Select(static diagnostic => diagnostic.Code)
+            .Should().Contain(InferencePreflightDiagnosticCode.MissingProfileBinding);
+        report.Diagnostics.Select(static diagnostic => diagnostic.Code)
+            .Should().Contain(InferencePreflightDiagnosticCode.MissingPromptTemplateBinding);
+        firstClient.Calls.Should().Be(0);
+        secondClient.Calls.Should().Be(0);
+    }
+
+    [Fact]
+    public void Exact_router_detailed_preflight_fails_closed_for_a_legacy_route()
+    {
+        var (profile, prompt) = Descriptors();
+        var target = new RecordingInferenceExecutor();
+        var router = new BaizeRoutedInferenceExecutor([
+            new BaizeInferenceRoute(profile, prompt, target),
+        ]);
+
+        var report = router.PreflightDetailed(new InferenceExecutionRequirement(profile, prompt, null));
+
+        report.IsExecutable.Should().BeFalse();
+        report.Diagnostics.Select(static diagnostic => diagnostic.Code)
+            .Should().Contain(InferencePreflightDiagnosticCode.MissingProfileBinding);
+        target.Calls.Should().Be(0);
+    }
+
+    [Fact]
+    public void Exact_router_detailed_preflight_does_no_provider_work()
+    {
+        var (profile, prompt) = Descriptors();
+        var client = new FakeClient("\"must-not-run\"");
+        var target = new BaizeInferenceExecutor([Binding(profile, prompt, client)]);
+        var router = new BaizeRoutedInferenceExecutor([
+            new BaizeInferenceRoute(profile, prompt, target),
+        ]);
+
+        _ = router.PreflightDetailed(new InferenceExecutionRequirement(profile, prompt, null));
+
+        client.Calls.Should().Be(0);
     }
 
     [Fact]

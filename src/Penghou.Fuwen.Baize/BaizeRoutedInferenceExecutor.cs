@@ -29,9 +29,17 @@ public sealed class BaizeInferenceRoute
 }
 
 /// <summary>Routes mixed structured-text and media inference by exact descriptors.</summary>
-public sealed class BaizeRoutedInferenceExecutor : IInferenceExecutor, IInferenceExecutorPreflight
+public sealed class BaizeRoutedInferenceExecutor : IInferenceExecutor, IInferenceExecutorPreflight, IInferenceExecutorManifest
 {
     private readonly IReadOnlyDictionary<(DescriptorReference Profile, DescriptorReference Prompt), IInferenceExecutor> routes;
+
+    // A router cannot truthfully publish the cartesian union of its route
+    // manifests: a profile from one route and a prompt from another would
+    // appear executable even though that pair is not registered. Exact
+    // detailed preflight therefore delegates to the selected route. This
+    // intentionally conservative snapshot is only used for unmatched routes
+    // and for legacy executors that do not expose a manifest.
+    private static readonly InferenceFeatureManifest featureManifest = CreateConservativeManifest();
 
     /// <summary>Creates a deterministic exact-descriptor router.</summary>
     public BaizeRoutedInferenceExecutor(IReadOnlyList<BaizeInferenceRoute> routes)
@@ -49,6 +57,14 @@ public sealed class BaizeRoutedInferenceExecutor : IInferenceExecutor, IInferenc
         }
         this.routes = copy;
     }
+
+    /// <summary>
+    /// Gets the router's intentionally conservative manifest. It does not
+    /// aggregate route capabilities or exact bindings; callers must use
+    /// <see cref="PreflightDetailed(InferenceExecutionRequirement)"/> for
+    /// exact route-aware admission.
+    /// </summary>
+    public InferenceFeatureManifest FeatureManifest => featureManifest;
 
     /// <inheritdoc />
     public ValueTask<InferenceExecutionResult> ExecuteAsync(
@@ -95,4 +111,47 @@ public sealed class BaizeRoutedInferenceExecutor : IInferenceExecutor, IInferenc
             ? preflight.Preflight(requirement)
             : null;
     }
+
+    /// <inheritdoc />
+    public InferencePreflightReport PreflightDetailed(InferenceExecutionRequirement requirement)
+    {
+        ArgumentNullException.ThrowIfNull(requirement);
+
+        // Route selection is deliberately performed before looking at a
+        // manifest. Evaluating this router's descriptor sets would recreate
+        // the invalid cartesian-union admission that the exact route table is
+        // intended to prevent.
+        if (requirement.PromptTemplate is not null &&
+            routes.TryGetValue((requirement.Profile, requirement.PromptTemplate), out var executor))
+        {
+            if (executor is IInferenceExecutorManifest manifest)
+                return manifest.PreflightDetailed(requirement);
+
+            // A legacy executor may still execute through this router, but it
+            // has no provider-neutral capability contract. Detailed preflight
+            // must fail closed without invoking provider work.
+        }
+
+        return featureManifest.Preflight(requirement);
+    }
+
+    private static InferenceFeatureManifest CreateConservativeManifest() =>
+        new(
+            protocolRevision: "fuwen-inference/v1",
+            supportedIrVersions: [],
+            supportedPromptForms: [],
+            supportedModalities: [],
+            supportsContextDelivery: false,
+            maximumContextPayloadUtf8Bytes: null,
+            supportedToolEffects: [],
+            supportedLimits: [],
+            recoveryQuality: InferenceRecoveryQuality.Unsupported,
+            usageQuality: InferenceUsageQuality.Unknown,
+            pricingQuality: InferencePricingQuality.Unknown,
+            supportsStructuredOutput: false,
+            supportsSyntheticStructuredOutput: false,
+            profiles: [],
+            promptTemplates: [],
+            tools: [],
+            workflowPromptDigests: []);
 }

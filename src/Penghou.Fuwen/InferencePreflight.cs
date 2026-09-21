@@ -416,7 +416,9 @@ public static class InferencePreflightReportRenderer
         builder.Append("Inference preflight: ").Append(report.IsExecutable ? "executable" : "blocked").AppendLine();
         builder.Append("Protocol revision: ").AppendLine(report.Requirement.ProtocolRevision);
         builder.Append("Prompt form: ").AppendLine(EnumText(report.Requirement.PromptForm));
-        builder.Append("Modality: ").AppendLine(EnumText(report.Requirement.Modality));
+        builder.Append("Modality: ").AppendLine(report.Requirement.Modality is null
+            ? "unspecified"
+            : EnumText(report.Requirement.Modality.Value));
         builder.Append("Profile: ").AppendLine(DescriptorText(report.Requirement.Profile));
         builder.Append("Prompt: ").AppendLine(report.Requirement.PromptTemplate is null
             ? $"workflow-owned ({report.Requirement.PromptDigest})"
@@ -454,7 +456,9 @@ public static class InferencePreflightReportRenderer
         writer.WriteBoolean("executable", report.IsExecutable);
         writer.WriteString("protocolRevision", report.Requirement.ProtocolRevision);
         writer.WriteString("promptForm", EnumText(report.Requirement.PromptForm));
-        writer.WriteString("modality", EnumText(report.Requirement.Modality));
+        writer.WriteString("modality", report.Requirement.Modality is null
+            ? "unspecified"
+            : EnumText(report.Requirement.Modality.Value));
         writer.WriteString("profile", DescriptorText(report.Requirement.Profile));
         if (report.Requirement.PromptTemplate is null)
         {
@@ -535,9 +539,12 @@ public static class InferencePreflight
         if (!manifest.SupportedPromptForms.Contains(requirement.PromptForm))
             diagnostics.Add(new(InferencePreflightDiagnosticCode.UnsupportedPromptForm, "The adapter does not support the required prompt form.", subject: requirement.PromptForm.ToString()));
         else matched.Add("prompt-form");
-        if (!manifest.SupportedModalities.Contains(requirement.Modality))
-            diagnostics.Add(new(InferencePreflightDiagnosticCode.UnsupportedModality, "The adapter does not support the required inference modality.", subject: requirement.Modality.ToString()));
-        else matched.Add("modality");
+        if (requirement.Modality is not null)
+        {
+            if (!manifest.SupportedModalities.Contains(requirement.Modality.Value))
+                diagnostics.Add(new(InferencePreflightDiagnosticCode.UnsupportedModality, "The adapter does not support the required inference modality.", subject: requirement.Modality.Value.ToString()));
+            else matched.Add("modality");
+        }
         if (requirement.RequiresStructuredOutput && !manifest.SupportsStructuredOutput && !manifest.SupportsSyntheticStructuredOutput)
             diagnostics.Add(new(InferencePreflightDiagnosticCode.StructuredOutputUnavailable, "The adapter cannot produce the required structured output."));
         else if (requirement.RequiresStructuredOutput)

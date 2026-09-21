@@ -177,10 +177,11 @@ public sealed class BaizeGenerationBinding
 }
 
 /// <summary>Executes artifact-producing inference through Baize generation clients.</summary>
-public sealed class BaizeGenerationInferenceExecutor : IInferenceExecutor
+public sealed class BaizeGenerationInferenceExecutor : IInferenceExecutor, IInferenceExecutorPreflight, IInferenceExecutorManifest
 {
     private readonly IReadOnlyList<BaizeGenerationBinding> bindings;
     private readonly IBaizeInferenceProvenanceSink? provenanceSink;
+    private readonly InferenceFeatureManifest featureManifest;
 
     /// <summary>Creates an executor over exact descriptor-bound generation routes.</summary>
     public BaizeGenerationInferenceExecutor(
@@ -196,6 +197,41 @@ public sealed class BaizeGenerationInferenceExecutor : IInferenceExecutor
             throw new ArgumentException("Profile and prompt-template descriptor pairs must be unique.", nameof(bindings));
         this.bindings = Array.AsReadOnly(copy);
         this.provenanceSink = provenanceSink;
+        featureManifest = CreateFeatureManifest(this.bindings);
+    }
+
+    /// <inheritdoc />
+    public InferenceFeatureManifest FeatureManifest => featureManifest;
+
+    /// <inheritdoc />
+    public ExecutionFailure? Preflight(InferenceExecutionRequirement requirement)
+    {
+        ArgumentNullException.ThrowIfNull(requirement);
+        var binding = FindBinding(requirement);
+        if (binding is null)
+        {
+            return new ExecutionFailure(
+                ExecutionFailureKind.Admission,
+                ExecutionFailureCode.DescriptorUnavailable,
+                "No exact Baize generation binding matched the admitted profile and prompt template.");
+        }
+
+        return ValidateRequirement(requirement, binding);
+    }
+
+    /// <inheritdoc />
+    public InferencePreflightReport PreflightDetailed(InferenceExecutionRequirement requirement)
+    {
+        ArgumentNullException.ThrowIfNull(requirement);
+
+        // Select a complete binding before evaluating the aggregate manifest;
+        // otherwise a profile from one media route could combine with a prompt
+        // template from another route.
+        var binding = FindBinding(requirement);
+        var manifest = binding is null
+            ? CreateFeatureManifest(bindings, includeBindings: false)
+            : CreateFeatureManifest([binding]);
+        return InferencePreflight.Evaluate(requirement, manifest);
     }
 
     /// <inheritdoc />
@@ -219,6 +255,14 @@ public sealed class BaizeGenerationInferenceExecutor : IInferenceExecutor
                 ExecutionFailureKind.Admission,
                 ExecutionFailureCode.DescriptorUnavailable,
                 "No exact Baize generation binding matched the admitted profile and prompt template."));
+
+        // Keep the legacy failure messages/codes below, but make the same
+        // capability gate available at execution time as at registration.
+        // This is deliberately before request mapping and provider work.
+        var requirement = CreateRequirement(request, binding);
+        var preflightFailure = ValidateRequirement(requirement, binding);
+        if (preflightFailure is not null && request.Limits?.MaxTokens is null)
+            return InferenceExecutionResult.Failed(preflightFailure);
 
         var started = Stopwatch.GetTimestamp();
         var modality = ToInferenceModality(binding.Modality);
@@ -551,6 +595,127 @@ public sealed class BaizeGenerationInferenceExecutor : IInferenceExecutor
         BaizeGenerationModality.Audio => InferenceModality.Audio,
         _ => throw new ArgumentOutOfRangeException(nameof(modality)),
     };
+
+    private BaizeGenerationBinding? FindBinding(InferenceExecutionRequirement requirement) =>
+        requirement.PromptTemplate is not null
+            ? bindings.FirstOrDefault(candidate =>
+                candidate.Profile == requirement.Profile &&
+                candidate.PromptTemplate == requirement.PromptTemplate)
+            : null;
+
+    private static InferenceExecutionRequirement CreateRequirement(
+        InferenceExecutionRequest request,
+        BaizeGenerationBinding binding)
+    {
+        var limits = new List<InferenceLimit>();
+        if (request.Limits?.MaxTokens is int maxTokens)
+            limits.Add(new(InferenceLimitDimension.CompletionTokens, maxTokens));
+        if (request.Limits?.TimeoutSeconds is int timeoutSeconds)
+        {
+            var requestedMilliseconds = checked(timeoutSeconds * 1000L);
+            // A narrower plan deadline is a supported bound. A wider plan
+            // deadline is still valid legacy input and is conservatively
+            // clamped to the trusted host policy by EffectiveDeadline below;
+            // it must not turn a previously executable request into an
+            // admission failure.
+            if (requestedMilliseconds <= (long)binding.Policy.Timeout.TotalMilliseconds)
+                limits.Add(new(InferenceLimitDimension.DurationMilliseconds, requestedMilliseconds));
+        }
+        return new InferenceExecutionRequirement(
+            request.Profile,
+            request.PromptTemplate,
+            request.Prompt?.GetSemanticDigest(),
+            request.Tools ?? [],
+            request.ContextInputs.Count != 0,
+            ToInferenceModality(binding.Modality),
+            limits: new InferenceLimitSet(limits));
+    }
+
+    private static ExecutionFailure? ValidateRequirement(
+        InferenceExecutionRequirement requirement,
+        BaizeGenerationBinding binding)
+    {
+        if (requirement.PromptTemplate is null || requirement.PromptDigest is not null)
+            return new ExecutionFailure(
+                ExecutionFailureKind.Admission,
+                ExecutionFailureCode.DescriptorUnavailable,
+                "Generation inference does not support workflow-owned prompts; bind the profile to BaizeInferenceExecutor.");
+        if (requirement.Modality is not null && requirement.Modality.Value != ToInferenceModality(binding.Modality))
+            return new ExecutionFailure(
+                ExecutionFailureKind.Admission,
+                ExecutionFailureCode.PolicyRejected,
+                "The admitted inference modality does not match the exact Baize generation binding.");
+        if (requirement.HasContextInputs)
+            return new ExecutionFailure(
+                ExecutionFailureKind.Admission,
+                ExecutionFailureCode.PolicyRejected,
+                "Baize media generation does not support context inputs.");
+        if (requirement.Tools.Count != 0)
+            return new ExecutionFailure(
+                ExecutionFailureKind.Admission,
+                ExecutionFailureCode.DescriptorUnavailable,
+                "Baize media generation does not support model-callable tools.");
+        foreach (var limit in requirement.Limits.Limits)
+        {
+            var maximum = limit.Dimension switch
+            {
+                InferenceLimitDimension.Turns => 1L,
+                InferenceLimitDimension.ModelCalls => 1L,
+                InferenceLimitDimension.DurationMilliseconds => (long)binding.Policy.Timeout.TotalMilliseconds,
+                _ => (long?)null,
+            };
+            if (maximum is null)
+                return new ExecutionFailure(
+                    ExecutionFailureKind.Contract,
+                    ExecutionFailureCode.InvalidInput,
+                    $"Baize media generation does not support the '{limit.Dimension}' limit.");
+            if (limit.Maximum > maximum.Value)
+                return new ExecutionFailure(
+                    ExecutionFailureKind.Contract,
+                    ExecutionFailureCode.InvalidInput,
+                    $"The '{limit.Dimension}' limit exceeds the configured Baize generation maximum of {maximum.Value}.");
+        }
+        return null;
+    }
+
+    private static InferenceFeatureManifest CreateFeatureManifest(
+        IReadOnlyList<BaizeGenerationBinding> source,
+        bool includeBindings = true)
+    {
+        var bindings = source.ToArray();
+        var maximumDurationMilliseconds = bindings.Max(static binding => (long)binding.Policy.Timeout.TotalMilliseconds);
+        return new InferenceFeatureManifest(
+            protocolRevision: "fuwen-inference/v1",
+            supportedIrVersions:
+            [
+                FuwenContracts.IrVersionV3,
+                FuwenContracts.IrVersionV4,
+                FuwenContracts.IrVersionV5,
+                FuwenContracts.IrVersionV6,
+                FuwenContracts.IrVersionV7,
+                FuwenContracts.IrVersionV8,
+            ],
+            supportedPromptForms: [InferencePromptForm.RegisteredTemplate],
+            supportedModalities: bindings.Select(static binding => ToInferenceModality(binding.Modality)).Distinct().ToArray(),
+            supportsContextDelivery: false,
+            maximumContextPayloadUtf8Bytes: null,
+            supportedToolEffects: [],
+            supportedLimits:
+            [
+                new(InferenceLimitDimension.Turns, 1),
+                new(InferenceLimitDimension.ModelCalls, 1),
+                new(InferenceLimitDimension.DurationMilliseconds, maximumDurationMilliseconds),
+            ],
+            recoveryQuality: InferenceRecoveryQuality.Unsupported,
+            usageQuality: InferenceUsageQuality.Unknown,
+            pricingQuality: InferencePricingQuality.Unknown,
+            supportsStructuredOutput: false,
+            supportsSyntheticStructuredOutput: false,
+            profiles: includeBindings ? bindings.Select(static binding => binding.Profile).Distinct().ToArray() : [],
+            promptTemplates: includeBindings ? bindings.Select(static binding => binding.PromptTemplate).Distinct().ToArray() : [],
+            tools: [],
+            workflowPromptDigests: []);
+    }
 
     private static string Bound(string? value, int maximumUtf8Bytes)
     {

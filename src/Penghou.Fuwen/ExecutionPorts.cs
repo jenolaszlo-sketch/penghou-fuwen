@@ -831,7 +831,7 @@ public sealed class InferenceExecutionRequirement
         string? promptDigest,
         IReadOnlyList<DescriptorReference>? tools = null,
         bool hasContextInputs = false)
-        : this(profile, promptTemplate, promptDigest, tools, hasContextInputs, InferenceModality.StructuredText)
+        : this(profile, promptTemplate, promptDigest, tools, hasContextInputs, modality: null)
     {
     }
 
@@ -842,7 +842,7 @@ public sealed class InferenceExecutionRequirement
         string? promptDigest,
         IReadOnlyList<DescriptorReference>? tools,
         bool hasContextInputs,
-        InferenceModality modality,
+        InferenceModality? modality,
         IReadOnlyList<InferenceToolRequirement>? toolRequirements = null,
         InferenceLimitSet? limits = null,
         string protocolRevision = "fuwen-inference/v1",
@@ -870,7 +870,7 @@ public sealed class InferenceExecutionRequirement
         Tools = Array.AsReadOnly(copy);
         HasContextInputs = hasContextInputs;
         PromptForm = promptTemplate is null ? InferencePromptForm.WorkflowOwned : InferencePromptForm.RegisteredTemplate;
-        if (!Enum.IsDefined(modality))
+        if (modality is not null && !Enum.IsDefined(modality.Value))
             throw new ArgumentOutOfRangeException(nameof(modality));
         Modality = modality;
         ProtocolRevision = RuntimeValueSnapshot.Text(protocolRevision, nameof(protocolRevision), InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
@@ -907,7 +907,7 @@ public sealed class InferenceExecutionRequirement
     /// <summary>The prompt form required by this inference.</summary>
     public InferencePromptForm PromptForm { get; }
     /// <summary>The output modality required by this inference.</summary>
-    public InferenceModality Modality { get; }
+    public InferenceModality? Modality { get; }
     /// <summary>The provider-neutral inference protocol revision required by this inference.</summary>
     public string ProtocolRevision { get; }
     /// <summary>The required workflow IR version, when the host is checking one.</summary>

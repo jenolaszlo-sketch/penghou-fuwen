@@ -2,12 +2,12 @@
 const Penghou.Fuwen.InferenceFeatureManifest.MaximumBindings = 256 -> int
 const Penghou.Fuwen.InferenceFeatureManifest.MaximumVersions = 32 -> int
 const Penghou.Fuwen.InferenceLimitSet.MaximumDimensions = 16 -> int
-Penghou.Fuwen.InferenceExecutionRequirement.InferenceExecutionRequirement(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference? promptTemplate, string? promptDigest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? tools, bool hasContextInputs, Penghou.Fuwen.InferenceModality modality, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolRequirement!>? toolRequirements = null, Penghou.Fuwen.InferenceLimitSet? limits = null, string! protocolRevision = "fuwen-inference/v1", string? irVersion = null, Penghou.Fuwen.InferenceRecoveryQuality minimumRecoveryQuality = Penghou.Fuwen.InferenceRecoveryQuality.Unsupported, int? maximumContextPayloadUtf8Bytes = null, bool requiresExactUsageEvidence = false, bool requiresExactPricingEvidence = false, bool requiresStructuredOutput = false) -> void
+Penghou.Fuwen.InferenceExecutionRequirement.InferenceExecutionRequirement(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference? promptTemplate, string? promptDigest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? tools, bool hasContextInputs, Penghou.Fuwen.InferenceModality? modality, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolRequirement!>? toolRequirements = null, Penghou.Fuwen.InferenceLimitSet? limits = null, string! protocolRevision = "fuwen-inference/v1", string? irVersion = null, Penghou.Fuwen.InferenceRecoveryQuality minimumRecoveryQuality = Penghou.Fuwen.InferenceRecoveryQuality.Unsupported, int? maximumContextPayloadUtf8Bytes = null, bool requiresExactUsageEvidence = false, bool requiresExactPricingEvidence = false, bool requiresStructuredOutput = false) -> void
 Penghou.Fuwen.InferenceExecutionRequirement.IrVersion.get -> string?
 Penghou.Fuwen.InferenceExecutionRequirement.Limits.get -> Penghou.Fuwen.InferenceLimitSet!
 Penghou.Fuwen.InferenceExecutionRequirement.MaximumContextPayloadUtf8Bytes.get -> int?
 Penghou.Fuwen.InferenceExecutionRequirement.MinimumRecoveryQuality.get -> Penghou.Fuwen.InferenceRecoveryQuality
-Penghou.Fuwen.InferenceExecutionRequirement.Modality.get -> Penghou.Fuwen.InferenceModality
+Penghou.Fuwen.InferenceExecutionRequirement.Modality.get -> Penghou.Fuwen.InferenceModality?
 Penghou.Fuwen.InferenceExecutionRequirement.PromptForm.get -> Penghou.Fuwen.InferencePromptForm
 Penghou.Fuwen.InferenceExecutionRequirement.ProtocolRevision.get -> string!
 Penghou.Fuwen.InferenceExecutionRequirement.RequiresExactPricingEvidence.get -> bool

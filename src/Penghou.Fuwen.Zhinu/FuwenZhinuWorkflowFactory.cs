@@ -383,7 +383,9 @@ public sealed class FuwenZhinuWorkflowFactory
                 promptTemplate,
                 promptDigest,
                 node.Tools,
-                node.ContextRequirements is { Count: > 0 });
+                node.ContextRequirements is { Count: > 0 },
+                modality: null,
+                irVersion: plan.IrVersion);
             var failure = manifest is not null
                 ? (manifest.PreflightDetailed(requirement) ?? throw new FuwenZhinuAdmissionException(
                     "The configured inference executor returned no structured preflight report."))

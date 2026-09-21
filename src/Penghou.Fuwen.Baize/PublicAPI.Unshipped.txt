@@ -6,8 +6,10 @@ Penghou.Fuwen.Baize.BaizeInferenceRoute.Profile.get -> Penghou.Fuwen.DescriptorR
 Penghou.Fuwen.Baize.BaizeInferenceRoute.PromptTemplate.get -> Penghou.Fuwen.DescriptorReference!
 Penghou.Fuwen.Baize.BaizeRoutedInferenceExecutor
 Penghou.Fuwen.Baize.BaizeRoutedInferenceExecutor.BaizeRoutedInferenceExecutor(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeInferenceRoute!>! routes) -> void
+Penghou.Fuwen.Baize.BaizeRoutedInferenceExecutor.FeatureManifest.get -> Penghou.Fuwen.InferenceFeatureManifest!
 Penghou.Fuwen.Baize.BaizeRoutedInferenceExecutor.ExecuteAsync(Penghou.Fuwen.InferenceExecutionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceExecutionResult!>
 Penghou.Fuwen.Baize.BaizeRoutedInferenceExecutor.Preflight(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.ExecutionFailure?
+Penghou.Fuwen.Baize.BaizeRoutedInferenceExecutor.PreflightDetailed(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.InferencePreflightReport!
 Penghou.Fuwen.Baize.BaizeEndpointBinding.BaizeEndpointBinding(string! endpointId, string! provider, string! model, Penghou.Baize.ILlmClient! client, Penghou.Fuwen.Baize.BaizeTokenPricing? pricing = null) -> void
 Penghou.Fuwen.Baize.BaizeEndpointBinding.Pricing.get -> Penghou.Fuwen.Baize.BaizeTokenPricing?
 Penghou.Fuwen.Baize.BaizeGenerationBinding
@@ -27,6 +29,9 @@ Penghou.Fuwen.Baize.BaizeGenerationBinding.RequestFactory.get -> System.Func<Pen
 Penghou.Fuwen.Baize.BaizeGenerationInferenceExecutor
 Penghou.Fuwen.Baize.BaizeGenerationInferenceExecutor.BaizeGenerationInferenceExecutor(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeGenerationBinding!>! bindings, Penghou.Fuwen.Baize.IBaizeInferenceProvenanceSink? provenanceSink = null) -> void
 Penghou.Fuwen.Baize.BaizeGenerationInferenceExecutor.ExecuteAsync(Penghou.Fuwen.InferenceExecutionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceExecutionResult!>
+Penghou.Fuwen.Baize.BaizeGenerationInferenceExecutor.FeatureManifest.get -> Penghou.Fuwen.InferenceFeatureManifest!
+Penghou.Fuwen.Baize.BaizeGenerationInferenceExecutor.Preflight(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.ExecutionFailure?
+Penghou.Fuwen.Baize.BaizeGenerationInferenceExecutor.PreflightDetailed(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.InferencePreflightReport!
 Penghou.Fuwen.Baize.BaizeGenerationModality
 Penghou.Fuwen.Baize.BaizeGenerationModality.Audio = 2 -> Penghou.Fuwen.Baize.BaizeGenerationModality
 Penghou.Fuwen.Baize.BaizeGenerationModality.Image = 0 -> Penghou.Fuwen.Baize.BaizeGenerationModality

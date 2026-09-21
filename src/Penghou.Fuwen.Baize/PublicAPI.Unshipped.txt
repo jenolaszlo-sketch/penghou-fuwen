@@ -97,4 +97,6 @@ Penghou.Fuwen.Baize.IBaizeInferenceProvenanceSink.RecordAsync(Penghou.Fuwen.Infe
 Penghou.Fuwen.Baize.BaizeInferenceExecutor
 Penghou.Fuwen.Baize.BaizeInferenceExecutor.BaizeInferenceExecutor(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeInferenceBinding!>! bindings, Penghou.Nuwa.IJsonRepairPipeline? repairPipeline = null, Penghou.Fuwen.Baize.IBaizeInferenceProvenanceSink? provenanceSink = null) -> void
 Penghou.Fuwen.Baize.BaizeInferenceExecutor.ExecuteAsync(Penghou.Fuwen.InferenceExecutionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceExecutionResult!>
+Penghou.Fuwen.Baize.BaizeInferenceExecutor.FeatureManifest.get -> Penghou.Fuwen.InferenceFeatureManifest!
 Penghou.Fuwen.Baize.BaizeInferenceExecutor.Preflight(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.ExecutionFailure?
+Penghou.Fuwen.Baize.BaizeInferenceExecutor.PreflightDetailed(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.InferencePreflightReport!

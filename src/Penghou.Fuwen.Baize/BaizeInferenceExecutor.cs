@@ -337,11 +337,12 @@ public interface IBaizeInferenceProvenanceSink
 }
 
 /// <summary>Executes admitted Fuwen inference requests through Baize.</summary>
-public sealed class BaizeInferenceExecutor : IInferenceExecutor, IInferenceExecutorPreflight
+public sealed class BaizeInferenceExecutor : IInferenceExecutor, IInferenceExecutorPreflight, IInferenceExecutorManifest
 {
     private readonly IReadOnlyList<BaizeInferenceBinding> bindings;
     private readonly IJsonRepairPipeline repairPipeline;
     private readonly IBaizeInferenceProvenanceSink? provenanceSink;
+    private readonly InferenceFeatureManifest featureManifest;
 
     /// <summary>Creates an adapter with deterministic Nuwa repair defaults.</summary>
     public BaizeInferenceExecutor(
@@ -356,7 +357,11 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor, IInferenceExecu
             throw new ArgumentException("Profile, prompt-template, and prompt-digest triples must be unique.", nameof(bindings));
         this.repairPipeline = repairPipeline ?? JsonRepairPipeline.Create();
         this.provenanceSink = provenanceSink;
+        featureManifest = CreateFeatureManifest(this.bindings);
     }
+
+    /// <inheritdoc />
+    public InferenceFeatureManifest FeatureManifest => featureManifest;
 
     /// <inheritdoc />
     public async ValueTask<InferenceExecutionResult> ExecuteAsync(InferenceExecutionRequest request, CancellationToken cancellationToken = default)
@@ -557,6 +562,90 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor, IInferenceExecu
                 $"Declared tool '{missing.Name}@{missing.Version}' is not bound by the host inference binding.");
         }
         return ValidateContextBinding(requirement.HasContextInputs, binding);
+    }
+
+    /// <inheritdoc />
+    public InferencePreflightReport PreflightDetailed(InferenceExecutionRequirement requirement)
+    {
+        ArgumentNullException.ThrowIfNull(requirement);
+
+        // The public manifest is a bounded snapshot of this adapter's exact
+        // catalogue. A detailed check must still select one complete binding
+        // first; evaluating the aggregate descriptor sets would otherwise
+        // accidentally admit a profile from one binding with a prompt from
+        // another.
+        var binding = FindBinding(requirement);
+        var manifest = binding is null
+            ? CreateFeatureManifest(bindings, includeBindings: false)
+            : CreateFeatureManifest([binding]);
+        return InferencePreflight.Evaluate(requirement, manifest);
+    }
+
+    private static InferenceFeatureManifest CreateFeatureManifest(
+        IReadOnlyList<BaizeInferenceBinding> source,
+        bool includeBindings = true)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        var bindings = source.ToArray();
+        var promptForms = bindings
+            .Select(static binding => binding.Prompt is null
+                ? InferencePromptForm.RegisteredTemplate
+                : InferencePromptForm.WorkflowOwned)
+            .Distinct()
+            .ToArray();
+        var contextBindings = bindings.Where(static binding =>
+            binding.ContextDeliveryPolicy is not null &&
+            (binding.Prompt is not null || binding.UserPromptTemplate.Contains("{context}", StringComparison.Ordinal)))
+            .ToArray();
+        var maxContext = contextBindings.Length == 0
+            ? (int?)null
+            : contextBindings.Min(static binding => binding.ContextDeliveryPolicy!.MaximumContextUtf8Bytes);
+        var priced = bindings.Length != 0 && bindings.All(static binding =>
+            binding.Endpoints.All(static endpoint => endpoint.Pricing is not null));
+
+        return new InferenceFeatureManifest(
+            protocolRevision: "fuwen-inference/v1",
+            supportedIrVersions:
+            [
+                FuwenContracts.IrVersionV3,
+                FuwenContracts.IrVersionV4,
+                FuwenContracts.IrVersionV5,
+                FuwenContracts.IrVersionV6,
+                FuwenContracts.IrVersionV7,
+                FuwenContracts.IrVersionV8,
+            ],
+            supportedPromptForms: promptForms,
+            supportedModalities: [InferenceModality.StructuredText],
+            supportsContextDelivery: contextBindings.Length != 0,
+            maximumContextPayloadUtf8Bytes: maxContext,
+            supportedToolEffects: [InferenceToolEffect.ReadOnly],
+            supportedLimits:
+            [
+                // The adapter is one logical turn. Representation repair and
+                // fallback do not become a durable multi-turn protocol, but
+                // every configured fallback is still a possible paid model call.
+                new(InferenceLimitDimension.Turns, 1),
+                new(InferenceLimitDimension.ModelCalls,
+                    bindings.Length == 0 ? 1 : bindings.Max(static binding => binding.Policy.MaximumAttempts)),
+            ],
+            recoveryQuality: InferenceRecoveryQuality.Unsupported,
+            // Baize may omit or partially report usage; it is not exact for
+            // admission purposes. Host pricing is derived from token usage and
+            // is explicitly marked estimated by BaizeTokenPricing.
+            usageQuality: InferenceUsageQuality.Unknown,
+            pricingQuality: priced ? InferencePricingQuality.Estimated : InferencePricingQuality.Unknown,
+            supportsStructuredOutput: true,
+            supportsSyntheticStructuredOutput: false,
+            profiles: includeBindings ? bindings.Select(static binding => binding.Profile).ToArray() : [],
+            promptTemplates: includeBindings
+                ? bindings.Where(static binding => binding.PromptTemplate is not null).Select(static binding => binding.PromptTemplate!).ToArray()
+                : [],
+            tools: includeBindings
+                ? bindings.SelectMany(static binding => binding.Tools).Select(static tool => tool.Descriptor).Distinct().ToArray()
+                : [],
+            workflowPromptDigests: includeBindings
+                ? bindings.Where(static binding => binding.PromptDigest is not null).Select(static binding => binding.PromptDigest!).ToArray()
+                : []);
     }
 
     private BaizeInferenceBinding? FindBinding(InferenceExecutionRequirement requirement) =>

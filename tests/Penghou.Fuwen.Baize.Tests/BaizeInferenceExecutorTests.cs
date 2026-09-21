@@ -1021,6 +1021,57 @@ public sealed class BaizeInferenceExecutorTests
         unmatched!.Code.Should().Be(ExecutionFailureCode.DescriptorUnavailable);
     }
 
+    [Fact]
+    public void Baize_manifest_advertises_exact_one_call_capabilities()
+    {
+        var (profile, prompt) = Descriptors();
+        var client = new FakeClient("\"ok\"");
+        var executor = new BaizeInferenceExecutor([Binding(profile, prompt, client)]);
+
+        var manifest = executor.FeatureManifest;
+
+        manifest.ProtocolRevision.Should().Be("fuwen-inference/v1");
+        manifest.SupportedIrVersions.Should().ContainInOrder(
+            FuwenContracts.IrVersionV3,
+            FuwenContracts.IrVersionV4,
+            FuwenContracts.IrVersionV5,
+            FuwenContracts.IrVersionV6,
+            FuwenContracts.IrVersionV7,
+            FuwenContracts.IrVersionV8);
+        manifest.SupportedPromptForms.Should().ContainSingle().Which.Should().Be(InferencePromptForm.RegisteredTemplate);
+        manifest.SupportedModalities.Should().ContainSingle().Which.Should().Be(InferenceModality.StructuredText);
+        manifest.SupportedLimits.GetMaximum(InferenceLimitDimension.Turns).Should().Be(1);
+        manifest.SupportedLimits.GetMaximum(InferenceLimitDimension.ModelCalls).Should().Be(1);
+        manifest.SupportedLimits.GetMaximum(InferenceLimitDimension.ToolCalls).Should().BeNull();
+        manifest.RecoveryQuality.Should().Be(InferenceRecoveryQuality.Unsupported);
+        manifest.UsageQuality.Should().Be(InferenceUsageQuality.Unknown);
+        manifest.PricingQuality.Should().Be(InferencePricingQuality.Unknown);
+        manifest.Profiles.Should().ContainSingle().Which.Should().Be(profile);
+        manifest.PromptTemplates.Should().ContainSingle().Which.Should().Be(prompt);
+    }
+
+    [Fact]
+    public async Task Detailed_preflight_rejects_an_unbound_profile_without_provider_call()
+    {
+        var (profile, prompt) = Descriptors();
+        var client = new FakeClient("\"must-not-run\"");
+        var executor = new BaizeInferenceExecutor([Binding(profile, prompt, client)]);
+        var changedProfile = Descriptor(DescriptorKind.InferenceProfile, "changed-profile");
+        var requirement = new InferenceExecutionRequirement(changedProfile, prompt, null);
+
+        var report = executor.PreflightDetailed(requirement);
+
+        report.IsExecutable.Should().BeFalse();
+        report.Diagnostics.Select(static diagnostic => diagnostic.Code)
+            .Should().Contain(InferencePreflightDiagnosticCode.MissingProfileBinding);
+        client.Calls.Should().Be(0);
+        var result = await executor.ExecuteAsync(
+            Request(changedProfile, prompt, new PrimitiveType(FuwenPrimitiveKind.String)),
+            TestContext.Current.CancellationToken);
+        result.Failure!.Code.Should().Be(ExecutionFailureCode.DescriptorUnavailable);
+        client.Calls.Should().Be(0);
+    }
+
     private static BaizeInferenceBinding Binding(DescriptorReference profile, DescriptorReference prompt, FakeClient client, BaizeInferencePolicy? policy = null) =>
         new(profile, prompt, [new BaizeEndpointBinding("primary", "provider", "model", client)], policy: policy);
 

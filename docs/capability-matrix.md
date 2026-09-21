@@ -16,6 +16,7 @@ configured credentials, or accepted operational risk.
 | Checkpoint and external wait | Supported | Typed durable interaction gates; presentation remains host-owned. |
 | Inline prompts and registered prompt aliases | Supported | Typed bindings; registered templates are resolved and rendered by the host. |
 | Inference tools | Limited | Declaration, identity and admission are supported. Stock Baize does not run a general model/tool/result loop; its tool-call mode extracts one expected call as typed output. |
+| Bounded complex inference protocol | Planned | The existing `infer` node will gain a versioned, preflighted, durably journaled read-tool loop; external mutations remain explicit workflow activities. |
 | Inference limits | Supported with adapter-specific enforcement | `maxTokens` and `timeout` are fingerprinted; an adapter must reject a limit it cannot honor rather than ignore it. |
 | Structured inference | Supported | Provider output remains untrusted until final Fuwen type validation. |
 | Image, video and audio generation | Supported | Exact profiles, bounded deadlines, publication receipts and durable evidence are required. |

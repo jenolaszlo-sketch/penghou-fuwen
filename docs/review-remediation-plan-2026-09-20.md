@@ -320,15 +320,18 @@ test fixtures or hidden host configuration.
 
 ## Milestone 4 — Make tools, evidence, and recovery operationally useful
 
-- [ ] **M4.1 — Publish a tool-mode capability contract.** Clearly distinguish
-  synthetic structured-output tools, proposed actions returned to a host, and
-  bounded executed tools.
-- [ ] **M4.2 — Design a host tool-execution port.** Require exact descriptors,
-  typed arguments/results, finite rounds, aggregate limits, stable operation
-  keys, per-call durable evidence, and explicit effect/retry rules.
-- [ ] **M4.3 — Implement the read-tool vertical slice.** Execute one permitted
-  lookup, return its result to the model, validate typed output, and recover
-  without repeating a completed call.
+- [ ] **M4.1 — Freeze the bounded inference-protocol contract.** Distinguish
+  synthetic structured-output tools, proposed host actions, and executed tools;
+  specify aggregate turns/model calls/tool calls/tokens/time/cost, normalized
+  outcomes, protocol revision identity, and the durable operation journal.
+- [ ] **M4.2 — Design a read-oriented host tool-execution port.** Require exact
+  descriptors, capability scopes, typed bounded arguments/results, finite
+  rounds, stable operation keys, deterministic fakes, per-call durable evidence,
+  and explicit effect/retry rules.
+- [ ] **M4.3 — Implement the bounded complex-inference vertical slice.** Execute
+  one permitted lookup, return its result to the model, validate typed output,
+  and recover/reconcile without restarting the logical inference or repeating a
+  completed paid/tool operation.
 - [ ] **M4.4 — Gate write tools on durable semantics.** Do not present model-
   driven writes as supported until multi-call replay, unknown commitment,
   idempotency, and approval behavior are proven. Record a separate ADR.
@@ -341,6 +344,10 @@ test fixtures or hidden host configuration.
 - [ ] **M4.7 — Verify fork/reuse cases.** Cover same-fingerprint/new-run and
   changed-fingerprint forks, runtime-path checks, copied evidence, rejection,
   and focused restart.
+
+Design constraints and acceptance criteria are recorded in
+`docs/complex-activities.md`. The existing `infer` node evolves first; no public
+generic complex-activity plugin surface is authorized by this plan.
 
 Exit criteria: the reference workflow performs a useful admitted tool call with
 bounded, durable, explainable behavior and survives recovery correctly.

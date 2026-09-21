@@ -65,6 +65,22 @@ public sealed class DocumentationContractTests
             .Contain("Status: resolved for the declared IR v8 scope");
     }
 
+    [Fact]
+    public async Task Complex_activity_direction_preserves_admission_durability_and_explicit_effects()
+    {
+        var design = await File.ReadAllTextAsync(
+            Path.Combine(FindRepositoryRoot(), "docs", "complex-activities.md"),
+            TestContext.Current.CancellationToken);
+
+        design.Should().Contain("not yet implemented");
+        design.Should().Contain("existing `infer` node");
+        design.Should().Contain("durable protocol journal");
+        design.Should().Contain("remain explicit workflow activities initially");
+        design.Should().Contain("invalidates the old admission/runtime identity");
+        design.Should().Contain("does not expose a generic activity-plugin escape hatch");
+        design.Should().Contain("Hongxian may correlate");
+    }
+
     private static string Section(string document, string heading, string nextHeading)
     {
         var start = document.IndexOf($"### {heading} ", StringComparison.Ordinal);

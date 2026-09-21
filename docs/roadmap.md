@@ -250,6 +250,30 @@ execution before investing in a friendly source grammar. A programmatic
 definition builder is a bootstrap and testing surface, not a second public
 language.
 
+### Next usability direction — bounded complex activities
+
+After the current reliability work, improve usability by treating the existing
+`infer` node as the first bounded complex activity. Authors declare one logical
+inference—prompt, typed inputs/context, output, profile, exact allowed tools and
+aggregate limits—while a versioned runtime protocol may perform several model
+and read-oriented tool calls internally.
+
+This direction is accepted subject to strict boundaries: internal operations
+are durably journaled and replay-safe; preflight rejects unsupported adapters;
+read tools remain capability-scoped and privacy-sensitive; external mutations
+stay explicit workflow nodes; material protocol changes invalidate admission;
+and Fuwen does not expose a generic activity-plugin escape hatch before a second
+protocol proves the abstraction. See [bounded complex activities](complex-activities.md).
+
+Delivery order:
+
+1. adapter feature manifest and preflight for current behavior;
+2. versioned inference protocol, aggregate bounds, outcomes and journal;
+3. host-supplied exact read-tool execution port and deterministic conformance
+   harness;
+4. bounded durable model/tool loop with recovery and evidence;
+5. credential-free end-to-end sample and two-consumer dogfood evidence.
+
 ### Delivery milestone A — Freeze the executable-plan contract (complete)
 
 Scope: the Milestone 1 design gate.

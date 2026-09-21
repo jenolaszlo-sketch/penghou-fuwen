@@ -282,6 +282,7 @@ public sealed class FuwenZhinuWorkflowFactory
         if (executionPorts is not null)
             ValidateInferenceBindings(
                 admittedPlan,
+                executionPorts.InferenceExecutor as IInferenceExecutorManifest,
                 executionPorts.InferenceExecutor as IInferenceExecutorPreflight);
 
         await definitionStore.StoreAsync(definition, cancellationToken).ConfigureAwait(false);
@@ -352,6 +353,7 @@ public sealed class FuwenZhinuWorkflowFactory
 
     private static void ValidateInferenceBindings(
         WorkflowPlan plan,
+        IInferenceExecutorManifest? manifest,
         IInferenceExecutorPreflight? preflight)
     {
         foreach (var node in EnumerateNodes(plan.Nodes).OfType<InferenceNode>())
@@ -365,7 +367,7 @@ public sealed class FuwenZhinuWorkflowFactory
                 promptTemplate = prompt.RegisteredSource;
                 if (promptTemplate is null)
                     promptDigest = prompt.GetSemanticDigest();
-                else if (preflight is null)
+                else if (manifest is null && preflight is null)
                 {
                     throw new FuwenZhinuAdmissionException(
                         $"Inference node '{node.StructuralPath}' uses registered prompt alias '{prompt.Name}', " +
@@ -373,15 +375,25 @@ public sealed class FuwenZhinuWorkflowFactory
                 }
             }
 
-            if (preflight is null)
+            if (manifest is null && preflight is null)
                 continue;
 
-            var failure = preflight.Preflight(new InferenceExecutionRequirement(
+            var requirement = new InferenceExecutionRequirement(
                 node.Profile,
                 promptTemplate,
                 promptDigest,
                 node.Tools,
-                node.ContextRequirements is { Count: > 0 }));
+                node.ContextRequirements is { Count: > 0 });
+            var failure = manifest is not null
+                ? (manifest.PreflightDetailed(requirement) ?? throw new FuwenZhinuAdmissionException(
+                    "The configured inference executor returned no structured preflight report."))
+                    .Failure
+                : preflight!.Preflight(requirement);
+            // Preserve the established v3-v8 failure vocabulary when a dual-
+            // capability adapter can explain the same structured rejection
+            // more specifically through its legacy compatibility surface.
+            if (failure is not null && manifest is not null && preflight is not null)
+                failure = preflight.Preflight(requirement) ?? failure;
             if (failure is not null)
             {
                 throw new FuwenZhinuAdmissionException(

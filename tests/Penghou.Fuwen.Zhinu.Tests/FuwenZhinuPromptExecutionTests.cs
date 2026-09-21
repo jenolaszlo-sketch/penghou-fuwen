@@ -407,6 +407,52 @@ public sealed class FuwenZhinuPromptExecutionTests
         inference.Requests.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task Structured_manifest_failure_is_rejected_before_storage_or_provider_work()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var admission = await AdmitAsync(ct);
+        var inference = new ManifestInference();
+        var store = new CountingDefinitionStore();
+        var factory = new FuwenZhinuWorkflowFactory(
+            store,
+            new FuwenZhinuProviderRuntimeIdentity(
+                admission.Receipt!.CatalogueSnapshotRevision,
+                admission.Receipt.ResolvedDescriptorSetFingerprint),
+            new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), inference));
+
+        var act = () => factory.CreateAsync("greet", "1", admission, ct).AsTask();
+
+        await act.Should().ThrowAsync<FuwenZhinuAdmissionException>()
+            .WithMessage("*failed executor preflight*");
+        inference.StructuredPreflightCalls.Should().Be(1);
+        inference.ProviderCalls.Should().Be(0);
+        store.Writes.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Legacy_preflight_remains_used_when_executor_has_no_manifest()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var admission = await AdmitAsync(ct);
+        var inference = new LegacyRejectingInference();
+        var store = new CountingDefinitionStore();
+        var factory = new FuwenZhinuWorkflowFactory(
+            store,
+            new FuwenZhinuProviderRuntimeIdentity(
+                admission.Receipt!.CatalogueSnapshotRevision,
+                admission.Receipt.ResolvedDescriptorSetFingerprint),
+            new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), inference));
+
+        var act = () => factory.CreateAsync("greet", "1", admission, ct).AsTask();
+
+        await act.Should().ThrowAsync<FuwenZhinuAdmissionException>()
+            .WithMessage("*legacy preflight blocked*");
+        inference.PreflightCalls.Should().Be(1);
+        inference.ProviderCalls.Should().Be(0);
+        store.Writes.Should().Be(0);
+    }
+
     private static async Task<(
         WorkflowAdmissionResult Admission,
         InMemoryTrustedCatalogue Catalogue,
@@ -506,6 +552,63 @@ public sealed class FuwenZhinuPromptExecutionTests
             using var document = JsonDocument.Parse("\"done\"");
             return ValueTask.FromResult(InferenceExecutionResult.Succeeded(
                 RuntimeValue.FromJson(document.RootElement)));
+        }
+    }
+
+    private sealed class ManifestInference : IInferenceExecutor, IInferenceExecutorManifest
+    {
+        private static readonly InferenceFeatureManifest Manifest = new(
+            protocolRevision: "unsupported/protocol",
+            supportedIrVersions: [FuwenContracts.IrVersionV8],
+            supportedPromptForms: [InferencePromptForm.WorkflowOwned],
+            supportedModalities: [InferenceModality.StructuredText],
+            supportsContextDelivery: false,
+            maximumContextPayloadUtf8Bytes: null,
+            supportedToolEffects: [InferenceToolEffect.ReadOnly],
+            supportedLimits: [],
+            recoveryQuality: InferenceRecoveryQuality.Unsupported,
+            usageQuality: InferenceUsageQuality.Unknown,
+            pricingQuality: InferencePricingQuality.Unknown);
+
+        public int StructuredPreflightCalls { get; private set; }
+        public int ProviderCalls { get; private set; }
+        public InferenceFeatureManifest FeatureManifest => Manifest;
+
+        public InferencePreflightReport PreflightDetailed(InferenceExecutionRequirement requirement)
+        {
+            StructuredPreflightCalls++;
+            return InferencePreflight.Evaluate(requirement, Manifest);
+        }
+
+        public ValueTask<InferenceExecutionResult> ExecuteAsync(
+            InferenceExecutionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ProviderCalls++;
+            throw new InvalidOperationException("Provider execution should not be called during registration.");
+        }
+    }
+
+    private sealed class LegacyRejectingInference : IInferenceExecutor, IInferenceExecutorPreflight
+    {
+        public int PreflightCalls { get; private set; }
+        public int ProviderCalls { get; private set; }
+
+        public ExecutionFailure? Preflight(InferenceExecutionRequirement requirement)
+        {
+            PreflightCalls++;
+            return new ExecutionFailure(
+                ExecutionFailureKind.Admission,
+                ExecutionFailureCode.NotAdmitted,
+                "legacy preflight blocked");
+        }
+
+        public ValueTask<InferenceExecutionResult> ExecuteAsync(
+            InferenceExecutionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            ProviderCalls++;
+            throw new InvalidOperationException("Provider execution should not be called during registration.");
         }
     }
 

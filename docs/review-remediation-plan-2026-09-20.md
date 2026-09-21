@@ -264,9 +264,11 @@ for the exact commit and artifacts being published.
 
 ### Documentation reconciliation
 
-- [ ] **M2.16 — Bring release-facing documents up to date.** Update the
+- [x] **M2.16 — Bring release-facing documents up to date.** Update the
   changelog from preview.2 through the current release, README tool semantics,
-  capability matrix, and release checklist status.
+  capability matrix, and release checklist status. Completed 2026-09-21 with
+  preview.3–preview.10 history reconstructed from repository commits, a linked
+  current-surface matrix, corrected roadmap status, and version/document tests.
 - [ ] **M2.17 — Replace the threat-model starter.** Document assets, trust
   boundaries, concrete controls, residual risks, and host responsibilities
   without implying an external audit.
@@ -397,6 +399,7 @@ Add one entry per completed parent task or milestone:
 | 2026-09-21 | M0.1 context subtask; M1.14–M1.16 | Working tree after `bbaede3`; commit pending | Format clean; Release build 0 warnings/errors; 505 tests pass on each of .NET 8 and .NET 10 (1,010 executions); independent canonical JSON vector passes | R35 resolved; ADR 0008 defines explicit bounded context mapping and snapshot/payload evidence |
 | 2026-09-21 | M2.8–M2.10 | Working tree after `8c6e671`; commit pending | Format clean; Release build 0 warnings/errors; 507 tests pass on each of .NET 8 and .NET 10 (1,014 executions); independent canonical JSON vector passes | R37 resolved; nine compiler-backed source fixtures and README fence compilation make language-reference drift test-visible |
 | 2026-09-21 | M2.11–M2.15 | Working tree after `fdd0b71`; commit pending | Format clean; Release build 0 warnings/errors; 508 tests pass on each of .NET 8 and .NET 10 (1,016 executions); independent canonical JSON vector passes | R38 resolved; publication depends on validation and transfers only commit-keyed complete package artifacts |
+| 2026-09-21 | M2.16 | Working tree after `b6a82af`; commit pending | Format clean; Release build 0 warnings/errors; 509 tests pass on each of .NET 8 and .NET 10 (1,018 executions); independent canonical JSON vector passes | Preview.3–preview.10 history, current capability boundaries, roadmap status, README links, and version/document conformance are reconciled |
 
 ## Deferred decisions
 

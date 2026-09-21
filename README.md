@@ -105,7 +105,8 @@ changes the execution fingerprint. Inference admits effect-free and read-only
 tools, plus retry-safe writes whose callable contract is idempotent.
 
 See the [authoring contract](docs/fuwen-authoring.md) for the complete compact
-syntax and catalogue inputs.
+syntax and catalogue inputs. The [capability matrix](docs/capability-matrix.md)
+distinguishes complete, limited, deferred, and deliberately host-owned surfaces.
 
 ## Compile, admit, execute
 
@@ -184,6 +185,7 @@ dotnet pack Penghou.Fuwen.slnx --configuration Release --no-build --output artif
 Useful design references:
 
 - [Roadmap and delivery status](docs/roadmap.md)
+- [Current capability matrix](docs/capability-matrix.md)
 - [Execution ports](docs/execution-ports.md)
 - [Zhinu adapter boundary](docs/zhinu-adapter.md)
 - [Runtime values and evidence](docs/runtime-evidence.md)

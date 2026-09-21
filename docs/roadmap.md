@@ -2,9 +2,14 @@
 
 ## Status
 
-**Delivery milestones A–E complete — bootstrap preview and Delivery F consumer pilot are next**
+**IR v8 compiler and durable adapters complete — Delivery F consumer pilot is next**
 
-Last reviewed: **2026-09-13**
+Last reviewed: **2026-09-21**
+
+The authoritative shipped-surface summary is the
+[capability matrix](capability-matrix.md). The numbered long-range milestones
+below preserve design history; unchecked historical boxes are not a claim that
+already listed IR v4-v8 capabilities are absent.
 
 Fuwen is the proposed typed authoring and compilation layer for portable,
 capability-reviewed AI workflows. It produces an immutable executable plan; it
@@ -1150,5 +1155,8 @@ Baize structured/media adapters are complete. The durable vertical proves
 context snapshots, real adapter execution, typed cost and provider evidence,
 recovery, selective restart, idempotent operation and artifact publication
 identity, cancellation, and corruption rejection. The admission receipt remains
-its authorization seam; it is not itself an executor. Loops, waits, transition
-activation, and artifact-reuse authorization remain outside the first preview.
+its authorization seam; it is not itself an executor. Bounded keyed fan-out,
+repeat, checkpoint, and wait execution are implemented through IR v7, while
+IR v8 adds workflow-owned prompts, registered aliases, declared tools, and
+inference limits. Transition activation, a general model/tool/result loop, and
+artifact-reuse authorization remain outside the current preview.

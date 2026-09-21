@@ -2,7 +2,7 @@
 
 Date created: 2026-09-21
 
-Status: approved direction; implementation not started
+Status: implementation in progress; CI-0 contract decisions frozen
 
 Primary consumer: Marang supervisor-authored Fuwen workflows
 
@@ -196,15 +196,20 @@ completion log.
 
 ### CI-0 — Freeze decisions and baseline evidence
 
-- [ ] Write an ADR for the inference protocol boundary, including the decision
-  not to publish a generic complex-activity handler in the first release.
-- [ ] Write an ADR for internal operation identity, Zhinu journal ownership,
-  fencing, replay, reconciliation, and protected payload references.
-- [ ] Write an ADR for aggregate budget reservations and unknown usage/pricing.
-- [ ] Capture current v8 one-call behavior for no tools, declared read tools,
-  structured output, context, repeat, fan-out, replay, and cancellation.
-- [ ] Add a checked-in Marang planning scenario and deterministic expected
-  trace without adding a Marang project dependency.
+- [x] Write an ADR for the inference protocol boundary, including the decision
+  not to publish a generic complex-activity handler in the first release. See
+  [ADR 0009](decisions/0009-inference-protocol-is-one-logical-activity.md).
+- [x] Write an ADR for internal operation identity, Zhinu journal ownership,
+  fencing, replay, reconciliation, and protected payload references. See
+  [ADR 0010](decisions/0010-zhinu-owns-inference-operation-journal.md).
+- [x] Write an ADR for aggregate budget reservations and unknown usage/pricing.
+  See [ADR 0011](decisions/0011-aggregate-inference-budgets-reserve-unknown-usage.md).
+- [x] Capture current v8 one-call behavior for no tools, declared read tools,
+  structured output, context, repeat, fan-out, replay, and cancellation. See
+  [the compatibility baseline](complex-inference-v8-baseline.md).
+- [x] Add a checked-in Marang planning scenario and deterministic expected
+  trace without adding a Marang project dependency. See
+  [the Marang scenario](marang-complex-inference-scenario.md).
 
 Exit: the versioning, authority, durability, privacy, and budget decisions are
 reviewable before any new public or persisted contract is added.
@@ -402,4 +407,3 @@ protocol feature.
 | Date | Task | Commit/PR | Verification | Notes |
 | --- | --- | --- | --- | --- |
 | — | — | — | — | — |
-

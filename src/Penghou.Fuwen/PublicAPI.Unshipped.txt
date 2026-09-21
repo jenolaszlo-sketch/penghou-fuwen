@@ -1,5 +1,128 @@
 #nullable enable
+const Penghou.Fuwen.InferenceFeatureManifest.MaximumBindings = 256 -> int
+const Penghou.Fuwen.InferenceFeatureManifest.MaximumVersions = 32 -> int
+const Penghou.Fuwen.InferenceLimitSet.MaximumDimensions = 16 -> int
+Penghou.Fuwen.InferenceExecutionRequirement.InferenceExecutionRequirement(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference? promptTemplate, string? promptDigest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? tools, bool hasContextInputs, Penghou.Fuwen.InferenceModality modality, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolRequirement!>? toolRequirements = null, Penghou.Fuwen.InferenceLimitSet? limits = null, string! protocolRevision = "fuwen-inference/v1", string? irVersion = null, Penghou.Fuwen.InferenceRecoveryQuality minimumRecoveryQuality = Penghou.Fuwen.InferenceRecoveryQuality.Unsupported, int? maximumContextPayloadUtf8Bytes = null, bool requiresExactUsageEvidence = false, bool requiresExactPricingEvidence = false, bool requiresStructuredOutput = false) -> void
+Penghou.Fuwen.InferenceExecutionRequirement.IrVersion.get -> string?
+Penghou.Fuwen.InferenceExecutionRequirement.Limits.get -> Penghou.Fuwen.InferenceLimitSet!
+Penghou.Fuwen.InferenceExecutionRequirement.MaximumContextPayloadUtf8Bytes.get -> int?
+Penghou.Fuwen.InferenceExecutionRequirement.MinimumRecoveryQuality.get -> Penghou.Fuwen.InferenceRecoveryQuality
+Penghou.Fuwen.InferenceExecutionRequirement.Modality.get -> Penghou.Fuwen.InferenceModality
+Penghou.Fuwen.InferenceExecutionRequirement.PromptForm.get -> Penghou.Fuwen.InferencePromptForm
+Penghou.Fuwen.InferenceExecutionRequirement.ProtocolRevision.get -> string!
+Penghou.Fuwen.InferenceExecutionRequirement.RequiresExactPricingEvidence.get -> bool
+Penghou.Fuwen.InferenceExecutionRequirement.RequiresExactUsageEvidence.get -> bool
+Penghou.Fuwen.InferenceExecutionRequirement.RequiresStructuredOutput.get -> bool
+Penghou.Fuwen.InferenceExecutionRequirement.ToolRequirements.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolRequirement!>!
+Penghou.Fuwen.InferenceFeatureManifest
+Penghou.Fuwen.InferenceFeatureManifest.InferenceFeatureManifest(string! protocolRevision, System.Collections.Generic.IReadOnlyList<string!>! supportedIrVersions, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferencePromptForm>! supportedPromptForms, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceModality>! supportedModalities, bool supportsContextDelivery, int? maximumContextPayloadUtf8Bytes, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolEffect>! supportedToolEffects, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceLimit!>! supportedLimits, Penghou.Fuwen.InferenceRecoveryQuality recoveryQuality, Penghou.Fuwen.InferenceUsageQuality usageQuality, Penghou.Fuwen.InferencePricingQuality pricingQuality, bool supportsStructuredOutput = true, bool supportsSyntheticStructuredOutput = false, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? profiles = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? promptTemplates = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? tools = null, System.Collections.Generic.IReadOnlyList<string!>? workflowPromptDigests = null) -> void
+Penghou.Fuwen.InferenceFeatureManifest.MaximumContextPayloadUtf8Bytes.get -> int?
+Penghou.Fuwen.InferenceFeatureManifest.Preflight(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.InferencePreflightReport!
+Penghou.Fuwen.InferenceFeatureManifest.PricingQuality.get -> Penghou.Fuwen.InferencePricingQuality
+Penghou.Fuwen.InferenceFeatureManifest.Profiles.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>!
+Penghou.Fuwen.InferenceFeatureManifest.PromptTemplates.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>!
+Penghou.Fuwen.InferenceFeatureManifest.ProtocolRevision.get -> string!
+Penghou.Fuwen.InferenceFeatureManifest.RecoveryQuality.get -> Penghou.Fuwen.InferenceRecoveryQuality
+Penghou.Fuwen.InferenceFeatureManifest.SupportedIrVersions.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Fuwen.InferenceFeatureManifest.SupportedLimits.get -> Penghou.Fuwen.InferenceLimitSet!
+Penghou.Fuwen.InferenceFeatureManifest.SupportedModalities.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceModality>!
+Penghou.Fuwen.InferenceFeatureManifest.SupportedPromptForms.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferencePromptForm>!
+Penghou.Fuwen.InferenceFeatureManifest.SupportedToolEffects.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolEffect>!
+Penghou.Fuwen.InferenceFeatureManifest.SupportsContextDelivery.get -> bool
+Penghou.Fuwen.InferenceFeatureManifest.SupportsStructuredOutput.get -> bool
+Penghou.Fuwen.InferenceFeatureManifest.SupportsSyntheticStructuredOutput.get -> bool
+Penghou.Fuwen.InferenceFeatureManifest.Tools.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>!
+Penghou.Fuwen.InferenceFeatureManifest.UsageQuality.get -> Penghou.Fuwen.InferenceUsageQuality
+Penghou.Fuwen.InferenceFeatureManifest.WorkflowPromptDigests.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Fuwen.InferenceLimit
+Penghou.Fuwen.InferenceLimit.Dimension.get -> Penghou.Fuwen.InferenceLimitDimension
+Penghou.Fuwen.InferenceLimit.InferenceLimit(Penghou.Fuwen.InferenceLimitDimension dimension, long maximum) -> void
+Penghou.Fuwen.InferenceLimit.Maximum.get -> long
+Penghou.Fuwen.InferenceLimitDimension
+Penghou.Fuwen.InferenceLimitDimension.CompletionTokens = 4 -> Penghou.Fuwen.InferenceLimitDimension
+Penghou.Fuwen.InferenceLimitDimension.CostMicrounits = 7 -> Penghou.Fuwen.InferenceLimitDimension
+Penghou.Fuwen.InferenceLimitDimension.DurationMilliseconds = 6 -> Penghou.Fuwen.InferenceLimitDimension
+Penghou.Fuwen.InferenceLimitDimension.ModelCalls = 1 -> Penghou.Fuwen.InferenceLimitDimension
+Penghou.Fuwen.InferenceLimitDimension.PromptTokens = 3 -> Penghou.Fuwen.InferenceLimitDimension
+Penghou.Fuwen.InferenceLimitDimension.RetainedConversationBytes = 10 -> Penghou.Fuwen.InferenceLimitDimension
+Penghou.Fuwen.InferenceLimitDimension.RetainedEvidenceBytes = 11 -> Penghou.Fuwen.InferenceLimitDimension
+Penghou.Fuwen.InferenceLimitDimension.ToolArgumentBytes = 8 -> Penghou.Fuwen.InferenceLimitDimension
+Penghou.Fuwen.InferenceLimitDimension.ToolCalls = 2 -> Penghou.Fuwen.InferenceLimitDimension
+Penghou.Fuwen.InferenceLimitDimension.ToolResultBytes = 9 -> Penghou.Fuwen.InferenceLimitDimension
+Penghou.Fuwen.InferenceLimitDimension.TotalTokens = 5 -> Penghou.Fuwen.InferenceLimitDimension
+Penghou.Fuwen.InferenceLimitDimension.Turns = 0 -> Penghou.Fuwen.InferenceLimitDimension
+Penghou.Fuwen.InferenceLimitSet
+Penghou.Fuwen.InferenceLimitSet.GetMaximum(Penghou.Fuwen.InferenceLimitDimension dimension) -> long?
+Penghou.Fuwen.InferenceLimitSet.InferenceLimitSet(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceLimit!>? limits = null) -> void
+Penghou.Fuwen.InferenceLimitSet.Limits.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceLimit!>!
+Penghou.Fuwen.InferencePreflight
+Penghou.Fuwen.InferencePreflightDiagnostic
+Penghou.Fuwen.InferencePreflightDiagnostic.Code.get -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnostic.InferencePreflightDiagnostic(Penghou.Fuwen.InferencePreflightDiagnosticCode code, string! message, bool isError = true, string? subject = null) -> void
+Penghou.Fuwen.InferencePreflightDiagnostic.IsError.get -> bool
+Penghou.Fuwen.InferencePreflightDiagnostic.Message.get -> string!
+Penghou.Fuwen.InferencePreflightDiagnostic.Subject.get -> string?
+Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.ContextDeliveryUnavailable = 5 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.ContextPayloadTooLarge = 6 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.LimitExceedsHostMaximum = 12 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.MissingProfileBinding = 7 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.MissingPromptTemplateBinding = 8 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.MissingWorkflowPromptBinding = 16 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.MissingToolBinding = 9 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.PricingEvidenceUnavailable = 15 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.RecoveryUnsupported = 13 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.StructuredOutputUnavailable = 4 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.UnsupportedIrVersion = 1 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.UnsupportedLimit = 11 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.UnsupportedModality = 3 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.UnsupportedPromptForm = 2 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.UnsupportedProtocolRevision = 0 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.UnsupportedToolEffect = 10 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.UsageEvidenceUnavailable = 14 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightReport
+Penghou.Fuwen.InferencePreflightReport.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferencePreflightDiagnostic!>!
+Penghou.Fuwen.InferencePreflightReport.EffectiveLimits.get -> Penghou.Fuwen.InferenceLimitSet!
+Penghou.Fuwen.InferencePreflightReport.Failure.get -> Penghou.Fuwen.ExecutionFailure?
+Penghou.Fuwen.InferencePreflightReport.IsExecutable.get -> bool
+Penghou.Fuwen.InferencePreflightReport.Manifest.get -> Penghou.Fuwen.InferenceFeatureManifest!
+Penghou.Fuwen.InferencePreflightReport.MatchedFeatures.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Fuwen.InferencePreflightReport.MissingBindings.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Fuwen.InferencePreflightReport.Requirement.get -> Penghou.Fuwen.InferenceExecutionRequirement!
+Penghou.Fuwen.InferencePreflightReportRenderer
+Penghou.Fuwen.InferencePricingQuality
+Penghou.Fuwen.InferencePricingQuality.Estimated = 1 -> Penghou.Fuwen.InferencePricingQuality
+Penghou.Fuwen.InferencePricingQuality.Exact = 2 -> Penghou.Fuwen.InferencePricingQuality
+Penghou.Fuwen.InferencePricingQuality.Unknown = 0 -> Penghou.Fuwen.InferencePricingQuality
+Penghou.Fuwen.InferencePromptForm
+Penghou.Fuwen.InferencePromptForm.RegisteredTemplate = 0 -> Penghou.Fuwen.InferencePromptForm
+Penghou.Fuwen.InferencePromptForm.WorkflowOwned = 1 -> Penghou.Fuwen.InferencePromptForm
+Penghou.Fuwen.InferenceRecoveryQuality
+Penghou.Fuwen.InferenceRecoveryQuality.Reconcilable = 2 -> Penghou.Fuwen.InferenceRecoveryQuality
+Penghou.Fuwen.InferenceRecoveryQuality.Resumable = 1 -> Penghou.Fuwen.InferenceRecoveryQuality
+Penghou.Fuwen.InferenceRecoveryQuality.Unsupported = 0 -> Penghou.Fuwen.InferenceRecoveryQuality
+Penghou.Fuwen.InferenceToolEffect
+Penghou.Fuwen.InferenceToolEffect.Destructive = 3 -> Penghou.Fuwen.InferenceToolEffect
+Penghou.Fuwen.InferenceToolEffect.ExternalWrite = 2 -> Penghou.Fuwen.InferenceToolEffect
+Penghou.Fuwen.InferenceToolEffect.IdempotentWrite = 1 -> Penghou.Fuwen.InferenceToolEffect
+Penghou.Fuwen.InferenceToolEffect.ReadOnly = 0 -> Penghou.Fuwen.InferenceToolEffect
+Penghou.Fuwen.InferenceToolRequirement
+Penghou.Fuwen.InferenceToolRequirement.Descriptor.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.InferenceToolRequirement.Effect.get -> Penghou.Fuwen.InferenceToolEffect
+Penghou.Fuwen.InferenceToolRequirement.InferenceToolRequirement(Penghou.Fuwen.DescriptorReference! descriptor, Penghou.Fuwen.InferenceToolEffect effect = Penghou.Fuwen.InferenceToolEffect.ReadOnly) -> void
+Penghou.Fuwen.InferenceUsageQuality
+Penghou.Fuwen.InferenceUsageQuality.Estimated = 1 -> Penghou.Fuwen.InferenceUsageQuality
+Penghou.Fuwen.InferenceUsageQuality.Exact = 2 -> Penghou.Fuwen.InferenceUsageQuality
+Penghou.Fuwen.InferenceUsageQuality.Unknown = 0 -> Penghou.Fuwen.InferenceUsageQuality
 Penghou.Fuwen.RuntimeValueJson
+static Penghou.Fuwen.InferencePreflight.Evaluate(Penghou.Fuwen.InferenceExecutionRequirement! requirement, Penghou.Fuwen.InferenceFeatureManifest! manifest) -> Penghou.Fuwen.InferencePreflightReport!
+static Penghou.Fuwen.InferencePreflightReportRenderer.RenderHuman(Penghou.Fuwen.InferencePreflightReport! report) -> string!
+static Penghou.Fuwen.InferencePreflightReportRenderer.RenderJson(Penghou.Fuwen.InferencePreflightReport! report) -> string!
+static Penghou.Fuwen.InferencePreflightReportRenderer.ToHumanString(Penghou.Fuwen.InferencePreflightReport! report) -> string!
+static Penghou.Fuwen.InferencePreflightReportRenderer.ToJson(Penghou.Fuwen.InferencePreflightReport! report) -> string!
+Penghou.Fuwen.IInferenceExecutorManifest
+Penghou.Fuwen.IInferenceExecutorManifest.FeatureManifest.get -> Penghou.Fuwen.InferenceFeatureManifest!
+Penghou.Fuwen.IInferenceExecutorManifest.PreflightDetailed(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.InferencePreflightReport!
 static Penghou.Fuwen.RuntimeValueJson.Normalize(Penghou.Fuwen.RuntimeValue! value, Penghou.Fuwen.FuwenType! expectedType, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>! schemas) -> Penghou.Fuwen.RuntimeValue!
 static Penghou.Fuwen.RuntimeValueJson.Normalize(System.Text.Json.JsonElement value, Penghou.Fuwen.FuwenType! expectedType, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>! schemas) -> Penghou.Fuwen.RuntimeValue!
 static Penghou.Fuwen.RuntimeValueJson.NormalizeList(Penghou.Fuwen.RuntimeValue! value, Penghou.Fuwen.FuwenType! itemType, int maximumItems, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>! schemas) -> Penghou.Fuwen.ListRuntimeValue!

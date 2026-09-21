@@ -216,15 +216,15 @@ reviewable before any new public or persisted contract is added.
 
 ### CI-1 — Feature manifest and executable preflight
 
-- [ ] Introduce the immutable adapter feature manifest and structured preflight
+- [x] Introduce the immutable adapter feature manifest and structured preflight
   report in the provider-neutral core.
-- [ ] Extend exact inference requirements with prompt form, modality, context,
+- [x] Extend exact inference requirements with prompt form, modality, context,
   tools/effects, limits, protocol revision, and recovery requirements.
 - [ ] Implement manifests/preflight for Baize structured text, media, exact
   routing, and deterministic fakes. Unsupported combinations fail closed.
 - [ ] Make Zhinu registration require successful complex-inference preflight
   before storing/registering an IR v9 definition.
-- [ ] Add a human-readable and JSON explanation renderer for the report.
+- [x] Add a human-readable and JSON explanation renderer for the report.
 
 Evidence: unit matrices for supported/unsupported combinations, missing exact
 bindings, too-weak limits, legacy executors, and zero-provider-work rejection.

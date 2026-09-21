@@ -824,13 +824,34 @@ public interface IInferenceExecutor
 /// <summary>An exact inference binding requirement that can be checked before workflow registration.</summary>
 public sealed class InferenceExecutionRequirement
 {
-    /// <summary>Creates one detached requirement for either a registered template or a workflow-owned prompt.</summary>
+    /// <summary>Creates a legacy one-call v3-v8 inference requirement.</summary>
     public InferenceExecutionRequirement(
         DescriptorReference profile,
         DescriptorReference? promptTemplate,
         string? promptDigest,
         IReadOnlyList<DescriptorReference>? tools = null,
         bool hasContextInputs = false)
+        : this(profile, promptTemplate, promptDigest, tools, hasContextInputs, InferenceModality.StructuredText)
+    {
+    }
+
+    /// <summary>Creates one detached requirement for either a registered template or a workflow-owned prompt.</summary>
+    public InferenceExecutionRequirement(
+        DescriptorReference profile,
+        DescriptorReference? promptTemplate,
+        string? promptDigest,
+        IReadOnlyList<DescriptorReference>? tools,
+        bool hasContextInputs,
+        InferenceModality modality,
+        IReadOnlyList<InferenceToolRequirement>? toolRequirements = null,
+        InferenceLimitSet? limits = null,
+        string protocolRevision = "fuwen-inference/v1",
+        string? irVersion = null,
+        InferenceRecoveryQuality minimumRecoveryQuality = InferenceRecoveryQuality.Unsupported,
+        int? maximumContextPayloadUtf8Bytes = null,
+        bool requiresExactUsageEvidence = false,
+        bool requiresExactPricingEvidence = false,
+        bool requiresStructuredOutput = false)
     {
         Profile = ExecutionPortValidation.Descriptor(profile, DescriptorKind.InferenceProfile, nameof(profile));
         if ((promptTemplate is null) == (promptDigest is null))
@@ -848,6 +869,29 @@ public sealed class InferenceExecutionRequirement
             throw new ArgumentException("Inference requirement tools must be unique.", nameof(tools));
         Tools = Array.AsReadOnly(copy);
         HasContextInputs = hasContextInputs;
+        PromptForm = promptTemplate is null ? InferencePromptForm.WorkflowOwned : InferencePromptForm.RegisteredTemplate;
+        if (!Enum.IsDefined(modality))
+            throw new ArgumentOutOfRangeException(nameof(modality));
+        Modality = modality;
+        ProtocolRevision = RuntimeValueSnapshot.Text(protocolRevision, nameof(protocolRevision), InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
+        IrVersion = RuntimeValueSnapshot.OptionalText(irVersion, nameof(irVersion), InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
+        Limits = limits ?? new InferenceLimitSet();
+        var requestedTools = toolRequirements is null
+            ? copy.Select(static descriptor => new InferenceToolRequirement(descriptor)).ToArray()
+            : toolRequirements.Select(tool => tool ?? throw new ArgumentException("Tool requirements cannot contain null values.", nameof(toolRequirements))).ToArray();
+        if (requestedTools.Length != copy.Length || requestedTools.Select(static tool => tool.Descriptor).Distinct().Count() != requestedTools.Length ||
+            requestedTools.Any(tool => !copy.Contains(tool.Descriptor)))
+            throw new ArgumentException("Tool requirements must exactly match the requirement tools.", nameof(toolRequirements));
+        ToolRequirements = Array.AsReadOnly(requestedTools);
+        if (!Enum.IsDefined(minimumRecoveryQuality))
+            throw new ArgumentOutOfRangeException(nameof(minimumRecoveryQuality));
+        MinimumRecoveryQuality = minimumRecoveryQuality;
+        if (maximumContextPayloadUtf8Bytes is <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maximumContextPayloadUtf8Bytes));
+        MaximumContextPayloadUtf8Bytes = maximumContextPayloadUtf8Bytes;
+        RequiresExactUsageEvidence = requiresExactUsageEvidence;
+        RequiresExactPricingEvidence = requiresExactPricingEvidence;
+        RequiresStructuredOutput = requiresStructuredOutput;
     }
 
     /// <summary>The exact admitted logical inference profile.</summary>
@@ -860,6 +904,28 @@ public sealed class InferenceExecutionRequirement
     public IReadOnlyList<DescriptorReference> Tools { get; }
     /// <summary>Whether the admitted inference expects one or more context inputs.</summary>
     public bool HasContextInputs { get; }
+    /// <summary>The prompt form required by this inference.</summary>
+    public InferencePromptForm PromptForm { get; }
+    /// <summary>The output modality required by this inference.</summary>
+    public InferenceModality Modality { get; }
+    /// <summary>The provider-neutral inference protocol revision required by this inference.</summary>
+    public string ProtocolRevision { get; }
+    /// <summary>The required workflow IR version, when the host is checking one.</summary>
+    public string? IrVersion { get; }
+    /// <summary>The aggregate bounds required by this inference.</summary>
+    public InferenceLimitSet Limits { get; }
+    /// <summary>The exact tool descriptors and effect classes required by this inference.</summary>
+    public IReadOnlyList<InferenceToolRequirement> ToolRequirements { get; }
+    /// <summary>The minimum durable recovery quality required by this inference.</summary>
+    public InferenceRecoveryQuality MinimumRecoveryQuality { get; }
+    /// <summary>The maximum context payload required by this inference, when set.</summary>
+    public int? MaximumContextPayloadUtf8Bytes { get; }
+    /// <summary>Whether exact usage evidence is required for admission.</summary>
+    public bool RequiresExactUsageEvidence { get; }
+    /// <summary>Whether exact pricing evidence is required for admission.</summary>
+    public bool RequiresExactPricingEvidence { get; }
+    /// <summary>Whether the adapter must provide the declared structured output contract.</summary>
+    public bool RequiresStructuredOutput { get; }
 }
 
 /// <summary>Optional host capability for rejecting unavailable inference bindings before registration.</summary>
@@ -867,6 +933,16 @@ public interface IInferenceExecutorPreflight
 {
     /// <summary>Returns a provider-neutral admission failure, or null when the exact requirement is executable.</summary>
     ExecutionFailure? Preflight(InferenceExecutionRequirement requirement);
+}
+
+/// <summary>Optional provider-neutral feature manifest and structured preflight capability.</summary>
+public interface IInferenceExecutorManifest
+{
+    /// <summary>The immutable features and exact bindings advertised by this executor.</summary>
+    InferenceFeatureManifest FeatureManifest { get; }
+
+    /// <summary>Returns a structured, provider-neutral report without starting provider work.</summary>
+    InferencePreflightReport PreflightDetailed(InferenceExecutionRequirement requirement);
 }
 
 /// <summary>Receives non-authoritative lifecycle observations from the host.</summary>

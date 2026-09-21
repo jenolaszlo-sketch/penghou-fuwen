@@ -269,9 +269,11 @@ for the exact commit and artifacts being published.
   capability matrix, and release checklist status. Completed 2026-09-21 with
   preview.3–preview.10 history reconstructed from repository commits, a linked
   current-surface matrix, corrected roadmap status, and version/document tests.
-- [ ] **M2.17 — Replace the threat-model starter.** Document assets, trust
+- [x] **M2.17 — Replace the threat-model starter.** Document assets, trust
   boundaries, concrete controls, residual risks, and host responsibilities
-  without implying an external audit.
+  without implying an external audit. Completed 2026-09-21 with a scoped model,
+  concrete threat/control/residual-risk matrix, deployment checklist, explicit
+  exclusions, and documentation contract coverage.
 - [ ] **M2.18 — Reconcile historical findings.** Verify R24 regression coverage
   and mark its historical record accurately; review R20–R23 and R29 against the
   current implementation without erasing history.
@@ -400,6 +402,7 @@ Add one entry per completed parent task or milestone:
 | 2026-09-21 | M2.8–M2.10 | Working tree after `8c6e671`; commit pending | Format clean; Release build 0 warnings/errors; 507 tests pass on each of .NET 8 and .NET 10 (1,014 executions); independent canonical JSON vector passes | R37 resolved; nine compiler-backed source fixtures and README fence compilation make language-reference drift test-visible |
 | 2026-09-21 | M2.11–M2.15 | Working tree after `fdd0b71`; commit pending | Format clean; Release build 0 warnings/errors; 508 tests pass on each of .NET 8 and .NET 10 (1,016 executions); independent canonical JSON vector passes | R38 resolved; publication depends on validation and transfers only commit-keyed complete package artifacts |
 | 2026-09-21 | M2.16 | Working tree after `b6a82af`; commit pending | Format clean; Release build 0 warnings/errors; 509 tests pass on each of .NET 8 and .NET 10 (1,018 executions); independent canonical JSON vector passes | Preview.3–preview.10 history, current capability boundaries, roadmap status, README links, and version/document conformance are reconciled |
+| 2026-09-21 | M2.17 | Working tree after `7e428eb`; commit pending | Format clean; Release build 0 warnings/errors; 510 tests pass on each of .NET 8 and .NET 10 (1,020 executions); independent canonical JSON vector passes | Threat model now records concrete assets, trust boundaries, controls, residual risks, host duties, exclusions, and review triggers without implying an audit |
 
 ## Deferred decisions
 

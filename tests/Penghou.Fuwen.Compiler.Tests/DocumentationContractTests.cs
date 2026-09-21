@@ -33,6 +33,23 @@ public sealed class DocumentationContractTests
     }
 
     [Fact]
+    public async Task Threat_model_names_enforced_boundaries_residual_risks_and_host_duties()
+    {
+        var threatModel = await File.ReadAllTextAsync(
+            Path.Combine(FindRepositoryRoot(), "docs", "threat-model.md"),
+            TestContext.Current.CancellationToken);
+
+        threatModel.Should().ContainAll(
+            "## Assets", "## Actors and untrusted inputs", "## Trust boundaries",
+            "## Threats, controls, and residual risks", "## Host responsibilities",
+            "## Out of scope and review cadence");
+        threatModel.Should().Contain("not an external security audit");
+        threatModel.Should().Contain("not signed cross-process authority");
+        threatModel.Should().Contain("test-only allow-all admission");
+        threatModel.Should().Contain("does not provide a general tool execution loop");
+    }
+
+    [Fact]
     public async Task Checked_in_language_corpus_compiles_formats_and_covers_documented_constructs()
     {
         var fixtureDirectory = Path.Combine(FindRepositoryRoot(), "tests", "fixtures", "documentation");

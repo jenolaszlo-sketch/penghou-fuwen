@@ -1,0 +1,6 @@
+capability "sample.read": "workspace";
+
+workflow documented_capability(input: string) -> string {
+  context facts = context "sample.secure-context@1#bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" (request: input;) -> string;
+  return facts;
+}

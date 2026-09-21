@@ -1,0 +1,8 @@
+workflow documented_conditional(input: string) -> string {
+  if choice input == "ready" {
+    activity accepted = activity "sample.echo@1#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" (value: input;) -> string;
+  } else {
+    activity repaired = activity "sample.echo@1#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" (value: input;) -> string;
+  } merge accepted, repaired -> string;
+  return choice;
+}

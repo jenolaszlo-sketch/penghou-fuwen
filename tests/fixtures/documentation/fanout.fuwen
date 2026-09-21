@@ -1,0 +1,6 @@
+workflow documented_fanout(input: list<string>[8]) -> list<string>[8] {
+  fanout processed over input as item: string key item max 8 concurrency 2 {
+    activity normalized = activity "sample.echo@1#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" (value: item;) -> string;
+  } yield normalized -> list<string>[8];
+  return processed;
+}

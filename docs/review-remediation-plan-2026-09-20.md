@@ -224,14 +224,18 @@ capabilities while compiled plans remain exactly pinned.
   production and describe prompts, tools, limits, optional context, repeat,
   checkpoint, wait, and current fan-out bodies accurately. Completed
   2026-09-20 and guarded by recursive duplicate-key and production-shape tests.
-- [ ] **M2.8 — Update `fuwen-authoring.md` and README examples.** Reconcile tool
-  effects and all supported constructs with the compiler.
-- [ ] **M2.9 — Add documentation conformance.** Detect duplicate keys and
+- [x] **M2.8 — Update `fuwen-authoring.md` and README examples.** Reconcile tool
+  effects and all supported constructs with the compiler. Completed 2026-09-21;
+  README tool effects and inline-prompt cardinality now match compiler behavior.
+- [x] **M2.9 — Add documentation conformance.** Detect duplicate keys and
   compile a syntax corpus with at least one fixture per node kind and inference
-  form in CI.
-- [ ] **M2.10 — Choose a sustainable source of truth.** Generate reference data
+  form in CI. Completed 2026-09-21 with nine checked-in fixtures, node/declaration/
+  inference-shape assertions, formatter idempotence, and README fence compilation.
+- [x] **M2.10 — Choose a sustainable source of truth.** Generate reference data
   from shared feature metadata, or document ownership and test the handwritten
-  catalogue against parser fixtures.
+  catalogue against parser fixtures. Completed 2026-09-21: the parser/compiler
+  own executable semantics; the reviewed JSON catalogue and prose are mirrors
+  protected by compiler-backed fixtures.
 
 Exit criteria: common strict JSON parsers accept the grammar, and every claimed
 syntax form is exercised against the actual compiler.
@@ -387,6 +391,7 @@ Add one entry per completed parent task or milestone:
 | 2026-09-21 | M0.1 media-timeout subtask; M1.10–M1.13 | Working tree after `2bfe03b`; commit pending | Format clean; Release build 0 warnings/errors; 495 tests pass on each of .NET 8 and .NET 10 (990 executions); independent canonical JSON vector passes | R34 resolved; ADR 0006 defines one effective deadline across submission, polling, and publication |
 | 2026-09-21 | M0.1 registered-alias subtask; M1.6–M1.9 | Working tree after `a4881cf`; commit pending | Format clean; Release build 0 warnings/errors; 499 tests pass on each of .NET 8 and .NET 10 (998 executions); independent canonical JSON vector passes | R32 resolved; ADR 0007 defines exact host-owned identity, typed parameter mapping, and pre-registration failure |
 | 2026-09-21 | M0.1 context subtask; M1.14–M1.16 | Working tree after `bbaede3`; commit pending | Format clean; Release build 0 warnings/errors; 505 tests pass on each of .NET 8 and .NET 10 (1,010 executions); independent canonical JSON vector passes | R35 resolved; ADR 0008 defines explicit bounded context mapping and snapshot/payload evidence |
+| 2026-09-21 | M2.8–M2.10 | Working tree after `8c6e671`; commit pending | Format clean; Release build 0 warnings/errors; 507 tests pass on each of .NET 8 and .NET 10 (1,014 executions); independent canonical JSON vector passes | R37 resolved; nine compiler-backed source fixtures and README fence compilation make language-reference drift test-visible |
 
 ## Deferred decisions
 

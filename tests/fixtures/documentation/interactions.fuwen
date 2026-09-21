@@ -1,0 +1,5 @@
+workflow documented_interactions(input: string) -> string {
+  checkpoint saved value input -> string;
+  wait approval signal approval_request type string timeout 3600;
+  return approval;
+}

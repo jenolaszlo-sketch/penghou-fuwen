@@ -1,0 +1,5 @@
+workflow documented_nodes(input: string) -> string {
+  context facts = context "sample.context@1#cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" (request: input;) -> string;
+  activity normalized = activity "sample.echo@1#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" (value: facts;) -> string;
+  return normalized;
+}

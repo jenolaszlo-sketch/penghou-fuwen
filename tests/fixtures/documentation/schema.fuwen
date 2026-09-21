@@ -1,0 +1,7 @@
+schema Request "sample.request@1#1111111111111111111111111111111111111111111111111111111111111111" {
+  value: string;
+}
+
+workflow documented_schema(input: Request) -> string {
+  return input.value;
+}

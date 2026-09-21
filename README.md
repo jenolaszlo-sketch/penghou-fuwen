@@ -101,8 +101,8 @@ workflow greeting(input: string) -> string {
 
 Descriptor pins are resolved against the host's trusted catalogue. Prompt and
 tool declarations are part of plan identity: changing their semantic content
-changes the execution fingerprint. Only read-only, idempotent, retry-safe tools
-are currently admitted for inference.
+changes the execution fingerprint. Inference admits effect-free and read-only
+tools, plus retry-safe writes whose callable contract is idempotent.
 
 See the [authoring contract](docs/fuwen-authoring.md) for the complete compact
 syntax and catalogue inputs.

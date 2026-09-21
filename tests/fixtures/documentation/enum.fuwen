@@ -1,0 +1,8 @@
+enum Mode "sample.mode@1#2222222222222222222222222222222222222222222222222222222222222222" {
+  fast = "fast";
+  safe = "safe";
+}
+
+workflow documented_enum(input: Mode) -> Mode {
+  return input;
+}

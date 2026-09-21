@@ -13,7 +13,7 @@
     "source": "declaration*",
     "declaration": "schema | enum | capability | prompt | toolset | workflow",
     "toolset": "'toolset' identifier '{' ('use' descriptor ';'?)* '}'",
-    "prompt": "'prompt' identifier '(' (identifier ':' type (','|';'))* ')' ('{' promptMessage* '}' | 'uses' 'registered' descriptor ';'?)",
+    "prompt": "'prompt' identifier '(' (identifier ':' type (','|';'))* ')' ('{' promptMessage+ '}' | 'uses' 'registered' descriptor ';'?)",
     "promptMessage": "('system' | 'user') string",
     "inferenceNode": "'infer' identifier (':' type)? '=' 'infer'? descriptor (('using'|',') descriptor arguments? | 'prompt' identifier ('(' (identifier (':'|'=') binding (','|';'))* ')')?) ('tools' ('none' | identifier | '[' descriptor (','|';')* ']'))? (('with'|'context') identifier (',' identifier)*)? ('limits' (('maxTokens' number)|('timeout' number)){1,2})? (('->'|':') type)? ';'?",
     "schema": "schema identifier descriptor? '{' field* '}'",

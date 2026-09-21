@@ -1,0 +1,6 @@
+workflow documented_repeat(input: string) -> string {
+  repeat attempted max 3 state current: string = input {
+    activity normalized = activity "sample.echo@1#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" (value: current;) -> string;
+  } continue normalized break normalized == "ready" -> string;
+  return attempted;
+}

@@ -11,6 +11,9 @@ permissions:
 jobs:
   build-test-pack:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -45,3 +48,48 @@ jobs:
             artifacts/*.nupkg
             artifacts/*.snupkg
           if-no-files-found: error
+
+  consumer-proof:
+    runs-on: ubuntu-latest
+    needs: build-test-pack
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Download packages
+        uses: actions/download-artifact@v6
+        with:
+          name: nuget-packages
+          path: artifacts
+
+      # Isolated package consumers: each consumer project references the packed
+      # commit only through NuGet package surfaces (never sibling projects)
+      # and restores them from a local feed of this run's packages.
+      - name: Marang consumer proof
+        run: >
+          dotnet test tests/Penghou.Fuwen.MarangConsumer.Tests/Penghou.Fuwen.MarangConsumer.Tests.csproj
+          --configuration Release
+          -p:FuwenPackageVersion=0.0.0-ci.${{ github.run_id }}
+
+      - name: Review consumer proof
+        run: >
+          dotnet test tests/Penghou.Fuwen.ReviewConsumer.Tests/Penghou.Fuwen.ReviewConsumer.Tests.csproj
+          --configuration Release
+          -p:FuwenPackageVersion=0.0.0-ci.${{ github.run_id }}
+
+      # Runs last: --no-restore needs the restore that the test steps above
+      # already performed on this runner.
+      - name: Verify consumer formatting
+        run: |
+          dotnet format tests/Penghou.Fuwen.MarangConsumer.Tests/Penghou.Fuwen.MarangConsumer.Tests.csproj --verify-no-changes --no-restore
+          dotnet format tests/Penghou.Fuwen.ReviewConsumer.Tests/Penghou.Fuwen.ReviewConsumer.Tests.csproj --verify-no-changes --no-restore

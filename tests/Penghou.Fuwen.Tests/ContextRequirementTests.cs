@@ -5,22 +5,18 @@ namespace Penghou.Fuwen.Tests;
 public sealed class ContextRequirementTests
 {
     [Theory]
-    [InlineData(1)]
-    [InlineData(2)]
-    public void Historical_versions_reject_non_null_typed_requirements(int version)
+    [InlineData("fuwen-ir/v2")]
+    [InlineData("fuwen-ir/v99")]
+    public void Unsupported_ir_versions_are_rejected_without_silent_upgrade(string irVersion)
     {
-        var source = PlanFixture.CreateV3();
-        var plan = source with
+        var plan = PlanFixture.CreateV3() with
         {
-            IrVersion = version == 1 ? FuwenContracts.IrVersionV1 : FuwenContracts.IrVersionV2,
-            CompilerSemanticVersion = version == 1 ? FuwenContracts.CompilerSemanticVersionV1 : FuwenContracts.CompilerSemanticVersionV2,
-            FingerprintVersion = version == 1 ? FuwenContracts.ExecutionFingerprintVersionV1 : FuwenContracts.ExecutionFingerprintVersionV2,
-            ExecutionOrder = version == 1 ? null : source.ExecutionOrder,
+            IrVersion = irVersion,
         };
 
         var act = () => WorkflowPlanIdentity.GetCanonicalBytes(plan);
 
-        act.Should().Throw<ArgumentException>().WithMessage("*Typed context requirements*");
+        act.Should().Throw<NotSupportedException>().WithMessage($"*{irVersion}*");
     }
 
     [Fact]
@@ -44,8 +40,8 @@ public sealed class ContextRequirementTests
         Action legacyAct = () => WorkflowPlanIdentity.GetCanonicalBytes(legacy);
         Action nullAct = () => WorkflowPlanIdentity.GetCanonicalBytes(nullRequirements);
 
-        legacyAct.Should().Throw<ArgumentException>().WithMessage("*legacy context snapshots*");
-        nullAct.Should().Throw<ArgumentException>().WithMessage("*non-null ContextRequirements*");
+        legacyAct.Should().Throw<ArgumentException>().WithMessage("*does not accept context snapshots*");
+        nullAct.Should().Throw<ArgumentException>().WithMessage("*requires a context-requirements collection*");
     }
 
     [Fact]
@@ -146,15 +142,15 @@ public sealed class ContextRequirementTests
     }
 
     [Fact]
-    public void V4_rejects_invalid_typed_context_dependency()
+    public void Current_ir_rejects_invalid_typed_context_dependency()
     {
         var source = PlanFixture.CreateV3();
         var inference = source.Nodes.OfType<InferenceNode>().Single();
         var invalid = source with
         {
-            IrVersion = FuwenContracts.IrVersionV4,
-            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV4,
-            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV4,
+            IrVersion = FuwenContracts.IrVersion,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersion,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersion,
             Nodes = source.Nodes.Select(node => node == inference
                 ? inference with
                 {

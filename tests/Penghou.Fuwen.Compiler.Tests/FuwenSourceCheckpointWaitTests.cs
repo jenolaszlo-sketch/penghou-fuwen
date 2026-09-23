@@ -21,7 +21,7 @@ public sealed class FuwenSourceCheckpointWaitTests
     }
 
     [Fact]
-    public async Task Checkpoint_node_compiles_to_v7()
+    public async Task Checkpoint_node_compiles_to_current_ir()
     {
         const string source = """
             workflow demo(input: string) -> string {
@@ -32,14 +32,14 @@ public sealed class FuwenSourceCheckpointWaitTests
         var result = await new FuwenSourceCompiler(Catalogue()).CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
         result.Succeeded.Should().BeTrue(string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
         result.Plan.Should().NotBeNull();
-        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersionV7);
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersion);
         var checkpoint = result.Plan.Nodes.OfType<CheckpointNode>().Should().ContainSingle().Subject;
         checkpoint.Name.Should().Be("saved");
         checkpoint.OutputType.Should().Be(new PrimitiveType(FuwenPrimitiveKind.String));
     }
 
     [Fact]
-    public async Task Wait_node_compiles_to_v7()
+    public async Task Wait_node_compiles_to_current_ir()
     {
         const string source = """
             workflow demo(input: string) -> string {
@@ -50,7 +50,7 @@ public sealed class FuwenSourceCheckpointWaitTests
         var result = await new FuwenSourceCompiler(Catalogue()).CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
         result.Succeeded.Should().BeTrue(string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
         result.Plan.Should().NotBeNull();
-        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersionV7);
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersion);
         var wait = result.Plan.Nodes.OfType<WaitNode>().Should().ContainSingle().Subject;
         wait.Name.Should().Be("approval");
         wait.SignalName.Should().Be("approval_request");
@@ -59,7 +59,7 @@ public sealed class FuwenSourceCheckpointWaitTests
     }
 
     [Fact]
-    public async Task Wait_node_without_timeout_compiles_to_v7()
+    public async Task Wait_node_without_timeout_compiles_to_current_ir()
     {
         const string source = """
             workflow demo(input: string) -> string {
@@ -74,7 +74,7 @@ public sealed class FuwenSourceCheckpointWaitTests
     }
 
     [Fact]
-    public async Task Checkpoint_followed_by_wait_compiles_to_v7()
+    public async Task Checkpoint_followed_by_wait_compiles_to_current_ir()
     {
         const string source = """
             workflow demo(input: string) -> string {
@@ -90,7 +90,7 @@ public sealed class FuwenSourceCheckpointWaitTests
     }
 
     [Fact]
-    public async Task Checkpoint_inside_repeat_body_compiles_to_v7()
+    public async Task Checkpoint_inside_repeat_body_compiles_to_current_ir()
     {
         const string source = """
             workflow demo(input: string) -> string {
@@ -102,7 +102,7 @@ public sealed class FuwenSourceCheckpointWaitTests
             """;
         var result = await new FuwenSourceCompiler(Catalogue()).CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
         result.Succeeded.Should().BeTrue(string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
-        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersionV7);
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersion);
         var repeat = result.Plan.Nodes.OfType<RepeatNode>().Should().ContainSingle().Subject;
         repeat.Body.Should().Contain(n => n is CheckpointNode);
     }

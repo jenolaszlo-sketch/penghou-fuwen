@@ -33,7 +33,7 @@ public sealed class FuwenSourceRepeatTests
     }
 
     [Fact]
-    public async Task Repeat_over_string_state_with_continue_and_break_compiles_to_v6()
+    public async Task Repeat_over_string_state_with_continue_and_break_compiles_to_current_ir()
     {
         const string source = """
             workflow demo(input: string) -> string {
@@ -46,8 +46,8 @@ public sealed class FuwenSourceRepeatTests
         var result = await new FuwenSourceCompiler(Catalogue()).CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
         result.Succeeded.Should().BeTrue(string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
         result.Plan.Should().NotBeNull();
-        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersionV6);
-        result.Plan.CompilerSemanticVersion.Should().Be(FuwenContracts.CompilerSemanticVersionV6);
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersion);
+        result.Plan.CompilerSemanticVersion.Should().Be(FuwenContracts.CompilerSemanticVersion);
         var repeat = result.Plan.Nodes.OfType<RepeatNode>().Should().ContainSingle().Subject;
         repeat.MaxIterations.Should().Be(3);
         repeat.StateType.Should().Be(new PrimitiveType(FuwenPrimitiveKind.String));
@@ -141,7 +141,7 @@ public sealed class FuwenSourceRepeatTests
             """;
         var result = await new FuwenSourceCompiler(Catalogue()).CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
         result.Succeeded.Should().BeTrue(string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
-        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersionV6);
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersion);
         var repeat = result.Plan.Nodes.OfType<RepeatNode>().Should().ContainSingle().Subject;
         repeat.Body.OfType<ContextNode>().Should().ContainSingle();
         var inference = repeat.Body.OfType<InferenceNode>().Should().ContainSingle().Subject;

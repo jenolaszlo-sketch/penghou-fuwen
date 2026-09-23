@@ -23,14 +23,6 @@ internal static class FuwenZhinuSequentialInterpreter
         ArgumentNullException.ThrowIfNull(ports);
         ArgumentNullException.ThrowIfNull(context);
         WorkflowPlanValidator.Validate(plan);
-        if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) &&
-            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal) &&
-            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal) &&
-            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal) &&
-            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV7, StringComparison.Ordinal) &&
-            !string.Equals(plan.IrVersion, FuwenContracts.IrVersionV8, StringComparison.Ordinal))
-            throw new FuwenZhinuAdapterException(
-                $"The sequential adapter supports '{FuwenContracts.IrVersionV3}'–'{FuwenContracts.IrVersionV8}', not '{plan.IrVersion}'.");
         WorkflowPlanIdentity.ValidateExecutionFingerprint(executionFingerprint);
         if (input.ValueKind == JsonValueKind.Undefined)
             throw new FuwenZhinuExecutionException("Workflow input is undefined JSON.");
@@ -220,6 +212,37 @@ internal static class FuwenZhinuSequentialInterpreter
         return envelope.Output!;
     }
 
+    private static ProtocolLoopRunner RootLoopRunner(WorkflowContext context) =>
+        (name, initial, body, options, token) =>
+            context.LoopAsync(name, initial, _ => true, body, options, token);
+
+    private static ProtocolLoopRunner IterationLoopRunner(WorkflowLoopIteration<JsonElement> iteration) =>
+        (name, initial, body, options, token) =>
+            iteration.LoopAsync(name, initial, _ => true, body, options, token);
+
+    private static List<InferenceContextInput> BuildContextInputs(
+        InferenceNode node,
+        WorkflowPlan plan,
+        FuwenInterpreterState state)
+    {
+        var contextInputs = new List<InferenceContextInput>(node.ContextRequirements!.Count);
+        foreach (var requirement in node.ContextRequirements)
+        {
+            if (!state.Outputs.TryGetValue(requirement.Source.NodePath, out var value) ||
+                !state.Snapshots.TryGetValue(requirement.Source.NodePath, out var snapshot))
+                throw new FuwenZhinuExecutionException(
+                    $"Inference node '{node.StructuralPath}' requires unavailable context '{requirement.Source.NodePath}'.");
+            EnsureType(value, requirement.ExpectedType, plan.Schemas,
+                $"inference context '{requirement.Name}' for '{node.StructuralPath}'");
+            contextInputs.Add(new InferenceContextInput(
+                requirement.Name,
+                requirement.ExpectedType,
+                value,
+                snapshot));
+        }
+        return contextInputs;
+    }
+
     private static (JsonElement RequestJson, Func<ExecutionInvocation, InferenceExecutionRequest> CreateRequest)
         BuildInferenceRequest(
             InferenceNode node,
@@ -233,9 +256,7 @@ internal static class FuwenZhinuSequentialInterpreter
         if (node.PromptName is null)
         {
             var toolList = node.Tools is null || node.Tools.Count == 0 ? null : node.Tools.ToArray();
-            var templateRequestTools = IrVersions.SupportsWorkflowPrompts(plan.IrVersion)
-                ? node.Tools?.ToArray() ?? []
-                : toolList;
+            var templateRequestTools = node.Tools?.ToArray() ?? [];
             var identity = new NodeRequestIdentity("inference", nodePath, node.Profile, node.PromptTemplate, arguments, contextInputs, toolList, node.Limits);
             var requestJson = FuwenRuntimeValueWire.Serialize(identity);
             return (requestJson, invocation => new InferenceExecutionRequest(
@@ -321,21 +342,15 @@ internal static class FuwenZhinuSequentialInterpreter
         CancellationToken cancellationToken)
     {
         var arguments = FuwenBindingEvaluator.EvaluateArguments(node.Arguments, plan, state);
-        var contextInputs = new List<InferenceContextInput>(node.ContextRequirements!.Count);
-        foreach (var requirement in node.ContextRequirements)
-        {
-            if (!state.Outputs.TryGetValue(requirement.Source.NodePath, out var value) ||
-                !state.Snapshots.TryGetValue(requirement.Source.NodePath, out var snapshot))
-                throw new FuwenZhinuExecutionException(
-                    $"Inference node '{node.StructuralPath}' requires unavailable context '{requirement.Source.NodePath}'.");
-            EnsureType(value, requirement.ExpectedType, plan.Schemas,
-                $"inference context '{requirement.Name}' for '{node.StructuralPath}'");
-            contextInputs.Add(new InferenceContextInput(
-                requirement.Name,
-                requirement.ExpectedType,
-                value,
-                snapshot));
-        }
+        var contextInputs = BuildContextInputs(node, plan, state);
+
+        // The durable protocol coordinator owns its own loop behind the same
+        // logical node. It runs only when the host supplies a turn executor;
+        // otherwise the node keeps its established one-call step behavior.
+        if (node.Protocol is not null && ports.TurnExecutor is not null)
+            return await FuwenInferenceCoordinator.ExecuteAsync(
+                node, plan, executionFingerprint, ports, RootLoopRunner(context), state, contextInputs,
+                node.StructuralPath, cancellationToken).ConfigureAwait(false);
 
         var (requestJson, createRequest) = BuildInferenceRequest(node, plan, state, arguments, contextInputs);
         var envelopeJson = await context.StepAsync<JsonElement, JsonElement>(
@@ -372,7 +387,7 @@ internal static class FuwenZhinuSequentialInterpreter
             stepOptions: StepOptionsFor(
                 inheritedDependencies,
                 node.Arguments,
-                node.ContextRequirements.Select(static requirement => requirement.Source)),
+                node.ContextRequirements!.Select(static requirement => requirement.Source)),
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         var envelope = FuwenEnvelopeValidator.Read(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId, ports.PriorExecutionFingerprints);
@@ -932,6 +947,15 @@ internal static class FuwenZhinuSequentialInterpreter
         }
 
         var stepSuffix = FuwenRepeatCoordinator.StepSuffix(node.StructuralPath, repeat.StructuralPath);
+
+        // The durable protocol coordinator nests its loop under the repeat
+        // iteration when the host supplies a turn executor.
+        if (node.Protocol is not null && ports.TurnExecutor is not null)
+            return await FuwenInferenceCoordinator.ExecuteAsync(
+                node, plan, executionFingerprint, ports, IterationLoopRunner(iteration), state, contextInputs,
+                RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, iteration.Iteration, stepSuffix),
+                cancellationToken).ConfigureAwait(false);
+
         var (requestJson, createRequest) = BuildInferenceRequest(node, plan, state, arguments, contextInputs);
         var runtimePath = RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, iteration.Iteration, stepSuffix);
         var result = await iteration.StepAsync(

@@ -112,7 +112,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         var registration = await new FuwenZhinuWorkflowFactory(
                 new InMemoryWorkflowDefinitionStore(),
                 IdentityFor(fixture.Admission),
-                new FuwenZhinuExecutionPorts(new UnusedActivity(), contextProvider, inference))
+                new FuwenZhinuExecutionPorts(new UnusedActivity(), contextProvider, CurrentInferenceFixture.WithPreflight(inference)))
             .CreateAsync("fuwen.context", "1", fixture.Admission, TestContext.Current.CancellationToken);
         var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -196,11 +196,11 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         var activityPath = StructuralNodeIdentity.Create("echo", "echo");
         var returnPath = StructuralNodeIdentity.Create("echo", "return_result");
         return new WorkflowPlan(
-            FuwenContracts.IrVersionV3,
+            FuwenContracts.IrVersion,
             "fuwen-language/v1",
-            FuwenContracts.CompilerSemanticVersionV3,
+            FuwenContracts.CompilerSemanticVersion,
             FuwenContracts.CanonicalJsonVersion,
-            FuwenContracts.ExecutionFingerprintVersionV3,
+            FuwenContracts.ExecutionFingerprintVersion,
             "echo",
             "1",
             new PrimitiveType(FuwenPrimitiveKind.String),
@@ -319,11 +319,11 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             new DescriptorFixture(template, null),
         };
         var plan = new WorkflowPlan(
-            FuwenContracts.IrVersionV3,
+            FuwenContracts.IrVersion,
             "fuwen-language/v1",
-            FuwenContracts.CompilerSemanticVersionV3,
+            FuwenContracts.CompilerSemanticVersion,
             FuwenContracts.CanonicalJsonVersion,
-            FuwenContracts.ExecutionFingerprintVersionV3,
+            FuwenContracts.ExecutionFingerprintVersion,
             "context",
             "1",
             stringType,
@@ -335,7 +335,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             [
                 new ContextNode("context", contextPath, contextDescriptor, [new ArgumentBinding("request", new InputBinding([]))], artifactType),
                 new InferenceNode("infer", inferencePath, profile, template, [new ArgumentBinding("request", new InputBinding([]))], [], stringType,
-                    [new ContextRequirement("context", new NodeOutputBinding(contextPath, []), artifactType)]),
+                    [new ContextRequirement("context", new NodeOutputBinding(contextPath, []), artifactType)],
+                    Protocol: CurrentInferenceFixture.OneCallProtocol),
                 new ReturnNode("return_result", returnPath, new NodeOutputBinding(inferencePath, [])),
             ],
             new WorkflowExecutionOrder([

@@ -19,7 +19,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 new FuwenZhinuExecutionPorts(
                     new UnusedActivity(),
                     new RecordingContextProvider(fixture.ContextDescriptor, fixture.ArtifactDescriptor),
-                    inference))
+                    CurrentInferenceFixture.WithPreflight(inference)))
             .CreateAsync("fuwen.vertical", "1", fixture.Admission, TestContext.Current.CancellationToken);
         var root = CreateTempRoot();
         var databasePath = Path.Combine(root, "workflow.db");

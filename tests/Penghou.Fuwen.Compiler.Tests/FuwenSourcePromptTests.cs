@@ -31,7 +31,7 @@ public sealed class FuwenSourcePromptTests
     private static string PromptSource(string prompt) => prompt + "\n" + MinimalWorkflow;
 
     [Fact]
-    public async Task Prompt_declaration_with_typed_params_compiles_to_v8()
+    public async Task Prompt_declaration_with_typed_params_compiles_to_current_ir()
     {
         const string source = """
             prompt implement_component(component_name: string) {
@@ -47,7 +47,7 @@ public sealed class FuwenSourcePromptTests
         result.Succeeded.Should().BeTrue(
             string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
         result.Plan.Should().NotBeNull();
-        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersionV8);
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersion);
         result.Plan.Prompts.Should().ContainSingle();
         var prompt = result.Plan.Prompts![0];
         prompt.Name.Should().Be("implement_component");
@@ -175,7 +175,7 @@ public sealed class FuwenSourcePromptTests
     }
 
     [Fact]
-    public void Prompts_require_v8()
+    public void Prompts_are_valid_in_the_current_IR()
     {
         var str = new PrimitiveType(FuwenPrimitiveKind.String);
         var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
@@ -187,15 +187,13 @@ public sealed class FuwenSourcePromptTests
                 new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([returnPath])]),
             ]))
             .AddPrompt(prompt)
-            .BuildV7();
+            .Build();
 
-        var act = () => WorkflowPlanValidator.Validate(plan);
-
-        act.Should().Throw<ArgumentException>().WithMessage("*IR v8*");
+        WorkflowPlanValidator.Validate(plan);
     }
 
     [Fact]
-    public void V8_plan_with_prompts_validates_and_fingerprints()
+    public void Current_plan_with_prompts_validates_and_fingerprints()
     {
         var str = new PrimitiveType(FuwenPrimitiveKind.String);
         var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
@@ -210,7 +208,7 @@ public sealed class FuwenSourcePromptTests
                 ]));
             foreach (var definition in prompts)
                 builder.AddPrompt(definition);
-            return builder.BuildV8();
+            return builder.Build();
         }
 
         var first = Build(Prompt("b", "second"), Prompt("a", "first"));
@@ -222,7 +220,7 @@ public sealed class FuwenSourcePromptTests
         var reorderedFingerprint = WorkflowPlanIdentity.ComputeExecutionFingerprint(reordered);
         var changedFingerprint = WorkflowPlanIdentity.ComputeExecutionFingerprint(changed);
 
-        firstFingerprint.Should().MatchRegex(@"^sha256:fuwen-execution/v8:[0-9a-f]{64}$");
+        firstFingerprint.Should().MatchRegex(@"^sha256:fuwen-execution/v1:[0-9a-f]{64}$");
         reorderedFingerprint.Should().Be(firstFingerprint);
         changedFingerprint.Should().NotBe(firstFingerprint);
     }
@@ -262,7 +260,7 @@ public sealed class FuwenSourcePromptTests
                 ]))
                 .AddPrompt(new PromptDefinition(
                     "p", [], [new PromptMessage(PromptMessageRole.User, text)]))
-                .BuildV8();
+                .Build();
         }
 
         var beforeDefinition = WorkflowDefinitionDocument.Create(Build("first"));
@@ -283,7 +281,7 @@ public sealed class FuwenSourcePromptTests
         new ContentDigest("sha256", "validation/v1", new string('c', 64)));
 
     [Fact]
-    public async Task Inference_with_prompt_reference_compiles_to_v8()
+    public async Task Inference_with_prompt_reference_compiles_to_current_ir()
     {
         var source =
             "prompt greet(name: string) {\n" +
@@ -300,7 +298,7 @@ public sealed class FuwenSourcePromptTests
 
         result.Succeeded.Should().BeTrue(
             string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
-        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersionV8);
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersion);
         var inference = result.Plan.Nodes.OfType<InferenceNode>().Single();
         inference.PromptName.Should().Be("greet");
         inference.PromptTemplate.Should().BeNull();

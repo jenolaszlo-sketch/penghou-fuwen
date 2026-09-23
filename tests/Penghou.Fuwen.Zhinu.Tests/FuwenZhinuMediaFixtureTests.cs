@@ -80,11 +80,11 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         var inferencePath = StructuralNodeIdentity.Create("media-fixture", "generate");
         var returnPath = StructuralNodeIdentity.Create("media-fixture", "return_result");
         var plan = new WorkflowPlan(
-            FuwenContracts.IrVersionV3,
+            FuwenContracts.IrVersion,
             "fuwen-language/v1",
-            FuwenContracts.CompilerSemanticVersionV3,
+            FuwenContracts.CompilerSemanticVersion,
             FuwenContracts.CanonicalJsonVersion,
-            FuwenContracts.ExecutionFingerprintVersionV3,
+            FuwenContracts.ExecutionFingerprintVersion,
             "media-fixture",
             "1",
             inputType,
@@ -94,7 +94,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             [profile, prompt, artifact],
             new CapabilityManifest([]),
             [
-                new InferenceNode("generate", inferencePath, profile, prompt, [], [], outputType, ContextRequirements: []),
+                new InferenceNode("generate", inferencePath, profile, prompt, [], [], outputType,
+                    ContextRequirements: [], Protocol: CurrentInferenceFixture.OneCallProtocol),
                 new ReturnNode("return_result", returnPath, new NodeOutputBinding(inferencePath, [])),
             ],
             new WorkflowExecutionOrder([

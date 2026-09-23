@@ -74,7 +74,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 new WorkflowExecutionRegion("demo/decide/$then", [new WorkflowExecutionPhase([acceptPath])]),
                 new WorkflowExecutionRegion("demo/decide/$else", [new WorkflowExecutionPhase([repairPath])]),
             ]))
-            .BuildV5();
+            .Build();
         var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
                 new InMemoryTrustedCatalogue([
                     new TrustedCatalogueDescriptor(activityDesc, callableContract: new CallableContract(new CallableSignature([new CallableParameter("value", str)], str), CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),

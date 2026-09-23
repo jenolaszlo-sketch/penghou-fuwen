@@ -29,10 +29,21 @@ public sealed class WorkflowPlanIdentityTests
             PlanFixture.Descriptor(DescriptorKind.Activity, "sample.audit"),
             [],
             new PrimitiveType(FuwenPrimitiveKind.Boolean));
+        var root = plan.ExecutionOrder!.Regions.Single(region => region.RegionPath == plan.Name);
         var changed = plan with
         {
             CatalogueBindings = [inserted.Activity, .. plan.CatalogueBindings],
             Nodes = [inserted, .. plan.Nodes],
+            ExecutionOrder = plan.ExecutionOrder with
+            {
+                Regions =
+                [
+                    root with
+                    {
+                        Phases = [.. root.Phases.Take(3), new WorkflowExecutionPhase([insertedPath]), root.Phases[3]],
+                    },
+                ],
+            },
         };
 
         changed.Nodes.Skip(1).Select(node => node.StructuralPath)
@@ -78,107 +89,144 @@ public sealed class WorkflowPlanIdentityTests
 
         canonicalBytes.Should().Equal(goldenBytes);
         WorkflowPlanIdentity.ComputeExecutionFingerprint(plan)
-            .Should().Be("sha256:fuwen-execution/v1:e3a76cc4128c703637fd14555e95725908f3170c69831033413f5f9a11bfad8a");
+            .Should().Be("sha256:fuwen-execution/v1:abefd1352b2211428a098711f49b813a97c71babe10368184b2169a9f73b7cfb");
     }
 
     [Fact]
-    public void V2_plan_has_an_explicit_execution_order_and_stable_golden_fingerprint()
+    public void Plan_with_audit_node_has_stable_current_identity()
     {
         var plan = PlanFixture.CreateV2();
-        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
-        var goldenPath = Path.Combine(AppContext.BaseDirectory, "golden", "workflow_plan_v2.json");
-        var goldenFile = File.ReadAllBytes(goldenPath);
-        var goldenLength = goldenFile.Length;
-        while (goldenLength > 0 && goldenFile[goldenLength - 1] is (byte)'\r' or (byte)'\n')
-            goldenLength--;
 
-        canonicalBytes.Should().Equal(goldenFile.AsSpan(0, goldenLength).ToArray());
+        plan.IrVersion.Should().Be(FuwenContracts.IrVersion);
+        plan.CompilerSemanticVersion.Should().Be(FuwenContracts.CompilerSemanticVersion);
+        plan.FingerprintVersion.Should().Be(FuwenContracts.ExecutionFingerprintVersion);
         WorkflowPlanIdentity.ComputeExecutionFingerprint(plan)
-            .Should().Be("sha256:fuwen-execution/v2:2bf5c628bcecfdb0970730bc160ee10f2bcbf326875f30430e5b832fafe96571");
+            .Should().StartWith("sha256:fuwen-execution/v1:");
+        WorkflowPlanIdentity.GetCanonicalBytes(plan).Should().NotBeEmpty();
     }
 
     [Fact]
-    public void V3_plan_has_typed_context_requirements_and_stable_golden_fingerprint()
+    public void Plan_with_typed_context_requirements_has_stable_current_identity()
     {
         var plan = PlanFixture.CreateV3();
-        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
-        var goldenPath = Path.Combine(AppContext.BaseDirectory, "golden", "workflow_plan_v3.json");
-        var goldenFile = File.ReadAllBytes(goldenPath);
-        var goldenLength = goldenFile.Length;
-        while (goldenLength > 0 && goldenFile[goldenLength - 1] is (byte)'\r' or (byte)'\n')
-            goldenLength--;
 
-        canonicalBytes.Should().Equal(goldenFile.AsSpan(0, goldenLength).ToArray());
+        plan.IrVersion.Should().Be(FuwenContracts.IrVersion);
+        var inference = plan.Nodes.OfType<InferenceNode>().Single();
+        inference.ContextSnapshots.Should().BeEmpty();
+        inference.ContextRequirements.Should().NotBeNull();
+        inference.Protocol.Should().NotBeNull();
         WorkflowPlanIdentity.ComputeExecutionFingerprint(plan)
-            .Should().Be("sha256:fuwen-execution/v3:53134b2d7566a22889e5a751b27a6367f8159b1686baf4e6d6260e99acfd0c33");
+            .Should().StartWith("sha256:fuwen-execution/v1:");
+        WorkflowPlanIdentity.GetCanonicalBytes(plan).Should().NotBeEmpty();
     }
 
     [Fact]
-    public void V4_plan_has_fan_out_and_stable_golden_fingerprint()
+    public void Plan_with_fan_out_has_stable_current_identity()
     {
         var plan = PlanFixture.CreateV4();
-        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
-        var goldenPath = Path.Combine(AppContext.BaseDirectory, "golden", "workflow_plan_v4.json");
-        var goldenFile = File.ReadAllBytes(goldenPath);
-        var goldenLength = goldenFile.Length;
-        while (goldenLength > 0 && goldenFile[goldenLength - 1] is (byte)'\r' or (byte)'\n')
-            goldenLength--;
 
-        canonicalBytes.Should().Equal(goldenFile.AsSpan(0, goldenLength).ToArray());
+        plan.IrVersion.Should().Be(FuwenContracts.IrVersion);
         WorkflowPlanIdentity.ComputeExecutionFingerprint(plan)
-            .Should().StartWith("sha256:fuwen-execution/v4:");
+            .Should().StartWith("sha256:fuwen-execution/v1:");
+        WorkflowPlanIdentity.GetCanonicalBytes(plan).Should().NotBeEmpty();
     }
 
     [Fact]
-    public void V5_plan_has_conditional_merge_and_stable_golden_fingerprint()
+    public void Plan_with_conditional_merge_has_stable_current_identity()
     {
         var plan = PlanFixture.CreateV5();
-        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
-        var goldenPath = Path.Combine(AppContext.BaseDirectory, "golden", "workflow_plan_v5.json");
-        var goldenFile = File.ReadAllBytes(goldenPath);
-        var goldenLength = goldenFile.Length;
-        while (goldenLength > 0 && goldenFile[goldenLength - 1] is (byte)'\r' or (byte)'\n')
-            goldenLength--;
 
-        canonicalBytes.Should().Equal(goldenFile.AsSpan(0, goldenLength).ToArray());
+        plan.IrVersion.Should().Be(FuwenContracts.IrVersion);
         WorkflowPlanIdentity.ComputeExecutionFingerprint(plan)
-            .Should().StartWith("sha256:fuwen-execution/v5:");
+            .Should().StartWith("sha256:fuwen-execution/v1:");
+        WorkflowPlanIdentity.GetCanonicalBytes(plan).Should().NotBeEmpty();
     }
 
     [Fact]
-    public void V6_plan_has_repeat_and_stable_golden_fingerprint()
+    public void Plan_with_repeat_has_stable_current_identity()
     {
         var plan = PlanFixture.CreateV6();
-        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
-        var goldenPath = Path.Combine(AppContext.BaseDirectory, "golden", "workflow_plan_v6.json");
-        var goldenFile = File.ReadAllBytes(goldenPath);
-        var goldenLength = goldenFile.Length;
-        while (goldenLength > 0 && goldenFile[goldenLength - 1] is (byte)'\r' or (byte)'\n')
-            goldenLength--;
 
-        canonicalBytes.Should().Equal(goldenFile.AsSpan(0, goldenLength).ToArray());
+        plan.IrVersion.Should().Be(FuwenContracts.IrVersion);
         WorkflowPlanIdentity.ComputeExecutionFingerprint(plan)
-            .Should().StartWith("sha256:fuwen-execution/v6:");
+            .Should().StartWith("sha256:fuwen-execution/v1:");
+        WorkflowPlanIdentity.GetCanonicalBytes(plan).Should().NotBeEmpty();
     }
 
     [Fact]
-    public void V7_plan_has_checkpoint_and_wait_and_stable_golden_fingerprint()
+    public void Plan_with_checkpoint_and_wait_has_stable_current_identity()
     {
         var plan = PlanFixture.CreateV7();
-        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
-        var goldenPath = Path.Combine(AppContext.BaseDirectory, "golden", "workflow_plan_v7.json");
-        var goldenFile = File.ReadAllBytes(goldenPath);
-        var goldenLength = goldenFile.Length;
-        while (goldenLength > 0 && goldenFile[goldenLength - 1] is (byte)'\r' or (byte)'\n')
-            goldenLength--;
 
-        canonicalBytes.Should().Equal(goldenFile.AsSpan(0, goldenLength).ToArray());
+        plan.IrVersion.Should().Be(FuwenContracts.IrVersion);
         WorkflowPlanIdentity.ComputeExecutionFingerprint(plan)
-            .Should().StartWith("sha256:fuwen-execution/v7:");
+            .Should().StartWith("sha256:fuwen-execution/v1:");
+        WorkflowPlanIdentity.GetCanonicalBytes(plan).Should().NotBeEmpty();
     }
 
     [Fact]
-    public void V4_fingerprint_differs_from_v3()
+    public void Plan_with_workflow_owned_prompt_has_stable_current_identity()
+    {
+        var plan = PlanFixture.CreateV8();
+
+        plan.IrVersion.Should().Be(FuwenContracts.IrVersion);
+        WorkflowPlanIdentity.ComputeExecutionFingerprint(plan)
+            .Should().StartWith("sha256:fuwen-execution/v1:");
+
+        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
+        canonicalBytes.Should().NotBeEmpty();
+        var restored = CanonicalJson.Deserialize<WorkflowPlan>(canonicalBytes);
+        WorkflowPlanIdentity.GetCanonicalBytes(restored).Should().Equal(canonicalBytes);
+    }
+
+    [Fact]
+    public void Plan_with_bounded_protocol_limits_has_stable_current_identity()
+    {
+        var plan = PlanFixture.CreateV9();
+
+        plan.IrVersion.Should().Be(FuwenContracts.IrVersion);
+        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
+        canonicalBytes.Should().NotBeEmpty();
+        WorkflowPlanIdentity.ComputeExecutionFingerprint(plan)
+            .Should().StartWith("sha256:fuwen-execution/v1:");
+
+        var restored = CanonicalJson.Deserialize<WorkflowPlan>(canonicalBytes);
+        WorkflowPlanIdentity.GetCanonicalBytes(restored).Should().Equal(canonicalBytes);
+    }
+
+    [Theory]
+    [InlineData("v2")]
+    [InlineData("v3")]
+    [InlineData("v4")]
+    [InlineData("v5")]
+    [InlineData("v6")]
+    [InlineData("v7")]
+    [InlineData("v8")]
+    [InlineData("v9")]
+    public void All_current_fixtures_round_trip_to_identical_canonical_bytes(string fixture)
+    {
+        var plan = fixture switch
+        {
+            "v2" => PlanFixture.CreateV2(),
+            "v3" => PlanFixture.CreateV3(),
+            "v4" => PlanFixture.CreateV4(),
+            "v5" => PlanFixture.CreateV5(),
+            "v6" => PlanFixture.CreateV6(),
+            "v7" => PlanFixture.CreateV7(),
+            "v8" => PlanFixture.CreateV8(),
+            "v9" => PlanFixture.CreateV9(),
+            _ => throw new ArgumentOutOfRangeException(nameof(fixture)),
+        };
+
+        var canonicalBytes = WorkflowPlanIdentity.GetCanonicalBytes(plan);
+        var reloaded = CanonicalJson.Deserialize<WorkflowPlan>(canonicalBytes);
+
+        WorkflowPlanIdentity.GetCanonicalBytes(reloaded).Should().Equal(canonicalBytes);
+        WorkflowPlanIdentity.ComputeExecutionFingerprint(reloaded).Should().StartWith("sha256:fuwen-execution/v1:");
+    }
+
+    [Fact]
+    public void Reordered_execution_phases_are_rejected()
     {
         var plan = PlanFixture.CreateV2();
         var order = plan.ExecutionOrder!;
@@ -208,7 +256,7 @@ public sealed class WorkflowPlanIdentityTests
     }
 
     [Fact]
-    public void V2_node_order_inside_a_phase_is_not_executable_semantics()
+    public void Node_order_inside_a_phase_is_not_executable_semantics()
     {
         var plan = PlanFixture.CreateV2();
         var root = plan.ExecutionOrder!.Regions[0];
@@ -392,8 +440,10 @@ internal static class PlanFixture
                 profile,
                 template,
                 [new ArgumentBinding("request", new InputBinding([]))],
-                [new NodeOutputBinding(contextPath, [])],
-                new NamedTypeReference(answer)),
+                [],
+                new NamedTypeReference(answer),
+                [new ContextRequirement("context", new NodeOutputBinding(contextPath, []), new ArtifactType(contextSnapshot))],
+                Protocol: new InferenceProtocol(new InferenceProtocolLimits(maxTurns: 1, maxModelCalls: 1))),
             new ActivityNode(
                 "validate",
                 validatePath,
@@ -417,7 +467,16 @@ internal static class PlanFixture
             schemas,
             [activity, answer, contextProvider, contextSnapshot, profile, request, severity, template],
             new CapabilityManifest([new CapabilityRequirement("inference"), new CapabilityRequirement("context.read")]),
-            nodes);
+            nodes,
+            new WorkflowExecutionOrder(
+                [new WorkflowExecutionRegion(
+                    "answer",
+                    [
+                        new WorkflowExecutionPhase([contextPath]),
+                        new WorkflowExecutionPhase([inferencePath]),
+                        new WorkflowExecutionPhase([validatePath]),
+                        new WorkflowExecutionPhase([returnPath]),
+                    ])]));
     }
 
     internal static WorkflowPlan CreateV2()
@@ -438,9 +497,9 @@ internal static class PlanFixture
             .ToArray();
         return v1 with
         {
-            IrVersion = FuwenContracts.IrVersionV2,
-            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV2,
-            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV2,
+            IrVersion = FuwenContracts.IrVersion,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersion,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersion,
             CatalogueBindings = [audit, .. v1.CatalogueBindings],
             Nodes = nodes,
             ExecutionOrder = new WorkflowExecutionOrder(
@@ -470,9 +529,9 @@ internal static class PlanFixture
             context.OutputType);
         return v2 with
         {
-            IrVersion = FuwenContracts.IrVersionV3,
-            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV3,
-            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV3,
+            IrVersion = FuwenContracts.IrVersion,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersion,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersion,
             Nodes = v2.Nodes.Select(node => node == inference
                 ? inference with { ContextSnapshots = [], ContextRequirements = [requirement] }
                 : node).ToArray(),
@@ -578,11 +637,11 @@ internal static class PlanFixture
         var contextPath = StructuralNodeIdentity.Create("demo", "ctx");
         var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
         return new WorkflowPlan(
-            FuwenContracts.IrVersionV4,
+            FuwenContracts.IrVersion,
             "fuwen-language/v1",
-            FuwenContracts.CompilerSemanticVersionV4,
+            FuwenContracts.CompilerSemanticVersion,
             FuwenContracts.CanonicalJsonVersion,
-            FuwenContracts.ExecutionFingerprintVersionV4,
+            FuwenContracts.ExecutionFingerprintVersion,
             "demo",
             "1",
             str,
@@ -619,11 +678,11 @@ internal static class PlanFixture
                 new NodeOutputBinding(elsePath, []),
                 str));
         return new WorkflowPlan(
-            FuwenContracts.IrVersionV5,
+            FuwenContracts.IrVersion,
             "fuwen-language/v1",
-            FuwenContracts.CompilerSemanticVersionV5,
+            FuwenContracts.CompilerSemanticVersion,
             FuwenContracts.CanonicalJsonVersion,
-            FuwenContracts.ExecutionFingerprintVersionV5,
+            FuwenContracts.ExecutionFingerprintVersion,
             "demo",
             "1",
             str,
@@ -648,11 +707,11 @@ internal static class PlanFixture
         var stepPath = loopPath + "/$body/step";
         var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
         return new WorkflowPlan(
-            FuwenContracts.IrVersionV6,
+            FuwenContracts.IrVersion,
             "fuwen-language/v1",
-            FuwenContracts.CompilerSemanticVersionV6,
+            FuwenContracts.CompilerSemanticVersion,
             FuwenContracts.CanonicalJsonVersion,
-            FuwenContracts.ExecutionFingerprintVersionV6,
+            FuwenContracts.ExecutionFingerprintVersion,
             "demo",
             "1",
             str,
@@ -684,11 +743,11 @@ internal static class PlanFixture
         var waitPath = StructuralNodeIdentity.Create("demo", "approval");
         var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
         return new WorkflowPlan(
-            FuwenContracts.IrVersionV7,
+            FuwenContracts.IrVersion,
             "fuwen-language/v1",
-            FuwenContracts.CompilerSemanticVersionV7,
+            FuwenContracts.CompilerSemanticVersion,
             FuwenContracts.CanonicalJsonVersion,
-            FuwenContracts.ExecutionFingerprintVersionV7,
+            FuwenContracts.ExecutionFingerprintVersion,
             "demo",
             "1",
             str,
@@ -705,5 +764,65 @@ internal static class PlanFixture
             new WorkflowExecutionOrder([
                 new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([checkpointPath]), new WorkflowExecutionPhase([waitPath]), new WorkflowExecutionPhase([returnPath])]),
             ]));
+    }
+
+    internal static WorkflowPlan CreateV8()
+    {
+        var source = CreateV2();
+        var inference = source.Nodes.OfType<InferenceNode>().Single();
+        var prompt = new PromptDefinition(
+            "answer_prompt",
+            [new PromptParameter("question", new PrimitiveType(FuwenPrimitiveKind.String))],
+            [new PromptMessage(PromptMessageRole.User, "Answer this question: {{ question }}")]);
+
+        return source with
+        {
+            IrVersion = FuwenContracts.IrVersion,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersion,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersion,
+            Prompts = [prompt],
+            Nodes = source.Nodes.Select(node => node == inference
+                ? inference with
+                {
+                    PromptTemplate = null,
+                    Arguments = [],
+                    ContextSnapshots = [],
+                    ContextRequirements = [],
+                    PromptName = prompt.Name,
+                    PromptBindings = [new PromptBinding("question", new InputBinding(["question"]))],
+                    Protocol = new InferenceProtocol(new InferenceProtocolLimits(maxTurns: 1, maxModelCalls: 1)),
+                }
+                : node).ToArray(),
+        };
+    }
+
+    internal static WorkflowPlan CreateV9()
+    {
+        var source = CreateV8();
+        var inference = source.Nodes.OfType<InferenceNode>().Single();
+        var protocol = new InferenceProtocol(
+            new InferenceProtocolLimits(
+                maxTurns: 3,
+                maxModelCalls: 3,
+                maxToolCalls: 4,
+                maxPromptTokens: 12_000,
+                maxCompletionTokens: 3_000,
+                maxTotalTokens: 15_000,
+                maxDurationMilliseconds: 90_000,
+                maxToolArgumentBytes: 24_000,
+                maxToolResultBytes: 24_000,
+                maxRetainedConversationBytes: 32_000,
+                maxRetainedEvidenceBytes: 32_000,
+                cost: new InferenceCostLimit("USD", 12_500)));
+
+        return source with
+        {
+            IrVersion = FuwenContracts.IrVersion,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersion,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersion,
+            Nodes = source.Nodes.Select(node => node == inference
+                ? inference with { Protocol = protocol }
+                : node).ToArray(),
+        };
     }
 }

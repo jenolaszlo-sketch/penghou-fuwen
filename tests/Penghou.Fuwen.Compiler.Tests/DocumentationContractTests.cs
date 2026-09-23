@@ -28,6 +28,8 @@ public sealed class DocumentationContractTests
             "checkpoint", "wait");
         productions.GetProperty("inferenceNode").GetString().Should().ContainAll(
             "prompt", "tools", "limits");
+        productions.GetProperty("aggregateLimit").GetString().Should().ContainAll(
+            "turns", "modelCalls", "toolCalls", "durationMs", "cost", "retainedEvidenceBytes");
         productions.GetProperty("prompt").GetString().Should().Contain("promptMessage+",
             "an inline prompt must contain at least one message; only registered aliases may be empty");
     }
@@ -62,7 +64,7 @@ public sealed class DocumentationContractTests
         Section(review, "R23", "R24").Should().Contain("Status: open (reconfirmed");
         Section(review, "R24", "R25").Should().Contain("Status: resolved");
         Section(review, "R29", "Suggested implementation order").Should()
-            .Contain("Status: resolved for the declared IR v8 scope");
+            .Contain("Status: resolved");
     }
 
     [Fact]
@@ -135,6 +137,7 @@ public sealed class DocumentationContractTests
         plans.SelectMany(plan => plan.CapabilityManifest.Requirements).Should().ContainSingle();
 
         var inferencePlan = plans.Single(plan => plan.Name == "documented_inference");
+        inferencePlan.IrVersion.Should().Be(FuwenContracts.IrVersion);
         inferencePlan.Prompts!.Any(prompt => prompt.Messages.Count > 0).Should().BeTrue();
         inferencePlan.Prompts!.Any(prompt => prompt.RegisteredSource is not null).Should().BeTrue();
         var inferences = inferencePlan.Nodes.OfType<InferenceNode>().ToArray();
@@ -143,6 +146,7 @@ public sealed class DocumentationContractTests
         inferences.Any(node => node.PromptTemplate is not null).Should().BeTrue();
         inferences.Any(node => node.Tools is { Count: > 0 }).Should().BeTrue();
         inferences.Any(node => node.Tools is null or { Count: 0 }).Should().BeTrue();
+        inferences.Any(node => node.Protocol is not null).Should().BeTrue();
     }
 
     [Fact]

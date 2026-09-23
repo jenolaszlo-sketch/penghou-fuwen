@@ -214,7 +214,27 @@ internal static class WorkflowPlanSnapshot
                         : SnapshotList(value.Tools, "inference tools", CloneDescriptor, state),
                     value.Limits is null
                         ? null
-                        : new InferenceLimits(value.Limits.MaxTokens, value.Limits.TimeoutSeconds)),
+                        : new InferenceLimits(value.Limits.MaxTokens, value.Limits.TimeoutSeconds),
+                    value.Protocol is null
+                        ? null
+                        : new InferenceProtocol(
+                            new InferenceProtocolLimits(
+                                value.Protocol.Limits.MaxTurns,
+                                value.Protocol.Limits.MaxModelCalls,
+                                value.Protocol.Limits.MaxToolCalls,
+                                value.Protocol.Limits.MaxPromptTokens,
+                                value.Protocol.Limits.MaxCompletionTokens,
+                                value.Protocol.Limits.MaxTotalTokens,
+                                value.Protocol.Limits.MaxDurationMilliseconds,
+                                value.Protocol.Limits.MaxToolArgumentBytes,
+                                value.Protocol.Limits.MaxToolResultBytes,
+                                value.Protocol.Limits.MaxRetainedConversationBytes,
+                                value.Protocol.Limits.MaxRetainedEvidenceBytes,
+                                value.Protocol.Limits.Cost is null
+                                    ? null
+                                    : new InferenceCostLimit(
+                                        value.Protocol.Limits.Cost.Currency,
+                                        value.Protocol.Limits.Cost.MaximumMicrounits)))),
                 ActivityNode value => new ActivityNode(
                     value.Name,
                     value.StructuralPath,

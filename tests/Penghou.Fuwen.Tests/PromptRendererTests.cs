@@ -110,7 +110,7 @@ public sealed class PromptRendererTests
         new(kind, name, "1", new ContentDigest("sha256", "descriptor/v1", new string('a', 64)));
 
     private static ExecutionInvocation Invocation() =>
-        new("sha256:fuwen-execution/v8:" + new string('a', 64), "workflow/infer", "run/infer", "1", "sha256:req:" + new string('b', 64));
+        new("sha256:fuwen-execution/v1:" + new string('a', 64), "workflow/infer", "run/infer", "1", "sha256:req:" + new string('b', 64));
 
     private static PromptDefinition Definition() => new(
         "greet",

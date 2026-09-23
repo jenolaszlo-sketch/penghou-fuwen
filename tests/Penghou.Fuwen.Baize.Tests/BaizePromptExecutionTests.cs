@@ -48,7 +48,7 @@ public sealed class BaizePromptExecutionTests
         new(ToolDescriptor(name, digest), new LlmTool(name, name, "{\"type\":\"string\"}"));
 
     private static ExecutionInvocation Invocation() =>
-        new("sha256:fuwen-execution/v8:" + new string('a', 64), "workflow/infer", "run/infer", "1", "sha256:req:" + new string('b', 64));
+        new("sha256:fuwen-execution/v1:" + new string('a', 64), "workflow/infer", "run/infer", "1", "sha256:req:" + new string('b', 64));
 
     private static InferenceExecutionRequest Request(PromptDefinition prompt, IReadOnlyList<RenderedPromptMessage> rendered) =>
         new(Invocation(), Profile(), null, [], [],

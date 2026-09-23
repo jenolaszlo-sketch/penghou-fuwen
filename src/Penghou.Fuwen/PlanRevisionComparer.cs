@@ -207,6 +207,7 @@ public static class PlanRevisionComparer
                         .OrderBy(key => key, StringComparer.Ordinal)),
                 MaxTokens = value.Limits?.MaxTokens,
                 TimeoutSeconds = value.Limits?.TimeoutSeconds,
+                Protocol = value.Protocol,
             },
             ActivityNode value => new { Kind = "activity", value.Activity, value.OutputType },
             ConditionalNode value => new { Kind = "conditional", value.Condition.Operator, MergeResultType = value.Merge?.ResultType },

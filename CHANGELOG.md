@@ -8,9 +8,24 @@ contract versions.
 
 ## Unreleased
 
+## 0.1.0-preview.11
+
 - Harden compiler determinism, patch-oriented formatting, registered prompt
   execution, bounded context delivery, media deadlines, catalogue discovery,
   language-reference conformance, and validated release publication.
+- Add the bounded complex-inference vertical slice: aggregate protocol limits
+  and `aggregate` source syntax, provider-neutral turn/read-tool ports with
+  pre-execution validation, deterministic conformance fakes and suites, a
+  durable Zhinu-owned model → tool → model coordinator with stable operation
+  identity and replay reuse (sequential, conditional, and repeat regions),
+  bounded privacy-preserving evidence with operator reports, and a recovery
+  and compatibility matrix.
+- Prove the slice through isolated package consumers restored from packed
+  packages with no sibling project references: a credential-free Marang
+  planning proof (source compile, explanation, preflight, admission, run,
+  fail, resume, evidence, fork/restart, typed planning result with separately
+  authorized promotion) and a second product-neutral review consumer, both
+  exercised in CI on .NET 8 and .NET 10.
 
 ## 0.1.0-preview.10
 

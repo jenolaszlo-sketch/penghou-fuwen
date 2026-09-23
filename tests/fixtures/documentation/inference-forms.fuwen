@@ -11,8 +11,8 @@ prompt registered_greeting(name: string) uses registered "sample.prompt@1#eeeeee
 
 workflow documented_inference(input: string) -> string {
   context facts = context "sample.context@1#cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" (request: input;) -> string;
-  infer owned = infer "sample.profile@1#dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" prompt concise_greeting(name: input;) tools research_tools with facts limits maxTokens 256 timeout 30 -> string;
-  infer aliased = infer "sample.profile@1#dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" prompt registered_greeting(name: input;) tools ["sample.search@1#ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"] -> string;
-  infer direct = infer "sample.profile@1#dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" using "sample.prompt@1#eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" (request: input;) tools none -> string;
+  infer owned = infer "sample.profile@1#dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" prompt concise_greeting(name: input;) tools research_tools with facts limits maxTokens 256 timeout 30 aggregate turns 4 modelCalls 4 toolCalls 2 totalTokens 4096 durationMs 120000 -> string;
+  infer aliased = infer "sample.profile@1#dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" prompt registered_greeting(name: input;) tools ["sample.search@1#ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"] limits aggregate turns 4 -> string;
+  infer direct = infer "sample.profile@1#dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" using "sample.prompt@1#eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" (request: input;) tools none limits aggregate turns 4 -> string;
   return direct;
 }

@@ -685,16 +685,6 @@ public sealed class BaizeGenerationInferenceExecutor : IInferenceExecutor, IInfe
         var bindings = source.ToArray();
         var maximumDurationMilliseconds = bindings.Max(static binding => (long)binding.Policy.Timeout.TotalMilliseconds);
         return new InferenceFeatureManifest(
-            protocolRevision: "fuwen-inference/v1",
-            supportedIrVersions:
-            [
-                FuwenContracts.IrVersionV3,
-                FuwenContracts.IrVersionV4,
-                FuwenContracts.IrVersionV5,
-                FuwenContracts.IrVersionV6,
-                FuwenContracts.IrVersionV7,
-                FuwenContracts.IrVersionV8,
-            ],
             supportedPromptForms: [InferencePromptForm.RegisteredTemplate],
             supportedModalities: bindings.Select(static binding => ToInferenceModality(binding.Modality)).Distinct().ToArray(),
             supportsContextDelivery: false,

@@ -20,8 +20,8 @@ attempted without provider ports.
 ## Executable subset
 
 When constructed with `FuwenZhinuExecutionPorts`, the adapter executes admitted
-IR v3 plans containing context, inference, activity, conditional, and return
-nodes. It intentionally executes unordered phase members sequentially in
+plans containing context, inference, activity, conditional, and return nodes.
+It intentionally executes unordered phase members sequentially in
 ordinal structural-path order. Every node is a stable Zhinu step, and dependency
 edges come from Fuwen bindings, typed context requirements, and conditional
 ancestry. This preserves deterministic replay and gives Zhinu the graph needed
@@ -54,10 +54,57 @@ provider delegate actually runs, so replaying a completed step does not emit a
 false provider call. Observer failure cannot alter workflow state, while
 authoritative workflow cancellation is still propagated.
 
-The current `ConditionalNode` selects a closed branch but produces no merged
-value. Branch-local outputs cannot be referenced from the root region. A later
-versioned IR may add an explicit typed branch result; the adapter will not infer
-one or weaken region isolation.
+`ConditionalNode` selects one closed branch and may expose one explicit typed
+merge result. Branch-local outputs otherwise cannot be referenced from the root
+region; the adapter never infers a merge or weakens region isolation.
+
+## Durable complex inference
+
+When the host supplies `IInferenceTurnExecutor` and (for tool proposals)
+`IInferenceReadToolExecutor` through `FuwenZhinuExecutionPorts`, an `infer` node
+that declares aggregate `Protocol` limits runs through the internal
+`FuwenInferenceCoordinator` instead of the one-call step. The coordinator owns a
+durable model → tool → model loop: each iteration performs exactly one durable
+operation (`infer-model-turn-NNNN` or `infer-read-tool-NNNN-<callId>`) whose
+stable operation identity is derived from the interaction identity and ordinal.
+A completed operation is reused on replay, so a crash after a committed tool
+result repeats only the in-flight turn. Ambiguous provider/tool transport, or a
+tool failure that may have committed an effect, stops with a typed
+`AmbiguousOperation` failure rather than silently issuing a new identity.
+
+Effective bounds are the per-dimension minimum of the authored protocol limits
+and the optional host `InferenceHostCeilings`; source bounds can only narrow
+host ceilings. The coordinator checks turns, model calls, tool calls, tokens
+(including unknown-usage `BudgetUnknown`), cost, payload bytes, retained
+conversation bytes, and Zhinu's durable `TimeBudget` before each operation. A
+tool is not issued when no turn or model call remains to consume its result.
+Workflow-owned local prompts are required; a registered template or alias on
+a coordinated node is rejected at registration, not at runtime. Context
+delivery is not yet part of the coordinated loop. The one-call path remains
+the behavior for nodes without aggregate protocol limits.
+
+Per-call `maxTokens` and `timeout` from `InferenceLimits` are forwarded to
+every turn and enforced: a completion overage fails with
+`PerCallLimitExceeded`, an overrun fails with `Timeout`, and unknown usage
+against a declared per-call bound stops as `BudgetUnknown`. Aggregate bounds
+combine per dimension as the minimum of source and host ceilings, including a
+host-only cost ceiling; mixed cost currencies fail closed as unknown rather
+than converting. Interaction identity includes the runtime scope so repeat
+iterations never share one operation journal, and per-operation evidence uses
+a global sequence ordinal.
+
+Registration preflights each coordinated node's exact requirement against the
+turn executor's `IInferenceTurnExecutorManifest` when present; one-call nodes
+always use the one-call executor's manifest or preflight hook, so mixed plans
+route each node to its own manifest. Coordinated inference inside a fan-out
+body is rejected at registration: an item step has no item-scoped nested-loop
+primitive for per-operation durable steps.
+
+The coordinator runs in root, conditional, and repeat regions. In a repeat body
+its loop nests under the repeat iteration, so each iteration has its own
+interaction identity and operation journal. Fan-out bodies still execute
+inference through the one-call path; a multi-turn protocol per fan-out item
+would require an item-scoped nested-loop primitive and remains out of scope.
 
 ## Startup and durable resume
 

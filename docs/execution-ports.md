@@ -29,14 +29,33 @@ Context-provider snapshots remain authoritative for selection, redaction, and
 source truncation. Artifact context carries detached identity only; adapters do
 not dereference bytes implicitly. See ADR 0008.
 
-IR v8 inference requests carry an explicit tool allowlist. A non-null empty
+Inference requests carry an explicit tool allowlist. A non-null empty
 `InferenceExecutionRequest.Tools` collection means `tools none`; a non-empty
-collection is the exact model-visible set. Null is reserved at the execution
-port for pre-v8 registered-template requests, which retain their host-binding
-tool defaults for compatibility. Workflow-owned prompts never inherit those
-defaults. An inference adapter records the effective model-visible descriptors
-in `InferenceExecutionEvidence.AdmittedTools`, including legacy defaults, so
-provider requests and evidence cannot describe different tool surfaces.
+collection is the exact model-visible set. Null means no declared model-callable
+tools. Workflow-owned prompts and registered templates use the same rule. An
+inference adapter records the effective model-visible descriptors in
+`InferenceExecutionEvidence.AdmittedTools`, so provider requests and evidence
+cannot describe different tool surfaces.
+
+One model turn is a separate provider-neutral port. `IInferenceTurnExecutor`
+accepts bounded normalized conversation state, the exact model-visible tool
+requirements, and the remaining aggregate bounds, and returns either a final
+candidate or exact tool-call proposals with normalized per-turn usage (unknown
+stays null, never zero). `IInferenceReadToolExecutor` accepts one exact
+admitted descriptor, typed bounded arguments, capability scope, stable
+operation key, and retry safety, and returns a typed result with bounded
+evidence. Neither port embeds credentials, filesystem paths, provider clients,
+or Zhinu contexts. `InferenceTurnValidation` rejects undeclared,
+write-capable, duplicate, oversized, or mistyped proposals before any tool
+execution. Each turn request also carries the plan's per-call completion and
+timeout bounds, and each read-tool request carries the effective result-byte
+ceiling, so hosts can enforce them before returning. Turn executors may
+advertise `IInferenceTurnExecutorManifest` for structured preflight of the
+exact requirement. Baize maps its provider tool-call shapes through
+`BaizeOneTurnMapper` under the same rules. Deterministic fake turn and
+read-tool executors plus `InferenceTurnToolConformance` suites let provider
+transport and host tools be tested independently of the durable coordinator.
+The durable model → tool → model loop remains a Zhinu concern.
 
 Execution results contain exactly one successful output or one failure.
 Activity and inference successes may include deeply snapshotted artifact

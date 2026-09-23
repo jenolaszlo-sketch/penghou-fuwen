@@ -604,16 +604,6 @@ public sealed class BaizeInferenceExecutor : IInferenceExecutor, IInferenceExecu
             binding.Endpoints.All(static endpoint => endpoint.Pricing is not null));
 
         return new InferenceFeatureManifest(
-            protocolRevision: "fuwen-inference/v1",
-            supportedIrVersions:
-            [
-                FuwenContracts.IrVersionV3,
-                FuwenContracts.IrVersionV4,
-                FuwenContracts.IrVersionV5,
-                FuwenContracts.IrVersionV6,
-                FuwenContracts.IrVersionV7,
-                FuwenContracts.IrVersionV8,
-            ],
             supportedPromptForms: promptForms,
             supportedModalities: [InferenceModality.StructuredText],
             supportsContextDelivery: contextBindings.Length != 0,

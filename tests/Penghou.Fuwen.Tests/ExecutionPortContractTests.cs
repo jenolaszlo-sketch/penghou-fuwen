@@ -243,7 +243,7 @@ public sealed class ExecutionPortContractTests
     }
 
     private static ExecutionInvocation Invocation() => new(
-        $"sha256:fuwen-execution/v3:{new string('a', 64)}",
+        $"sha256:fuwen-execution/v1:{new string('a', 64)}",
         "workflow/node",
         "workflow/node",
         "revision-1",

@@ -176,10 +176,10 @@ public sealed class WorkflowPlanValidatorTests
     }
 
     [Fact]
-    public void Value_producing_conditionals_are_accepted_on_ir_v7_with_interaction_gates()
+    public void Value_producing_conditionals_are_accepted_on_current_ir_with_interaction_gates()
     {
-        // R13: a v7 plan combining a conditional merge with checkpoint and
-        // wait nodes must validate (previously rejected as "v5 or v6").
+        // R13: a current-IR plan combining a conditional merge with checkpoint and
+        // wait nodes must validate.
         var source = PlanFixture.CreateV5();
         var str = new PrimitiveType(FuwenPrimitiveKind.String);
         var checkpointPath = StructuralNodeIdentity.Create(source.Name, "saved");
@@ -188,9 +188,9 @@ public sealed class WorkflowPlanValidatorTests
         var returnNode = source.Nodes.OfType<ReturnNode>().Single();
         var plan = source with
         {
-            IrVersion = FuwenContracts.IrVersionV7,
-            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV7,
-            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV7,
+            IrVersion = FuwenContracts.IrVersion,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersion,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersion,
             Nodes = [
                 .. source.Nodes.Where(node => node is not ReturnNode),
                 new CheckpointNode("saved", checkpointPath, new NodeOutputBinding(checkPath, []), str),
@@ -213,19 +213,16 @@ public sealed class WorkflowPlanValidatorTests
         act.Should().NotThrow();
     }
 
-    [Theory]
-    [InlineData("fuwen-ir/v6", "compiler-semantics/6", "fuwen-execution/v6")]
-    [InlineData("fuwen-ir/v7", "compiler-semantics/7", "fuwen-execution/v7")]
-    public void Typed_context_requirements_are_accepted_on_ir_v6_and_v7(
-        string irVersion, string compilerSemantics, string fingerprintVersion)
+    [Fact]
+    public void Typed_context_requirements_are_accepted_on_current_ir()
     {
         // R14: inference nodes with typed context requirements must validate
-        // on modern IR versions, not just v3-v5.
+        // on the current IR.
         var plan = PlanFixture.CreateV3() with
         {
-            IrVersion = irVersion,
-            CompilerSemanticVersion = compilerSemantics,
-            FingerprintVersion = fingerprintVersion,
+            IrVersion = FuwenContracts.IrVersion,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersion,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersion,
         };
 
         var act = () => WorkflowPlanValidator.Validate(plan);
@@ -234,21 +231,18 @@ public sealed class WorkflowPlanValidatorTests
     }
 
     [Theory]
-    [InlineData("fuwen-ir/v1", "compiler-semantics/1", "fuwen-execution/v1", true)]
-    [InlineData("fuwen-ir/v2", "compiler-semantics/2", "fuwen-execution/v2", false)]
-    public void Typed_context_requirements_are_rejected_on_legacy_ir(
-        string irVersion, string compilerSemantics, string fingerprintVersion, bool dropExecutionOrder)
+    [InlineData("fuwen-ir/v2")]
+    [InlineData("fuwen-ir/v99")]
+    public void Unsupported_ir_versions_are_rejected_without_silent_upgrade(
+        string irVersion)
     {
-        var source = PlanFixture.CreateV3() with
+        var plan = PlanFixture.CreateV3() with
         {
             IrVersion = irVersion,
-            CompilerSemanticVersion = compilerSemantics,
-            FingerprintVersion = fingerprintVersion,
         };
-        var plan = dropExecutionOrder ? source with { ExecutionOrder = null } : source;
 
         var act = () => WorkflowPlanValidator.Validate(plan);
 
-        act.Should().Throw<ArgumentException>().WithMessage("*never silently upgraded*");
+        act.Should().Throw<NotSupportedException>().WithMessage($"*{irVersion}*");
     }
 }

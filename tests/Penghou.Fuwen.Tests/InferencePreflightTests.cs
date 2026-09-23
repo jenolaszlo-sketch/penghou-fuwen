@@ -15,7 +15,7 @@ public sealed class InferencePreflightTests
             profile, prompt, null, [tool], hasContextInputs: false, modality: InferenceModality.StructuredText,
             toolRequirements: [new InferenceToolRequirement(tool, InferenceToolEffect.ReadOnly)],
             limits: new InferenceLimitSet([new(InferenceLimitDimension.ModelCalls, 2)]),
-            irVersion: "ir/v1", requiresStructuredOutput: true);
+            requiresStructuredOutput: true);
         var manifest = Manifest(profile, prompt, tool,
             supportedLimits: [new(InferenceLimitDimension.ModelCalls, 5)]);
 
@@ -24,7 +24,7 @@ public sealed class InferencePreflightTests
         report.IsExecutable.Should().BeTrue();
         report.Diagnostics.Should().BeEmpty();
         report.EffectiveLimits.GetMaximum(InferenceLimitDimension.ModelCalls).Should().Be(2);
-        report.MatchedFeatures.Should().ContainInOrder("protocol-revision", "ir-version", "prompt-form", "modality", "structured-output", "profile", "tool:lookup");
+        report.MatchedFeatures.Should().ContainInOrder("prompt-form", "modality", "structured-output", "profile", "tool:lookup");
     }
 
     [Fact]
@@ -66,22 +66,20 @@ public sealed class InferencePreflightTests
         var prompt = Descriptor(DescriptorKind.PromptTemplate, "answer");
         var tool = Descriptor(DescriptorKind.Tool, "lookup");
         var tools = new List<DescriptorReference> { tool };
-        var versions = new List<string> { "ir/v1" };
         var requirement = new InferenceExecutionRequirement(
             profile, prompt, null, tools, hasContextInputs: false,
-            modality: InferenceModality.StructuredText, irVersion: "ir/v1");
+            modality: InferenceModality.StructuredText);
         var manifest = new InferenceFeatureManifest(
-            "fuwen-inference/v1", versions, [InferencePromptForm.RegisteredTemplate], [InferenceModality.StructuredText],
+            [InferencePromptForm.RegisteredTemplate], [InferenceModality.StructuredText],
             false, null, [InferenceToolEffect.ReadOnly], [], InferenceRecoveryQuality.Unsupported, InferenceUsageQuality.Unknown, InferencePricingQuality.Unknown,
             profiles: [profile], promptTemplates: [prompt], tools: tools);
         tools.Clear();
-        versions[0] = "ir/v2";
 
         var report = manifest.Preflight(requirement);
 
         report.IsExecutable.Should().BeTrue();
         report.Requirement.Tools.Should().ContainSingle().Which.Should().Be(tool);
-        report.Manifest.SupportedIrVersions.Should().ContainSingle().Which.Should().Be("ir/v1");
+        report.Manifest.Tools.Should().ContainSingle().Which.Should().Be(tool);
         report.MissingBindings.Should().BeEmpty();
     }
 
@@ -111,14 +109,14 @@ public sealed class InferencePreflightTests
         var profile = Descriptor(DescriptorKind.InferenceProfile, "chat");
         var requirement = new InferenceExecutionRequirement(profile, null, "prompt-digest");
         var manifest = new InferenceFeatureManifest(
-            "fuwen-inference/v1", ["ir/v1"], [InferencePromptForm.WorkflowOwned], [InferenceModality.StructuredText],
+            [InferencePromptForm.WorkflowOwned], [InferenceModality.StructuredText],
             false, null, [], [], InferenceRecoveryQuality.Unsupported, InferenceUsageQuality.Unknown,
             InferencePricingQuality.Unknown, profiles: [profile], workflowPromptDigests: ["other-digest"]);
 
         manifest.Preflight(requirement).Diagnostics.Select(diagnostic => diagnostic.Code)
             .Should().ContainSingle().Which.Should().Be(InferencePreflightDiagnosticCode.MissingWorkflowPromptBinding);
         ((Action)(() => new InferenceFeatureManifest(
-            "fuwen-inference/v1", ["ir/v1"], [InferencePromptForm.RegisteredTemplate], [InferenceModality.StructuredText],
+            [InferencePromptForm.RegisteredTemplate], [InferenceModality.StructuredText],
             false, null, [InferenceToolEffect.ExternalWrite], [], InferenceRecoveryQuality.Unsupported,
             InferenceUsageQuality.Unknown, InferencePricingQuality.Unknown)))
             .Should().Throw<ArgumentException>().WithMessage("*read-only*");
@@ -131,7 +129,7 @@ public sealed class InferencePreflightTests
         var prompt = Descriptor(DescriptorKind.PromptTemplate, "generate");
         var requirement = new InferenceExecutionRequirement(profile, prompt, null);
         var manifest = new InferenceFeatureManifest(
-            "fuwen-inference/v1", ["ir/v8"], [InferencePromptForm.RegisteredTemplate], [InferenceModality.Image],
+            [InferencePromptForm.RegisteredTemplate], [InferenceModality.Image],
             false, null, [], [], InferenceRecoveryQuality.Unsupported, InferenceUsageQuality.Unknown,
             InferencePricingQuality.Unknown, profiles: [profile], promptTemplates: [prompt]);
 
@@ -143,7 +141,7 @@ public sealed class InferencePreflightTests
 
     private static InferenceFeatureManifest Manifest(DescriptorReference profile, DescriptorReference prompt, DescriptorReference? tool,
         IReadOnlyList<InferenceLimit>? supportedLimits = null) => new(
-        "fuwen-inference/v1", ["ir/v1"], [InferencePromptForm.RegisteredTemplate], [InferenceModality.StructuredText],
+        [InferencePromptForm.RegisteredTemplate], [InferenceModality.StructuredText],
         false, null, tool is null ? [] : [InferenceToolEffect.ReadOnly], supportedLimits ?? [],
         InferenceRecoveryQuality.Unsupported, InferenceUsageQuality.Unknown, InferencePricingQuality.Unknown,
         profiles: [profile], promptTemplates: [prompt], tools: tool is null ? [] : [tool]);

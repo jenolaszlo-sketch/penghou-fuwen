@@ -136,7 +136,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 new FuwenZhinuExecutionPorts(
                     new CompositeActivity(activity),
                     new RecordingContextProvider(fixture.ContextDescriptor, fixture.ArtifactDescriptor),
-                    new VerticalInference(),
+                    CurrentInferenceFixture.WithPreflight(new VerticalInference()),
                     observer))
             .CreateAsync("fuwen.vertical", "1", fixture.Admission, TestContext.Current.CancellationToken);
         var root = CreateTempRoot();
@@ -192,7 +192,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 new FuwenZhinuExecutionPorts(
                     new CompositeActivity(activity),
                     new RecordingContextProvider(fixture.ContextDescriptor, fixture.ArtifactDescriptor),
-                    new VerticalInference()))
+                    CurrentInferenceFixture.WithPreflight(new VerticalInference())))
             .CreateAsync("fuwen.vertical", "1", fixture.Admission, TestContext.Current.CancellationToken);
         var root = CreateTempRoot();
 
@@ -228,7 +228,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 new FuwenZhinuExecutionPorts(
                     new CompositeActivity(activity),
                     new RecordingContextProvider(fixture.ContextDescriptor, fixture.ArtifactDescriptor),
-                    new VerticalInference()))
+                    CurrentInferenceFixture.WithPreflight(new VerticalInference())))
             .CreateAsync("fuwen.vertical", "1", fixture.Admission, TestContext.Current.CancellationToken);
         var root = CreateTempRoot();
         var databasePath = Path.Combine(root, "workflow.db");
@@ -301,7 +301,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         var inference = new InferenceNode(
             "infer", inferencePath, profile, prompt,
             [new ArgumentBinding("request", new InputBinding([]))], [], boolType,
-            [new ContextRequirement("context", new NodeOutputBinding(contextPath, []), contextType)]);
+            [new ContextRequirement("context", new NodeOutputBinding(contextPath, []), contextType)],
+            Protocol: CurrentInferenceFixture.OneCallProtocol);
         var conditional = new ConditionalNode(
             "check", checkPath,
             new ConditionExpression(
@@ -315,11 +316,11 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 "unselected", unselectedPath, unselectedActivity,
                 [new ArgumentBinding("value", new InputBinding([]))], stringType)]);
         var plan = new WorkflowPlan(
-            FuwenContracts.IrVersionV3,
+            FuwenContracts.IrVersion,
             "fuwen-language/v1",
-            FuwenContracts.CompilerSemanticVersionV3,
+            FuwenContracts.CompilerSemanticVersion,
             FuwenContracts.CanonicalJsonVersion,
-            FuwenContracts.ExecutionFingerprintVersionV3,
+            FuwenContracts.ExecutionFingerprintVersion,
             "vertical", "1", stringType, stringType, "routing/1", [],
             [contextDescriptor, artifactDescriptor, profile, prompt, selectedActivity, unselectedActivity],
             new CapabilityManifest([]),

@@ -192,7 +192,15 @@ internal static class CompilerPlanFixture
         ],
         [Descriptor(DescriptorKind.Activity, "sample.validate"), Descriptor(DescriptorKind.Schema, "sample.answer"), Descriptor(DescriptorKind.Schema, "sample.request"), Descriptor(DescriptorKind.ContextProvider, "sample.context"), Descriptor(DescriptorKind.InferenceProfile, "sample.reasoning"), Descriptor(DescriptorKind.PromptTemplate, "sample.answer-template")],
         new CapabilityManifest([new CapabilityRequirement("inference"), new CapabilityRequirement("context.read")]),
-        nodes);
+        nodes,
+        new WorkflowExecutionOrder([
+            new WorkflowExecutionRegion("answer", [
+                new WorkflowExecutionPhase([StructuralNodeIdentity.Create("answer", "context")]),
+                new WorkflowExecutionPhase([StructuralNodeIdentity.Create("answer", "infer")]),
+                new WorkflowExecutionPhase([StructuralNodeIdentity.Create("answer", "validate")]),
+                new WorkflowExecutionPhase([StructuralNodeIdentity.Create("answer", "return_result")]),
+            ]),
+        ]));
 
     internal static WorkflowNode[] CreateNodes(Binding inferenceArgument)
     {
@@ -203,7 +211,7 @@ internal static class CompilerPlanFixture
         return
         [
             new ContextNode("context", contextPath, Descriptor(DescriptorKind.ContextProvider, "sample.context"), [new ArgumentBinding("request", new InputBinding([]))], new PrimitiveType(FuwenPrimitiveKind.String)),
-            new InferenceNode("infer", inferencePath, Descriptor(DescriptorKind.InferenceProfile, "sample.reasoning"), Descriptor(DescriptorKind.PromptTemplate, "sample.answer-template"), [new ArgumentBinding("request", inferenceArgument)], [new NodeOutputBinding(contextPath, [])], new NamedTypeReference(answer)),
+            new InferenceNode("infer", inferencePath, Descriptor(DescriptorKind.InferenceProfile, "sample.reasoning"), Descriptor(DescriptorKind.PromptTemplate, "sample.answer-template"), [new ArgumentBinding("request", inferenceArgument)], [], new NamedTypeReference(answer), [new ContextRequirement("context", new NodeOutputBinding(contextPath, []), new PrimitiveType(FuwenPrimitiveKind.String))]),
             new ActivityNode("validate", StructuralNodeIdentity.Create("answer", "validate"), activity, [new ArgumentBinding("answer", new NodeOutputBinding(inferencePath, []))], new PrimitiveType(FuwenPrimitiveKind.Boolean)),
             new ReturnNode("return_result", StructuralNodeIdentity.Create("answer", "return_result"), new NodeOutputBinding(inferencePath, [])),
         ];

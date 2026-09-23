@@ -91,7 +91,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             .SetExecutionOrder(new WorkflowExecutionOrder([
                 new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([checkpointPath]), new WorkflowExecutionPhase([returnPath])]),
             ]))
-            .BuildV7();
+            .Build();
         var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
                 new InMemoryTrustedCatalogue([
                     new TrustedCatalogueDescriptor(activityDesc, callableContract: new CallableContract(new CallableSignature([new CallableParameter("value", str)], str), CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
@@ -114,7 +114,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             .SetExecutionOrder(new WorkflowExecutionOrder([
                 new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([waitPath]), new WorkflowExecutionPhase([returnPath])]),
             ]))
-            .BuildV7();
+            .Build();
         var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
                 new InMemoryTrustedCatalogue([
                     new TrustedCatalogueDescriptor(activityDesc, callableContract: new CallableContract(new CallableSignature([new CallableParameter("value", str)], str), CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),

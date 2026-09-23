@@ -164,15 +164,13 @@ public sealed class InferenceToolRequirement
 /// <summary>Provider-neutral immutable capabilities exposed by one inference adapter.</summary>
 public sealed class InferenceFeatureManifest
 {
-    /// <summary>Maximum number of advertised protocol or IR versions.</summary>
+    /// <summary>Maximum number of advertised feature values.</summary>
     public const int MaximumVersions = 32;
     /// <summary>Maximum number of exact descriptor bindings.</summary>
     public const int MaximumBindings = 256;
 
     /// <summary>Creates a bounded adapter feature manifest.</summary>
     public InferenceFeatureManifest(
-        string protocolRevision,
-        IReadOnlyList<string> supportedIrVersions,
         IReadOnlyList<InferencePromptForm> supportedPromptForms,
         IReadOnlyList<InferenceModality> supportedModalities,
         bool supportsContextDelivery,
@@ -189,8 +187,6 @@ public sealed class InferenceFeatureManifest
         IReadOnlyList<DescriptorReference>? tools = null,
         IReadOnlyList<string>? workflowPromptDigests = null)
     {
-        ProtocolRevision = RuntimeValueSnapshot.Text(protocolRevision, nameof(protocolRevision), InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
-        SupportedIrVersions = TextList(supportedIrVersions, nameof(supportedIrVersions));
         SupportedPromptForms = EnumList(supportedPromptForms, nameof(supportedPromptForms));
         SupportedModalities = EnumList(supportedModalities, nameof(supportedModalities));
         if (maximumContextPayloadUtf8Bytes is <= 0)
@@ -221,10 +217,6 @@ public sealed class InferenceFeatureManifest
         WorkflowPromptDigests = TextList(workflowPromptDigests ?? [], nameof(workflowPromptDigests), MaximumBindings);
     }
 
-    /// <summary>The implementation revision of the inference protocol.</summary>
-    public string ProtocolRevision { get; }
-    /// <summary>IR versions understood by the adapter.</summary>
-    public IReadOnlyList<string> SupportedIrVersions { get; }
     /// <summary>Prompt forms understood by the adapter.</summary>
     public IReadOnlyList<InferencePromptForm> SupportedPromptForms { get; }
     /// <summary>Output modalities understood by the adapter.</summary>
@@ -302,10 +294,6 @@ public sealed class InferenceFeatureManifest
 /// <summary>Stable diagnostic code emitted by inference preflight.</summary>
 public enum InferencePreflightDiagnosticCode
 {
-    /// <summary>The adapter implements a different protocol revision.</summary>
-    UnsupportedProtocolRevision,
-    /// <summary>The adapter does not support the requested IR version.</summary>
-    UnsupportedIrVersion,
     /// <summary>The adapter does not support the requested prompt form.</summary>
     UnsupportedPromptForm,
     /// <summary>The adapter does not support the requested modality.</summary>
@@ -414,7 +402,6 @@ public static class InferencePreflightReportRenderer
         ArgumentNullException.ThrowIfNull(report);
         var builder = new StringBuilder();
         builder.Append("Inference preflight: ").Append(report.IsExecutable ? "executable" : "blocked").AppendLine();
-        builder.Append("Protocol revision: ").AppendLine(report.Requirement.ProtocolRevision);
         builder.Append("Prompt form: ").AppendLine(EnumText(report.Requirement.PromptForm));
         builder.Append("Modality: ").AppendLine(report.Requirement.Modality is null
             ? "unspecified"
@@ -454,7 +441,6 @@ public static class InferencePreflightReportRenderer
         using var writer = new Utf8JsonWriter(buffer, new JsonWriterOptions { Indented = false });
         writer.WriteStartObject();
         writer.WriteBoolean("executable", report.IsExecutable);
-        writer.WriteString("protocolRevision", report.Requirement.ProtocolRevision);
         writer.WriteString("promptForm", EnumText(report.Requirement.PromptForm));
         writer.WriteString("modality", report.Requirement.Modality is null
             ? "unspecified"
@@ -527,15 +513,6 @@ public static class InferencePreflight
         var matched = new List<string>();
         var missing = new List<string>();
 
-        if (!string.Equals(requirement.ProtocolRevision, manifest.ProtocolRevision, StringComparison.Ordinal))
-            diagnostics.Add(new(InferencePreflightDiagnosticCode.UnsupportedProtocolRevision, "The adapter protocol revision does not match the admitted requirement.", subject: requirement.ProtocolRevision));
-        else matched.Add("protocol-revision");
-        if (requirement.IrVersion is not null)
-        {
-            if (!manifest.SupportedIrVersions.Contains(requirement.IrVersion, StringComparer.Ordinal))
-                diagnostics.Add(new(InferencePreflightDiagnosticCode.UnsupportedIrVersion, "The adapter does not support the required IR version.", subject: requirement.IrVersion));
-            else matched.Add("ir-version");
-        }
         if (!manifest.SupportedPromptForms.Contains(requirement.PromptForm))
             diagnostics.Add(new(InferencePreflightDiagnosticCode.UnsupportedPromptForm, "The adapter does not support the required prompt form.", subject: requirement.PromptForm.ToString()));
         else matched.Add("prompt-form");

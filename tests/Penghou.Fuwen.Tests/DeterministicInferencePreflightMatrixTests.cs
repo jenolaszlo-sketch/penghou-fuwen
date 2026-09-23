@@ -19,8 +19,6 @@ public sealed class DeterministicInferencePreflightMatrixTests
     [InlineData("tool-binding")]
     [InlineData("limit-exceeds")]
     [InlineData("limit-unsupported")]
-    [InlineData("protocol")]
-    [InlineData("ir")]
     [InlineData("recovery")]
     [InlineData("usage")]
     [InlineData("pricing")]
@@ -90,8 +88,6 @@ public sealed class DeterministicInferencePreflightMatrixTests
             modality: InferenceModality.StructuredText,
             toolRequirements: [new InferenceToolRequirement(tool)],
             limits: new InferenceLimitSet([new(InferenceLimitDimension.ModelCalls, 2)]),
-            protocolRevision: "fuwen-inference/v1",
-            irVersion: "ir/v1",
             requiresStructuredOutput: true);
 
         var manifest = Manifest(profile, prompt, tool);
@@ -132,14 +128,6 @@ public sealed class DeterministicInferencePreflightMatrixTests
                 requirement = Requirement(profile, prompt, tool,
                     limits: new InferenceLimitSet([new(InferenceLimitDimension.CostMicrounits, 1)]));
                 expected = InferencePreflightDiagnosticCode.UnsupportedLimit;
-                break;
-            case "protocol":
-                manifest = Manifest(profile, prompt, tool, protocolRevision: "fuwen-inference/v0");
-                expected = InferencePreflightDiagnosticCode.UnsupportedProtocolRevision;
-                break;
-            case "ir":
-                manifest = Manifest(profile, prompt, tool, supportedIrVersions: ["ir/v0"]);
-                expected = InferencePreflightDiagnosticCode.UnsupportedIrVersion;
                 break;
             case "recovery":
                 requirement = Requirement(profile, prompt, tool,
@@ -195,7 +183,7 @@ public sealed class DeterministicInferencePreflightMatrixTests
             profile, prompt, promptDigest: null, tools: [tool], hasContextInputs: hasContextInputs, modality: modality,
             toolRequirements: [new InferenceToolRequirement(tool, toolEffect)],
             limits: limits ?? new InferenceLimitSet([new(InferenceLimitDimension.ModelCalls, 2)]),
-            irVersion: "ir/v1", minimumRecoveryQuality: minimumRecoveryQuality,
+            minimumRecoveryQuality: minimumRecoveryQuality,
             maximumContextPayloadUtf8Bytes: maximumContextPayloadUtf8Bytes,
             requiresExactUsageEvidence: requiresExactUsageEvidence,
             requiresExactPricingEvidence: requiresExactPricingEvidence,
@@ -205,11 +193,7 @@ public sealed class DeterministicInferencePreflightMatrixTests
         DescriptorReference profile,
         DescriptorReference prompt,
         DescriptorReference tool,
-        string protocolRevision = "fuwen-inference/v1",
-        IReadOnlyList<string>? supportedIrVersions = null,
         IReadOnlyList<InferencePromptForm>? supportedPromptForms = null) => new(
-            protocolRevision,
-            supportedIrVersions ?? ["ir/v1"],
             supportedPromptForms ?? [InferencePromptForm.RegisteredTemplate],
             [InferenceModality.StructuredText],
             supportsContextDelivery: true,

@@ -2,7 +2,7 @@
 
 Date created: 2026-09-21
 
-Status: implementation in progress; CI-0 and CI-1 complete
+Status: implementation in progress; CI-0 through CI-7 complete
 
 Primary consumer: Marang supervisor-authored Fuwen workflows
 
@@ -48,12 +48,11 @@ operation remains bounded, durably identified, recoverable, and explainable.
   idempotency, approval, unknown-commitment, and compensation semantics.
 - Workflow-owned and registered prompts remain first-class Fuwen definitions.
   The protocol runtime never invents or silently replaces the business prompt.
-- Protocol implementation revision belongs to adapter/runtime identity and
-  admission. It does not change the workflow fingerprint unless authored plan
-  semantics change.
-- Existing IR v3–v8 bytes and one-call behavior remain unchanged. Complex
-  inference is introduced through a new versioned contract, expected to be IR
-  v9 after the contract ADR is accepted.
+- The current IR evolves in place while Fuwen has no external persisted-plan
+  consumers. Do not retain version branches, protocol-revision checks, or
+  migration machinery solely for repository-internal history.
+- Canonical identity still changes whenever authored plan semantics change;
+  the repository keeps one golden contract for the current IR.
 
 ## Marang boundary
 
@@ -92,8 +91,8 @@ semantics and ownership boundaries are requirements.
 
 ### Authored protocol limits
 
-IR v9 should add aggregate inference bounds alongside the existing per-call
-`MaxTokens` and wall-clock timeout:
+The current IR should add aggregate inference bounds alongside the existing
+per-call `MaxTokens` and wall-clock timeout:
 
 - maximum protocol turns;
 - maximum model calls;
@@ -121,7 +120,7 @@ Add a provider-neutral immutable feature manifest that reports at least:
 - structured-content and synthetic structured-output support;
 - context delivery support and maximum payload;
 - exact tool-call support and supported tool effects;
-- protocol revision and supported IR versions;
+- supported inference semantics and current IR contract;
 - supported limit dimensions and maxima;
 - resumable/reconcilable operation support;
 - usage and pricing evidence quality.
@@ -144,15 +143,15 @@ framework:
   filesystem paths, provider client objects, or Zhinu contexts;
 - deterministic fake implementations are first-class conformance fixtures.
 
-The current `IInferenceExecutor` remains the compatibility path for v3–v8. Do
-not silently reinterpret it as a durable multi-turn executor.
+Update the current inference adapters to implement the complex-inference
+semantics directly. Do not retain a parallel legacy one-call path without a
+real external consumer that requires it.
 
 ### Durable operation journal
 
 One logical inference invocation has a stable interaction identity derived from
-the execution fingerprint, structural/runtime path, step revision, effective
-request fingerprint, and protocol revision. Internal operations add an ordinal
-and kind:
+the execution fingerprint, structural/runtime path, step revision, and
+effective request fingerprint. Internal operations add an ordinal and kind:
 
 ```text
 <interaction>/model/0001
@@ -204,14 +203,14 @@ completion log.
   [ADR 0010](decisions/0010-zhinu-owns-inference-operation-journal.md).
 - [x] Write an ADR for aggregate budget reservations and unknown usage/pricing.
   See [ADR 0011](decisions/0011-aggregate-inference-budgets-reserve-unknown-usage.md).
-- [x] Capture current v8 one-call behavior for no tools, declared read tools,
-  structured output, context, repeat, fan-out, replay, and cancellation. See
-  [the compatibility baseline](complex-inference-v8-baseline.md).
+- [x] Capture the pre-CI-2 one-call behavior for no tools, declared read tools,
+  structured output, context, repeat, fan-out, replay, and cancellation in the
+  executable test suite before replacing it with the current contract.
 - [x] Add a checked-in Marang planning scenario and deterministic expected
   trace without adding a Marang project dependency. See
   [the Marang scenario](marang-complex-inference-scenario.md).
 
-Exit: the versioning, authority, durability, privacy, and budget decisions are
+Exit: the authority, durability, privacy, and budget decisions are
 reviewable before any new public or persisted contract is added.
 
 ### CI-1 — Feature manifest and executable preflight
@@ -233,32 +232,34 @@ bindings, too-weak limits, legacy executors, and zero-provider-work rejection.
 Exit: Marang can explain whether a plan is executable, and why, without
 starting or paying for it.
 
-### CI-2 — Versioned IR v9 limits and identity
+### CI-2 — Complex inference limits and identity
 
-- [ ] Define the IR v9 inference protocol and aggregate-limit records with
-  bounded constructors and snapshot semantics.
-- [ ] Extend source parsing, validation, normalization, canonical JSON,
-  fingerprints, source maps, usage accounting, comparison, and explanations.
-- [ ] Decide and document exact source syntax; update grammar metadata,
-  authoring reference, capability matrix, and compiler-backed examples.
-- [ ] Add v9 canonical/fingerprint golden vectors and prove v3–v8 bytes remain
-  identical.
-- [ ] Reject v9 in adapters that cannot report a matching protocol revision.
+- [x] Define inference protocol and aggregate-limit records with bounded
+  constructors and snapshot semantics.
+- [x] Extend parsing, validation, normalization, canonical JSON, fingerprints,
+  source maps, usage accounting, comparison, and explanations.
+- [x] Define the source syntax and update grammar metadata, authoring reference,
+  capability matrix, and compiler-backed examples.
+- [x] Add canonical/fingerprint golden vectors for the **current IR**.
+- [x] Update adapters to support the new inference semantics directly.
+- [x] Delete obsolete IR-version compatibility code, legacy golden vectors,
+  migration paths, and protocol-revision checks.
 
 Exit: authored complex-inference meaning is immutable, comparable, bounded,
-and cannot be mistaken for legacy v8 one-call behavior.
+and implemented directly by every supported adapter without legacy-version
+branches.
 
 ### CI-3 — Turn/tool contracts and deterministic conformance harness
 
-- [ ] Add the inference-turn request/result contracts, normalized conversation
+- [x] Add the inference-turn request/result contracts, normalized conversation
   state, exact tool-call proposal identity, and bounded continuation data.
-- [ ] Add the read-tool execution request/result/evidence contracts with exact
+- [x] Add the read-tool execution request/result/evidence contracts with exact
   descriptor, typed arguments/result, scope, operation key, and retry safety.
-- [ ] Implement Baize one-turn mapping for supported provider tool-call shapes.
-- [ ] Implement deterministic fake model and read tools capable of success,
+- [x] Implement Baize one-turn mapping for supported provider tool-call shapes.
+- [x] Implement deterministic fake model and read tools capable of success,
   malformed calls, duplicate IDs, cancellation, unknown usage, and ambiguity.
-- [ ] Publish internal/shared conformance suites for turn and tool adapters.
-- [ ] Prove undeclared, write-capable, duplicate, oversized, or mistyped tool
+- [x] Publish internal/shared conformance suites for turn and tool adapters.
+- [x] Prove undeclared, write-capable, duplicate, oversized, or mistyped tool
   calls are rejected before tool execution.
 
 Exit: provider transport and host tools can be tested independently of the
@@ -266,34 +267,34 @@ durable coordinator, with exact model-visible and executable tool sets.
 
 ### CI-4 — Durable complex-inference vertical slice
 
-- [ ] Implement a Zhinu-owned inference protocol coordinator under one logical
+- [x] Implement a Zhinu-owned inference protocol coordinator under one logical
   Fuwen `infer` node.
-- [ ] Journal every model turn, tool call/result, validation/repair operation,
+- [x] Journal every model turn, tool call/result, validation/repair operation,
   aggregate usage update, and terminal outcome with stable operation identity.
-- [ ] Execute one exact read tool, return its result to the model, and validate
+- [x] Execute one exact read tool, return its result to the model, and validate
   the final typed output.
-- [ ] Enforce effective source/host bounds before each operation using atomic
+- [x] Enforce effective source/host bounds before each operation using atomic
   reservations where concurrency or external commitment requires them.
-- [ ] Reuse completed operations on replay and reconcile ambiguous provider
+- [x] Reuse completed operations on replay and reconcile ambiguous provider
   handles without restarting the logical activity.
-- [ ] Preserve current cancellation and fencing semantics at every boundary.
+- [x] Preserve current cancellation and fencing semantics at every boundary.
 
 Exit: a crash at any model/tool boundary resumes without duplicate completed
 work, and the enclosing workflow still observes one logical inference result.
 
 ### CI-5 — Evidence, privacy, and operator explanation
 
-- [ ] Extend inference evidence with protocol revision, interaction identity,
-  per-operation summaries, aggregate limits/usage, tool outcomes, validation,
+- [x] Extend inference evidence with interaction identity, current inference
+  semantics, per-operation summaries, aggregate limits/usage, tool outcomes, validation,
   recovery disposition, and commitment uncertainty.
-- [ ] Keep sensitive payloads behind explicit host-controlled references and
+- [x] Keep sensitive payloads behind explicit host-controlled references and
   access checks; normal reports contain digests and safe summaries.
-- [ ] Extend the operator explanation report to show effective prompt form,
+- [x] Extend the operator explanation report to show effective prompt form,
   context, tools, limits, attempts, cost quality, replay/reconciliation, and
   final outcome.
-- [ ] Add bounded Hongxian/Siming correlation adapters only as optional sinks;
+- [x] Add bounded Hongxian/Siming correlation adapters only as optional sinks;
   loss of a non-authoritative sink cannot alter execution truth.
-- [ ] Update the threat model for prompt injection through tool results,
+- [x] Update the threat model for prompt injection through tool results,
   exfiltration, malicious tool metadata, journal corruption, and budget races.
 
 Exit: an operator can answer why the activity produced its output and what it
@@ -301,35 +302,35 @@ could access without exposing secrets or requiring raw chain-of-thought.
 
 ### CI-6 — Recovery and compatibility matrix
 
-- [ ] Cover zero-tool one-turn, one-tool multi-turn, multiple calls, model
+- [x] Cover zero-tool one-turn, one-tool multi-turn, multiple calls, model
   refusal, malformed tool requests, tool failure, validation repair, every
   limit, caller cancellation, fencing loss, and corrupt journal entries.
-- [ ] Run critical cases in sequential, repeat, and fan-out regions.
-- [ ] Inject crashes before/after model submission, provider-handle storage,
+- [x] Run critical cases in sequential, repeat, and fan-out regions.
+- [x] Inject crashes before/after model submission, provider-handle storage,
   model completion, tool claim, tool completion, result persistence, final
   validation, and node completion.
-- [ ] Cover same-fingerprint and changed-fingerprint forks, copied evidence,
+- [x] Cover same-fingerprint and changed-fingerprint forks, copied evidence,
   explicit rejection, and focused restart.
-- [ ] Verify unknown usage/pricing and changed pricing revisions never
+- [x] Verify unknown usage/pricing and changed pricing revisions never
   authorize an unprovably affordable additional operation.
-- [ ] Keep a pairwise feature matrix and critical full-path Marang scenario in
+- [x] Keep a pairwise feature matrix and critical full-path Marang scenario in
   CI on .NET 8 and .NET 10.
 
 Exit: compatibility gaps become test failures, not runtime surprises.
 
 ### CI-7 — Marang consumer proof and release gate
 
-- [ ] Build a credential-free package-consumer sample using only published
+- [x] Build a credential-free package-consumer sample using only published
   public surfaces and deterministic model/tools.
-- [ ] Demonstrate compile, explain, preflight, admit, run, fail, resume, inspect
+- [x] Demonstrate compile, explain, preflight, admit, run, fail, resume, inspect
   evidence, fork/restart, and return a typed planning result.
-- [ ] Exercise the same immutable definition through a minimal Marang host
+- [x] Exercise the same immutable definition through a minimal Marang host
   adapter without moving workflow or protocol semantics into Marang/Qingniao.
-- [ ] Prove a proposed mutation or external side effect is returned as typed
+- [x] Prove a proposed mutation or external side effect is returned as typed
   data and executed only by a separate explicitly authorized workflow step.
-- [ ] Validate package APIs, docs, compatibility notes, release workflow, and a
+- [x] Validate package APIs, docs, compatibility notes, release workflow, and a
   clean restore in an isolated consumer.
-- [ ] Record a second non-Marang consumer before considering any generic
+- [x] Record a second non-Marang consumer before considering any generic
   complex-activity abstraction.
 
 Exit: Marang can safely consume complex inference as a supervision feature,
@@ -350,8 +351,8 @@ Tests should be layered so a failure identifies the broken contract:
 
 1. Core contract tests: construction bounds, snapshots, canonical identities,
    manifest/preflight, budgets, outcomes, and evidence.
-2. Compiler tests: source, diagnostics, validation, normalization, v9 golden
-   vectors, comparison, and historical-byte compatibility.
+2. Compiler tests: source, diagnostics, validation, normalization, current-IR
+   golden vectors, comparison, and explanation.
 3. Baize tests: one-turn mapping, tool proposal normalization, exact tool
    visibility, usage/cost quality, payload ceilings, cancellation, and provider
    adversaries.
@@ -370,17 +371,17 @@ Every completed milestone must pass:
 - package validation and public API review for changed packable projects;
 - documentation contract checks and credential/path scanning.
 
-## Compatibility and rollout
+## Contract cleanup and rollout
 
-- Do not reinterpret or rewrite persisted v3–v8 plans.
-- Keep the current one-call executors and adapters available for historical
-  plans throughout the v9 rollout.
-- Require an exact protocol revision during v9 registration; changing runtime
-  protocol semantics requires a new revision and fresh admission/runtime
-  identity.
+- Treat the current IR as the only supported contract until a real external
+  consumer creates a compatibility obligation.
+- Delete obsolete IR-version branches, legacy golden vectors, migration paths,
+  and protocol-revision checks as part of CI-2.
+- Update every supported adapter in the same release so there is no split
+  between legacy one-call and complex-inference semantics.
 - Feature flags may gate preview use, but they cannot bypass admission,
   preflight, exact tool grants, finite limits, or journal verification.
-- Publish previews in slices: manifest/preflight, v9 contracts, fake durable
+- Publish previews in slices: manifest/preflight, current contracts, fake durable
   vertical, then Baize/Marang proof. Do not wait to review all public contracts
   in one large release.
 - Keep generated or mutable provider data out of workflow fingerprints. Bind
@@ -412,3 +413,10 @@ protocol feature.
 | 2026-09-21 | CI-1 Zhinu pre-registration enforcement | `b9e35d7` | Zhinu tests on .NET 8/.NET 10 | Structured rejection precedes storage/provider work; v3-v8 failure vocabulary retained |
 | 2026-09-21 | CI-1 Baize structured-text manifest | `30443a1` | Baize tests and package on .NET 8/.NET 10 | Conservative evidence/recovery claims and exact bindings |
 | 2026-09-21 | CI-1 media, exact routing, and deterministic matrix | `95872c3` | 548 tests per framework; format; core/Baize pack; canonical JSON | Legacy modality remains unspecified; explicit mismatches fail closed |
+| 2026-09-22 | CI-2 complex inference limits and identity | uncommitted | 561 tests per framework (210 core + 222 compiler + 69 Baize + 60 Zhinu) on .NET 8/.NET 10; format clean; Release 0 warnings | Current IR only; aggregate `limits ... aggregate ...` source syntax; single `workflow_plan_v1.json` golden (`abefd135...`); IrVersions/versioned contracts and v2-v7 goldens deleted |
+| 2026-09-22 | CI-3 turn/tool contracts and deterministic conformance harness | uncommitted | 636 tests per framework (268 core + 222 compiler + 86 Baize + 60 Zhinu) on .NET 8/.NET 10; format clean; Release 0 warnings | `IInferenceTurnExecutor`/`IInferenceReadToolExecutor` ports, `InferenceTurnValidation` pre-execution rejection, `BaizeOneTurnMapper`, deterministic fakes, `InferenceTurnToolConformance` suites |
+| 2026-09-22 | CI-4 durable complex-inference vertical slice | uncommitted | 647 tests per framework (268 core + 222 compiler + 86 Baize + 71 Zhinu) on .NET 8/.NET 10; format clean; Release 0 warnings | `FuwenInferenceCoordinator` LoopAsync journal, stable per-operation steps, replay reuse proven by crash injection, effective bound enforcement incl. `BudgetUnknown`, durable `TimeBudget`, `AmbiguousOperation` fail-closed; new failure codes and turn/read-tool ports |
+| 2026-09-22 | CI-5 evidence, privacy, and operator explanation | uncommitted | 657 tests per framework (274 core + 222 compiler + 86 Baize + 75 Zhinu) on .NET 8/.NET 10; format clean; Release 0 warnings | `InferenceProtocolEvidence` + per-operation/tool-outcome summaries, `ProtectedPayloadReference` (digests only), human/JSON renderer, optional non-authoritative `IInferenceEvidenceSink` wired through `FuwenZhinuExecutionPorts`; coordinator emits evidence on success/failure incl. commitment uncertainty; threat model extended. Concrete Hongxian/Siming adapters are host-supplied through the generic sink and are intentionally not a repository dependency |
+| 2026-09-22 | CI-6 recovery and compatibility matrix | uncommitted | 671 tests per framework (274 core + 222 compiler + 86 Baize + 89 Zhinu) on .NET 8/.NET 10; format clean; Release 0 warnings | Coordinator matrix covers every aggregate limit, multiple tool calls, unknown/exceeded cost, argument/result byte ceilings, duration budget, replay reuse, and the deterministic three-model/two-tool Marang trace. Coordinator now nests its loop into repeat regions (per-iteration interaction identity, `ProtocolLoopRunner`); crash points before/after model and tool completion inject via lease recovery. Fork/rejection and corrupt-journal coverage reuse the extended activity/inference recovery suites; unknown pricing is host-owned for revision pinning |
+| 2026-09-22 | CI-2–CI-6 correctness review pass | uncommitted | 673 tests per framework (274 core + 222 compiler + 86 Baize + 91 Zhinu) on .NET 8/.NET 10; format clean; Release 0 warnings | Fixed: model turn could throw when its last tool budget was spent (omitted advisory cap); one-call inference nodes no longer required `Protocol` at registration unless a turn executor is configured; oversized tool results rejected before persistence; duration `TimeSpan` overflow clamped; `InferenceProtocolLimits` now capped like `InferenceLimit`; evidence no longer fabricates a currency or matches tools by name only; tools + turn executor now rejected at registration when no read-tool executor is present |
+| 2026-09-23 | CI-7 Marang consumer proof and release gate | uncommitted | 8 isolated-package consumer tests per framework (6 Marang + 2 review) restored from packed packages with no sibling project references, plus 691 in-repo tests per framework (285 core + 222 compiler + 86 Baize + 98 Zhinu); format clean; Release 0 warnings | `tests/Penghou.Fuwen.MarangConsumer.Tests` (hand-written Marang adapter: deterministic planning trace, exact repo tools, workspace context, promotion activity, turn manifest) proves compile/explain/preflight/admit/run/fail/resume/evidence/fork/restart/typed `PlanningResult`/explicit promotion; `tests/Penghou.Fuwen.ReviewConsumer.Tests` records the second product-neutral consumer; `consumer-proof` CI job packs and runs both on .NET 8/.NET 10 |

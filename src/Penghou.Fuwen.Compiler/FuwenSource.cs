@@ -575,13 +575,6 @@ internal sealed class SourceParser
     private int bindingDepth;
     private int conditionalOrdinal;
     private bool workflowSeen;
-    private bool promptSeen;
-    private bool toolsetSeen;
-    private bool limitsSeen;
-    private bool fanOutSeen;
-    private bool conditionalMergeSeen;
-    private bool repeatSeen;
-    private bool interactionGateSeen;
     private string? fanOutItemName;
     private string? loopStateName;
     private string? loopIterationName;
@@ -636,7 +629,7 @@ internal sealed class SourceParser
                 foreach (var prompt in prompts) builder.AddPrompt(prompt);
                 foreach (var node in nodes) builder.AddNode(node);
                 builder.SetExecutionOrder(new WorkflowExecutionOrder(BuildRegions(workflowName, nodes)));
-                plan = promptSeen || toolsetSeen || limitsSeen ? builder.BuildV8() : interactionGateSeen ? builder.BuildV7() : repeatSeen ? builder.BuildV6() : conditionalMergeSeen ? builder.BuildV5() : fanOutSeen ? builder.BuildV4() : builder.BuildV3();
+                plan = builder.Build();
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
             {
@@ -739,7 +732,6 @@ internal sealed class SourceParser
             if (prompts.Any(prompt => string.Equals(prompt.Name, name, StringComparison.Ordinal)))
                 Error(CompilerDiagnosticCodes.SemanticValidationFailed, $"Duplicate prompt definition '{name}'.", Previous);
             prompts.Add(new PromptDefinition(name, parameters, [], source));
-            promptSeen = true;
             return;
         }
         Expect("{");
@@ -784,7 +776,6 @@ internal sealed class SourceParser
             }
         }
         prompts.Add(new PromptDefinition(name, parameters, messages));
-        promptSeen = true;
     }
 
     private string ReadPromptText()
@@ -823,7 +814,6 @@ internal sealed class SourceParser
             Error(CompilerDiagnosticCodes.SemanticValidationFailed, $"Duplicate toolset definition '{name}'.", Previous);
         else
             toolsets[name] = tools;
-        toolsetSeen = true;
     }
 
     private void ParseWorkflow()
@@ -929,7 +919,6 @@ internal sealed class SourceParser
         List<DescriptorReference>? tools = null;
         if (Match("tools"))
         {
-            toolsetSeen = true;
             if (Match("none"))
             {
                 tools = [];
@@ -968,11 +957,12 @@ internal sealed class SourceParser
             while (Match(","));
         }
         InferenceLimits? limits = null;
+        InferenceProtocol? protocol = null;
         if (Match("limits"))
         {
             int? maxTokens = null;
             int? timeoutSeconds = null;
-            for (var seen = 0; seen < 2; seen++)
+            for (var seen = 0; seen < 2 && Current.Text != "aggregate"; seen++)
             {
                 if (Match("maxTokens"))
                 {
@@ -992,10 +982,104 @@ internal sealed class SourceParser
                 }
             }
 
-            if (maxTokens is null && timeoutSeconds is null)
-                Error(CompilerDiagnosticCodes.SemanticValidationFailed, "Inference limits require 'maxTokens' and/or 'timeout'.", Previous);
-            limits = new InferenceLimits(maxTokens, timeoutSeconds);
-            limitsSeen = true;
+            if (Match("aggregate"))
+            {
+                var seenDimensions = new HashSet<string>(StringComparer.Ordinal);
+                long? maxTurns = null;
+                long? maxModelCalls = null;
+                long? maxToolCalls = null;
+                long? maxPromptTokens = null;
+                long? maxCompletionTokens = null;
+                long? maxTotalTokens = null;
+                long? maxDurationMilliseconds = null;
+                long? maxToolArgumentBytes = null;
+                long? maxToolResultBytes = null;
+                long? maxRetainedConversationBytes = null;
+                long? maxRetainedEvidenceBytes = null;
+                InferenceCostLimit? cost = null;
+                var dimensionCount = 0;
+
+                while (!AtEnd && Current.Text is not ("->" or ":" or ";" or "}"))
+                {
+                    var dimension = Current.Text;
+                    if (!IsAggregateDimension(dimension))
+                    {
+                        Error(CompilerDiagnosticCodes.ParseExpectedToken,
+                            "Expected an aggregate inference limit dimension.", Current, dimension);
+                        Next();
+                        continue;
+                    }
+
+                    Next();
+                    dimensionCount++;
+                    if (!seenDimensions.Add(dimension))
+                    {
+                        Error(CompilerDiagnosticCodes.SemanticValidationFailed,
+                            $"Duplicate aggregate '{dimension}' limit.", Previous);
+                    }
+
+                    if (dimension == "cost")
+                    {
+                        var currency = ReadQuotedText("cost currency");
+                        var microunits = ReadPositiveLong("cost microunits");
+                        try
+                        {
+                            cost = new InferenceCostLimit(currency, microunits);
+                        }
+                        catch (ArgumentException exception)
+                        {
+                            Error(CompilerDiagnosticCodes.SemanticValidationFailed,
+                                "Cost limit is invalid.", Previous, exception.Message);
+                        }
+                        CountExpression();
+                        continue;
+                    }
+
+                    var value = ReadPositiveLong($"aggregate '{dimension}' limit");
+                    CountExpression();
+                    switch (dimension)
+                    {
+                        case "turns": maxTurns = value; break;
+                        case "modelCalls": maxModelCalls = value; break;
+                        case "toolCalls": maxToolCalls = value; break;
+                        case "promptTokens": maxPromptTokens = value; break;
+                        case "completionTokens": maxCompletionTokens = value; break;
+                        case "totalTokens": maxTotalTokens = value; break;
+                        case "durationMs": maxDurationMilliseconds = value; break;
+                        case "toolArgumentBytes": maxToolArgumentBytes = value; break;
+                        case "toolResultBytes": maxToolResultBytes = value; break;
+                        case "retainedConversationBytes": maxRetainedConversationBytes = value; break;
+                        case "retainedEvidenceBytes": maxRetainedEvidenceBytes = value; break;
+                    }
+                }
+
+                if (dimensionCount == 0)
+                {
+                    Error(CompilerDiagnosticCodes.SemanticValidationFailed,
+                        "Aggregate inference limits require at least one dimension.", Previous);
+                }
+
+                try
+                {
+                    protocol = new InferenceProtocol(
+                        new InferenceProtocolLimits(
+                            maxTurns, maxModelCalls, maxToolCalls, maxPromptTokens,
+                            maxCompletionTokens, maxTotalTokens, maxDurationMilliseconds,
+                            maxToolArgumentBytes, maxToolResultBytes,
+                            maxRetainedConversationBytes, maxRetainedEvidenceBytes, cost));
+                }
+                catch (ArgumentException exception)
+                {
+                    Error(CompilerDiagnosticCodes.SemanticValidationFailed,
+                        "Aggregate inference limits are invalid.", Previous, exception.Message);
+                }
+            }
+
+            if (maxTokens is null && timeoutSeconds is null && protocol is null)
+                Error(CompilerDiagnosticCodes.SemanticValidationFailed, "Inference limits require 'maxTokens', 'timeout', and/or 'aggregate'.", Previous);
+            limits = maxTokens is null && timeoutSeconds is null
+                ? null
+                : new InferenceLimits(maxTokens, timeoutSeconds);
         }
         if (Match("->") || Match(":")) declared = ParseType();
         Match(";");
@@ -1005,7 +1089,8 @@ internal sealed class SourceParser
             name, path, profile, template, arguments, [], type, requirements,
             promptName, promptBindings is null || promptBindings.Count == 0 ? null : promptBindings,
             tools is null || tools.Count == 0 ? null : tools,
-            limits);
+            limits,
+            protocol);
         nodeTypes[name] = type; nodePaths[name] = path; AddSpan(path, start, Previous); Ast(); return node;
     }
 
@@ -1064,7 +1149,6 @@ internal sealed class SourceParser
             var thenBinding = new NodeOutputBinding(thenPath, thenProj);
             var elseBinding = new NodeOutputBinding(elsePath, elseProj);
             merge = new ConditionalMerge(thenBinding, elseBinding, resultType);
-            conditionalMergeSeen = true;
             // A merged conditional produces a value at its own path, so
             // downstream nodes may reference it by name. Control-only
             // conditionals stay unreferenceable.
@@ -1127,7 +1211,6 @@ internal sealed class SourceParser
         fanOutItemName = savedItem;
         var node = new FanOutNode(name, path, source, new FanOutItemBinding(itemName, itemType), key, body, yield, resultType, maxItems, maxConcurrency);
         nodeTypes[name] = resultType; nodePaths[name] = path;
-        fanOutSeen = true;
         AddSpan(path, start, Previous); Ast(); return node;
     }
 
@@ -1205,7 +1288,6 @@ internal sealed class SourceParser
         Match(";");
         var node = new RepeatNode(name, path, maxIterations, stateType, initialState, body, continueWith, breakWhen, resultType);
         nodeTypes[name] = resultType; nodePaths[name] = path;
-        repeatSeen = true;
         AddSpan(path, start, Previous); Ast(); return node;
     }
 
@@ -1256,7 +1338,6 @@ internal sealed class SourceParser
         var path = parentPath + "/" + name;
         var node = new CheckpointNode(name, path, value, outputType);
         nodeTypes[name] = outputType; nodePaths[name] = path;
-        interactionGateSeen = true;
         AddSpan(path, start, Previous); Ast(); return node;
     }
 
@@ -1276,7 +1357,6 @@ internal sealed class SourceParser
         var path = parentPath + "/" + name;
         var node = new WaitNode(name, path, signalName, outputType, timeoutSeconds);
         nodeTypes[name] = outputType; nodePaths[name] = path;
-        interactionGateSeen = true;
         AddSpan(path, start, Previous); Ast(); return node;
     }
 
@@ -1529,6 +1609,30 @@ internal sealed class SourceParser
     }
     private static int CountNodes(IEnumerable<WorkflowNode> values) => values.Sum(item => 1 + (item is ConditionalNode conditional ? CountNodes(conditional.Then) + CountNodes(conditional.Else) : item is FanOutNode fanOut ? CountNodes(fanOut.Body) : item is RepeatNode repeat ? CountNodes(repeat.Body) : 0));
     private int ParsePositiveInt() => ReadBound("positive integer");
+    private static bool IsAggregateDimension(string text) => text is
+        "turns" or "modelCalls" or "toolCalls" or "promptTokens" or
+        "completionTokens" or "totalTokens" or "durationMs" or "cost" or
+        "toolArgumentBytes" or "toolResultBytes" or
+        "retainedConversationBytes" or "retainedEvidenceBytes";
+
+    private long ReadPositiveLong(string what)
+    {
+        const long maximum = 1_000_000_000_000_000;
+        if (Current.Kind == FuwenTokenKind.Number &&
+            long.TryParse(Current.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var value) &&
+            value > 0 && value <= maximum)
+        {
+            Next();
+            return value;
+        }
+
+        Error(CompilerDiagnosticCodes.ParseExpectedToken,
+            $"Expected a positive bounded integer {what}.", Current);
+        if (!AtEnd && Current.Text is not ("->" or ":" or ";" or "}"))
+            Next();
+        return 1;
+    }
+
     private int ReadBound(string what)
     {
         if (Current.Kind == FuwenTokenKind.Number &&
@@ -1557,6 +1661,17 @@ internal sealed class SourceParser
             catch (JsonException) { return raw.Trim('"'); }
         }
         return ReadIdentifier(expected);
+    }
+
+    private string ReadQuotedText(string expected)
+    {
+        if (Current.Kind == FuwenTokenKind.String)
+            return ReadText(expected);
+
+        Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected a quoted " + expected + ".", Current);
+        if (!AtEnd && Current.Text is not ("->" or ":" or ";" or "}"))
+            Next();
+        return string.Empty;
     }
     private bool Match(string text) { if (Current.Text == text) { Next(); return true; } return false; }
     private bool MatchIdentifier(string text) { if (Current.Kind == FuwenTokenKind.Identifier && Current.Text == text) { Next(); return true; } return false; }

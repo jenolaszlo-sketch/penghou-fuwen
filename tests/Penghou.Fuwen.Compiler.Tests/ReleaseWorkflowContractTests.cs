@@ -17,9 +17,9 @@ public sealed class ReleaseWorkflowContractTests
             Path.Combine(root, "README.md"), TestContext.Current.CancellationToken);
         var matrixPath = Path.Combine(root, "docs", "capability-matrix.md");
 
-        version.Should().Be("0.1.0-preview.10");
+        version.Should().Be("0.1.0-preview.11");
         var headings = changelog.Split('\n').Select(line => line.TrimEnd('\r')).ToArray();
-        for (var preview = 1; preview <= 10; preview++)
+        for (var preview = 1; preview <= 11; preview++)
             headings.Should().Contain($"## 0.1.0-preview.{preview}");
         File.Exists(matrixPath).Should().BeTrue();
         readme.Should().Contain("docs/capability-matrix.md");

@@ -75,3 +75,27 @@ lists, named objects, and artifact references from detached JSON, and can
 re-normalize any `RuntimeValue` through the same contract. Adapter code should
 not cast provider results to `JsonRuntimeValue` or maintain a second type
 conversion table.
+
+## Coordinated-inference evidence
+
+`InferenceProtocolEvidence` describes one coordinated logical `infer` activity
+without exposing secrets. It carries the stable interaction identity, the
+current semantics identity, the effective aggregate limits, aggregate
+usage/cost with their quality markers, bounded per-operation summaries
+(model turn, tool call, validation), bounded tool-outcome summaries with result
+digests and byte counts, the final-output validation attempt count, the
+recovery disposition, and a commitment-uncertainty flag. It never contains raw
+prompts, context values, tool arguments or results, provider payloads,
+credentials, or chain-of-thought.
+
+Sensitive content is represented only through `ProtectedPayloadReference`,
+which is a provider/payload identity plus a content digest, optional descriptor,
+length, retention-policy revision, and storage identity. It is a reference, not
+an implicit dereference: the host owns storage, access control, retention, and
+byte verification. `InferenceProtocolEvidenceRenderer` produces deterministic
+human and JSON reports containing digests and safe summaries only.
+
+A host may observe evidence through the optional, non-authoritative
+`IInferenceEvidenceSink`. A missing sink, or a sink that throws, never alters
+execution truth; the durable journal remains the authority for replay and
+recovery.

@@ -250,7 +250,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                     new WorkflowExecutionPhase([decoratePath]),
                 ]),
             ]))
-            .BuildV4();
+            .Build();
         var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
                 new InMemoryTrustedCatalogue([
                     new TrustedCatalogueDescriptor(
@@ -291,7 +291,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         var bodyPath = $"{fanOutPath}/$body/double";
         var returnPath = StructuralNodeIdentity.Create("batch", "return_result");
         var inference = new InferenceNode(
-            "infer", inferencePath, profile, prompt, [], [], list, ContextRequirements: []);
+            "infer", inferencePath, profile, prompt, [], [], list,
+            ContextRequirements: [], Protocol: CurrentInferenceFixture.OneCallProtocol);
         var fanOut = new FanOutNode(
             "process", fanOutPath,
             new NodeOutputBinding(inferencePath, []),
@@ -305,11 +306,11 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             MaximumItems: 3,
             MaximumConcurrency: 2);
         var plan = new WorkflowPlan(
-            FuwenContracts.IrVersionV4,
+            FuwenContracts.IrVersion,
             "fuwen-language/v1",
-            FuwenContracts.CompilerSemanticVersionV4,
+            FuwenContracts.CompilerSemanticVersion,
             FuwenContracts.CanonicalJsonVersion,
-            FuwenContracts.ExecutionFingerprintVersionV4,
+            FuwenContracts.ExecutionFingerprintVersion,
             "batch", "1", inputType, list, "routing/1", [],
             [profile, prompt, activity],
             new CapabilityManifest([]),
@@ -443,7 +444,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                         [new ArgumentBinding("request", new FanOutItemValueBinding([]))], text),
                     new InferenceNode("infer", inferPath, profile, template,
                         [new ArgumentBinding("request", new NodeOutputBinding(cxPath, []))], [], text,
-                        [new ContextRequirement("cx", new NodeOutputBinding(cxPath, []), text)]),
+                        [new ContextRequirement("cx", new NodeOutputBinding(cxPath, []), text)],
+                        Protocol: CurrentInferenceFixture.OneCallProtocol),
                 ],
                 new NodeOutputBinding(inferPath, []),
                 list,
@@ -460,7 +462,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                     new WorkflowExecutionPhase([inferPath]),
                 ]),
             ]))
-            .BuildV4();
+            .Build();
         var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
                 new InMemoryTrustedCatalogue([
                     new TrustedCatalogueDescriptor(contextDesc, callableContract: new CallableContract(
@@ -480,7 +482,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         var registration = await new FuwenZhinuWorkflowFactory(
                 new InMemoryWorkflowDefinitionStore(),
                 IdentityFor(admission),
-                new FuwenZhinuExecutionPorts(new UnusedActivity(), context, inference))
+                new FuwenZhinuExecutionPorts(new UnusedActivity(), context, CurrentInferenceFixture.WithPreflight(inference)))
             .CreateAsync("fuwen.fanout-inference", "1", admission, TestContext.Current.CancellationToken);
         var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);

@@ -31,13 +31,14 @@ public sealed class WorkflowExecutionOrderTests
     }
 
     [Fact]
-    public void V2_requires_an_explicit_execution_order()
+    public void Current_ir_requires_an_explicit_execution_order()
     {
         var plan = PlanFixture.Create() with
         {
-            IrVersion = FuwenContracts.IrVersionV2,
-            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV2,
-            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV2,
+            IrVersion = FuwenContracts.IrVersion,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersion,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersion,
+            ExecutionOrder = null,
         };
 
         var act = () => WorkflowPlanIdentity.GetCanonicalBytes(plan);
@@ -46,9 +47,9 @@ public sealed class WorkflowExecutionOrderTests
     }
 
     [Fact]
-    public void V2_requires_the_exact_compiler_semantics_contract()
+    public void Current_ir_requires_the_exact_compiler_semantics_contract()
     {
-        var plan = PlanFixture.CreateV2() with { CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV1 };
+        var plan = PlanFixture.CreateV2() with { CompilerSemanticVersion = "compiler-semantics/2" };
 
         var act = () => WorkflowPlanIdentity.GetCanonicalBytes(plan);
 
@@ -56,23 +57,21 @@ public sealed class WorkflowExecutionOrderTests
     }
 
     [Fact]
-    public void V1_requires_the_exact_historical_compiler_semantics_contract()
+    public void Current_plan_validates_successfully()
     {
-        var plan = PlanFixture.Create() with { CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV2 };
+        var act = () => WorkflowPlanValidator.Validate(PlanFixture.Create());
 
-        var act = () => WorkflowPlanIdentity.GetCanonicalBytes(plan);
-
-        act.Should().Throw<NotSupportedException>().WithMessage("*compiler-semantics/1*");
+        act.Should().NotThrow();
     }
 
     [Fact]
-    public void V1_with_a_schedule_is_rejected_instead_of_being_reinterpreted()
+    public void Unsupported_ir_version_is_rejected_instead_of_being_reinterpreted()
     {
-        var plan = PlanFixture.Create() with { ExecutionOrder = PlanFixture.CreateV2().ExecutionOrder };
+        var plan = PlanFixture.Create() with { IrVersion = "fuwen-ir/v2" };
 
         var act = () => WorkflowPlanIdentity.GetCanonicalBytes(plan);
 
-        act.Should().Throw<ArgumentException>().WithMessage("*never silently upgraded*");
+        act.Should().Throw<NotSupportedException>().WithMessage("*fuwen-ir/v2*");
     }
 
     [Fact]

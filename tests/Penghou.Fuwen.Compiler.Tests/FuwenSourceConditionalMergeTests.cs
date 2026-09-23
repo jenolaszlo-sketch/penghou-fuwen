@@ -4,7 +4,7 @@ using Penghou.Fuwen.Compiler;
 
 namespace Penghou.Fuwen.Compiler.Tests;
 
-/// <summary>Stage 2 value-producing conditionals — IR v5 merge clause.</summary>
+/// <summary>Value-producing conditional merge clauses.</summary>
 public sealed class FuwenSourceConditionalMergeTests
 {
     private static ContentDigest Digest(char c) => new("sha256", "descriptor/v1", new string(c, 64));
@@ -33,15 +33,15 @@ public sealed class FuwenSourceConditionalMergeTests
         """;
 
     [Fact]
-    public async Task Merge_clause_compiles_to_v5_with_branch_bindings()
+    public async Task Merge_clause_compiles_with_branch_bindings()
     {
         var result = await new FuwenSourceCompiler(Catalogue()).CompileAsync(MergeSource, cancellationToken: TestContext.Current.CancellationToken);
 
         result.Succeeded.Should().BeTrue(string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
         result.Plan.Should().NotBeNull();
-        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersionV5);
-        result.Plan.CompilerSemanticVersion.Should().Be(FuwenContracts.CompilerSemanticVersionV5);
-        result.Plan.FingerprintVersion.Should().Be(FuwenContracts.ExecutionFingerprintVersionV5);
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersion);
+        result.Plan.CompilerSemanticVersion.Should().Be(FuwenContracts.CompilerSemanticVersion);
+        result.Plan.FingerprintVersion.Should().Be(FuwenContracts.ExecutionFingerprintVersion);
         var conditional = result.Plan.Nodes.OfType<ConditionalNode>().Should().ContainSingle().Subject;
         conditional.Merge.Should().NotBeNull();
         conditional.Name.Should().Be("decide");
@@ -145,7 +145,7 @@ public sealed class FuwenSourceConditionalMergeTests
     }
 
     [Fact]
-    public async Task Merge_on_non_v5_plan_is_rejected_by_core_validator()
+    public async Task Merge_is_valid_in_the_current_IR()
     {
         var str = new PrimitiveType(FuwenPrimitiveKind.String);
         var activity = new DescriptorReference(DescriptorKind.Activity, "sample.echo", "1", Digest('a'));
@@ -174,9 +174,8 @@ public sealed class FuwenSourceConditionalMergeTests
                     new WorkflowExecutionPhase([elsePath]),
                 ]),
             ]))
-            .BuildV4();
+            .Build();
 
-        var act = () => WorkflowPlanValidator.Validate(plan);
-        act.Should().Throw<ArgumentException>().WithMessage("*IR v5*");
+        WorkflowPlanValidator.Validate(plan);
     }
 }

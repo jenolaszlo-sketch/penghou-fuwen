@@ -413,7 +413,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         var registration = await new FuwenZhinuWorkflowFactory(
                 new InMemoryWorkflowDefinitionStore(),
                 IdentityFor(fixture.Admission),
-                new FuwenZhinuExecutionPorts(new UnusedActivity(), contextProvider, inference))
+                new FuwenZhinuExecutionPorts(new UnusedActivity(), contextProvider, CurrentInferenceFixture.WithPreflight(inference)))
             .CreateAsync("fuwen.context", "1", fixture.Admission, TestContext.Current.CancellationToken);
         var root = CreateTempRoot();
         var databasePath = Path.Combine(root, "workflow.db");
@@ -518,11 +518,11 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         var activityPath = StructuralNodeIdentity.Create(rootName, "echo");
         var returnPath = StructuralNodeIdentity.Create(rootName, "return_result");
         return new WorkflowPlan(
-            FuwenContracts.IrVersionV3,
+            FuwenContracts.IrVersion,
             "fuwen-language/v1",
-            FuwenContracts.CompilerSemanticVersionV3,
+            FuwenContracts.CompilerSemanticVersion,
             FuwenContracts.CanonicalJsonVersion,
-            FuwenContracts.ExecutionFingerprintVersionV3,
+            FuwenContracts.ExecutionFingerprintVersion,
             rootName,
             "1",
             new PrimitiveType(FuwenPrimitiveKind.String),
@@ -567,11 +567,11 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 new NodeOutputBinding(StructuralNodeIdentity.Create("branch", "b"), [])),
         };
         var plan = new WorkflowPlan(
-            FuwenContracts.IrVersionV3,
+            FuwenContracts.IrVersion,
             "fuwen-language/v1",
-            FuwenContracts.CompilerSemanticVersionV3,
+            FuwenContracts.CompilerSemanticVersion,
             FuwenContracts.CanonicalJsonVersion,
-            FuwenContracts.ExecutionFingerprintVersionV3,
+            FuwenContracts.ExecutionFingerprintVersion,
             "branch",
             "1",
             stringType,

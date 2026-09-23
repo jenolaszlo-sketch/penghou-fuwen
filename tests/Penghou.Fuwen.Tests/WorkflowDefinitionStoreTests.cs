@@ -27,7 +27,7 @@ public sealed class WorkflowDefinitionStoreTests
     }
 
     [Fact]
-    public void V2_definition_loads_and_round_trips_with_its_v2_fingerprint()
+    public void Current_definition_loads_and_round_trips_with_its_fingerprint()
     {
         var definition = WorkflowDefinitionDocument.Create(PlanFixture.CreateV2());
 
@@ -37,7 +37,7 @@ public sealed class WorkflowDefinitionStoreTests
 
         loaded.ExecutionFingerprint.Should().Be(definition.ExecutionFingerprint);
         loaded.CanonicalBytes.ToArray().Should().Equal(definition.CanonicalBytes.ToArray());
-        loaded.ReadPlan().IrVersion.Should().Be(FuwenContracts.IrVersionV2);
+        loaded.ReadPlan().IrVersion.Should().Be(FuwenContracts.IrVersion);
         WorkflowPlanIdentity.ComputeExecutionFingerprint(loaded.ReadPlan())
             .Should().Be(definition.ExecutionFingerprint);
     }
@@ -70,18 +70,16 @@ public sealed class WorkflowDefinitionStoreTests
     }
 
     [Fact]
-    public void V1_and_v2_fingerprint_claims_cannot_cross_versions()
+    public void Fingerprint_claims_cannot_cross_definitions()
     {
-        var v1 = WorkflowDefinitionDocument.Create(PlanFixture.Create());
-        var v2 = WorkflowDefinitionDocument.Create(PlanFixture.CreateV2());
-        var v1ClaimForV2 = v1.ExecutionFingerprint.Replace("/v1:", "/v2:", StringComparison.Ordinal);
-        var v2ClaimForV1 = v2.ExecutionFingerprint.Replace("/v2:", "/v1:", StringComparison.Ordinal);
+        var first = WorkflowDefinitionDocument.Create(PlanFixture.Create());
+        var second = WorkflowDefinitionDocument.Create(PlanFixture.CreateV2());
 
-        var v1Act = () => WorkflowDefinitionDocument.LoadVerified(v2ClaimForV1, v1.CanonicalBytes.Span);
-        var v2Act = () => WorkflowDefinitionDocument.LoadVerified(v1ClaimForV2, v2.CanonicalBytes.Span);
+        var firstAct = () => WorkflowDefinitionDocument.LoadVerified(second.ExecutionFingerprint, first.CanonicalBytes.Span);
+        var secondAct = () => WorkflowDefinitionDocument.LoadVerified(first.ExecutionFingerprint, second.CanonicalBytes.Span);
 
-        v1Act.Should().Throw<WorkflowDefinitionIntegrityException>().WithMessage("*fingerprint mismatch*");
-        v2Act.Should().Throw<WorkflowDefinitionIntegrityException>().WithMessage("*fingerprint mismatch*");
+        firstAct.Should().Throw<WorkflowDefinitionIntegrityException>().WithMessage("*fingerprint mismatch*");
+        secondAct.Should().Throw<WorkflowDefinitionIntegrityException>().WithMessage("*fingerprint mismatch*");
     }
 
     [Fact]

@@ -22,7 +22,7 @@ public sealed class WorkflowPlanBuilder
     private readonly List<PromptDefinition> prompts = [];
     private WorkflowExecutionOrder? executionOrder;
 
-    /// <summary>Creates a v2 builder with the current canonical contracts.</summary>
+    /// <summary>Creates a builder with the current canonical contracts.</summary>
     public WorkflowPlanBuilder(
         string name,
         string revision,
@@ -75,7 +75,7 @@ public sealed class WorkflowPlanBuilder
     /// <summary>Adds one bounded keyed fan-out region to the programmatic plan.</summary>
     public WorkflowPlanBuilder AddFanOut(FanOutNode node) => AddNode(node);
 
-    /// <summary>Adds one workflow-owned prompt declaration (IR v8).</summary>
+    /// <summary>Adds one workflow-owned prompt declaration.</summary>
     public WorkflowPlanBuilder AddPrompt(PromptDefinition prompt)
     {
         ArgumentNullException.ThrowIfNull(prompt);
@@ -83,7 +83,7 @@ public sealed class WorkflowPlanBuilder
         return this;
     }
 
-    /// <summary>Sets the explicit v2 completion schedule.</summary>
+    /// <summary>Sets the explicit completion schedule.</summary>
     public WorkflowPlanBuilder SetExecutionOrder(WorkflowExecutionOrder order)
     {
         ArgumentNullException.ThrowIfNull(order);
@@ -91,42 +91,15 @@ public sealed class WorkflowPlanBuilder
         return this;
     }
 
-    /// <summary>Returns a detached plan snapshot. Semantic validation occurs in <see cref="WorkflowCompiler"/>.</summary>
+    /// <summary>Returns a detached current-IR plan snapshot. Semantic validation occurs in <see cref="WorkflowCompiler"/>.</summary>
     public WorkflowPlan Build()
-        => BuildVersioned(FuwenContracts.IrVersionV2, FuwenContracts.CompilerSemanticVersionV2, FuwenContracts.ExecutionFingerprintVersionV2);
-
-    /// <summary>Builds a pre-release v3 plan using typed context requirements.</summary>
-    public WorkflowPlan BuildV3()
-        => BuildVersioned(FuwenContracts.IrVersionV3, FuwenContracts.CompilerSemanticVersionV3, FuwenContracts.ExecutionFingerprintVersionV3);
-
-    /// <summary>Builds a pre-release v4 plan containing bounded keyed fan-out regions.</summary>
-    public WorkflowPlan BuildV4()
-        => BuildVersioned(FuwenContracts.IrVersionV4, FuwenContracts.CompilerSemanticVersionV4, FuwenContracts.ExecutionFingerprintVersionV4);
-
-    /// <summary>Builds a pre-release v5 plan containing value-producing conditionals.</summary>
-    public WorkflowPlan BuildV5()
-        => BuildVersioned(FuwenContracts.IrVersionV5, FuwenContracts.CompilerSemanticVersionV5, FuwenContracts.ExecutionFingerprintVersionV5);
-
-    /// <summary>Builds a pre-release v6 plan containing bounded repeat regions.</summary>
-    public WorkflowPlan BuildV6()
-        => BuildVersioned(FuwenContracts.IrVersionV6, FuwenContracts.CompilerSemanticVersionV6, FuwenContracts.ExecutionFingerprintVersionV6);
-
-    /// <summary>Builds a pre-release v7 plan containing interaction gates (checkpoint + wait).</summary>
-    public WorkflowPlan BuildV7()
-        => BuildVersioned(FuwenContracts.IrVersionV7, FuwenContracts.CompilerSemanticVersionV7, FuwenContracts.ExecutionFingerprintVersionV7);
-
-    /// <summary>Builds a pre-release v8 plan containing workflow-owned prompt declarations.</summary>
-    public WorkflowPlan BuildV8()
-        => BuildVersioned(FuwenContracts.IrVersionV8, FuwenContracts.CompilerSemanticVersionV8, FuwenContracts.ExecutionFingerprintVersionV8);
-
-    private WorkflowPlan BuildVersioned(string irVersion, string compilerSemanticVersion, string fingerprintVersion)
     {
         var plan = new WorkflowPlan(
-            irVersion,
+            FuwenContracts.IrVersion,
             languageVersion,
-            compilerSemanticVersion,
+            FuwenContracts.CompilerSemanticVersion,
             FuwenContracts.CanonicalJsonVersion,
-            fingerprintVersion,
+            FuwenContracts.ExecutionFingerprintVersion,
             name,
             revision,
             inputType,
@@ -137,7 +110,7 @@ public sealed class WorkflowPlanBuilder
             new CapabilityManifest(capabilities.ToArray()),
             nodes.ToArray(),
             executionOrder ?? throw new InvalidOperationException(
-                $"{irVersion} requires an explicit execution order; use SetExecutionOrder before building the plan."),
+                "An explicit execution order is required; use SetExecutionOrder before building the plan."),
             prompts.Count == 0 ? null : prompts.ToArray());
 
         // The core snapshot is intentionally the only place that freezes the

@@ -1,8 +1,14 @@
 # Marang complex-inference planning scenario
 
-Status: checked-in CI-0 scenario; descriptive contract only. This document does
-not claim that IR v9 syntax, the complex-inference coordinator, or the Marang
-adapter already exists.
+Status: checked-in CI-0 scenario, proven by the CI-7 isolated-package Marang
+consumer (`tests/Penghou.Fuwen.MarangConsumer.Tests`). The proof implements
+the bounds table, the deterministic three-model/two-tool trace, crash
+recovery, evidence assertions, focused restart, same-fingerprint fork, and
+explicit side-effect promotion from this fixture. Two deliberate deviations
+from the sketch below: the proof uses a workflow-owned prompt (the
+coordinator has no registered-template renderer, and admission rejects
+templates on the coordinated path) and the current IR contract rather than a
+versioned IR v9.
 
 ## Purpose and boundary
 

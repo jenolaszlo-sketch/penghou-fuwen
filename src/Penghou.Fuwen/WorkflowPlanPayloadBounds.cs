@@ -197,6 +197,8 @@ internal sealed class WorkflowPlanPayloadBounds
                     if (value.Tools is not null)
                         foreach (var tool in value.Tools)
                             Descriptor(tool);
+                    if (value.Protocol?.Limits.Cost is not null)
+                        Text(value.Protocol.Limits.Cost.Currency, "inference cost currency");
                     Type(value.OutputType);
                     break;
                 case ActivityNode value:

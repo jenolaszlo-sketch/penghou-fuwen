@@ -5,14 +5,7 @@ namespace Penghou.Fuwen;
 /// <summary>Canonicalizes resolved plans and derives their execution identity.</summary>
 public static class WorkflowPlanIdentity
 {
-    private const string ExecutionFingerprintPrefixV1 = "sha256:fuwen-execution/v1:";
-    private const string ExecutionFingerprintPrefixV2 = "sha256:fuwen-execution/v2:";
-    private const string ExecutionFingerprintPrefixV3 = "sha256:fuwen-execution/v3:";
-    private const string ExecutionFingerprintPrefixV4 = "sha256:fuwen-execution/v4:";
-    private const string ExecutionFingerprintPrefixV5 = "sha256:fuwen-execution/v5:";
-    private const string ExecutionFingerprintPrefixV6 = "sha256:fuwen-execution/v6:";
-    private const string ExecutionFingerprintPrefixV7 = "sha256:fuwen-execution/v7:";
-    private const string ExecutionFingerprintPrefixV8 = "sha256:fuwen-execution/v8:";
+    private const string ExecutionFingerprintPrefix = "sha256:fuwen-execution/v1:";
 
     /// <summary>Produces canonical resolved IR bytes after normalizing unordered collections.</summary>
     public static byte[] GetCanonicalBytes(WorkflowPlan plan)
@@ -44,7 +37,7 @@ public static class WorkflowPlanIdentity
 
     internal static string ComputeExecutionFingerprint(ReadOnlySpan<byte> canonicalBytes)
     {
-        return ComputeExecutionFingerprint(canonicalBytes, FuwenContracts.ExecutionFingerprintVersionV1);
+        return ComputeExecutionFingerprint(canonicalBytes, FuwenContracts.ExecutionFingerprintVersion);
     }
 
     internal static string ComputeExecutionFingerprint(
@@ -52,14 +45,7 @@ public static class WorkflowPlanIdentity
         string fingerprintVersion)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(fingerprintVersion);
-        if (!string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV1, StringComparison.Ordinal) &&
-            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV2, StringComparison.Ordinal) &&
-            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV3, StringComparison.Ordinal) &&
-            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV4, StringComparison.Ordinal) &&
-            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV5, StringComparison.Ordinal) &&
-            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV6, StringComparison.Ordinal) &&
-            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV7, StringComparison.Ordinal) &&
-            !string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersionV8, StringComparison.Ordinal))
+        if (!string.Equals(fingerprintVersion, FuwenContracts.ExecutionFingerprintVersion, StringComparison.Ordinal))
             throw new NotSupportedException($"Unsupported fingerprint version '{fingerprintVersion}'.");
         var hash = SHA256.HashData(canonicalBytes);
         return $"sha256:{fingerprintVersion}:{Convert.ToHexString(hash).ToLowerInvariant()}";
@@ -69,28 +55,12 @@ public static class WorkflowPlanIdentity
     public static void ValidateExecutionFingerprint(string executionFingerprint)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executionFingerprint);
-        var prefix = executionFingerprint.StartsWith(ExecutionFingerprintPrefixV1, StringComparison.Ordinal)
-            ? ExecutionFingerprintPrefixV1
-            : executionFingerprint.StartsWith(ExecutionFingerprintPrefixV2, StringComparison.Ordinal)
-                ? ExecutionFingerprintPrefixV2
-                : executionFingerprint.StartsWith(ExecutionFingerprintPrefixV3, StringComparison.Ordinal)
-                ? ExecutionFingerprintPrefixV3
-                    : executionFingerprint.StartsWith(ExecutionFingerprintPrefixV4, StringComparison.Ordinal)
-                        ? ExecutionFingerprintPrefixV4
-                        : executionFingerprint.StartsWith(ExecutionFingerprintPrefixV5, StringComparison.Ordinal)
-                            ? ExecutionFingerprintPrefixV5
-                            : executionFingerprint.StartsWith(ExecutionFingerprintPrefixV6, StringComparison.Ordinal)
-                                ? ExecutionFingerprintPrefixV6
-                                : executionFingerprint.StartsWith(ExecutionFingerprintPrefixV7, StringComparison.Ordinal)
-                                    ? ExecutionFingerprintPrefixV7
-                : executionFingerprint.StartsWith(ExecutionFingerprintPrefixV8, StringComparison.Ordinal)
-                    ? ExecutionFingerprintPrefixV8
-                : string.Empty;
-        if (prefix.Length == 0 || executionFingerprint.Length != prefix.Length + 64)
-            throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1, v2, v3, v4, v5, v6, v7, or v8 lowercase hexadecimal form.", nameof(executionFingerprint));
-        foreach (var character in executionFingerprint.AsSpan(prefix.Length))
+        if (!executionFingerprint.StartsWith(ExecutionFingerprintPrefix, StringComparison.Ordinal) ||
+            executionFingerprint.Length != ExecutionFingerprintPrefix.Length + 64)
+            throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1 lowercase hexadecimal form.", nameof(executionFingerprint));
+        foreach (var character in executionFingerprint.AsSpan(ExecutionFingerprintPrefix.Length))
             if (character is not (>= '0' and <= '9') and not (>= 'a' and <= 'f'))
-                throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1, v2, v3, v4, v5, v6, v7, or v8 lowercase hexadecimal form.", nameof(executionFingerprint));
+                throw new ArgumentException("Execution fingerprint must use canonical sha256:fuwen-execution/v1 lowercase hexadecimal form.", nameof(executionFingerprint));
     }
 
     private static WorkflowPlan Normalize(WorkflowPlan plan) => plan with

@@ -22,7 +22,7 @@ public sealed class R31ToolSurfaceRecoveryTests
                 new FuwenZhinuProviderRuntimeIdentity(
                     fixture.Admission.Receipt!.CatalogueSnapshotRevision,
                     fixture.Admission.Receipt.ResolvedDescriptorSetFingerprint),
-                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), inference))
+                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), CurrentInferenceFixture.WithPreflight(inference)))
             .CreateAsync("r31.repeat", "1", fixture.Admission, TestContext.Current.CancellationToken);
         var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -64,7 +64,7 @@ public sealed class R31ToolSurfaceRecoveryTests
                 new FuwenZhinuProviderRuntimeIdentity(
                     fixture.Admission.Receipt!.CatalogueSnapshotRevision,
                     fixture.Admission.Receipt.ResolvedDescriptorSetFingerprint),
-                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), inference))
+                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), CurrentInferenceFixture.WithPreflight(inference)))
             .CreateAsync("r31.fanout", "1", fixture.Admission, TestContext.Current.CancellationToken);
         var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -108,7 +108,7 @@ public sealed class R31ToolSurfaceRecoveryTests
         var returnPath = StructuralNodeIdentity.Create("demo", "return");
         var plan = new WorkflowPlanBuilder("demo", "1", text, text, "routing/1")
             .AddNode(new RepeatNode("loop", loopPath, 2, text, new InputBinding([]),
-                [new InferenceNode("answer", answerPath, profile, template, [new ArgumentBinding("request", new LoopStateBinding([]))], [], text, [], Tools: [search])],
+                [new InferenceNode("answer", answerPath, profile, template, [new ArgumentBinding("request", new LoopStateBinding([]))], [], text, [], Tools: [search], Protocol: CurrentInferenceFixture.OneCallProtocol)],
                 new NodeOutputBinding(answerPath, []),
                 new ConditionExpression(ConditionOperator.Equal, new LoopIterationBinding([]), new LiteralBinding(JsonDocument.Parse("2").RootElement.Clone())), text))
             .AddNode(new ReturnNode("return", returnPath, new NodeOutputBinding(loopPath, [])))
@@ -116,7 +116,7 @@ public sealed class R31ToolSurfaceRecoveryTests
                 new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([loopPath]), new WorkflowExecutionPhase([returnPath])]),
                 new WorkflowExecutionRegion($"{loopPath}/$body", [new WorkflowExecutionPhase([answerPath])]),
             ]))
-            .BuildV8();
+            .Build();
         return new RepeatFixture(await AdmitAsync(plan, [profile, template, search], text), search, answerPath);
     }
 
@@ -132,14 +132,14 @@ public sealed class R31ToolSurfaceRecoveryTests
         var returnPath = StructuralNodeIdentity.Create("batch", "return");
         var plan = new WorkflowPlanBuilder("batch", "1", list, list, "routing/1")
             .AddFanOut(new FanOutNode("process", fanOutPath, new InputBinding([]), new FanOutItemBinding("item", text), new FanOutItemValueBinding([]),
-                [new InferenceNode("answer", answerPath, profile, template, [new ArgumentBinding("request", new FanOutItemValueBinding([]))], [], text, [], Tools: [search])],
+                [new InferenceNode("answer", answerPath, profile, template, [new ArgumentBinding("request", new FanOutItemValueBinding([]))], [], text, [], Tools: [search], Protocol: CurrentInferenceFixture.OneCallProtocol)],
                 new NodeOutputBinding(answerPath, []), list, 2, 2))
             .AddNode(new ReturnNode("return", returnPath, new NodeOutputBinding(fanOutPath, [])))
             .SetExecutionOrder(new WorkflowExecutionOrder([
                 new WorkflowExecutionRegion("batch", [new WorkflowExecutionPhase([fanOutPath]), new WorkflowExecutionPhase([returnPath])]),
                 new WorkflowExecutionRegion($"{fanOutPath}/$body", [new WorkflowExecutionPhase([answerPath])]),
             ]))
-            .BuildV8();
+            .Build();
         return new FanOutFixture(await AdmitAsync(plan, [profile, template, search], text), search, fanOutPath);
     }
 

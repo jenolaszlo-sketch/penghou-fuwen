@@ -126,13 +126,21 @@ public sealed class FuwenZhinuExecutionPorts
         IContextProvider contextProvider,
         IInferenceExecutor inferenceExecutor,
         IExecutionObserver? observer,
-        Options options)
+        Options options,
+        IInferenceTurnExecutor? turnExecutor = null,
+        IInferenceReadToolExecutor? readToolExecutor = null,
+        InferenceLimitSet? inferenceHostCeilings = null,
+        IInferenceEvidenceSink? evidenceSink = null)
     {
         ActivityExecutor = activityExecutor ?? throw new ArgumentNullException(nameof(activityExecutor));
         ContextProvider = contextProvider ?? throw new ArgumentNullException(nameof(contextProvider));
         InferenceExecutor = inferenceExecutor ?? throw new ArgumentNullException(nameof(inferenceExecutor));
         Observer = observer;
         ExecutionOptions = options ?? throw new ArgumentNullException(nameof(options));
+        TurnExecutor = turnExecutor;
+        ReadToolExecutor = readToolExecutor;
+        InferenceHostCeilings = inferenceHostCeilings;
+        EvidenceSink = evidenceSink;
     }
 
     /// <summary>Executes trusted activity descriptors.</summary>
@@ -141,6 +149,26 @@ public sealed class FuwenZhinuExecutionPorts
     public IContextProvider ContextProvider { get; }
     /// <summary>Executes trusted inference descriptors.</summary>
     public IInferenceExecutor InferenceExecutor { get; }
+    /// <summary>
+    /// Executes one bounded normalized model turn for the complex-inference
+    /// coordinator, or null when inference nodes use the one-call executor.
+    /// </summary>
+    public IInferenceTurnExecutor? TurnExecutor { get; }
+    /// <summary>
+    /// Executes exact admitted read tools for the complex-inference
+    /// coordinator, or null when no host tool execution is configured.
+    /// </summary>
+    public IInferenceReadToolExecutor? ReadToolExecutor { get; }
+    /// <summary>
+    /// Optional host aggregate ceilings combined with authored protocol limits.
+    /// Source bounds may narrow these ceilings and may never expand them.
+    /// </summary>
+    public InferenceLimitSet? InferenceHostCeilings { get; }
+    /// <summary>
+    /// Optional non-authoritative sink for coordinated-inference evidence. A
+    /// missing sink or a sink failure cannot alter execution truth.
+    /// </summary>
+    public IInferenceEvidenceSink? EvidenceSink { get; }
     /// <summary>Receives best-effort lifecycle observations, or null when observations are disabled.</summary>
     public IExecutionObserver? Observer { get; }
     /// <summary>The validated bounded execution options.</summary>
@@ -271,19 +299,17 @@ public sealed class FuwenZhinuWorkflowFactory
         VerifyProviderRuntimeIdentity(receipt, providerRuntimeIdentity);
 
         var admittedPlan = definition.ReadPlan();
-        if (executionPorts is not null &&
-            !IrVersions.SupportsTypedContextRequirements(admittedPlan.IrVersion))
-        {
-            throw new FuwenZhinuAdmissionException(
-                $"The sequential Zhinu adapter supports '{FuwenContracts.IrVersionV3}'–'{FuwenContracts.IrVersionV8}', not '{admittedPlan.IrVersion}'.");
-        }
+        var coordinated = executionPorts?.TurnExecutor is not null;
         if (executionPorts is not null)
-            ValidateExecutableSubset(admittedPlan.Nodes, insideFanOut: false, insideRepeat: false);
+            ValidateExecutableSubset(admittedPlan.Nodes, insideFanOut: false, insideRepeat: false, coordinated);
         if (executionPorts is not null)
             ValidateInferenceBindings(
                 admittedPlan,
                 executionPorts.InferenceExecutor as IInferenceExecutorManifest,
-                executionPorts.InferenceExecutor as IInferenceExecutorPreflight);
+                executionPorts.InferenceExecutor as IInferenceExecutorPreflight,
+                executionPorts.TurnExecutor as IInferenceTurnExecutorManifest,
+                requiresProtocol: executionPorts.TurnExecutor is not null,
+                hasReadToolExecutor: executionPorts.ReadToolExecutor is not null);
 
         await definitionStore.StoreAsync(definition, cancellationToken).ConfigureAwait(false);
         var stored = await definitionStore.ReadAsync(receipt.ExecutionFingerprint, cancellationToken).ConfigureAwait(false);
@@ -297,7 +323,7 @@ public sealed class FuwenZhinuWorkflowFactory
         return new FuwenZhinuWorkflowRegistration(name, version, stored, executionPorts);
     }
 
-    private static void ValidateExecutableSubset(IEnumerable<WorkflowNode> nodes, bool insideFanOut, bool insideRepeat)
+    private static void ValidateExecutableSubset(IEnumerable<WorkflowNode> nodes, bool insideFanOut, bool insideRepeat, bool coordinated)
     {
         foreach (var node in nodes)
         {
@@ -305,6 +331,12 @@ public sealed class FuwenZhinuWorkflowFactory
             {
                 throw new FuwenZhinuAdmissionException(
                     $"The sequential Zhinu adapter does not support '{node.GetType().Name}' inside fan-out body '{node.StructuralPath}'.");
+            }
+            if (insideFanOut && coordinated && node is InferenceNode protocolInference && protocolInference.Protocol is not null)
+            {
+                throw new FuwenZhinuAdmissionException(
+                    $"The sequential Zhinu adapter does not support coordinated inference '{node.StructuralPath}' inside fan-out; " +
+                    "a fan-out item has no item-scoped nested-loop primitive for per-operation durable steps.");
             }
             if (insideRepeat && node is not ActivityNode and not ContextNode and not InferenceNode and not ConditionalNode and not CheckpointNode and not WaitNode)
             {
@@ -318,8 +350,8 @@ public sealed class FuwenZhinuWorkflowFactory
                     if (conditional.Merge is not null && insideFanOut)
                         throw new FuwenZhinuAdmissionException(
                             $"The sequential Zhinu adapter does not support value-producing conditional '{conditional.StructuralPath}' inside fan-out.");
-                    ValidateExecutableSubset(conditional.Then, insideFanOut, insideRepeat);
-                    ValidateExecutableSubset(conditional.Else, insideFanOut, insideRepeat);
+                    ValidateExecutableSubset(conditional.Then, insideFanOut, insideRepeat, coordinated);
+                    ValidateExecutableSubset(conditional.Else, insideFanOut, insideRepeat, coordinated);
                     break;
                 case FanOutNode fanOut:
                     if (insideFanOut)
@@ -332,7 +364,7 @@ public sealed class FuwenZhinuWorkflowFactory
                         throw new FuwenZhinuAdmissionException(
                             $"The sequential Zhinu adapter does not support fan-out '{fanOut.StructuralPath}' inside repeat; nested regions need iteration-scoped step keys.");
                     }
-                    ValidateExecutableSubset(fanOut.Body, insideFanOut: true, insideRepeat: false);
+                    ValidateExecutableSubset(fanOut.Body, insideFanOut: true, insideRepeat: false, coordinated);
                     break;
                 case RepeatNode repeat:
                     if (insideFanOut)
@@ -345,7 +377,7 @@ public sealed class FuwenZhinuWorkflowFactory
                         throw new FuwenZhinuAdmissionException(
                             $"The sequential Zhinu adapter does not support nested repeat '{repeat.StructuralPath}'; nested regions need iteration-scoped step keys.");
                     }
-                    ValidateExecutableSubset(repeat.Body, insideFanOut: false, insideRepeat: true);
+                    ValidateExecutableSubset(repeat.Body, insideFanOut: false, insideRepeat: true, coordinated);
                     break;
             }
         }
@@ -354,7 +386,10 @@ public sealed class FuwenZhinuWorkflowFactory
     private static void ValidateInferenceBindings(
         WorkflowPlan plan,
         IInferenceExecutorManifest? manifest,
-        IInferenceExecutorPreflight? preflight)
+        IInferenceExecutorPreflight? preflight,
+        IInferenceTurnExecutorManifest? turnManifest,
+        bool requiresProtocol,
+        bool hasReadToolExecutor)
     {
         foreach (var node in EnumerateNodes(plan.Nodes).OfType<InferenceNode>())
         {
@@ -375,8 +410,32 @@ public sealed class FuwenZhinuWorkflowFactory
                 }
             }
 
-            if (manifest is null && preflight is null)
-                continue;
+            if (manifest is null && preflight is null && turnManifest is null)
+            {
+                throw new FuwenZhinuAdmissionException(
+                    $"Inference node '{node.StructuralPath}' requires an adapter manifest or preflight implementation.");
+            }
+
+            // Only nodes carrying aggregate protocol limits take the
+            // coordinated path; one-call nodes keep their established behavior
+            // even when a turn executor is configured for other nodes.
+            var coordinated = requiresProtocol && node.Protocol is not null;
+            if (coordinated && !hasReadToolExecutor && node.Tools is { Count: > 0 })
+            {
+                throw new FuwenZhinuAdmissionException(
+                    $"Inference node '{node.StructuralPath}' declares model-callable tools for coordinated inference, " +
+                    "but no read-tool executor is configured.");
+            }
+
+            // The coordinator renders workflow-owned prompts itself; a
+            // registered template or alias has no renderer on this path, so
+            // reject it at admission rather than at runtime.
+            if (coordinated && (node.PromptTemplate is not null || promptTemplate is not null))
+            {
+                throw new FuwenZhinuAdmissionException(
+                    $"Inference node '{node.StructuralPath}' uses a registered prompt template, " +
+                    "but coordinated inference requires a workflow-owned prompt.");
+            }
 
             var requirement = new InferenceExecutionRequirement(
                 node.Profile,
@@ -385,15 +444,23 @@ public sealed class FuwenZhinuWorkflowFactory
                 node.Tools,
                 node.ContextRequirements is { Count: > 0 },
                 modality: null,
-                irVersion: plan.IrVersion);
-            var failure = manifest is not null
-                ? (manifest.PreflightDetailed(requirement) ?? throw new FuwenZhinuAdmissionException(
-                    "The configured inference executor returned no structured preflight report."))
+                limits: node.Protocol is null ? null : ToInferenceLimitSet(node.Protocol.Limits));
+            // Only coordinated nodes are preflighted against the turn
+            // executor; one-call nodes keep the one-call executor's manifest
+            // or preflight hook even when a turn executor is configured.
+            var nodeTurnManifest = coordinated ? turnManifest : null;
+            var failure = nodeTurnManifest is not null
+                ? (nodeTurnManifest.PreflightTurnDetailed(requirement) ?? throw new FuwenZhinuAdmissionException(
+                    "The configured turn executor returned no structured preflight report."))
                     .Failure
-                : preflight!.Preflight(requirement);
-            // Preserve the established v3-v8 failure vocabulary when a dual-
+                : manifest is not null
+                    ? (manifest.PreflightDetailed(requirement) ?? throw new FuwenZhinuAdmissionException(
+                        "The configured inference executor returned no structured preflight report."))
+                        .Failure
+                    : preflight!.Preflight(requirement);
+            // Preserve the established failure vocabulary when a dual-
             // capability adapter can explain the same structured rejection
-            // more specifically through its legacy compatibility surface.
+            // more specifically through its compatibility surface.
             if (failure is not null && manifest is not null && preflight is not null)
                 failure = preflight.Preflight(requirement) ?? failure;
             if (failure is not null)
@@ -402,6 +469,32 @@ public sealed class FuwenZhinuWorkflowFactory
                     $"Inference node '{node.StructuralPath}' failed executor preflight " +
                     $"[{failure.Code}]: {failure.Message}");
             }
+        }
+    }
+
+    private static InferenceLimitSet ToInferenceLimitSet(InferenceProtocolLimits limits)
+    {
+        ArgumentNullException.ThrowIfNull(limits);
+        var mapped = new List<InferenceLimit>();
+        Add(mapped, InferenceLimitDimension.Turns, limits.MaxTurns);
+        Add(mapped, InferenceLimitDimension.ModelCalls, limits.MaxModelCalls);
+        Add(mapped, InferenceLimitDimension.ToolCalls, limits.MaxToolCalls);
+        Add(mapped, InferenceLimitDimension.PromptTokens, limits.MaxPromptTokens);
+        Add(mapped, InferenceLimitDimension.CompletionTokens, limits.MaxCompletionTokens);
+        Add(mapped, InferenceLimitDimension.TotalTokens, limits.MaxTotalTokens);
+        Add(mapped, InferenceLimitDimension.DurationMilliseconds, limits.MaxDurationMilliseconds);
+        Add(mapped, InferenceLimitDimension.ToolArgumentBytes, limits.MaxToolArgumentBytes);
+        Add(mapped, InferenceLimitDimension.ToolResultBytes, limits.MaxToolResultBytes);
+        Add(mapped, InferenceLimitDimension.RetainedConversationBytes, limits.MaxRetainedConversationBytes);
+        Add(mapped, InferenceLimitDimension.RetainedEvidenceBytes, limits.MaxRetainedEvidenceBytes);
+        if (limits.Cost is not null)
+            mapped.Add(new InferenceLimit(InferenceLimitDimension.CostMicrounits, limits.Cost.MaximumMicrounits));
+        return new InferenceLimitSet(mapped);
+
+        static void Add(List<InferenceLimit> target, InferenceLimitDimension dimension, long? maximum)
+        {
+            if (maximum is not null)
+                target.Add(new InferenceLimit(dimension, maximum.Value));
         }
     }
 

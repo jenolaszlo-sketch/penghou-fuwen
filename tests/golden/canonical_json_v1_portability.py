@@ -105,10 +105,10 @@ for name, source, expected, expected_digest in vectors:
     )
 
 # Keep the original independent full-plan checks in this script as well.
+# Only the current IR is supported; legacy versioned vectors were removed in CI-2.
 root = Path(__file__).parent
 for filename, expected_digest in (
-    ("workflow_plan_v1.json", "e3a76cc4128c703637fd14555e95725908f3170c69831033413f5f9a11bfad8a"),
-    ("workflow_plan_v2.json", "2bf5c628bcecfdb0970730bc160ee10f2bcbf326875f30430e5b832fafe96571"),
+    ("workflow_plan_v1.json", "abefd1352b2211428a098711f49b813a97c71babe10368184b2169a9f73b7cfb"),
 ):
     plan = json.loads((root / filename).read_text(encoding="utf-8"), parse_int=Decimal, parse_float=Decimal)
     actual = canonical(plan).encode("utf-8")

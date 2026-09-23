@@ -41,7 +41,7 @@ public sealed class FuwenSourceFanOutTests
     }
 
     [Fact]
-    public async Task Fanout_over_string_list_with_key_and_yield_compiles_to_v4()
+    public async Task Fanout_over_string_list_with_key_and_yield_compiles_to_current_ir()
     {
         const string source = """
             workflow batch(input: list<string>[8]) -> list<string>[8] {
@@ -56,8 +56,8 @@ public sealed class FuwenSourceFanOutTests
         var result = await new FuwenSourceCompiler(Catalogue()).CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
         result.Succeeded.Should().BeTrue(string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
         result.Plan.Should().NotBeNull();
-        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersionV4);
-        result.Plan.CompilerSemanticVersion.Should().Be(FuwenContracts.CompilerSemanticVersionV4);
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersion);
+        result.Plan.CompilerSemanticVersion.Should().Be(FuwenContracts.CompilerSemanticVersion);
         result.Plan.Nodes.OfType<FanOutNode>().Should().ContainSingle();
         var fanOut = result.Plan.Nodes.OfType<FanOutNode>().Single();
         fanOut.Name.Should().Be("process");

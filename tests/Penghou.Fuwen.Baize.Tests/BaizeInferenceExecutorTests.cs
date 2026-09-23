@@ -556,6 +556,38 @@ public sealed class BaizeInferenceExecutorTests
     }
 
     [Fact]
+    public void Generation_accepts_current_aggregate_limits_without_provider_submission()
+    {
+        var (profile, prompt) = Descriptors();
+        var artifact = Descriptor(DescriptorKind.Artifact, "generated-image");
+        var client = new FakeGenerationClient(new GenerationResult([]));
+        var binding = new BaizeGenerationBinding(
+            profile, prompt, artifact, BaizeGenerationModality.Image,
+            "endpoint", "provider", "model", client,
+            request => new ImageGenerationRequest { Prompt = "draw", IdempotencyKey = request.Invocation.OperationKey },
+            new FakeGeneratedAssetPublisher());
+        var executor = new BaizeGenerationInferenceExecutor([binding]);
+        var requirement = new InferenceExecutionRequirement(
+            profile,
+            prompt,
+            null,
+            tools: null,
+            hasContextInputs: false,
+            modality: InferenceModality.Image,
+            limits: new InferenceLimitSet([
+                new(InferenceLimitDimension.Turns, 1),
+                new(InferenceLimitDimension.ModelCalls, 1),
+            ]));
+
+        var failure = executor.Preflight(requirement);
+        var report = executor.PreflightDetailed(requirement);
+
+        failure.Should().BeNull();
+        report.IsExecutable.Should().BeTrue();
+        client.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Generation_preflight_rejects_context_before_provider_submission()
     {
         var (profile, prompt) = Descriptors();
@@ -1213,14 +1245,6 @@ public sealed class BaizeInferenceExecutorTests
 
         var manifest = executor.FeatureManifest;
 
-        manifest.ProtocolRevision.Should().Be("fuwen-inference/v1");
-        manifest.SupportedIrVersions.Should().ContainInOrder(
-            FuwenContracts.IrVersionV3,
-            FuwenContracts.IrVersionV4,
-            FuwenContracts.IrVersionV5,
-            FuwenContracts.IrVersionV6,
-            FuwenContracts.IrVersionV7,
-            FuwenContracts.IrVersionV8);
         manifest.SupportedPromptForms.Should().ContainSingle().Which.Should().Be(InferencePromptForm.RegisteredTemplate);
         manifest.SupportedModalities.Should().ContainSingle().Which.Should().Be(InferenceModality.StructuredText);
         manifest.SupportedLimits.GetMaximum(InferenceLimitDimension.Turns).Should().Be(1);
@@ -1231,6 +1255,32 @@ public sealed class BaizeInferenceExecutorTests
         manifest.PricingQuality.Should().Be(InferencePricingQuality.Unknown);
         manifest.Profiles.Should().ContainSingle().Which.Should().Be(profile);
         manifest.PromptTemplates.Should().ContainSingle().Which.Should().Be(prompt);
+    }
+
+    [Fact]
+    public void Baize_accepts_supported_aggregate_limits_without_provider_work()
+    {
+        var (profile, prompt) = Descriptors();
+        var client = new FakeClient("\"must-not-run\"");
+        var executor = new BaizeInferenceExecutor([Binding(profile, prompt, client)]);
+        var requirement = new InferenceExecutionRequirement(
+            profile,
+            prompt,
+            null,
+            tools: null,
+            hasContextInputs: false,
+            modality: null,
+            limits: new InferenceLimitSet([
+                new(InferenceLimitDimension.Turns, 1),
+                new(InferenceLimitDimension.ModelCalls, 1),
+            ]));
+
+        var failure = executor.Preflight(requirement);
+        var report = executor.PreflightDetailed(requirement);
+
+        failure.Should().BeNull();
+        report.IsExecutable.Should().BeTrue();
+        client.Calls.Should().Be(0);
     }
 
     [Fact]
@@ -1291,7 +1341,7 @@ public sealed class BaizeInferenceExecutorTests
         new(kind, name, "1", new ContentDigest("sha256", "test", new string('a', 64)));
 
     private static ExecutionInvocation Invocation() =>
-        new("sha256:fuwen-execution/v3:" + new string('a', 64), "workflow/infer", "run/infer", "1", "sha256:req:" + new string('b', 64));
+        new("sha256:fuwen-execution/v1:" + new string('a', 64), "workflow/infer", "run/infer", "1", "sha256:req:" + new string('b', 64));
 
     private sealed class RecordingSink : IBaizeInferenceProvenanceSink
     {

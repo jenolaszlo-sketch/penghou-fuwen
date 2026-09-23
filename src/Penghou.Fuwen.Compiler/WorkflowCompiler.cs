@@ -171,18 +171,6 @@ public sealed class WorkflowCompiler
         if (CompilationDeadlineExceeded(started, budget, diagnostics, localUsage, out var deadlineFailure))
             return deadlineFailure!;
 
-        // v1 remains loadable as historical integrity-checked content, but it
-        // is never silently upgraded or accepted by the current compiler.
-        if (!IrVersions.SupportsExecutionOrder(plan.IrVersion))
-        {
-            diagnostics.Add(Diagnostic(
-                CompilerDiagnosticCodes.SemanticValidationFailed,
-                DiagnosticPhase.Validation,
-                "Historical IR v1 is integrity-loadable but is not accepted by the current compiler.",
-                plan.IrVersion));
-            return Failure(diagnostics, localUsage, budget);
-        }
-
         cancellationToken.ThrowIfCancellationRequested();
         var remainingMilliseconds = budget.MaxCompilationMilliseconds - PlanUsage.ElapsedMilliseconds(started);
         if (remainingMilliseconds <= 0)
@@ -542,12 +530,10 @@ internal static class WorkflowBindingValidator
         {
             if (location.Node is not RepeatNode repeat)
                 continue;
-            if (!IrVersions.SupportsRepeat(plan.IrVersion))
-                diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.SemanticValidationFailed, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Bounded repeat requires IR v6 or later, not '{plan.IrVersion}'.", path: repeat.StructuralPath));
             if (repeat.MaxIterations <= 0 || repeat.MaxIterations > 1000)
                 diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BudgetWorkflowNodesExceeded, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Repeat maximum iterations must be between 1 and 1000, not '{repeat.MaxIterations}'.", path: repeat.StructuralPath));
             if (!EquivalentExact(repeat.StateType, repeat.ResultType))
-                diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Repeat result type must equal the state type for v6 (single-state loop).", path: repeat.StructuralPath, expected: Describe(repeat.StateType), actual: Describe(repeat.ResultType)));
+                diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.BindingTypeMismatch, DiagnosticSeverity.Error, DiagnosticPhase.Typing, "Repeat result type must equal the declared state type.", path: repeat.StructuralPath, expected: Describe(repeat.StateType), actual: Describe(repeat.ResultType)));
             // Continue/break are evaluated after the body with body outputs and
             // the loop state in scope, so validate them as body-region consumers.
             // The initial state is evaluated before the first iteration in the
@@ -576,8 +562,7 @@ internal static class WorkflowBindingValidator
                     else
                         ValidateCallableNode(inference.Profile, DescriptorKind.InferenceProfile, inference.Arguments, inference.OutputType, location, plan, locations, descriptors, diagnostics);
                     ValidateInferenceTools(inference, location, descriptors, diagnostics);
-                    ValidateInferenceLimits(inference, plan, diagnostics);
-                    if (IrVersions.SupportsTypedContextRequirements(plan.IrVersion))
+                    ValidateInferenceLimits(inference, diagnostics);
                     {
                         var contextNames = new HashSet<string>(StringComparer.Ordinal);
                         var contextSources = new HashSet<string>(StringComparer.Ordinal);
@@ -615,32 +600,6 @@ internal static class WorkflowBindingValidator
                             ValidateBinding(requirement.Source, requirement.ExpectedType, location, plan, locations, diagnostics, CompilerDiagnosticCodes.ContextRequirementTypeMismatch, exact: true);
                         }
                     }
-                    else
-                    {
-                        var contextSources = new HashSet<string>(StringComparer.Ordinal);
-                        foreach (var snapshot in inference.ContextSnapshots)
-                        {
-                            if (!contextSources.Add(snapshot.NodePath))
-                            {
-                                diagnostics.Add(new CompilerDiagnostic(
-                                    CompilerDiagnosticCodes.ContextSnapshotDuplicate,
-                                    DiagnosticSeverity.Error,
-                                    DiagnosticPhase.Binding,
-                                    $"Inference node '{inference.StructuralPath}' repeats context snapshot '{snapshot.NodePath}'.",
-                                    path: inference.StructuralPath));
-                            }
-                            else if (!locations.TryGetValue(snapshot.NodePath, out var source) || source.Node is not ContextNode)
-                            {
-                                diagnostics.Add(new CompilerDiagnostic(
-                                    CompilerDiagnosticCodes.ContextSnapshotInvalid,
-                                    DiagnosticSeverity.Error,
-                                    DiagnosticPhase.Binding,
-                                    $"Inference context snapshot '{snapshot.NodePath}' must reference a ContextNode.",
-                                    path: inference.StructuralPath));
-                            }
-                            ValidateBinding(snapshot, null, location, plan, locations, diagnostics);
-                        }
-                    }
                     break;
                 case ActivityNode activity:
                     ValidateCallableNode(activity.Activity, DescriptorKind.Activity, activity.Arguments, activity.OutputType, location, plan, locations, descriptors, diagnostics);
@@ -649,8 +608,6 @@ internal static class WorkflowBindingValidator
                     ValidateCondition(conditional.Condition, location, plan, locations, diagnostics);
                     if (conditional.Merge is not null)
                     {
-                        if (!IrVersions.SupportsConditionalMerge(plan.IrVersion))
-                            diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.SemanticValidationFailed, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Value-producing conditionals require IR v5 or later, not '{plan.IrVersion}'.", path: conditional.StructuralPath));
                         // Merge bindings are validated as if consumed inside their own
                         // branch region, so the existing closed-region rule applies:
                         // each side may only see its own branch (plus region-free
@@ -667,8 +624,6 @@ internal static class WorkflowBindingValidator
                     ValidateBinding(checkpoint.Value, checkpoint.OutputType, location, plan, locations, diagnostics, exact: true);
                     break;
                 case WaitNode wait:
-                    if (!IrVersions.SupportsInteractionGates(plan.IrVersion))
-                        diagnostics.Add(new CompilerDiagnostic(CompilerDiagnosticCodes.SemanticValidationFailed, DiagnosticSeverity.Error, DiagnosticPhase.Validation, $"Wait nodes require IR v7 or later, not '{plan.IrVersion}'.", path: wait.StructuralPath));
                     break;
                 case ReturnNode @return:
                     ValidateBinding(@return.Value, plan.OutputType, location, plan, locations, diagnostics);
@@ -859,21 +814,10 @@ internal static class WorkflowBindingValidator
 
     private static void ValidateInferenceLimits(
         InferenceNode inference,
-        WorkflowPlan plan,
         List<CompilerDiagnostic> diagnostics)
     {
         if (inference.Limits is null)
             return;
-        if (!IrVersions.SupportsWorkflowPrompts(plan.IrVersion))
-        {
-            diagnostics.Add(new CompilerDiagnostic(
-                CompilerDiagnosticCodes.SemanticValidationFailed,
-                DiagnosticSeverity.Error,
-                DiagnosticPhase.Validation,
-                $"Inference limits require IR v8 or later, not '{plan.IrVersion}'.",
-                path: inference.StructuralPath));
-        }
-
         if (inference.Limits.MaxTokens is not null &&
             (inference.Limits.MaxTokens < 1 || inference.Limits.MaxTokens > 1_000_000))
         {
@@ -1395,6 +1339,7 @@ internal static class PlanUsage
                 case InferenceNode inference:
                     CountArguments(inference.Arguments, ref expressions);
                     expressions += inference.ContextRequirements?.Count ?? inference.ContextSnapshots.Count;
+                    expressions += CountProtocolLimits(inference.Protocol);
                     break;
                 case ActivityNode activity:
                     CountArguments(activity.Arguments, ref expressions);
@@ -1441,6 +1386,26 @@ internal static class PlanUsage
             var depth = 0;
             CountBinding(argument.Value, 1, ref expressions, ref depth);
         }
+    }
+
+    private static int CountProtocolLimits(InferenceProtocol? protocol)
+    {
+        if (protocol is null)
+            return 0;
+
+        var limits = protocol.Limits;
+        return (limits.MaxTurns is not null ? 1 : 0) +
+            (limits.MaxModelCalls is not null ? 1 : 0) +
+            (limits.MaxToolCalls is not null ? 1 : 0) +
+            (limits.MaxPromptTokens is not null ? 1 : 0) +
+            (limits.MaxCompletionTokens is not null ? 1 : 0) +
+            (limits.MaxTotalTokens is not null ? 1 : 0) +
+            (limits.MaxDurationMilliseconds is not null ? 1 : 0) +
+            (limits.MaxToolArgumentBytes is not null ? 1 : 0) +
+            (limits.MaxToolResultBytes is not null ? 1 : 0) +
+            (limits.MaxRetainedConversationBytes is not null ? 1 : 0) +
+            (limits.MaxRetainedEvidenceBytes is not null ? 1 : 0) +
+            (limits.Cost is not null ? 1 : 0);
     }
 
     private static void CountBinding(Binding binding, int currentDepth, ref int expressions, ref int depth)
@@ -1563,6 +1528,8 @@ internal static class PlanUsage
                             AddBindingText(requirement.Source, ref bytes);
                             AddTypeText(requirement.ExpectedType, ref bytes);
                         }
+                    if (inference.Protocol?.Limits.Cost is not null)
+                        AddText(inference.Protocol.Limits.Cost.Currency, ref bytes);
                     break;
                 case ActivityNode activity:
                     AddDescriptorText(activity.Activity, ref bytes);

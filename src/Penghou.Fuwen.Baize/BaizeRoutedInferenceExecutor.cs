@@ -137,8 +137,6 @@ public sealed class BaizeRoutedInferenceExecutor : IInferenceExecutor, IInferenc
 
     private static InferenceFeatureManifest CreateConservativeManifest() =>
         new(
-            protocolRevision: "fuwen-inference/v1",
-            supportedIrVersions: [],
             supportedPromptForms: [],
             supportedModalities: [],
             supportsContextDelivery: false,

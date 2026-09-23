@@ -5,62 +5,14 @@ namespace Penghou.Fuwen;
 /// <summary>Canonicalization and fingerprint contracts supported by the Fuwen IR.</summary>
 public static class FuwenContracts
 {
-    /// <summary>The historical v1 executable-plan contract.</summary>
+    /// <summary>The current executable-plan contract.</summary>
     public const string IrVersion = "fuwen-ir/v1";
-    /// <summary>The historical v1 executable-plan contract.</summary>
-    public const string IrVersionV1 = IrVersion;
-    /// <summary>The structured execution-schedule executable-plan contract.</summary>
-    public const string IrVersionV2 = "fuwen-ir/v2";
-    /// <summary>The typed-context-requirements executable-plan contract.</summary>
-    public const string IrVersionV3 = "fuwen-ir/v3";
-    /// <summary>The keyed fan-out executable-plan contract.</summary>
-    public const string IrVersionV4 = "fuwen-ir/v4";
-    /// <summary>The value-producing conditional executable-plan contract.</summary>
-    public const string IrVersionV5 = "fuwen-ir/v5";
-    /// <summary>The bounded repeat executable-plan contract.</summary>
-    public const string IrVersionV6 = "fuwen-ir/v6";
-    /// <summary>The interaction gates (checkpoint + wait) executable-plan contract.</summary>
-    public const string IrVersionV7 = "fuwen-ir/v7";
-    /// <summary>The self-describing inference (workflow-owned prompts) executable-plan contract.</summary>
-    public const string IrVersionV8 = "fuwen-ir/v8";
-    /// <summary>The historical v1 compiler-semantics contract.</summary>
+    /// <summary>The current compiler-semantics contract.</summary>
     public const string CompilerSemanticVersion = "compiler-semantics/1";
-    /// <summary>The historical v1 compiler-semantics contract.</summary>
-    public const string CompilerSemanticVersionV1 = CompilerSemanticVersion;
-    /// <summary>The exact compiler-semantics contract required by IR v2.</summary>
-    public const string CompilerSemanticVersionV2 = "compiler-semantics/2";
-    /// <summary>The compiler-semantics contract for typed context requirements.</summary>
-    public const string CompilerSemanticVersionV3 = "compiler-semantics/3";
-    /// <summary>The compiler-semantics contract for keyed fan-out.</summary>
-    public const string CompilerSemanticVersionV4 = "compiler-semantics/4";
-    /// <summary>The compiler-semantics contract for value-producing conditionals.</summary>
-    public const string CompilerSemanticVersionV5 = "compiler-semantics/5";
-    /// <summary>The compiler-semantics contract for bounded repeat.</summary>
-    public const string CompilerSemanticVersionV6 = "compiler-semantics/6";
-    /// <summary>The compiler-semantics contract for interaction gates.</summary>
-    public const string CompilerSemanticVersionV7 = "compiler-semantics/7";
-    /// <summary>The compiler-semantics contract for workflow-owned prompts.</summary>
-    public const string CompilerSemanticVersionV8 = "compiler-semantics/8";
     /// <summary>The canonical JSON contract used by all currently supported IR versions.</summary>
     public const string CanonicalJsonVersion = "penghou-canonical-json/v1";
-    /// <summary>The historical v1 execution fingerprint envelope.</summary>
+    /// <summary>The current execution fingerprint envelope.</summary>
     public const string ExecutionFingerprintVersion = "fuwen-execution/v1";
-    /// <summary>The historical v1 execution fingerprint envelope.</summary>
-    public const string ExecutionFingerprintVersionV1 = ExecutionFingerprintVersion;
-    /// <summary>The v2 execution fingerprint envelope for scheduled plans.</summary>
-    public const string ExecutionFingerprintVersionV2 = "fuwen-execution/v2";
-    /// <summary>The execution fingerprint envelope for typed context requirements.</summary>
-    public const string ExecutionFingerprintVersionV3 = "fuwen-execution/v3";
-    /// <summary>The execution fingerprint envelope for keyed fan-out.</summary>
-    public const string ExecutionFingerprintVersionV4 = "fuwen-execution/v4";
-    /// <summary>The execution fingerprint envelope for value-producing conditionals.</summary>
-    public const string ExecutionFingerprintVersionV5 = "fuwen-execution/v5";
-    /// <summary>The execution fingerprint envelope for bounded repeat.</summary>
-    public const string ExecutionFingerprintVersionV6 = "fuwen-execution/v6";
-    /// <summary>The execution fingerprint envelope for interaction gates.</summary>
-    public const string ExecutionFingerprintVersionV7 = "fuwen-execution/v7";
-    /// <summary>The execution fingerprint envelope for workflow-owned prompts.</summary>
-    public const string ExecutionFingerprintVersionV8 = "fuwen-execution/v8";
     /// <summary>The first canonical authored-source fingerprint envelope.</summary>
     public const string SourceFingerprintVersion = "fuwen-source/v1";
     /// <summary>The maximum persisted canonical IR size accepted by the core verifier.</summary>
@@ -96,7 +48,7 @@ public sealed record ContextRequirement(
 
 /// <summary>
 /// Executes structured or media inference through a resolved profile, either
-/// with a registered prompt template and descriptor arguments (legacy) or
+/// with a registered prompt template and descriptor arguments or
 /// with a workflow-owned prompt reference and typed prompt bindings.
 /// Exactly one prompt source is set: <see cref="PromptTemplate"/> is null
 /// if and only if <see cref="PromptName"/> names a plan prompt definition.
@@ -120,7 +72,9 @@ public sealed record InferenceNode(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     IReadOnlyList<DescriptorReference>? Tools = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    InferenceLimits? Limits = null) : WorkflowNode(Name, StructuralPath);
+    InferenceLimits? Limits = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    InferenceProtocol? Protocol = null) : WorkflowNode(Name, StructuralPath);
 
 /// <summary>Executes one trusted catalogue activity.</summary>
 public sealed record ActivityNode(
@@ -134,6 +88,128 @@ public sealed record ActivityNode(
 /// <param name="MaxTokens">Maximum model output tokens.</param>
 /// <param name="TimeoutSeconds">Wall-clock ceiling per attempt.</param>
 public sealed record InferenceLimits(int? MaxTokens, int? TimeoutSeconds);
+
+/// <summary>
+/// Aggregate bounds for one inference node. These bounds cap the complete
+/// activity, rather than a single model attempt. A null member means the
+/// workflow does not declare that particular aggregate bound; adapters must
+/// supply a finite host policy before executing a plan that omits a bound.
+/// </summary>
+public sealed record InferenceProtocolLimits
+{
+    /// <summary>Maximum model turns in the complete inference activity.</summary>
+    public long? MaxTurns { get; }
+    /// <summary>Maximum model calls in the complete inference activity.</summary>
+    public long? MaxModelCalls { get; }
+    /// <summary>Maximum tool calls in the complete inference activity.</summary>
+    public long? MaxToolCalls { get; }
+    /// <summary>Maximum prompt tokens consumed by the complete activity.</summary>
+    public long? MaxPromptTokens { get; }
+    /// <summary>Maximum completion tokens produced by the complete activity.</summary>
+    public long? MaxCompletionTokens { get; }
+    /// <summary>Maximum total tokens consumed by the complete activity.</summary>
+    public long? MaxTotalTokens { get; }
+    /// <summary>Maximum wall-clock duration in seconds for the complete activity.</summary>
+    public long? MaxDurationMilliseconds { get; }
+    /// <summary>Maximum aggregate tool-argument bytes for the complete activity.</summary>
+    public long? MaxToolArgumentBytes { get; }
+    /// <summary>Maximum aggregate tool-result bytes for the complete activity.</summary>
+    public long? MaxToolResultBytes { get; }
+    /// <summary>Maximum retained conversation bytes for the complete activity.</summary>
+    public long? MaxRetainedConversationBytes { get; }
+    /// <summary>Maximum retained evidence bytes for the complete activity.</summary>
+    public long? MaxRetainedEvidenceBytes { get; }
+    /// <summary>Optional aggregate monetary ceiling.</summary>
+    public InferenceCostLimit? Cost { get; }
+
+    /// <summary>Creates immutable aggregate bounds after validating each supplied bound.</summary>
+    public InferenceProtocolLimits(
+        long? maxTurns = null,
+        long? maxModelCalls = null,
+        long? maxToolCalls = null,
+        long? maxPromptTokens = null,
+        long? maxCompletionTokens = null,
+        long? maxTotalTokens = null,
+        long? maxDurationMilliseconds = null,
+        long? maxToolArgumentBytes = null,
+        long? maxToolResultBytes = null,
+        long? maxRetainedConversationBytes = null,
+        long? maxRetainedEvidenceBytes = null,
+        InferenceCostLimit? cost = null)
+    {
+        MaxTurns = PositiveOrNull(maxTurns, nameof(maxTurns));
+        MaxModelCalls = PositiveOrNull(maxModelCalls, nameof(maxModelCalls));
+        MaxToolCalls = PositiveOrNull(maxToolCalls, nameof(maxToolCalls));
+        MaxPromptTokens = PositiveOrNull(maxPromptTokens, nameof(maxPromptTokens));
+        MaxCompletionTokens = PositiveOrNull(maxCompletionTokens, nameof(maxCompletionTokens));
+        MaxTotalTokens = PositiveOrNull(maxTotalTokens, nameof(maxTotalTokens));
+        MaxDurationMilliseconds = PositiveOrNull(maxDurationMilliseconds, nameof(maxDurationMilliseconds));
+        MaxToolArgumentBytes = PositiveOrNull(maxToolArgumentBytes, nameof(maxToolArgumentBytes));
+        MaxToolResultBytes = PositiveOrNull(maxToolResultBytes, nameof(maxToolResultBytes));
+        MaxRetainedConversationBytes = PositiveOrNull(maxRetainedConversationBytes, nameof(maxRetainedConversationBytes));
+        MaxRetainedEvidenceBytes = PositiveOrNull(maxRetainedEvidenceBytes, nameof(maxRetainedEvidenceBytes));
+        Cost = cost;
+
+        if (MaxPromptTokens is not null && MaxTotalTokens is not null && MaxPromptTokens > MaxTotalTokens)
+            throw new ArgumentOutOfRangeException(nameof(maxPromptTokens), "prompt-token bound cannot exceed total-token bound");
+        if (MaxCompletionTokens is not null && MaxTotalTokens is not null && MaxCompletionTokens > MaxTotalTokens)
+            throw new ArgumentOutOfRangeException(nameof(maxCompletionTokens), "completion-token bound cannot exceed total-token bound");
+    }
+
+    private const long MaximumAggregateLimit = 1_000_000_000_000_000;
+
+    private static long? PositiveOrNull(long? value, string parameterName)
+    {
+        if (value is <= 0)
+            throw new ArgumentOutOfRangeException(parameterName, value, "aggregate limits must be positive when specified");
+        if (value > MaximumAggregateLimit)
+            throw new ArgumentOutOfRangeException(parameterName, value, "aggregate limits exceed the supported bound");
+        return value;
+    }
+}
+
+/// <summary>Deterministic monetary ceiling for aggregate inference usage.</summary>
+public sealed record InferenceCostLimit
+{
+    private const int MaximumTextUtf8Bytes = 256;
+
+    /// <summary>ISO-like host currency identifier.</summary>
+    public string Currency { get; }
+    /// <summary>Maximum spend in the currency's fixed microunit.</summary>
+    public long MaximumMicrounits { get; }
+
+    /// <summary>Creates an immutable, bounded monetary ceiling.</summary>
+    public InferenceCostLimit(string currency, long maximumMicrounits)
+    {
+        Currency = BoundedText(currency, nameof(currency));
+        if (maximumMicrounits <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maximumMicrounits), maximumMicrounits, "cost limits must be positive");
+        MaximumMicrounits = maximumMicrounits;
+    }
+
+    private static string BoundedText(string value, string parameterName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);
+        if (System.Text.Encoding.UTF8.GetByteCount(value) > MaximumTextUtf8Bytes)
+            throw new ArgumentException($"{parameterName} exceeds the bounded UTF-8 length.", parameterName);
+        return value;
+    }
+}
+
+/// <summary>
+/// Current implementation contract for bounded inference.
+/// </summary>
+public sealed record InferenceProtocol
+{
+    /// <summary>Immutable aggregate bounds for the logical inference activity.</summary>
+    public InferenceProtocolLimits Limits { get; }
+
+    /// <summary>Creates an immutable protocol contract.</summary>
+    public InferenceProtocol(InferenceProtocolLimits limits)
+    {
+        Limits = limits ?? throw new ArgumentNullException(nameof(limits));
+    }
+}
 
 /// <summary>The explicit merge declaration for a value-producing conditional.</summary>
 public sealed record ConditionalMerge(
@@ -223,7 +299,7 @@ public enum ApprovalOutcome
     Denied,
 }
 
-/// <summary>The explicit completion schedule for an IR v2 workflow.</summary>
+/// <summary>The explicit completion schedule for a workflow.</summary>
 public sealed record WorkflowExecutionOrder(
     IReadOnlyList<WorkflowExecutionRegion> Regions);
 

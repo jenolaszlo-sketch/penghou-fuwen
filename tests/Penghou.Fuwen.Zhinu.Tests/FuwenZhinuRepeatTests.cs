@@ -150,7 +150,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         var admission = await AdmitRepeatInferenceAsync();
         var context = new LoopSuffixContext(".cx");
         var inference = new LoopSuffixInference(".inf");
-        var ports = new FuwenZhinuExecutionPorts(new UnusedActivity(), context, inference);
+        var ports = new FuwenZhinuExecutionPorts(new UnusedActivity(), context, CurrentInferenceFixture.WithPreflight(inference));
         var registration = await new FuwenZhinuWorkflowFactory(
                 new InMemoryWorkflowDefinitionStore(),
                 IdentityFor(admission),
@@ -206,7 +206,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                         [new ArgumentBinding("request", new LoopStateBinding([]))], str),
                     new InferenceNode("answer", answerPath, profileDesc, templateDesc,
                         [new ArgumentBinding("request", new NodeOutputBinding(cxPath, []))], [], str,
-                        [new ContextRequirement("cx", new NodeOutputBinding(cxPath, []), str)]),
+                        [new ContextRequirement("cx", new NodeOutputBinding(cxPath, []), str)],
+                        Protocol: CurrentInferenceFixture.OneCallProtocol),
                 ],
                 new NodeOutputBinding(answerPath, []),
                 new ConditionExpression(ConditionOperator.Equal, new LoopIterationBinding([]), new LiteralBinding(JsonDocument.Parse("2").RootElement.Clone())),
@@ -216,7 +217,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([loopPath]), new WorkflowExecutionPhase([returnPath])]),
                 new WorkflowExecutionRegion("demo/loop1/$body", [new WorkflowExecutionPhase([cxPath]), new WorkflowExecutionPhase([answerPath])]),
             ]))
-            .BuildV6();
+            .Build();
         var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
                 new InMemoryTrustedCatalogue([
                     new TrustedCatalogueDescriptor(contextDesc, callableContract: new CallableContract(new CallableSignature([new CallableParameter("request", str)], str), CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
@@ -282,7 +283,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([loopPath]), new WorkflowExecutionPhase([returnPath])]),
                 new WorkflowExecutionRegion("demo/loop1/$body", [new WorkflowExecutionPhase([stepPath])]),
             ]))
-            .BuildV6();
+            .Build();
         var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
                 new InMemoryTrustedCatalogue([
                     new TrustedCatalogueDescriptor(activityDesc, callableContract: new CallableContract(new CallableSignature([new CallableParameter("value", str)], str), CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
@@ -348,7 +349,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([loopPath]), new WorkflowExecutionPhase([returnPath])]),
                 new WorkflowExecutionRegion("demo/loop1/$body", [new WorkflowExecutionPhase([stepPath])]),
             ]))
-            .BuildV6();
+            .Build();
         var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
                 new InMemoryTrustedCatalogue([
                     new TrustedCatalogueDescriptor(flagSchemaDescriptor, schemaDefinition: flagSchema),
@@ -433,7 +434,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                     new WorkflowExecutionPhase([tailPath]),
                 ]),
             ]))
-            .BuildV6();
+            .Build();
         var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
                 new InMemoryTrustedCatalogue([
                     new TrustedCatalogueDescriptor(flagSchemaDescriptor, schemaDefinition: flagSchema),
@@ -530,7 +531,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([prepPath]), new WorkflowExecutionPhase([loopPath]), new WorkflowExecutionPhase([returnPath])]),
                 new WorkflowExecutionRegion("demo/loop1/$body", [new WorkflowExecutionPhase([stepPath])]),
             ]))
-            .BuildV6();
+            .Build();
         var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
                 new InMemoryTrustedCatalogue([
                     new TrustedCatalogueDescriptor(activityDesc, callableContract: new CallableContract(new CallableSignature([new CallableParameter("value", str)], str), CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
@@ -601,7 +602,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([loopPath]), new WorkflowExecutionPhase([returnPath])]),
                 new WorkflowExecutionRegion("demo/loop1/$body", [new WorkflowExecutionPhase([stepPath])]),
             ]))
-            .BuildV6();
+            .Build();
         var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
                 new InMemoryTrustedCatalogue([
                     new TrustedCatalogueDescriptor(activityDesc, callableContract: new CallableContract(new CallableSignature([new CallableParameter("value", str)], str), CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),

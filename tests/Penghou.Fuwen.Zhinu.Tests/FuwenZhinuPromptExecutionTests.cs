@@ -45,7 +45,8 @@ public sealed class FuwenZhinuPromptExecutionTests
                 stringType,
                 [],
                 "greet",
-                [new PromptBinding("name", new InputBinding([]))]))
+                [new PromptBinding("name", new InputBinding([]))],
+                Protocol: CurrentInferenceFixture.OneCallProtocol))
             .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(greetPath, [])))
             .SetExecutionOrder(new WorkflowExecutionOrder([
                 new WorkflowExecutionRegion("greet", [
@@ -53,7 +54,7 @@ public sealed class FuwenZhinuPromptExecutionTests
                     new WorkflowExecutionPhase([returnPath]),
                 ]),
             ]))
-            .BuildV8();
+            .Build();
     }
 
     private static ITrustedCatalogue Catalogue()
@@ -90,7 +91,7 @@ public sealed class FuwenZhinuPromptExecutionTests
                 new FuwenZhinuProviderRuntimeIdentity(
                     admission.Receipt!.CatalogueSnapshotRevision,
                     admission.Receipt.ResolvedDescriptorSetFingerprint),
-                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), inference))
+                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), CurrentInferenceFixture.WithPreflight(inference)))
             .CreateAsync("greet", "1", admission, ct);
         var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -142,7 +143,8 @@ public sealed class FuwenZhinuPromptExecutionTests
                 [],
                 "greet",
                 [new PromptBinding("name", new InputBinding([]))],
-                [tool]))
+                [tool],
+                Protocol: CurrentInferenceFixture.OneCallProtocol))
             .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(greetPath, [])))
             .SetExecutionOrder(new WorkflowExecutionOrder([
                 new WorkflowExecutionRegion("greet", [
@@ -150,7 +152,7 @@ public sealed class FuwenZhinuPromptExecutionTests
                     new WorkflowExecutionPhase([returnPath]),
                 ]),
             ]))
-            .BuildV8();
+            .Build();
         var admission = await new WorkflowAdmissionService(new WorkflowCompiler(
                 new InMemoryTrustedCatalogue([
                     new TrustedCatalogueDescriptor(
@@ -175,7 +177,7 @@ public sealed class FuwenZhinuPromptExecutionTests
                 new FuwenZhinuProviderRuntimeIdentity(
                     admission.Receipt!.CatalogueSnapshotRevision,
                     admission.Receipt.ResolvedDescriptorSetFingerprint),
-                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), inference))
+                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), CurrentInferenceFixture.WithPreflight(inference)))
             .CreateAsync("greet", "1", admission, ct);
         var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -211,7 +213,8 @@ public sealed class FuwenZhinuPromptExecutionTests
             .AddCatalogueBinding(profile)
             .AddCatalogueBinding(template)
             .AddNode(new InferenceNode(
-                "infer", inferPath, profile, template, [], [], str, []))
+                "infer", inferPath, profile, template, [], [], str, [],
+                Protocol: CurrentInferenceFixture.OneCallProtocol))
             .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(inferPath, [])))
             .SetExecutionOrder(new WorkflowExecutionOrder([
                 new WorkflowExecutionRegion("template", [
@@ -219,7 +222,7 @@ public sealed class FuwenZhinuPromptExecutionTests
                     new WorkflowExecutionPhase([returnPath]),
                 ]),
             ]))
-            .BuildV8();
+            .Build();
         var catalogue = new InMemoryTrustedCatalogue([
             new TrustedCatalogueDescriptor(
                 profile,
@@ -240,7 +243,7 @@ public sealed class FuwenZhinuPromptExecutionTests
                 new FuwenZhinuProviderRuntimeIdentity(
                     admission.Receipt!.CatalogueSnapshotRevision,
                     admission.Receipt.ResolvedDescriptorSetFingerprint),
-                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), inference))
+                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), CurrentInferenceFixture.WithPreflight(inference)))
             .CreateAsync("template", "1", admission, ct);
         var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -275,7 +278,7 @@ public sealed class FuwenZhinuPromptExecutionTests
                 new FuwenZhinuProviderRuntimeIdentity(
                     admission.Receipt!.CatalogueSnapshotRevision,
                     admission.Receipt.ResolvedDescriptorSetFingerprint),
-                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), inference))
+                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), CurrentInferenceFixture.WithPreflight(inference)))
             .CreateAsync("greet", "1", admission, ct);
         var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -322,7 +325,7 @@ public sealed class FuwenZhinuPromptExecutionTests
                 new FuwenZhinuProviderRuntimeIdentity(
                     catalogue.SnapshotRevision,
                     admission.Receipt!.ResolvedDescriptorSetFingerprint),
-                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), inference))
+                new FuwenZhinuExecutionPorts(new UnusedActivity(), new UnusedContext(), CurrentInferenceFixture.WithPreflight(inference)))
             .CreateAsync("alias", "1", admission, ct);
         var root = Path.Combine(Path.GetTempPath(), "penghou-fuwen-zhinu", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -426,7 +429,6 @@ public sealed class FuwenZhinuPromptExecutionTests
         await act.Should().ThrowAsync<FuwenZhinuAdmissionException>()
             .WithMessage("*failed executor preflight*");
         inference.StructuredPreflightCalls.Should().Be(1);
-        inference.RequiredIrVersion.Should().Be(FuwenContracts.IrVersionV8);
         inference.ProviderCalls.Should().Be(0);
         store.Writes.Should().Be(0);
     }
@@ -483,7 +485,7 @@ public sealed class FuwenZhinuPromptExecutionTests
         ]);
         var source =
             $"prompt standard_greeting(name: string) uses registered \"sample.template@1#{new string('b', 64)}\";\n" +
-            $"workflow answer(input: string) -> string {{ infer infer = infer \"sample.profile@1#{new string('a', 64)}\" prompt standard_greeting(name: input;) -> string; return infer; }}";
+            $"workflow answer(input: string) -> string {{ infer infer = infer \"sample.profile@1#{new string('a', 64)}\" prompt standard_greeting(name: input;) limits aggregate turns 1 modelCalls 1 -> string; return infer; }}";
         var compiled = await new FuwenSourceCompiler(catalogue)
             .CompileAsync(source, cancellationToken: cancellationToken);
         compiled.Succeeded.Should().BeTrue(
@@ -559,8 +561,6 @@ public sealed class FuwenZhinuPromptExecutionTests
     private sealed class ManifestInference : IInferenceExecutor, IInferenceExecutorManifest
     {
         private static readonly InferenceFeatureManifest Manifest = new(
-            protocolRevision: "unsupported/protocol",
-            supportedIrVersions: [FuwenContracts.IrVersionV8],
             supportedPromptForms: [InferencePromptForm.WorkflowOwned],
             supportedModalities: [InferenceModality.StructuredText],
             supportsContextDelivery: false,
@@ -572,14 +572,12 @@ public sealed class FuwenZhinuPromptExecutionTests
             pricingQuality: InferencePricingQuality.Unknown);
 
         public int StructuredPreflightCalls { get; private set; }
-        public string? RequiredIrVersion { get; private set; }
         public int ProviderCalls { get; private set; }
         public InferenceFeatureManifest FeatureManifest => Manifest;
 
         public InferencePreflightReport PreflightDetailed(InferenceExecutionRequirement requirement)
         {
             StructuredPreflightCalls++;
-            RequiredIrVersion = requirement.IrVersion;
             return InferencePreflight.Evaluate(requirement, Manifest);
         }
 

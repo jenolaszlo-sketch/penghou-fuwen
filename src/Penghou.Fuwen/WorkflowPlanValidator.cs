@@ -35,15 +35,12 @@ public static class WorkflowPlanValidator
         {
             if (conditional.Merge is not null)
             {
-                if (!IrVersions.SupportsConditionalMerge(plan.IrVersion))
-                    throw new ArgumentException($"Value-producing conditionals require IR v5 or later, not '{plan.IrVersion}'.", nameof(plan.Nodes));
                 ValidateType(conditional.Merge.ResultType);
             }
         }
         ValidateCatalogueClosure(plan);
 
-        if (IrVersions.SupportsExecutionOrder(plan.IrVersion))
-            ValidateExecutionOrder(plan, nodes);
+        ValidateExecutionOrder(plan, nodes);
     }
 
     /// <summary>
@@ -53,46 +50,24 @@ public static class WorkflowPlanValidator
     internal static void ValidateCompatibility(WorkflowPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        var isV1 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV1, StringComparison.Ordinal);
-        var isV2 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV2, StringComparison.Ordinal);
-        var isV3 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal);
-        var isV4 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal);
-        var isV5 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV5, StringComparison.Ordinal);
-        var isV6 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV6, StringComparison.Ordinal);
-        var isV7 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV7, StringComparison.Ordinal);
-        var isV8 = string.Equals(plan.IrVersion, FuwenContracts.IrVersionV8, StringComparison.Ordinal);
-        if (!isV1 && !isV2 && !isV3 && !isV4 && !isV5 && !isV6 && !isV7 && !isV8)
+        if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersion, StringComparison.Ordinal))
             throw new NotSupportedException(
-                $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'. Expected '{FuwenContracts.IrVersionV1}', '{FuwenContracts.IrVersionV2}', '{FuwenContracts.IrVersionV3}', '{FuwenContracts.IrVersionV4}', '{FuwenContracts.IrVersionV5}', '{FuwenContracts.IrVersionV6}', '{FuwenContracts.IrVersionV7}', or '{FuwenContracts.IrVersionV8}'.");
+                $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'. Expected '{FuwenContracts.IrVersion}'.");
 
         RequireVersion(plan.CanonicalJsonVersion, FuwenContracts.CanonicalJsonVersion, nameof(plan.CanonicalJsonVersion));
-        var expectedFingerprint = isV1
-            ? FuwenContracts.ExecutionFingerprintVersionV1
-            : isV2 ? FuwenContracts.ExecutionFingerprintVersionV2 : isV3 ? FuwenContracts.ExecutionFingerprintVersionV3 : isV4 ? FuwenContracts.ExecutionFingerprintVersionV4 : isV5 ? FuwenContracts.ExecutionFingerprintVersionV5 : isV6 ? FuwenContracts.ExecutionFingerprintVersionV6 : isV7 ? FuwenContracts.ExecutionFingerprintVersionV7 : FuwenContracts.ExecutionFingerprintVersionV8;
-        RequireVersion(plan.FingerprintVersion, expectedFingerprint, nameof(plan.FingerprintVersion));
-        var expectedCompilerSemantics = isV1
-            ? FuwenContracts.CompilerSemanticVersionV1
-            : isV2 ? FuwenContracts.CompilerSemanticVersionV2 : isV3 ? FuwenContracts.CompilerSemanticVersionV3 : isV4 ? FuwenContracts.CompilerSemanticVersionV4 : isV5 ? FuwenContracts.CompilerSemanticVersionV5 : isV6 ? FuwenContracts.CompilerSemanticVersionV6 : isV7 ? FuwenContracts.CompilerSemanticVersionV7 : FuwenContracts.CompilerSemanticVersionV8;
-        RequireVersion(plan.CompilerSemanticVersion, expectedCompilerSemantics, nameof(plan.CompilerSemanticVersion));
-        if (isV1 && plan.ExecutionOrder is not null)
+        RequireVersion(plan.FingerprintVersion, FuwenContracts.ExecutionFingerprintVersion, nameof(plan.FingerprintVersion));
+        RequireVersion(plan.CompilerSemanticVersion, FuwenContracts.CompilerSemanticVersion, nameof(plan.CompilerSemanticVersion));
+        if (plan.ExecutionOrder is null)
             throw new ArgumentException(
-                "IR v1 does not contain an execution order; historical v1 plans are never silently upgraded.",
+                "The current IR requires an explicit execution order.",
                 nameof(plan.ExecutionOrder));
-        if (IrVersions.SupportsExecutionOrder(plan.IrVersion) && plan.ExecutionOrder is null)
+        if (FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextSnapshots.Count != 0))
             throw new ArgumentException(
-                $"{plan.IrVersion} requires an explicit execution order.",
-                nameof(plan.ExecutionOrder));
-        if (!IrVersions.SupportsTypedContextRequirements(plan.IrVersion) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextRequirements is not null))
-            throw new ArgumentException(
-                "Typed context requirements are only supported by IR v3 and later; historical v1/v2 plans are never silently upgraded.",
+                "The current IR uses typed context requirements and does not accept context snapshots.",
                 nameof(plan.Nodes));
-        if (IrVersions.SupportsTypedContextRequirements(plan.IrVersion) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextSnapshots.Count != 0))
+        if (FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextRequirements is null))
             throw new ArgumentException(
-                "IR v3 and later use typed context requirements and do not accept legacy context snapshots.",
-                nameof(plan.Nodes));
-        if (IrVersions.SupportsTypedContextRequirements(plan.IrVersion) && FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.ContextRequirements is null))
-            throw new ArgumentException(
-                "IR v3 and later require a non-null ContextRequirements collection on every inference node.",
+                "The current IR requires a context-requirements collection on every inference node.",
                 nameof(plan.Nodes));
     }
 
@@ -191,7 +166,7 @@ public static class WorkflowPlanValidator
                     ValidateType(repeat.StateType);
                     ValidateType(repeat.ResultType);
                     if (!TypesEquivalent(repeat.StateType, repeat.ResultType))
-                        throw new ArgumentException("Repeat ResultType must equal StateType for v6 (single-state loop).", nameof(repeat.ResultType));
+                        throw new ArgumentException("Repeat ResultType must equal StateType for a single-state loop.", nameof(repeat.ResultType));
                     ArgumentNullException.ThrowIfNull(repeat.InitialState);
                     ArgumentNullException.ThrowIfNull(repeat.ContinueWith);
                     ArgumentNullException.ThrowIfNull(repeat.BreakWhen);
@@ -399,18 +374,18 @@ public static class WorkflowPlanValidator
             .ToArray();
         if (rootReturns.Length != 1)
             throw new ArgumentException(
-                $"IR v2 requires exactly one root return node; found {rootReturns.Length}.",
+                $"The current IR requires exactly one root return node; found {rootReturns.Length}.",
                 nameof(plan.Nodes));
 
         var branchReturn = locations.Values
             .FirstOrDefault(location => !string.Equals(location.RegionPath, plan.Name, StringComparison.Ordinal) && location.Node is ReturnNode);
         if (branchReturn is not null)
             throw new ArgumentException(
-                $"Branch-local return node '{branchReturn.Node.StructuralPath}' is not supported by IR v2.",
+                $"Branch-local return node '{branchReturn.Node.StructuralPath}' is not supported.",
                 nameof(plan.Nodes));
 
         if (!phasesByRegion.TryGetValue(plan.Name, out var rootPhases) || rootPhases.Count == 0)
-            throw new ArgumentException("IR v2 requires a non-empty root execution order.", nameof(plan.ExecutionOrder));
+            throw new ArgumentException("The current IR requires a non-empty root execution order.", nameof(plan.ExecutionOrder));
 
         var rootReturnPath = rootReturns[0].Node.StructuralPath;
         var finalPhase = rootPhases
@@ -437,12 +412,7 @@ public static class WorkflowPlanValidator
                     break;
                 case InferenceNode inference:
                     ValidateArgumentsForExecution(inference.Arguments, location, locations, phasesByRegion);
-                    if (string.Equals(plan.IrVersion, FuwenContracts.IrVersionV3, StringComparison.Ordinal) ||
-                        string.Equals(plan.IrVersion, FuwenContracts.IrVersionV4, StringComparison.Ordinal))
-                        ValidateContextRequirements(inference, location, locations, phasesByRegion);
-                    else
-                        foreach (var snapshot in inference.ContextSnapshots)
-                            ValidateNodeOutputBinding(snapshot, location, locations, phasesByRegion);
+                    ValidateContextRequirements(inference, location, locations, phasesByRegion);
                     break;
                 case ActivityNode activity:
                     ValidateArgumentsForExecution(activity.Arguments, location, locations, phasesByRegion);
@@ -752,7 +722,7 @@ public static class WorkflowPlanValidator
 
         if (returnNode.Value is not InputBinding and not NodeOutputBinding)
             throw new ArgumentException(
-                $"IR v2 does not support return binding shape '{returnNode.Value.GetType().Name}'; use an input or node-output binding.",
+                $"The current IR does not support return binding shape '{returnNode.Value.GetType().Name}'; use an input or node-output binding.",
                 nameof(returnNode.Value));
 
         var actualType = returnNode.Value switch
@@ -764,7 +734,7 @@ public static class WorkflowPlanValidator
         };
         if (actualType is null)
             throw new ArgumentException(
-                $"IR v2 cannot resolve the return binding shape for '{returnNode.StructuralPath}'.",
+                $"The current IR cannot resolve the return binding shape for '{returnNode.StructuralPath}'.",
                 nameof(returnNode.Value));
         if (!TypesEquivalent(actualType, plan.OutputType))
             throw new ArgumentException(
@@ -1159,10 +1129,6 @@ public static class WorkflowPlanValidator
     private static void ValidatePrompts(WorkflowPlan plan)
     {
         var prompts = plan.Prompts ?? (IReadOnlyList<PromptDefinition>)[];
-        if (prompts.Count != 0 && !IrVersions.SupportsWorkflowPrompts(plan.IrVersion))
-            throw new ArgumentException(
-                $"Workflow-owned prompts require IR v8 or later, not '{plan.IrVersion}'.",
-                nameof(plan.Prompts));
         var names = new HashSet<string>(StringComparer.Ordinal);
         foreach (var prompt in prompts)
         {
@@ -1199,10 +1165,6 @@ public static class WorkflowPlanValidator
                         nameof(plan.Nodes));
                 continue;
             }
-            if (!IrVersions.SupportsWorkflowPrompts(plan.IrVersion))
-                throw new ArgumentException(
-                    $"Workflow-owned prompt references require IR v8 or later, not '{plan.IrVersion}'.",
-                    nameof(plan.Nodes));
             if (inference.PromptTemplate is not null)
                 throw new ArgumentException(
                     $"Inference node '{inference.StructuralPath}' declares both a prompt template and a workflow-owned prompt; exactly one prompt source is allowed.",
@@ -1243,10 +1205,6 @@ public static class WorkflowPlanValidator
     {
         if (inference.Tools is null || inference.Tools.Count == 0)
             return;
-        if (!IrVersions.SupportsWorkflowPrompts(plan.IrVersion))
-            throw new ArgumentException(
-                $"Declared inference tools require IR v8 or later, not '{plan.IrVersion}'.",
-                nameof(plan.Nodes));
         var seen = new HashSet<DescriptorReference>();
         foreach (var tool in inference.Tools)
         {

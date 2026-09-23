@@ -20,11 +20,26 @@ restricted bindings, control-only `if/else` with an optional explicit
 keyed `fanout` regions with context/activity/inference/conditional bodies,
 bounded state-carrying `repeat` regions, `checkpoint` and external `wait`
 interaction gates, and a complete `return`. Prompt declarations, inference
-tools, and inference `limits`
-(`maxTokens` and/or `timeout`, either or both) require IR v8; only
+tools, and per-call inference `limits`
+(`maxTokens` and/or `timeout`, either or both) are part of the current IR; only
 effect-free, read-only, and idempotent retry-safe write tools admit.
 `maxTokens` participates in execution fingerprints; `timeout` bounds
 wall-clock time per attempt without retry.
+
+An inference may also declare aggregate limits after the per-call limits:
+
+```fuwen
+limits maxTokens 800 timeout 30 aggregate turns 8 modelCalls 6 toolCalls 4
+  promptTokens 12000 completionTokens 4000 totalTokens 16000 durationMs 300000
+  cost "USD" 250000 toolArgumentBytes 65536 toolResultBytes 262144
+  retainedConversationBytes 524288 retainedEvidenceBytes 524288
+```
+
+Aggregate dimensions are positive, unique, and bounded. The `cost` form
+requires a quoted currency and positive integer microunits. Aggregate limits
+are part of the current inference protocol; authors do not select a protocol
+revision or adapter implementation. Source bounds may only narrow finite host
+ceilings. Per-call limits retain their per-attempt meaning.
 
 Inline prompt declarations contain at least one `system` or `user` message.
 A registered prompt alias instead declares `uses registered <descriptor>` and

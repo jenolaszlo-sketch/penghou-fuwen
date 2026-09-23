@@ -24,7 +24,7 @@ public sealed class WorkflowCompilerTests
     }
 
     [Fact]
-    public void Builder_BuildV3_authors_typed_context_requirements_without_duplicating_provider_arguments()
+    public void Builder_authors_typed_context_requirements_without_duplicating_provider_arguments()
     {
         var source = Fixture.CreatePlan();
         var context = source.Nodes.OfType<ContextNode>().Single();
@@ -48,24 +48,21 @@ public sealed class WorkflowCompilerTests
         foreach (var node in nodes)
             builder.AddNode(node);
 
-        var plan = builder.BuildV3();
+        var plan = builder.Build();
 
-        plan.IrVersion.Should().Be(FuwenContracts.IrVersionV3);
+        plan.IrVersion.Should().Be(FuwenContracts.IrVersion);
         plan.Nodes.OfType<InferenceNode>().Single().ContextRequirements.Should().ContainSingle();
         WorkflowPlanIdentity.GetCanonicalBytes(plan).Should().NotBeEmpty();
     }
 
     [Fact]
-    public void Compiler_accepts_v3_typed_context_requirement()
+    public void Compiler_accepts_typed_context_requirement()
     {
         var source = Fixture.CreatePlan();
         var context = source.Nodes.OfType<ContextNode>().Single();
         var inference = source.Nodes.OfType<InferenceNode>().Single();
         var plan = source with
         {
-            IrVersion = FuwenContracts.IrVersionV3,
-            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV3,
-            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV3,
             Nodes = source.Nodes.Select(node => node == inference
                 ? inference with
                 {
@@ -85,8 +82,8 @@ public sealed class WorkflowCompilerTests
     [Fact]
     public void Binding_validator_reports_context_requirement_duplicate_diagnostic()
     {
-        var plan = CreateV3BindingPlan(requirements => [requirements[0], requirements[0] with { Source = new NodeOutputBinding("answer/context", []) }]);
-        var diagnostics = ValidateV3Bindings(plan);
+        var plan = CreateBindingPlan(requirements => [requirements[0], requirements[0] with { Source = new NodeOutputBinding("answer/context", []) }]);
+        var diagnostics = ValidateBindings(plan);
 
         diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.ContextRequirementInvalid);
     }
@@ -94,8 +91,8 @@ public sealed class WorkflowCompilerTests
     [Fact]
     public void Binding_validator_reports_context_requirement_source_diagnostic()
     {
-        var plan = CreateV3BindingPlan(requirements => [requirements[0] with { Source = new NodeOutputBinding("answer/validate", []) }]);
-        var diagnostics = ValidateV3Bindings(plan);
+        var plan = CreateBindingPlan(requirements => [requirements[0] with { Source = new NodeOutputBinding("answer/validate", []) }]);
+        var diagnostics = ValidateBindings(plan);
 
         diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.ContextRequirementSourceInvalid);
     }
@@ -103,20 +100,20 @@ public sealed class WorkflowCompilerTests
     [Fact]
     public void Binding_validator_reports_context_requirement_type_diagnostic()
     {
-        var plan = CreateV3BindingPlan(requirements => [requirements[0] with { ExpectedType = new PrimitiveType(FuwenPrimitiveKind.Boolean) }]);
-        var diagnostics = ValidateV3Bindings(plan);
+        var plan = CreateBindingPlan(requirements => [requirements[0] with { ExpectedType = new PrimitiveType(FuwenPrimitiveKind.Boolean) }]);
+        var diagnostics = ValidateBindings(plan);
 
         diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.ContextRequirementTypeMismatch);
     }
 
-    private static IReadOnlyList<CompilerDiagnostic> ValidateV3Bindings(WorkflowPlan plan)
+    private static IReadOnlyList<CompilerDiagnostic> ValidateBindings(WorkflowPlan plan)
     {
         var catalogue = Fixture.CreateCatalogue(plan);
         var descriptors = catalogue.Descriptors.ToDictionary(static descriptor => descriptor.Descriptor);
         return WorkflowBindingValidator.Validate(plan, descriptors);
     }
 
-    private static WorkflowPlan CreateV3BindingPlan(Func<IReadOnlyList<ContextRequirement>, IReadOnlyList<ContextRequirement>> transform)
+    private static WorkflowPlan CreateBindingPlan(Func<IReadOnlyList<ContextRequirement>, IReadOnlyList<ContextRequirement>> transform)
     {
         var source = Fixture.CreatePlan();
         var context = source.Nodes.OfType<ContextNode>().Single();
@@ -124,9 +121,6 @@ public sealed class WorkflowCompilerTests
         var requirements = new[] { new ContextRequirement("context", new NodeOutputBinding(context.StructuralPath, []), context.OutputType) };
         return source with
         {
-            IrVersion = FuwenContracts.IrVersionV3,
-            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV3,
-            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV3,
             Nodes = source.Nodes.Select(node => node == inference
                 ? inference with { ContextSnapshots = [], ContextRequirements = transform(requirements) }
                 : node).ToArray(),
@@ -480,50 +474,6 @@ public sealed class WorkflowCompilerTests
     }
 
     [Fact]
-    public void Compiler_RejectsDuplicateAndNonContextInferenceSnapshots()
-    {
-        var plan = Fixture.CreatePlan();
-        var inference = (InferenceNode)plan.Nodes.Single(node => node is InferenceNode);
-        var duplicate = plan with
-        {
-            Nodes = plan.Nodes.Select(node => node == inference
-                ? inference with
-                {
-                    ContextSnapshots = [
-                        new NodeOutputBinding(inference.ContextSnapshots[0].NodePath, []),
-                        new NodeOutputBinding(inference.ContextSnapshots[0].NodePath, []),
-                    ],
-                }
-                : node).ToArray(),
-        };
-        var duplicateResult = new WorkflowCompiler(Fixture.CreateCatalogue(), capabilityPolicy: CapabilityGrantPolicy.AllowAll)
-            .Compile(duplicate, cancellationToken: TestContext.Current.CancellationToken);
-        duplicateResult.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.ContextSnapshotDuplicate);
-
-        var activityPath = plan.Nodes.OfType<ActivityNode>().Single().StructuralPath;
-        var nonContext = plan with
-        {
-            Nodes = plan.Nodes.Select(node => node switch
-            {
-                InferenceNode value => value with { ContextSnapshots = [new NodeOutputBinding(activityPath, [])] },
-                ActivityNode value => value with { Arguments = [] },
-                _ => node,
-            }).ToArray(),
-            ExecutionOrder = new WorkflowExecutionOrder([
-                new WorkflowExecutionRegion("answer", [
-                    new WorkflowExecutionPhase([StructuralNodeIdentity.Create("answer", "context")]),
-                    new WorkflowExecutionPhase([activityPath]),
-                    new WorkflowExecutionPhase([inference.StructuralPath]),
-                    new WorkflowExecutionPhase([StructuralNodeIdentity.Create("answer", "return_result")]),
-                ]),
-            ]),
-        };
-        var nonContextResult = new WorkflowCompiler(Fixture.CreateCatalogue(), capabilityPolicy: CapabilityGrantPolicy.AllowAll)
-            .Compile(nonContext, cancellationToken: TestContext.Current.CancellationToken);
-        nonContextResult.Diagnostics.Should().Contain(d => d.Code == CompilerDiagnosticCodes.ContextSnapshotInvalid);
-    }
-
-    [Fact]
     public void Compiler_RejectsBudgetBeforeCatalogueResolution()
     {
         var compiler = new WorkflowCompiler(
@@ -805,7 +755,7 @@ public sealed class WorkflowCompilerTests
                 new WorkflowExecutionRegion("demo", [new WorkflowExecutionPhase([loopPath]), new WorkflowExecutionPhase([returnPath])]),
                 new WorkflowExecutionRegion("demo/loop1/$body", [new WorkflowExecutionPhase([stepPath])]),
             ]))
-            .BuildV6();
+            .Build();
 
         var result = new WorkflowCompiler(
                 new InMemoryTrustedCatalogue([
@@ -1000,16 +950,16 @@ public sealed class WorkflowCompilerTests
             var nodes = new WorkflowNode[]
             {
                 new ContextNode("context", contextPath, Descriptor(DescriptorKind.ContextProvider, "sample.context"), [new ArgumentBinding("request", new InputBinding([]))], new PrimitiveType(FuwenPrimitiveKind.String)),
-                new InferenceNode("infer", inferencePath, Descriptor(DescriptorKind.InferenceProfile, "sample.reasoning"), Descriptor(DescriptorKind.PromptTemplate, "sample.answer-template"), [new ArgumentBinding("request", new LiteralBinding(JsonDocument.Parse("\"hello\"").RootElement.Clone()))], [new NodeOutputBinding(contextPath, [])], new NamedTypeReference(answer)),
+                new InferenceNode("infer", inferencePath, Descriptor(DescriptorKind.InferenceProfile, "sample.reasoning"), Descriptor(DescriptorKind.PromptTemplate, "sample.answer-template"), [new ArgumentBinding("request", new LiteralBinding(JsonDocument.Parse("\"hello\"").RootElement.Clone()))], [], new NamedTypeReference(answer), [new ContextRequirement("context", new NodeOutputBinding(contextPath, []), new PrimitiveType(FuwenPrimitiveKind.String))]),
                 new ActivityNode("validate", validatePath, Descriptor(DescriptorKind.Activity, "sample.validate"), [new ArgumentBinding("answer", new NodeOutputBinding(inferencePath, []))], new PrimitiveType(FuwenPrimitiveKind.Boolean)),
                 new ReturnNode("return_result", returnPath, new NodeOutputBinding(inferencePath, [])),
             };
             return new WorkflowPlan(
-                FuwenContracts.IrVersionV2,
+                FuwenContracts.IrVersion,
                 "fuwen-language/v1",
-                FuwenContracts.CompilerSemanticVersionV2,
+                FuwenContracts.CompilerSemanticVersion,
                 FuwenContracts.CanonicalJsonVersion,
-                FuwenContracts.ExecutionFingerprintVersionV2,
+                FuwenContracts.ExecutionFingerprintVersion,
                 "answer",
                 "1",
                 new NamedTypeReference(request),

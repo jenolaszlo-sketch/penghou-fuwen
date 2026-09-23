@@ -69,7 +69,7 @@ public sealed class FuwenSourceToolTests
 
         result.Succeeded.Should().BeTrue(
             string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
-        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersionV8);
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersion);
         var inference = result.Plan.Nodes.OfType<InferenceNode>().Single();
         inference.Tools!.Select(tool => tool.Name).Should().BeEquivalentTo("sample.search", "sample.read");
     }
@@ -219,16 +219,17 @@ public sealed class FuwenSourceToolTests
     }
 
     [Fact]
-    public void Tools_require_v8()
+    public void Tools_are_valid_in_the_current_IR()
     {
         var str = new PrimitiveType(FuwenPrimitiveKind.String);
         var profile = new DescriptorReference(DescriptorKind.InferenceProfile, "sample.profile", "1", Digest('d'));
+        var template = new DescriptorReference(DescriptorKind.PromptTemplate, "sample.template", "1", Digest('c'));
         var tool = new DescriptorReference(DescriptorKind.Tool, "sample.search", "1", Digest('f'));
         var inferPath = StructuralNodeIdentity.Create("demo", "infer");
         var returnPath = StructuralNodeIdentity.Create("demo", "return_result");
         var plan = new WorkflowPlanBuilder("demo", "1", str, str, "routing/1")
             .AddNode(new InferenceNode(
-                "infer", inferPath, profile, null, [], [], str, [],
+                "infer", inferPath, profile, template, [], [], str, [],
                 null, null, [tool]))
             .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(inferPath, [])))
             .SetExecutionOrder(new WorkflowExecutionOrder([
@@ -237,11 +238,9 @@ public sealed class FuwenSourceToolTests
                     new WorkflowExecutionPhase([returnPath]),
                 ]),
             ]))
-            .BuildV7();
+            .Build();
 
-        var act = () => WorkflowPlanValidator.Validate(plan);
-
-        act.Should().Throw<ArgumentException>().WithMessage("*IR v8*");
+        WorkflowPlanValidator.Validate(plan);
     }
 
     [Fact]
@@ -272,7 +271,7 @@ public sealed class FuwenSourceToolTests
                     "greet",
                     [new PromptParameter("name", str)],
                     [new PromptMessage(PromptMessageRole.User, "Hi {{ name }}.")]))
-                .BuildV8();
+                .Build();
         }
 
         var withSearch = Build(search);
@@ -294,7 +293,7 @@ public sealed class FuwenSourceToolTests
                 "greet",
                 [new PromptParameter("name", str)],
                 [new PromptMessage(PromptMessageRole.User, "Hi {{ name }}.")]))
-            .BuildV8();
+            .Build();
         // Reordered tool list normalizes identically to [search, read] sorted order.
         var sorted = Build(search, read);
 

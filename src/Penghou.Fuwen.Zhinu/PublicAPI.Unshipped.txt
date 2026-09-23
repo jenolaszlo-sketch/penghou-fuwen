@@ -7,6 +7,11 @@ Penghou.Fuwen.Zhinu.FuwenZhinuExecutionException.FuwenZhinuExecutionException(Pe
 Penghou.Fuwen.Zhinu.FuwenZhinuExecutionException.FuwenZhinuExecutionException(string! message) -> void
 Penghou.Fuwen.Zhinu.FuwenZhinuAdmissionException
 Penghou.Fuwen.Zhinu.FuwenZhinuAdmissionException.FuwenZhinuAdmissionException(string! message) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.EvidenceSink.get -> Penghou.Fuwen.IInferenceEvidenceSink?
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.FuwenZhinuExecutionPorts(Penghou.Fuwen.IActivityExecutor! activityExecutor, Penghou.Fuwen.IContextProvider! contextProvider, Penghou.Fuwen.IInferenceExecutor! inferenceExecutor, Penghou.Fuwen.IExecutionObserver? observer, Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options! options, Penghou.Fuwen.IInferenceTurnExecutor? turnExecutor = null, Penghou.Fuwen.IInferenceReadToolExecutor? readToolExecutor = null, Penghou.Fuwen.InferenceLimitSet? inferenceHostCeilings = null, Penghou.Fuwen.IInferenceEvidenceSink? evidenceSink = null) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.InferenceHostCeilings.get -> Penghou.Fuwen.InferenceLimitSet?
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.ReadToolExecutor.get -> Penghou.Fuwen.IInferenceReadToolExecutor?
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.TurnExecutor.get -> Penghou.Fuwen.IInferenceTurnExecutor?
 Penghou.Fuwen.Zhinu.FuwenZhinuProviderRuntimeIdentity
 Penghou.Fuwen.Zhinu.FuwenZhinuProviderRuntimeIdentity.CatalogueSnapshotRevision.get -> string!
 Penghou.Fuwen.Zhinu.FuwenZhinuProviderRuntimeIdentity.FuwenZhinuProviderRuntimeIdentity(string! catalogueSnapshotRevision, string! resolvedDescriptorSetFingerprint) -> void
@@ -21,7 +26,6 @@ Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Observer.get -> Penghou.Fuwen.IExec
 Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.PriorExecutionFingerprints.get -> System.Collections.Generic.IReadOnlySet<string!>!
 Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.PriorExecutionFingerprints.init -> void
 Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.ExecutionOptions.get -> Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options!
-Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.FuwenZhinuExecutionPorts(Penghou.Fuwen.IActivityExecutor! activityExecutor, Penghou.Fuwen.IContextProvider! contextProvider, Penghou.Fuwen.IInferenceExecutor! inferenceExecutor, Penghou.Fuwen.IExecutionObserver? observer, Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options! options) -> void
 Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options
 const Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options.MaximumAllowedInfrastructureAttempts = 8 -> int
 const Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.Options.MaximumAllowedFanOutConcurrency = 256 -> int

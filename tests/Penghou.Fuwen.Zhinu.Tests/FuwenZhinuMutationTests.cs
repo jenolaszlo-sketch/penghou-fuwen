@@ -238,14 +238,14 @@ public sealed class FuwenZhinuMutationTests
             return builder
                 .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(cPath, [])))
                 .SetExecutionOrder(new WorkflowExecutionOrder([new WorkflowExecutionRegion("mutate", phases)]))
-                .BuildV3();
+                .Build();
         }
 
         phases.Add(new WorkflowExecutionPhase([returnPath]));
         return builder
             .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(bPath, [])))
             .SetExecutionOrder(new WorkflowExecutionOrder([new WorkflowExecutionRegion("mutate", phases)]))
-            .BuildV3();
+            .Build();
     }
 
     private static async Task<WorkflowAdmissionResult> AdmitAsync(WorkflowPlan plan, CancellationToken ct)

@@ -133,11 +133,11 @@ public sealed class FuwenZhinuWorkflowFactoryTests
         var outputType = new PrimitiveType(FuwenPrimitiveKind.String);
         var returnPath = StructuralNodeIdentity.Create("echo", "return_result");
         return new WorkflowPlan(
-            FuwenContracts.IrVersionV2,
+            FuwenContracts.IrVersion,
             "fuwen-language/v1",
-            FuwenContracts.CompilerSemanticVersionV2,
+            FuwenContracts.CompilerSemanticVersion,
             FuwenContracts.CanonicalJsonVersion,
-            FuwenContracts.ExecutionFingerprintVersionV2,
+            FuwenContracts.ExecutionFingerprintVersion,
             "echo",
             "1",
             outputType,

@@ -38,14 +38,6 @@ public sealed class FuwenSourceLimitTests
         return result.Plan!;
     }
 
-    private static async Task<WorkflowAdmissionResult> AdmitAsync(WorkflowPlan plan)
-    {
-        var admission = await new WorkflowAdmissionService(
-                new WorkflowCompiler(Catalogue(), capabilityPolicy: new CapabilityGrantPolicy("policy/1", [])))
-            .AdmitAsync(plan, cancellationToken: TestContext.Current.CancellationToken);
-        return admission;
-    }
-
     private static async Task<FuwenSourceCompilationResult> CompileRawAsync(string source) =>
         await new FuwenSourceCompiler(Catalogue())
             .CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
@@ -58,26 +50,32 @@ public sealed class FuwenSourceLimitTests
     {
         var both = await CompileAsync(WorkflowWithLimits("limits maxTokens 400 timeout 30"));
         SingleInference(both).Limits.Should().Be(new InferenceLimits(400, 30));
+        SingleInference(both).Protocol.Should().BeNull();
 
         var reversed = await CompileAsync(WorkflowWithLimits("limits timeout 30 maxTokens 400"));
         SingleInference(reversed).Limits.Should().Be(new InferenceLimits(400, 30));
+        SingleInference(reversed).Protocol.Should().BeNull();
 
         var tokensOnly = await CompileAsync(WorkflowWithLimits("limits maxTokens 400"));
         SingleInference(tokensOnly).Limits.Should().Be(new InferenceLimits(400, null));
+        SingleInference(tokensOnly).Protocol.Should().BeNull();
 
         var timeoutOnly = await CompileAsync(WorkflowWithLimits("limits timeout 30"));
         SingleInference(timeoutOnly).Limits.Should().Be(new InferenceLimits(null, 30));
+        SingleInference(timeoutOnly).Protocol.Should().BeNull();
 
         var bare = await CompileAsync(WorkflowWithLimits(string.Empty));
         SingleInference(bare).Limits.Should().BeNull();
+        SingleInference(bare).Protocol.Should().BeNull();
     }
 
     [Fact]
-    public async Task Limits_select_IR_v8()
+    public async Task Limits_use_the_current_IR()
     {
         var plan = await CompileAsync(WorkflowWithLimits("limits maxTokens 400"));
 
-        plan.IrVersion.Should().Be(FuwenContracts.IrVersionV8);
+        plan.IrVersion.Should().Be(FuwenContracts.IrVersion);
+        SingleInference(plan).Protocol.Should().BeNull();
     }
 
     [Fact]
@@ -119,19 +117,59 @@ public sealed class FuwenSourceLimitTests
     }
 
     [Fact]
-    public async Task Limits_require_IR_v8()
+    public async Task Aggregate_limits_use_the_current_IR_without_a_protocol_revision()
     {
-        var plan = await CompileAsync(WorkflowWithLimits("limits maxTokens 400"));
-        var downgraded = plan with
+        var plan = await CompileAsync(
+            WorkflowWithLimits(
+                "limits maxTokens 400 timeout 30 aggregate turns 8 modelCalls 6 toolCalls 4 " +
+                "promptTokens 12000 completionTokens 4000 totalTokens 16000 durationMs 300000 " +
+                "cost \"USD\" 250000 toolArgumentBytes 65536 toolResultBytes 262144 " +
+                "retainedConversationBytes 524288 retainedEvidenceBytes 524288"));
+
+        plan.IrVersion.Should().Be(FuwenContracts.IrVersion);
+        var inference = SingleInference(plan);
+        inference.Limits.Should().Be(new InferenceLimits(400, 30));
+        inference.Protocol.Should().NotBeNull();
+        inference.Protocol.Limits.MaxTurns.Should().Be(8);
+        inference.Protocol.Limits.MaxModelCalls.Should().Be(6);
+        inference.Protocol.Limits.MaxToolCalls.Should().Be(4);
+        inference.Protocol.Limits.MaxPromptTokens.Should().Be(12000);
+        inference.Protocol.Limits.MaxCompletionTokens.Should().Be(4000);
+        inference.Protocol.Limits.MaxTotalTokens.Should().Be(16000);
+        inference.Protocol.Limits.MaxDurationMilliseconds.Should().Be(300000);
+        inference.Protocol.Limits.Cost.Should().Be(new InferenceCostLimit("USD", 250000));
+        inference.Protocol.Limits.MaxToolArgumentBytes.Should().Be(65536);
+        inference.Protocol.Limits.MaxToolResultBytes.Should().Be(262144);
+        inference.Protocol.Limits.MaxRetainedConversationBytes.Should().Be(524288);
+        inference.Protocol.Limits.MaxRetainedEvidenceBytes.Should().Be(524288);
+    }
+
+    [Fact]
+    public async Task Aggregate_limits_require_a_dimension_and_reject_duplicate_or_malformed_values()
+    {
+        foreach (var clause in new[]
         {
-            IrVersion = FuwenContracts.IrVersionV7,
-            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV7,
-            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV7,
-        };
+            "limits aggregate",
+            "limits aggregate turns 2 turns 3",
+            "limits aggregate turns 0",
+            "limits aggregate turns 1000000000000001",
+            "limits aggregate cost USD 100",
+            "limits aggregate cost \"USD\" 0",
+            "limits aggregate cost \"USD\" 100 cost \"USD\" 200",
+        })
+        {
+            var result = await CompileRawAsync(WorkflowWithLimits(clause));
+            result.Succeeded.Should().BeFalse($"clause '{clause}' must be rejected");
+        }
+    }
 
-        var admission = await AdmitAsync(downgraded);
+    [Fact]
+    public async Task Aggregate_only_limits_leave_per_call_limits_unset()
+    {
+        var plan = await CompileAsync(WorkflowWithLimits("limits aggregate turns 4"));
 
-        admission.Succeeded.Should().BeFalse();
-        admission.Diagnostics.Should().Contain(diagnostic => diagnostic.Message.Contains("IR v8"));
+        var inference = SingleInference(plan);
+        inference.Limits.Should().BeNull();
+        inference.Protocol!.Limits.MaxTurns.Should().Be(4);
     }
 }

@@ -394,9 +394,9 @@ public sealed class PlanRevisionComparerTests
         var inference = source.Nodes.OfType<InferenceNode>().Single();
         return source with
         {
-            IrVersion = FuwenContracts.IrVersionV8,
-            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV8,
-            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV8,
+            IrVersion = FuwenContracts.IrVersion,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersion,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersion,
             Schemas = source.Schemas.Select(schema => schema is ObjectSchemaDefinition value && value.Descriptor == inputSchema
                 ? value with
                 {
@@ -439,9 +439,9 @@ public sealed class PlanRevisionComparerTests
         var phases = source.ExecutionOrder!.Regions.Single().Phases;
         return source with
         {
-            IrVersion = FuwenContracts.IrVersionV8,
-            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersionV8,
-            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersionV8,
+            IrVersion = FuwenContracts.IrVersion,
+            CompilerSemanticVersion = FuwenContracts.CompilerSemanticVersion,
+            FingerprintVersion = FuwenContracts.ExecutionFingerprintVersion,
             Prompts = [prompt],
             Nodes = source.Nodes.Select(node => node == inference
                 ? inference with

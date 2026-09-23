@@ -289,6 +289,24 @@ public enum ExecutionFailureCode
     LoopLimitExceeded,
     /// <summary>Non-authoritative observation delivery failed.</summary>
     ObserverFailure,
+    /// <summary>The inference protocol exhausted its admitted turns.</summary>
+    TurnLimitExceeded,
+    /// <summary>The inference protocol exhausted its admitted model calls.</summary>
+    ModelCallLimitExceeded,
+    /// <summary>The inference protocol exhausted its admitted tool calls.</summary>
+    ToolCallLimitExceeded,
+    /// <summary>The inference protocol exhausted its admitted token budget.</summary>
+    TokenLimitExceeded,
+    /// <summary>The inference protocol exhausted its admitted cost budget.</summary>
+    CostLimitExceeded,
+    /// <summary>The inference protocol exhausted an admitted byte ceiling.</summary>
+    PayloadLimitExceeded,
+    /// <summary>Unknown usage or pricing prevents proof that further paid work fits the budget.</summary>
+    BudgetUnknown,
+    /// <summary>An operation may have committed remotely and cannot be reconciled automatically.</summary>
+    AmbiguousOperation,
+    /// <summary>One model turn exceeded its admitted per-call output or time bound.</summary>
+    PerCallLimitExceeded,
     /// <summary>The failure is not classified by this contract version.</summary>
     Unknown,
 }
@@ -355,13 +373,17 @@ public sealed class ExecutionFailure
         ExecutionFailureCode.NotAdmitted or ExecutionFailureCode.DescriptorUnavailable or ExecutionFailureCode.PolicyRejected
             => kind == ExecutionFailureKind.Admission,
         ExecutionFailureCode.InvalidInput or ExecutionFailureCode.BindingFailure or ExecutionFailureCode.OutputTypeMismatch or
-        ExecutionFailureCode.ContextSnapshotMismatch or ExecutionFailureCode.PublicationRejected or ExecutionFailureCode.LoopLimitExceeded
+        ExecutionFailureCode.ContextSnapshotMismatch or ExecutionFailureCode.PublicationRejected or ExecutionFailureCode.LoopLimitExceeded or
+        ExecutionFailureCode.TurnLimitExceeded or ExecutionFailureCode.ModelCallLimitExceeded or ExecutionFailureCode.ToolCallLimitExceeded or
+        ExecutionFailureCode.TokenLimitExceeded or ExecutionFailureCode.CostLimitExceeded or ExecutionFailureCode.PayloadLimitExceeded or
+        ExecutionFailureCode.BudgetUnknown or ExecutionFailureCode.PerCallLimitExceeded
             => kind == ExecutionFailureKind.Contract,
         ExecutionFailureCode.MalformedOutput or ExecutionFailureCode.RepairedOutputSchemaInvalid or ExecutionFailureCode.SchemaMismatch or
         ExecutionFailureCode.ToolMappingFailure or ExecutionFailureCode.TruncatedOutput
             => kind == ExecutionFailureKind.ProviderOutput,
         ExecutionFailureCode.ProviderError => kind == ExecutionFailureKind.Provider,
-        ExecutionFailureCode.TransientInfrastructureFailure or ExecutionFailureCode.FencingLost
+        ExecutionFailureCode.TransientInfrastructureFailure or ExecutionFailureCode.FencingLost or
+        ExecutionFailureCode.AmbiguousOperation
             => kind == ExecutionFailureKind.Infrastructure,
         ExecutionFailureCode.Timeout => kind == ExecutionFailureKind.Timeout,
         ExecutionFailureCode.Cancelled => kind == ExecutionFailureKind.Cancelled,
@@ -824,7 +846,7 @@ public interface IInferenceExecutor
 /// <summary>An exact inference binding requirement that can be checked before workflow registration.</summary>
 public sealed class InferenceExecutionRequirement
 {
-    /// <summary>Creates a legacy one-call v3-v8 inference requirement.</summary>
+    /// <summary>Creates an inference requirement with the current contract.</summary>
     public InferenceExecutionRequirement(
         DescriptorReference profile,
         DescriptorReference? promptTemplate,
@@ -845,8 +867,6 @@ public sealed class InferenceExecutionRequirement
         InferenceModality? modality,
         IReadOnlyList<InferenceToolRequirement>? toolRequirements = null,
         InferenceLimitSet? limits = null,
-        string protocolRevision = "fuwen-inference/v1",
-        string? irVersion = null,
         InferenceRecoveryQuality minimumRecoveryQuality = InferenceRecoveryQuality.Unsupported,
         int? maximumContextPayloadUtf8Bytes = null,
         bool requiresExactUsageEvidence = false,
@@ -873,8 +893,6 @@ public sealed class InferenceExecutionRequirement
         if (modality is not null && !Enum.IsDefined(modality.Value))
             throw new ArgumentOutOfRangeException(nameof(modality));
         Modality = modality;
-        ProtocolRevision = RuntimeValueSnapshot.Text(protocolRevision, nameof(protocolRevision), InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
-        IrVersion = RuntimeValueSnapshot.OptionalText(irVersion, nameof(irVersion), InferenceExecutionEvidence.MaximumIdentityUtf8Bytes);
         Limits = limits ?? new InferenceLimitSet();
         var requestedTools = toolRequirements is null
             ? copy.Select(static descriptor => new InferenceToolRequirement(descriptor)).ToArray()
@@ -908,10 +926,6 @@ public sealed class InferenceExecutionRequirement
     public InferencePromptForm PromptForm { get; }
     /// <summary>The output modality required by this inference.</summary>
     public InferenceModality? Modality { get; }
-    /// <summary>The provider-neutral inference protocol revision required by this inference.</summary>
-    public string ProtocolRevision { get; }
-    /// <summary>The required workflow IR version, when the host is checking one.</summary>
-    public string? IrVersion { get; }
     /// <summary>The aggregate bounds required by this inference.</summary>
     public InferenceLimitSet Limits { get; }
     /// <summary>The exact tool descriptors and effect classes required by this inference.</summary>

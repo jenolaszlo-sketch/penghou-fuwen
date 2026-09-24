@@ -345,6 +345,14 @@ and Fuwen remains independently useful and product-neutral.
 
 Exit: none for the initial complex-inference release; this gate remains closed.
 
+## Beyond previews: graduation
+
+Graduating the packages out of preview (preview → RC → stable) is tracked
+separately in [graduation requirements](graduation-requirements.md): API
+freeze with Shipped baselines, live-provider conformance, rulings on every
+deferred item, the Guyabano pilot, human security review, and a scoped
+definition of done. Preview releases must not claim any of those gates.
+
 ## Required test architecture
 
 Tests should be layered so a failure identifies the broken contract:

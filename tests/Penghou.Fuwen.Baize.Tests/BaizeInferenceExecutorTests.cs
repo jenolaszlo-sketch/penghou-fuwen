@@ -767,10 +767,18 @@ public sealed class BaizeInferenceExecutorTests
     {
         var (profile, prompt) = Descriptors();
         var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "generated-image");
+        using var cancellation = new CancellationTokenSource();
         var generation = new DelayedGenerationClient(
             submissionDelay: duringPolling ? null : TimeSpan.FromSeconds(5),
             pollingDelay: duringPolling ? TimeSpan.FromSeconds(5) : null,
-            initiallyQueued: duringPolling);
+            initiallyQueued: duringPolling,
+            // Cancel deterministically from inside the first poll instead of
+            // racing a wall-clock timeout against the poll loop.
+            onPolling: duringPolling ? cancellation.Cancel : null);
+        if (!duringPolling)
+            cancellation.CancelAfter(TimeSpan.FromMilliseconds(50));
+        else
+            cancellation.CancelAfter(TimeSpan.FromSeconds(30));
         var binding = new BaizeGenerationBinding(
             profile, prompt, artifactDescriptor, BaizeGenerationModality.Image,
             "endpoint", "provider", "model", generation,
@@ -779,7 +787,6 @@ public sealed class BaizeInferenceExecutorTests
             new BaizeGenerationPolicy(
                 pollingInterval: TimeSpan.FromMilliseconds(1),
                 timeout: TimeSpan.FromSeconds(5)));
-        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
 
         var act = () => new BaizeGenerationInferenceExecutor([binding]).ExecuteAsync(
             Request(profile, prompt, new ArtifactType(artifactDescriptor), new InferenceLimits(null, 5)),
@@ -1490,7 +1497,8 @@ public sealed class BaizeInferenceExecutorTests
     private sealed class DelayedGenerationClient(
         TimeSpan? submissionDelay = null,
         TimeSpan? pollingDelay = null,
-        bool initiallyQueued = false) : IGenerationClient
+        bool initiallyQueued = false,
+        Action? onPolling = null) : IGenerationClient
     {
         private readonly GenerationOperationHandle handle = new(
             "provider", "endpoint", "delayed-operation", "model", new Dictionary<string, string>());
@@ -1519,6 +1527,7 @@ public sealed class BaizeInferenceExecutorTests
             CancellationToken cancellationToken = default)
         {
             PollingCalls++;
+            onPolling?.Invoke();
             if (pollingDelay is { } delay)
                 await Task.Delay(delay, cancellationToken);
             return Completed();

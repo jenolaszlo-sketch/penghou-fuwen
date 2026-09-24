@@ -33,7 +33,7 @@ assert plan["executionOrder"]["regions"][0]["phases"][-1]["nodePaths"] == [
 ]
 inference = next(node for node in plan["nodes"] if node["$kind"] == "inference")
 assert inference["contextSnapshots"] == []
-assert inference["contextRequirements"][0]["name"] == "answer_context"
+assert inference["contextRequirements"][0]["name"] == "context"
 assert inference["protocol"]["limits"]["maxTurns"] == 1
 assert inference["protocol"]["limits"]["maxModelCalls"] == 1
 canonical_plan = json.dumps(

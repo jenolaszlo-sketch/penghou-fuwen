@@ -4,11 +4,27 @@ Notable changes to Penghou.Fuwen are recorded here. The project follows
 [Semantic Versioning](https://semver.org/) for package versions. Preview
 releases may still revise source syntax and public contracts; immutable plans
 remain governed by their explicit IR, canonicalization, and fingerprint
-contract versions.
+contract versions. Consumer-visible breaking changes are called out under
+**Breaking changes** and given a recipe in the
+[consumer migration notes](docs/consumer-migration.md).
 
 ## Unreleased
 
 ## 0.1.0-preview.11
+
+**Breaking changes** (recipe:
+[consumer migration notes](docs/consumer-migration.md)):
+
+- Remove the versioned-vector constant names:
+  `FuwenContracts.ExecutionFingerprintVersionV1` → `ExecutionFingerprintVersion`
+  and `FuwenContracts.IrVersionV7` (and other `*V<n>`) → `IrVersion`.
+- Collapse `WorkflowPlanBuilder.BuildV3()/BuildV4()/BuildV5()/BuildV6()/BuildV7()`
+  into `Build()`.
+- Inference executors must implement `IInferenceExecutorPreflight` or
+  `IInferenceExecutorManifest`; otherwise workflow registration fails with
+  `FuwenZhinuAdmissionException`.
+
+**Other changes:**
 
 - Harden compiler determinism, patch-oriented formatting, registered prompt
   execution, bounded context delivery, media deadlines, catalogue discovery,

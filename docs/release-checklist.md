@@ -9,6 +9,10 @@ not satisfy a semantic release gate.
   deferred behavior.
 - [ ] Public API baselines are intentional and contain no accidental framework
   or provider-specific types.
+- [ ] Every consumer-visible breaking change is listed under a **Breaking
+  changes** section in `CHANGELOG.md` with a recipe in
+  [consumer migration notes](consumer-migration.md), or the entry states there
+  are none.
 - [ ] IR, canonical JSON, fingerprint, operation-key, diagnostic, and source
   language contract versions are unchanged or explicitly versioned.
 - [ ] Golden vectors pass through the .NET and independent implementations.

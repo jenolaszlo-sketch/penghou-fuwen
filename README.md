@@ -185,6 +185,7 @@ dotnet pack Penghou.Fuwen.slnx --configuration Release --no-build --output artif
 Useful design references:
 
 - [Roadmap and delivery status](docs/roadmap.md)
+- [Consumer migration notes](docs/consumer-migration.md)
 - [Current capability matrix](docs/capability-matrix.md)
 - [Bounded complex-activity direction](docs/complex-activities.md)
 - [Complex-inference implementation plan](docs/complex-activities-implementation-plan.md)

@@ -24,7 +24,10 @@ preview tag.
   finalization-only request; no tool proposals are allowed. The coordinator
   rejects a batch larger than the remaining allowance before running any
   tool. Different descriptors with the same provider-visible name now fail
-  coordinated registration.
+  coordinated registration. Admitted tool signatures now validate exact
+  argument names/types before tool I/O and result types before storage.
+  Adapt fixtures and executors that previously sent arbitrary JSON objects
+  despite declaring a different callable signature.
 - **Hosts using coordinated read tools:** supply an
   `IInferenceProtectedPayloadStore` through the expanded
   `FuwenZhinuExecutionPorts` constructor. The old constructor remains
@@ -34,7 +37,8 @@ preview tag.
   results for the workflow's recovery lifetime. The included in-memory store
   is a test fixture, not a production storage adapter.
 - **Persisted runs:** interaction and operation-key identities changed, and
-  coordinator state now requires protected-tool-payload semantics. Do not
+  coordinator state now binds admitted tool signatures as well as protected
+  tool payload semantics. Do not
   resume an older in-flight coordinator journal with the new implementation
   unless it is explicitly migrated; the runtime stops unsupported state.
   Plan IR and package versions are separate from this journal contract.

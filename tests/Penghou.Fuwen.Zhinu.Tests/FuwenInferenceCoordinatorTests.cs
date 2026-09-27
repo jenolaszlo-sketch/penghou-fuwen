@@ -85,14 +85,20 @@ public sealed partial class FuwenInferenceCoordinatorTests
         return builder.Build();
     }
 
-    private static async Task<WorkflowAdmissionResult> AdmitAsync(WorkflowPlan plan, CancellationToken ct)
+    private static async Task<WorkflowAdmissionResult> AdmitAsync(WorkflowPlan plan, CancellationToken ct, CallableContract? toolContract = null)
     {
         var catalogue = plan.CatalogueBindings
             .Select(descriptor => new TrustedCatalogueDescriptor(
                 descriptor,
-                callableContract: descriptor.Kind is DescriptorKind.InferenceProfile or DescriptorKind.Tool
+                callableContract: descriptor.Kind == DescriptorKind.Tool && toolContract is not null
+                    ? toolContract
+                    : descriptor.Kind is DescriptorKind.InferenceProfile or DescriptorKind.Tool
                     ? new CallableContract(
-                        new CallableSignature([new CallableParameter("request", Text)], Text),
+                        descriptor.Kind == DescriptorKind.Tool
+                            ? new CallableSignature(
+                                [new CallableParameter("q", new PrimitiveType(FuwenPrimitiveKind.Json))],
+                                new PrimitiveType(FuwenPrimitiveKind.Json))
+                            : new CallableSignature([new CallableParameter("request", Text)], Text),
                         CallableEffect.Read,
                         CallableIdempotency.Idempotent,
                         CallableRetrySafety.Safe)
@@ -115,9 +121,10 @@ public sealed partial class FuwenInferenceCoordinatorTests
         IInferenceEvidenceSink? evidenceSink = null,
         IInferenceProtectedPayloadStore? protectedPayloadStore = null,
         bool omitProtectedPayloadStore = false,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        CallableContract? toolContract = null)
     {
-        var admission = await AdmitAsync(plan, ct);
+        var admission = await AdmitAsync(plan, ct, toolContract);
         return await new FuwenZhinuWorkflowFactory(
                 new InMemoryWorkflowDefinitionStore(),
                 new FuwenZhinuProviderRuntimeIdentity(
@@ -252,7 +259,7 @@ public sealed partial class FuwenInferenceCoordinatorTests
         var turns = DeterministicFakeTurnExecutor.FromResponder((request, _) => ValueTask.FromResult<InferenceTurnResult>(
             request.TurnOrdinal == 0
                 ? new InferenceToolCallTurnResult(
-                    [new InferenceToolCallProposal("call-private", Search, "{}")], ExactUsage())
+                    [new InferenceToolCallProposal("call-private", Search, "{\"q\":1}")], ExactUsage())
                 : new InferenceFinalCandidateResult("\"done\"", ExactUsage())));
         var tools = new DeterministicFakeReadToolExecutor().RegisterSuccess(Search, Json("{\"private\":\"" + marker + "\"}"));
         var payloads = new InMemoryProtectedPayloadStore();
@@ -317,7 +324,7 @@ public sealed partial class FuwenInferenceCoordinatorTests
         var ct = TestContext.Current.CancellationToken;
         var plan = CreatePlan(Limits(turns: 3, modelCalls: 3, toolCalls: 2), [Search]);
         var turns = DeterministicFakeTurnExecutor.ToolCalls(
-            new InferenceToolCallProposal("call-protected", Search, "{}"));
+            new InferenceToolCallProposal("call-protected", Search, "{\"q\":1}"));
         var tools = new DeterministicFakeReadToolExecutor().RegisterSuccess(Search, Json("{\"answer\":42}"));
         var payloads = new InMemoryProtectedPayloadStore { CorruptReads = true };
         var sink = new RecordingEvidenceSink();

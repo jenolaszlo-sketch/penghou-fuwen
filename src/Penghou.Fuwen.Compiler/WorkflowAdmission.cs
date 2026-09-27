@@ -134,6 +134,13 @@ public sealed class WorkflowAdmissionResult
     /// <summary>Bounded compilation and admission diagnostics.</summary>
     public DiagnosticCollection Diagnostics { get; }
 
+    /// <summary>Exact trusted tool signatures from this in-process admission, bound by the resolved descriptor fingerprint.</summary>
+    public IReadOnlyDictionary<DescriptorReference, CallableSignature> TrustedToolSignatures =>
+        Receipt is null
+            ? new System.Collections.ObjectModel.ReadOnlyDictionary<DescriptorReference, CallableSignature>(
+                new Dictionary<DescriptorReference, CallableSignature>())
+            : Compilation.AdmissionEvidence!.ToolSignatures;
+
     /// <summary>True only when compilation succeeded and a receipt was issued.</summary>
     public bool Succeeded => Compilation.Succeeded && Receipt is not null && !Diagnostics.HasErrors;
 }
@@ -196,4 +203,5 @@ internal sealed record CompilationAdmissionEvidence(
     string ResolvedDescriptorSetFingerprint,
     string? CapabilityPolicyRevision,
     string CapabilityGrantFingerprint,
-    bool PolicyCanIssueReceipt);
+    bool PolicyCanIssueReceipt,
+    IReadOnlyDictionary<DescriptorReference, CallableSignature> ToolSignatures);

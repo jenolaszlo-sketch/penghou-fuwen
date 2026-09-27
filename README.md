@@ -174,10 +174,11 @@ Its corrective work now covers run/request identity, final usage and cost
 settlement, currency checks, selected-executor preflight, evidence size,
 completion-token capability checks, protected successful tool results, and
 whole-batch tool allowance checks. Coordinated admission rejects duplicate
-provider-visible tool names.
+provider-visible tool names and carries exact trusted callable signatures to
+runtime argument/result validation.
 
-Before a production claim, this path still needs exact admitted tool
-argument/result typing, hard pre-call prompt/total-token/cost enforcement,
+Before a production claim, this path still needs provider-facing tool schemas
+and resource grants, hard pre-call prompt/total-token/cost enforcement,
 protection of other sensitive journal content, complete ambiguous-call
 recovery, and a stock Baize turn adapter. Older in-flight coordinator journals
 need migration or an explicit stop. See the [capability matrix](docs/capability-matrix.md),

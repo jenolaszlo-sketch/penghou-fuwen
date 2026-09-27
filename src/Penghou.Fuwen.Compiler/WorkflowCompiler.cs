@@ -273,7 +273,11 @@ public sealed class WorkflowCompiler
             CatalogueIdentity.ComputeResolvedSetFingerprint(resolvedDescriptors),
             capabilityPolicy.PolicyRevision,
             capabilityPolicy.GrantSetFingerprint,
-            capabilityPolicy.CanIssueAdmissionReceipt);
+            capabilityPolicy.CanIssueAdmissionReceipt,
+            new System.Collections.ObjectModel.ReadOnlyDictionary<DescriptorReference, CallableSignature>(
+                trustedDescriptors.Values
+                    .Where(static descriptor => descriptor.Descriptor.Kind == DescriptorKind.Tool && descriptor.CallableContract is not null)
+                    .ToDictionary(static descriptor => descriptor.Descriptor, static descriptor => descriptor.CallableContract!.Signature)));
         var callableEffectSummaries = WorkflowExplanationEnrichment.CreateCallableEffectSummaries(
             trustedPlan,
             trustedDescriptors);

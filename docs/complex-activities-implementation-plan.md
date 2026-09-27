@@ -22,9 +22,11 @@ currency matching, selected-executor preflight, and fixed-length tool operation
 keys. Later batches added the serialized evidence cap, overflow-safe
 accounting, a hard completion-token capability gate, protected successful
 read-tool results, and whole-batch tool allowance rejection. Duplicate
-provider-visible tool names now fail admission. Journal state remains separate
-from the evidence-report cap. Other sensitive journal paths, hard pre-call
-prompt/total-token/cost guarantees, exact tool typing, ambiguous paid-call
+provider-visible tool names now fail admission. Admitted catalogue callable
+signatures now validate tool arguments before I/O and results before storage.
+Journal state remains separate from the evidence-report cap. Other sensitive
+journal paths, hard pre-call prompt/total-token/cost guarantees, provider-facing
+tool schemas and resource grants, ambiguous paid-call
 reconciliation, and complete request-contract delivery still need evidence
 before claiming safe recovery.
 

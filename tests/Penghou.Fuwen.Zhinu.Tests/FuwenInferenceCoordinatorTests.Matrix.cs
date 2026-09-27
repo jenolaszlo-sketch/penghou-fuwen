@@ -264,7 +264,7 @@ public sealed partial class FuwenInferenceCoordinatorTests
                 maxToolArgumentBytes: 4, maxDurationMilliseconds: 60_000),
             [Search]);
         var turns = DeterministicFakeTurnExecutor.ToolCalls(
-            new InferenceToolCallProposal("call-1", Search, "{\"query\":\"long\"}"));
+            new InferenceToolCallProposal("call-1", Search, "{\"q\":\"long\"}"));
         var tools = new DeterministicFakeReadToolExecutor().RegisterSuccess(Search, Json("{\"answer\":1}"));
         var registration = await RegisterAsync(plan, turns, tools, ct: ct);
         var root = NewRoot();
@@ -379,10 +379,10 @@ public sealed partial class FuwenInferenceCoordinatorTests
             request.TurnOrdinal switch
             {
                 0 => new InferenceToolCallTurnResult(
-                    [new InferenceToolCallProposal("model-call-1", Search, "{\"query\":\"InferenceExecutionRequest\",\"maxResults\":10}")],
+                    [new InferenceToolCallProposal("model-call-1", Search, "{\"q\":{\"query\":\"InferenceExecutionRequest\",\"maxResults\":10}}")],
                     ExactUsage()),
                 1 => new InferenceToolCallTurnResult(
-                    [new InferenceToolCallProposal("model-call-2", Search, "{\"path\":\"src/InferenceExecutionRequest.cs\"}")],
+                    [new InferenceToolCallProposal("model-call-2", Search, "{\"q\":{\"path\":\"src/InferenceExecutionRequest.cs\"}}")],
                     ExactUsage()),
                 _ => new InferenceFinalCandidateResult("\"bounded plan\"", ExactUsage()),
             }));

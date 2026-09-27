@@ -215,8 +215,10 @@ public sealed class FuwenZhinuWorkflowRegistration
         string name,
         string version,
         WorkflowDefinitionDocument definition,
-        FuwenZhinuExecutionPorts? executionPorts)
+        FuwenZhinuExecutionPorts? executionPorts,
+        IReadOnlyDictionary<DescriptorReference, CallableSignature> trustedToolSignatures)
     {
+        TrustedToolSignatures = trustedToolSignatures ?? throw new ArgumentNullException(nameof(trustedToolSignatures));
         Name = RequireText(name, nameof(name));
         Version = RequireText(version, nameof(version));
         Definition = definition ?? throw new ArgumentNullException(nameof(definition));
@@ -226,7 +228,8 @@ public sealed class FuwenZhinuWorkflowRegistration
             () => new FuwenZhinuSequentialWorkflow(
                 Definition.ReadPlan(),
                 Definition.ExecutionFingerprint,
-                ExecutionPorts));
+                ExecutionPorts,
+                TrustedToolSignatures));
     }
 
     /// <summary>The host-defined durable Zhinu workflow name.</summary>
@@ -237,6 +240,8 @@ public sealed class FuwenZhinuWorkflowRegistration
 
     /// <summary>The verified immutable definition stored for this registration.</summary>
     public WorkflowDefinitionDocument Definition { get; }
+
+    internal IReadOnlyDictionary<DescriptorReference, CallableSignature> TrustedToolSignatures { get; }
 
     /// <summary>The provider ports bound to this registration, or null for admission-only registration.</summary>
     public FuwenZhinuExecutionPorts? ExecutionPorts { get; }
@@ -319,6 +324,19 @@ public sealed class FuwenZhinuWorkflowFactory
         VerifyProviderRuntimeIdentity(receipt, providerRuntimeIdentity);
 
         var admittedPlan = definition.ReadPlan();
+        if (executionPorts?.TurnExecutor is not null)
+        {
+            foreach (var node in EnumerateNodes(admittedPlan.Nodes).OfType<InferenceNode>())
+            {
+                if (node.Protocol is null) continue;
+                foreach (var tool in node.Tools ?? [])
+                {
+                    if (!admission.TrustedToolSignatures.ContainsKey(tool))
+                        throw new FuwenZhinuAdmissionException(
+                            $"Inference node '{node.StructuralPath}' has no exact trusted callable signature for tool '{tool.Name}@{tool.Version}'.");
+                }
+            }
+        }
         var coordinated = executionPorts?.TurnExecutor is not null;
         if (executionPorts is not null)
             ValidateExecutableSubset(admittedPlan.Nodes, insideFanOut: false, insideRepeat: false, coordinated);
@@ -342,7 +360,8 @@ public sealed class FuwenZhinuWorkflowFactory
         }
 
         VerifyStoredDefinition(definition, stored);
-        return new FuwenZhinuWorkflowRegistration(name, version, stored, executionPorts);
+        return new FuwenZhinuWorkflowRegistration(name, version, stored, executionPorts,
+            admission.TrustedToolSignatures);
     }
 
     private static void ValidateExecutableSubset(IEnumerable<WorkflowNode> nodes, bool insideFanOut, bool insideRepeat, bool coordinated)
@@ -635,7 +654,8 @@ public sealed class FuwenZhinuWorkflowFactory
 internal sealed class FuwenZhinuSequentialWorkflow(
     WorkflowPlan plan,
     string fingerprint,
-    FuwenZhinuExecutionPorts? executionPorts)
+    FuwenZhinuExecutionPorts? executionPorts,
+    IReadOnlyDictionary<DescriptorReference, CallableSignature> trustedToolSignatures)
     : IWorkflow<JsonElement, JsonElement>, IWorkflowFingerprint
 {
     public string Fingerprint { get; } = fingerprint;
@@ -657,6 +677,7 @@ internal sealed class FuwenZhinuSequentialWorkflow(
             plan,
             Fingerprint,
             executionPorts,
+            trustedToolSignatures,
             context,
             input,
             cancellationToken);

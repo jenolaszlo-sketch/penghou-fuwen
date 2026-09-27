@@ -28,7 +28,7 @@ internal delegate Task<JsonElement> ProtocolLoopRunner(
 internal static class FuwenInferenceCoordinator
 {
     private const string RequestFingerprintContract = "fuwen-request/v2";
-    private const string CoordinatorStateSemantics = "fuwen-inference-coordinator-state/v2-protected-tool-payloads";
+    private const string CoordinatorStateSemantics = "fuwen-inference-coordinator-state/v3-admitted-tool-signatures";
     private const string ToolResultDigestContract = "inference-tool-result/v1";
     private const int DefaultConversationCapUtf8Bytes = 262_144;
     private const int DefaultStepArgumentCapUtf8Bytes = 65_536;
@@ -87,7 +87,7 @@ internal static class FuwenInferenceCoordinator
                 ProtocolLoopName(node.StructuralPath),
                 FuwenRuntimeValueWire.Serialize(initial),
                 (iteration, token) => IterateAsync(
-                    node, plan, ports, prepared, effective, iteration, token),
+                    node, plan, ports, state.TrustedToolSignatures, prepared, effective, iteration, token),
                 new LoopOptions(maxIterations)
                 {
                     // Zhinu measures the time budget once from the loop's first
@@ -329,6 +329,7 @@ internal static class FuwenInferenceCoordinator
                     .OrderBy(static tool => tool.Name, StringComparer.Ordinal)
                     .ThenBy(static tool => tool.Version, StringComparer.Ordinal)
                     .ThenBy(static tool => tool.ContentDigest.Value, StringComparer.Ordinal)
+                    .Select(tool => new { tool, signature = state.TrustedToolSignatures[tool] })
                     .ToArray(),
             };
             var interactionId = RequestFingerprint(FuwenRuntimeValueWire.Serialize(identity));
@@ -630,6 +631,7 @@ internal static class FuwenInferenceCoordinator
         InferenceNode node,
         WorkflowPlan plan,
         FuwenZhinuExecutionPorts ports,
+        IReadOnlyDictionary<DescriptorReference, CallableSignature> trustedToolSignatures,
         PreparedConversation prepared,
         EffectiveBounds effective,
         WorkflowLoopIteration<JsonElement> iteration,
@@ -686,9 +688,9 @@ internal static class FuwenInferenceCoordinator
         }
 
         if (state.Phase == "tool")
-            await ExecuteToolOperationAsync(node, ports, effective, state, iteration, cancellationToken).ConfigureAwait(false);
+            await ExecuteToolOperationAsync(node, plan, ports, trustedToolSignatures, effective, state, iteration, cancellationToken).ConfigureAwait(false);
         else
-            await ExecuteModelOperationAsync(node, plan, ports, effective, state, iteration, cancellationToken).ConfigureAwait(false);
+            await ExecuteModelOperationAsync(node, plan, ports, trustedToolSignatures, effective, state, iteration, cancellationToken).ConfigureAwait(false);
 
         return FinishIteration(
             node, effective, state, iteration,
@@ -841,6 +843,7 @@ internal static class FuwenInferenceCoordinator
         InferenceNode node,
         WorkflowPlan plan,
         FuwenZhinuExecutionPorts ports,
+        IReadOnlyDictionary<DescriptorReference, CallableSignature> trustedToolSignatures,
         EffectiveBounds effective,
         CoordinatorState state,
         WorkflowLoopIteration<JsonElement> iteration,
@@ -946,7 +949,7 @@ internal static class FuwenInferenceCoordinator
             },
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        ApplyTurnOutput(node, plan, effective, state, output, ordinal, operationId);
+        ApplyTurnOutput(node, plan, trustedToolSignatures, effective, state, output, ordinal, operationId);
     }
 
     private static JsonElement TurnRecord(InferenceTurnResult result, long elapsedMilliseconds)
@@ -978,8 +981,9 @@ internal static class FuwenInferenceCoordinator
             usage.Cost?.AmountMicrounits, usage.Cost?.CurrencyCode, usage.Cost?.PricingRevision, usage.Cost?.IsEstimated ?? false);
 
     private static void ApplyTurnOutput(
-        InferenceNode node, WorkflowPlan plan, EffectiveBounds effective, CoordinatorState state,
-        JsonElement output, int ordinal, string operationId)
+        InferenceNode node, WorkflowPlan plan,
+        IReadOnlyDictionary<DescriptorReference, CallableSignature> trustedToolSignatures,
+        EffectiveBounds effective, CoordinatorState state, JsonElement output, int ordinal, string operationId)
     {
         var record = CanonicalJson.Deserialize<TurnOutputRecord>(CanonicalJson.Canonicalize(output));
         if (record.Status == "transport-error")
@@ -1068,7 +1072,8 @@ internal static class FuwenInferenceCoordinator
                 ExecutionFailureKind.Contract,
                 ExecutionFailureCode.ToolCallLimitExceeded,
                 $"Inference node '{node.StructuralPath}' received more tool calls than its remaining allowance.")
-            : InferenceTurnValidation.ValidateProposals(proposals, visibleTools, maxArgBytes);
+            : InferenceTurnValidation.ValidateProposals(proposals, visibleTools, maxArgBytes)
+              ?? ValidateTypedProposals(proposals, trustedToolSignatures, plan.Schemas);
         if (failure is not null)
         {
             state.Failure = ToRecord(failure);
@@ -1171,9 +1176,45 @@ internal static class FuwenInferenceCoordinator
         state.Phase = "done";
     }
 
+    private static ExecutionFailure? ValidateTypedProposals(
+        IReadOnlyList<InferenceToolCallProposal> proposals,
+        IReadOnlyDictionary<DescriptorReference, CallableSignature> trustedToolSignatures,
+        IReadOnlyList<ResolvedSchemaDefinition> schemas)
+    {
+        foreach (var proposal in proposals)
+        {
+            if (!trustedToolSignatures.TryGetValue(proposal.Tool, out var signature))
+                return ToolTypeFailure(proposal, "has no trusted admitted signature");
+            using var arguments = JsonDocument.Parse(proposal.ArgumentsJson);
+            var values = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+            foreach (var property in arguments.RootElement.EnumerateObject())
+            {
+                if (!values.TryAdd(property.Name, property.Value))
+                    return ToolTypeFailure(proposal, $"repeats argument '{property.Name}'");
+            }
+            if (values.Count != signature.Parameters.Count)
+                return ToolTypeFailure(proposal, "does not supply exactly the admitted argument names");
+            foreach (var parameter in signature.Parameters)
+            {
+                if (!values.TryGetValue(parameter.Name, out var value))
+                    return ToolTypeFailure(proposal, $"omits admitted argument '{parameter.Name}'");
+                if (!RuntimeValueValidator.Validate(
+                    RuntimeValue.FromJson(value), parameter.Type, schemas).Succeeded)
+                    return ToolTypeFailure(proposal, $"has an invalid value for '{parameter.Name}'");
+            }
+        }
+        return null;
+    }
+
+    private static ExecutionFailure ToolTypeFailure(InferenceToolCallProposal proposal, string reason) =>
+        new(ExecutionFailureKind.ProviderOutput, ExecutionFailureCode.ToolMappingFailure,
+            $"Tool call '{proposal.CallId}' {reason}.");
+
     private static async Task ExecuteToolOperationAsync(
         InferenceNode node,
+        WorkflowPlan plan,
         FuwenZhinuExecutionPorts ports,
+        IReadOnlyDictionary<DescriptorReference, CallableSignature> trustedToolSignatures,
         EffectiveBounds effective,
         CoordinatorState state,
         WorkflowLoopIteration<JsonElement> iteration,
@@ -1262,6 +1303,15 @@ internal static class FuwenInferenceCoordinator
                             (int)failure.Kind, (int)failure.Code,
                             $"Tool call '{pending.CallId}' failed with {failure.Code}.",
                             false, failure.ProviderCode), stopwatch.ElapsedMilliseconds);
+                    }
+                    if (!trustedToolSignatures.TryGetValue(tool, out var signature) ||
+                        !RuntimeValueValidator.Validate(toolResult.Output, signature.OutputType, plan.Schemas).Succeeded)
+                    {
+                        return ToolRecord(new FailureRecord(
+                            (int)ExecutionFailureKind.ProviderOutput,
+                            (int)ExecutionFailureCode.SchemaMismatch,
+                            $"Tool call '{pending.CallId}' returned a value outside its admitted output type.",
+                            false, null), stopwatch.ElapsedMilliseconds);
                     }
                     var outputBytes = CanonicalJson.Serialize(FuwenRuntimeValueWire.ToJson(toolResult.Output!));
                     // Reject an oversized result before it is persisted in the

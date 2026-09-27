@@ -11,9 +11,11 @@ work covers invocation identity, final budget settlement, currency validation,
 selected-executor preflight, bounded evidence reports, hard completion-token
 capability checks, protected successful read-tool results, and whole-batch
 tool allowance checks. Duplicate provider-visible tool names now fail
-admission. Hard pre-call prompt, total-token, and cost guarantees, typed
-tool arguments/results, full private history, and ambiguous-call recovery
-remain open. The intended guarantees below are normative design goals; see
+admission. Exact catalogue callable signatures now gate tool arguments
+before I/O and results before protected storage.
+Hard pre-call prompt, total-token, and cost guarantees, provider-facing
+tool schemas, resource
+grants, full private history, and ambiguous-call recovery remain open. The intended guarantees below are normative design goals; see
 the [corrective plan](inference-hardening-v2-prep-plan-2026-09-27.md) for gates.
 
 ## Direction

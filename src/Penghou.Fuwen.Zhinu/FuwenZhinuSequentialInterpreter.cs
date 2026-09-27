@@ -15,6 +15,7 @@ internal static class FuwenZhinuSequentialInterpreter
         WorkflowPlan plan,
         string executionFingerprint,
         FuwenZhinuExecutionPorts ports,
+        IReadOnlyDictionary<DescriptorReference, CallableSignature> trustedToolSignatures,
         WorkflowContext context,
         JsonElement input,
         CancellationToken cancellationToken)
@@ -30,7 +31,7 @@ internal static class FuwenZhinuSequentialInterpreter
         var inputValue = FuwenRuntimeValueWire.FromJson(input, plan.InputType, plan.Schemas);
         EnsureType(inputValue, plan.InputType, plan.Schemas, "workflow input");
 
-        var state = new FuwenInterpreterState(inputValue);
+        var state = new FuwenInterpreterState(inputValue) { TrustedToolSignatures = trustedToolSignatures };
         var schedule = new FuwenExecutionSchedule(plan);
         var result = await ExecuteRegionAsync(
             plan.Name,

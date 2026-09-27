@@ -55,6 +55,8 @@ internal static class FuwenBindingEvaluator
 internal sealed class FuwenInterpreterState(RuntimeValue input)
 {
     internal RuntimeValue Input { get; } = input;
+    internal IReadOnlyDictionary<DescriptorReference, Penghou.Fuwen.Compiler.CallableSignature> TrustedToolSignatures { get; init; } =
+        new Dictionary<DescriptorReference, Penghou.Fuwen.Compiler.CallableSignature>();
     internal Dictionary<string, RuntimeValue> Outputs { get; } = new(StringComparer.Ordinal);
     internal Dictionary<string, ContextSnapshotReference> Snapshots { get; } = new(StringComparer.Ordinal);
     internal RuntimeValue? CurrentItem { get; set; }

@@ -329,6 +329,7 @@ Penghou.Fuwen.Compiler.WorkflowAdmissionResult.Compilation.get -> Penghou.Fuwen.
 Penghou.Fuwen.Compiler.WorkflowAdmissionResult.Diagnostics.get -> Penghou.Fuwen.Compiler.DiagnosticCollection!
 Penghou.Fuwen.Compiler.WorkflowAdmissionResult.Receipt.get -> Penghou.Fuwen.Compiler.WorkflowAdmissionReceipt?
 Penghou.Fuwen.Compiler.WorkflowAdmissionResult.Succeeded.get -> bool
+Penghou.Fuwen.Compiler.WorkflowAdmissionResult.TrustedToolSignatures.get -> System.Collections.Generic.IReadOnlyDictionary<Penghou.Fuwen.DescriptorReference!, Penghou.Fuwen.Compiler.CallableSignature!>!
 Penghou.Fuwen.Compiler.WorkflowAdmissionService
 Penghou.Fuwen.Compiler.WorkflowAdmissionService.AdmitAsync(Penghou.Fuwen.WorkflowPlan! plan, Penghou.Fuwen.Compiler.CompilationBudget? callerBudget = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.WorkflowAdmissionResult!>
 Penghou.Fuwen.Compiler.WorkflowAdmissionService.WorkflowAdmissionService(Penghou.Fuwen.Compiler.WorkflowCompiler! compiler) -> void

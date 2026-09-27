@@ -27,9 +27,14 @@ contract versions. Consumer-visible breaking changes are called out under
 - Make exhausted tool allowances explicit no-tools finalization requests,
   reject oversized proposal batches before any tool I/O, and reject duplicate
   provider-visible tool names at registration.
-- Reconcile README and capability documentation with the still-open typed
-  tool, budget, recovery, privacy, provider, and operator gates. No new NuGet
-  package is published by these source changes.
+- Carry exact catalogue tool signatures through in-process admission and
+  validate proposed argument names/types before tool I/O and returned values
+  before protected storage. Durable interaction identity now binds these
+  signatures; older in-flight coordinator state stops on the new semantics.
+  Provider-facing tool schemas and resource-level authorization remain open.
+- Reconcile README and capability documentation with the still-open budget,
+  recovery, privacy, provider, and operator gates. No new NuGet package is
+  published by these source changes.
 
 ## 0.1.0-preview.11
 

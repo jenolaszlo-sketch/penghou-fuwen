@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using FluentAssertions;
+using Penghou.Fuwen.Compiler;
 using Penghou.Zhinu;
 
 namespace Penghou.Fuwen.Zhinu.Tests;
@@ -151,6 +152,86 @@ public sealed partial class FuwenInferenceCoordinatorTests
             var evidence = sink.Items.Should().ContainSingle().Subject;
             evidence.Cost.Should().BeNull();
             evidence.PricingQuality.Should().Be(InferencePricingQuality.Unknown);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    private static CallableContract StrictReviewToolContract() => new(
+        new CallableSignature([new CallableParameter("q", Text)], Text),
+        CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe);
+
+    [Fact]
+    public async Task Admitted_tool_signature_accepts_matching_arguments_and_result()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var turns = DeterministicFakeTurnExecutor.FromResponder((request, _) =>
+            ValueTask.FromResult<InferenceTurnResult>(request.TurnOrdinal == 0
+                ? new InferenceToolCallTurnResult(
+                    [new InferenceToolCallProposal("call-1", Search, "{\"q\":\"ok\"}")], ExactUsage())
+                : new InferenceFinalCandidateResult("\"done\"", ExactUsage())));
+        var tools = new DeterministicFakeReadToolExecutor().RegisterSuccess(Search, Json("\"result\""));
+        var registration = await RegisterAsync(CreatePlan(Limits(2, 2, 1), [Search]), turns, tools,
+            ct: ct, toolContract: StrictReviewToolContract());
+        var root = NewRoot();
+        try
+        {
+            await using var engine = CreateEngine(root, registration);
+            var run = await engine.StartAsync("coord", "1", JsonSerializer.SerializeToElement("q"), cancellationToken: ct);
+            await engine.ExecuteAsync(run, ct);
+            (await engine.WaitForCompletionAsync<JsonElement>(run, cancellationToken: ct))
+                .GetString().Should().Be("done");
+            tools.ObservedRequests.Should().ContainSingle();
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"q\":1}")]
+    [InlineData("{\"q\":\"ok\",\"extra\":1}")]
+    [InlineData("{\"q\":\"first\",\"q\":\"second\"}")]
+    public async Task Admitted_tool_signature_rejects_invalid_arguments_before_tool_io(string arguments)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var turns = DeterministicFakeTurnExecutor.ToolCalls(new InferenceToolCallProposal("call-1", Search, arguments));
+        var tools = new DeterministicFakeReadToolExecutor().RegisterSuccess(Search, Json("\"ok\""));
+        var sink = new RecordingEvidenceSink();
+        var registration = await RegisterAsync(CreatePlan(Limits(2, 2, 1), [Search]), turns, tools,
+            evidenceSink: sink, ct: ct, toolContract: StrictReviewToolContract());
+        var root = NewRoot();
+        try
+        {
+            await using var engine = CreateEngine(root, registration);
+            var run = await engine.StartAsync("coord", "1", JsonSerializer.SerializeToElement("q"), cancellationToken: ct);
+            await engine.ExecuteAsync(run, ct);
+            (await engine.GetRunAsync(run, ct))!.Status.Should().Be(WorkflowStatus.Failed);
+            tools.ObservedRequests.Should().BeEmpty();
+            sink.Items.Should().ContainSingle().Subject.Failure!.Code.Should().Be(ExecutionFailureCode.ToolMappingFailure);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    [Fact]
+    public async Task Admitted_tool_signature_rejects_wrong_result_before_storage()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var turns = DeterministicFakeTurnExecutor.ToolCalls(
+            new InferenceToolCallProposal("call-1", Search, "{\"q\":\"ok\"}"));
+        var tools = new DeterministicFakeReadToolExecutor().RegisterSuccess(Search, Json("{\"wrong\":1}"));
+        var sink = new RecordingEvidenceSink();
+        var registration = await RegisterAsync(CreatePlan(Limits(2, 2, 1), [Search]), turns, tools,
+            evidenceSink: sink, ct: ct, toolContract: StrictReviewToolContract());
+        var root = NewRoot();
+        try
+        {
+            await using var engine = CreateEngine(root, registration);
+            var run = await engine.StartAsync("coord", "1", JsonSerializer.SerializeToElement("q"), cancellationToken: ct);
+            await engine.ExecuteAsync(run, ct);
+            (await engine.GetRunAsync(run, ct))!.Status.Should().Be(WorkflowStatus.Failed);
+            tools.ObservedRequests.Should().ContainSingle();
+            var evidence = sink.Items.Should().ContainSingle().Subject;
+            evidence.Failure!.Code.Should().Be(ExecutionFailureCode.SchemaMismatch);
+            evidence.ProtectedPayloads.Should().BeEmpty();
         }
         finally { DeleteDirectory(root); }
     }

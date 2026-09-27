@@ -113,6 +113,7 @@ public sealed partial class FuwenInferenceCoordinatorTests
 
     private sealed class RecordingBudgetLedger(InferenceBudgetReservationDecision decision) : IInferenceBudgetLedger
     {
+        public string StoreIdentity { get; } = "test-budget-ledger/v1";
         public List<InferenceBudgetReservationRequest> Reservations { get; } = [];
         public int Settlements { get; private set; }
         public int Uncertainties { get; private set; }

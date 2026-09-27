@@ -51,6 +51,9 @@ public sealed class InferenceBudgetReservationRequest
 /// </summary>
 public interface IInferenceBudgetLedger
 {
+    /// <summary>Stable identity of the durable ledger store, changed when its backing store is replaced.</summary>
+    string StoreIdentity { get; }
+
     /// <summary>Atomically reserve the entire maximum charge before any paid work.</summary>
     ValueTask<InferenceBudgetReservationDecision> ReserveAsync(
         InferenceBudgetReservationRequest request, CancellationToken cancellationToken = default);

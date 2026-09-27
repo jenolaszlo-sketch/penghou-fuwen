@@ -59,13 +59,16 @@ internal static class FuwenInferenceCoordinator
         if (ports.TurnExecutor is null)
             throw new FuwenZhinuExecutionException(
                 $"Inference node '{node.StructuralPath}' requires a turn executor for coordinated inference.");
+        if (ports.BudgetLedger is not null && string.IsNullOrWhiteSpace(ports.BudgetLedger.StoreIdentity))
+            throw new FuwenZhinuExecutionException(
+                $"Inference node '{node.StructuralPath}' requires a stable durable budget store identity.");
 
         var effective = EffectiveLimits(node.Protocol.Limits, ports.InferenceHostCeilings);
         var required = RequireFiniteBounds(node, effective, ports.InferenceHostCeilings);
         if (required is not null)
             throw new FuwenZhinuExecutionException(required);
 
-        var prepared = Prepare(node, plan, executionFingerprint, state, contextInputs, effective, workflowRunId, runtimeScope);
+        var prepared = Prepare(node, plan, executionFingerprint, state, contextInputs, effective, workflowRunId, runtimeScope, ports.BudgetLedger?.StoreIdentity);
         if (prepared.Failure is not null)
             throw new FuwenZhinuExecutionException(prepared.Failure);
 
@@ -289,7 +292,8 @@ internal static class FuwenInferenceCoordinator
         IReadOnlyList<InferenceContextInput> contextInputs,
         EffectiveBounds effective,
         Guid workflowRunId,
-        string runtimeScope)
+        string runtimeScope,
+        string? budgetLedgerIdentity)
     {
         try
         {
@@ -351,7 +355,11 @@ internal static class FuwenInferenceCoordinator
                     .Select(tool => new { tool, signature = state.TrustedToolSignatures[tool] })
                     .ToArray(),
             };
-            var interactionId = RequestFingerprint(FuwenRuntimeValueWire.Serialize(identity));
+            // Preserve existing interaction identities when no ledger is used.
+            // A ledger-backed replay must not silently reserve against a different store.
+            var interactionId = budgetLedgerIdentity is null
+                ? RequestFingerprint(FuwenRuntimeValueWire.Serialize(identity))
+                : RequestFingerprint(FuwenRuntimeValueWire.Serialize(new { identity, budgetLedgerIdentity }));
             return new PreparedConversation(conversation, interactionId, null);
 
             PreparedConversation Fail(string message) => new(

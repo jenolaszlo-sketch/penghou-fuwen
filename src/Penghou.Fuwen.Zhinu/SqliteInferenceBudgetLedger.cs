@@ -8,6 +8,8 @@ namespace Penghou.Fuwen.Zhinu;
 public sealed class SqliteInferenceBudgetLedger : IInferenceBudgetLedger
 {
     private readonly string _connectionString;
+    /// <inheritdoc />
+    public string StoreIdentity { get; }
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     /// <summary>Creates or opens a durable ledger database at <paramref name="databasePath"/>.</summary>
@@ -19,8 +21,12 @@ public sealed class SqliteInferenceBudgetLedger : IInferenceBudgetLedger
         _connectionString = new SqliteConnectionStringBuilder { DataSource = fullPath, Mode = SqliteOpenMode.ReadWriteCreate, Pooling = false }.ToString();
         using var connection = Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS accounts (interaction_id TEXT PRIMARY KEY, limits_json TEXT NOT NULL, finalized INTEGER NOT NULL DEFAULT 0, currency TEXT NULL, pricing_revision TEXT NULL); CREATE TABLE IF NOT EXISTS operations (interaction_id TEXT NOT NULL, operation_id TEXT NOT NULL, digest TEXT NOT NULL, binding TEXT NOT NULL, prompt_quote INTEGER NULL, completion_quote INTEGER NULL, total_quote INTEGER NULL, cost_quote INTEGER NULL, currency TEXT NULL, pricing_revision TEXT NULL, status INTEGER NOT NULL, prompt_actual INTEGER NULL, completion_actual INTEGER NULL, total_actual INTEGER NULL, cost_actual INTEGER NULL, actual_currency TEXT NULL, actual_revision TEXT NULL, PRIMARY KEY(interaction_id, operation_id), FOREIGN KEY(interaction_id) REFERENCES accounts(interaction_id));";
+        command.CommandText = "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS ledger_metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS accounts (interaction_id TEXT PRIMARY KEY, limits_json TEXT NOT NULL, finalized INTEGER NOT NULL DEFAULT 0, currency TEXT NULL, pricing_revision TEXT NULL); CREATE TABLE IF NOT EXISTS operations (interaction_id TEXT NOT NULL, operation_id TEXT NOT NULL, digest TEXT NOT NULL, binding TEXT NOT NULL, prompt_quote INTEGER NULL, completion_quote INTEGER NULL, total_quote INTEGER NULL, cost_quote INTEGER NULL, currency TEXT NULL, pricing_revision TEXT NULL, status INTEGER NOT NULL, prompt_actual INTEGER NULL, completion_actual INTEGER NULL, total_actual INTEGER NULL, cost_actual INTEGER NULL, actual_currency TEXT NULL, actual_revision TEXT NULL, PRIMARY KEY(interaction_id, operation_id), FOREIGN KEY(interaction_id) REFERENCES accounts(interaction_id)); INSERT OR IGNORE INTO ledger_metadata(key,value) VALUES('store_identity',$identity);";
+        command.Parameters.AddWithValue("$identity", Guid.NewGuid().ToString("D"));
         command.ExecuteNonQuery();
+        using var identityCommand = connection.CreateCommand();
+        identityCommand.CommandText = "SELECT value FROM ledger_metadata WHERE key='store_identity'";
+        StoreIdentity = identityCommand.ExecuteScalar() as string ?? throw new InvalidOperationException("The SQLite ledger store identity is missing.");
     }
 
     /// <inheritdoc />
@@ -29,6 +35,7 @@ public sealed class SqliteInferenceBudgetLedger : IInferenceBudgetLedger
         ArgumentNullException.ThrowIfNull(request);
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction(deferred: false);
+        await VerifyStoreIdentityAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
         var limitsJson = JsonSerializer.Serialize(request.EffectiveLimits.Limits.Select(x => new LimitDto((int)x.Dimension, x.Maximum)), JsonOptions);
         var account = await ReadAccountAsync(connection, transaction, request.InteractionId, cancellationToken).ConfigureAwait(false);
         if (account is not null && account.LimitsJson != limitsJson)
@@ -120,6 +127,7 @@ public sealed class SqliteInferenceBudgetLedger : IInferenceBudgetLedger
         ArgumentException.ThrowIfNullOrWhiteSpace(interactionId);
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction(deferred: false);
+        await VerifyStoreIdentityAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
         var account = await ReadAccountAsync(connection, transaction, interactionId, cancellationToken).ConfigureAwait(false);
         if (account is not null && !account.Finalized)
         {
@@ -135,6 +143,7 @@ public sealed class SqliteInferenceBudgetLedger : IInferenceBudgetLedger
         ArgumentException.ThrowIfNullOrWhiteSpace(interactionId); ArgumentException.ThrowIfNullOrWhiteSpace(operationId);
         await using var connection = await OpenAsync(token).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction(deferred: false);
+        await VerifyStoreIdentityAsync(connection, transaction, token).ConfigureAwait(false);
         var operation = await ReadOperationAsync(connection, transaction, interactionId, operationId, token).ConfigureAwait(false) ?? throw new InvalidOperationException("Budget operation was not found.");
         await action(connection, transaction, operation).ConfigureAwait(false);
         await transaction.CommitAsync(token).ConfigureAwait(false);
@@ -178,6 +187,15 @@ public sealed class SqliteInferenceBudgetLedger : IInferenceBudgetLedger
     private async ValueTask<SqliteConnection> OpenAsync(CancellationToken token) { var c = new SqliteConnection(_connectionString); await c.OpenAsync(token).ConfigureAwait(false); await using var cmd = c.CreateCommand(); cmd.CommandText = "PRAGMA foreign_keys=ON;"; await cmd.ExecuteNonQueryAsync(token).ConfigureAwait(false); return c; }
     private static async Task ExecuteAsync(SqliteConnection c, SqliteTransaction t, string sql, CancellationToken token, params (string Name, object? Value)[] args)
     { await using var cmd = c.CreateCommand(); cmd.Transaction = t; cmd.CommandText = sql; foreach (var a in args) cmd.Parameters.AddWithValue(a.Name, a.Value ?? DBNull.Value); await cmd.ExecuteNonQueryAsync(token).ConfigureAwait(false); }
+    private async Task VerifyStoreIdentityAsync(SqliteConnection connection, SqliteTransaction transaction, CancellationToken token)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT value FROM ledger_metadata WHERE key='store_identity'";
+        var identity = await command.ExecuteScalarAsync(token).ConfigureAwait(false) as string;
+        if (!string.Equals(identity, StoreIdentity, StringComparison.Ordinal))
+            throw new InvalidOperationException("The SQLite ledger backing store was replaced after this ledger instance was created.");
+    }
     private static async Task<Account?> ReadAccountAsync(SqliteConnection c, SqliteTransaction t, string id, CancellationToken token)
     { await using var cmd = c.CreateCommand(); cmd.Transaction = t; cmd.CommandText = "SELECT limits_json,finalized,currency,pricing_revision FROM accounts WHERE interaction_id=$i"; cmd.Parameters.AddWithValue("$i", id); await using var r = await cmd.ExecuteReaderAsync(token).ConfigureAwait(false); return await r.ReadAsync(token).ConfigureAwait(false) ? new(r.GetString(0), r.GetInt64(1) != 0, Text(r, 2), Text(r, 3)) : null; }
     private static async Task<Operation?> ReadOperationAsync(SqliteConnection c, SqliteTransaction t, string i, string o, CancellationToken token)

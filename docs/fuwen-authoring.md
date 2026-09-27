@@ -48,8 +48,8 @@ are part of the current inference protocol; authors do not select a protocol
 revision or adapter implementation. Source bounds may only narrow finite host
 ceilings. Per-call limits retain their per-attempt meaning. Without the
 `advisory` keyword, authored prompt-token, total-token and monetary limits
-are strict: coordinated registration rejects them until a trusted provider maximum quote and replay-bound ledger
-identity are integrated. An optional SQLite leaf ledger now supports durable
+are strict: coordinated registration rejects them until a trusted provider maximum quote is integrated. The ledger
+store identity is now bound to replay identity. An optional SQLite leaf ledger now supports durable
 reservation for custom quoted executors. Explicit
 `aggregate advisory` permits after-call monitoring and failure on measured
 overrun; it cannot prevent a provider charge. Host prompt, total-token and

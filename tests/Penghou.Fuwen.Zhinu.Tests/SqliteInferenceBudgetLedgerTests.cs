@@ -138,6 +138,34 @@ public sealed class SqliteInferenceBudgetLedgerTests
         finally { DeleteRoot(root); }
     }
 
+    [Fact]
+    public async Task Store_identity_survives_reopen_and_stale_ledger_fails_after_database_replacement()
+    {
+        var root = NewRoot();
+        try
+        {
+            var path = Path.Combine(root, "budget.db");
+            var original = new SqliteInferenceBudgetLedger(path);
+            var identity = original.StoreIdentity;
+            Guid.TryParseExact(identity, "D", out _).Should().BeTrue();
+            var reopened = new SqliteInferenceBudgetLedger(path);
+            reopened.StoreIdentity.Should().Be(identity);
+
+            File.Delete(path);
+            foreach (var suffix in new[] { "-wal", "-shm" })
+            {
+                var sidecar = path + suffix;
+                if (File.Exists(sidecar)) File.Delete(sidecar);
+            }
+            var replacement = new SqliteInferenceBudgetLedger(path);
+            replacement.StoreIdentity.Should().NotBe(identity);
+            var staleUse = async () => await original.ReserveAsync(
+                Request("stale-op", "stale-digest", prompt: 5, total: 8, cost: 10), TestContext.Current.CancellationToken);
+            await staleUse.Should().ThrowAsync<InvalidOperationException>().WithMessage("*backing store was replaced*");
+        }
+        finally { DeleteRoot(root); }
+    }
+
     private static InferenceBudgetReservationRequest Request(
         string operationId, string digest, long prompt, long total, long cost) => new(
         "interaction/1", operationId, digest, Limits,

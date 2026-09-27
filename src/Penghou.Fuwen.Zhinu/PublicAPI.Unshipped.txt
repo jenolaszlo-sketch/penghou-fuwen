@@ -3,6 +3,7 @@ Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger
 Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger.SqliteInferenceBudgetLedger(string! databasePath) -> void
 Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger.ReserveAsync(Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Zhinu.InferenceBudgetReservationDecision>
 Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger.SettleAsync(string! interactionId, string! operationId, Penghou.Fuwen.InferenceTurnUsage! actual, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger.StoreIdentity.get -> string!
 Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger.RetainUncertainAsync(string! interactionId, string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger.ReleaseProvenUnusedAsync(string! interactionId, string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger.FinalizeAsync(string! interactionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
@@ -58,6 +59,7 @@ Penghou.Fuwen.Zhinu.IFuwenZhinuProviderRuntimeIdentity.ResolvedDescriptorSetFing
 Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.BudgetLedger.get -> Penghou.Fuwen.Zhinu.IInferenceBudgetLedger?
 Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.BudgetLedger.init -> void
 Penghou.Fuwen.Zhinu.IInferenceBudgetLedger
+Penghou.Fuwen.Zhinu.IInferenceBudgetLedger.StoreIdentity.get -> string!
 Penghou.Fuwen.Zhinu.IInferenceBudgetLedger.FinalizeAsync(string! interactionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Penghou.Fuwen.Zhinu.IInferenceBudgetLedger.ReleaseProvenUnusedAsync(string! interactionId, string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Penghou.Fuwen.Zhinu.IInferenceBudgetLedger.ReserveAsync(Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Zhinu.InferenceBudgetReservationDecision>

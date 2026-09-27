@@ -48,11 +48,14 @@ evidence. Neither port embeds credentials, filesystem paths, provider clients,
 or Zhinu contexts. `InferenceTurnValidation` rejects undeclared,
 write-capable, duplicate-call-ID, oversized, and malformed-JSON proposals;
 coordinated admission also rejects duplicate provider-visible tool names.
-An oversized batch fails before any tool execution. Exact callable
-argument/result type validation is not yet implemented on this path. Each turn
-request carries a completion ceiling narrowed by the remaining aggregate
-allowance and its per-call timeout; read-tool requests carry the effective
-result-byte ceiling. The selected coordinated turn executor must expose
+An oversized batch fails before any tool execution. Coordinated admission
+binds exact trusted callable signatures; the coordinator validates proposed
+argument names/types before tool I/O and validates results before persistence.
+Each turn request carries a completion ceiling narrowed by the remaining
+aggregate allowance and its per-call timeout. The coordinator also cancels a
+cooperative turn executor at that timeout; expiry remains possibly committed
+and does not prove that provider work was avoided. Read-tool requests carry the
+effective result-byte ceiling. The selected coordinated turn executor must expose
 `IInferenceTurnExecutorManifest` for structured preflight, and must declare
 hard completion-token enforcement when a completion ceiling is required.
 `BaizeOneTurnMapper` maps one-turn provider shapes; a stock Baize

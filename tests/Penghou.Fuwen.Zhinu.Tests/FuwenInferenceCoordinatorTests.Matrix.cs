@@ -651,9 +651,18 @@ public sealed partial class FuwenInferenceCoordinatorTests
     {
         var ct = TestContext.Current.CancellationToken;
         var plan = CreatePlan(Limits(turns: 2, modelCalls: 2), perCall: new InferenceLimits(MaxTokens: null, TimeoutSeconds: 1));
+        var observedCancellation = false;
         var turns = DeterministicFakeTurnExecutor.FromResponder(async (_, token) =>
         {
-            await Task.Delay(1500, token);
+            try
+            {
+                await Task.Delay(1500, token);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                observedCancellation = true;
+                throw;
+            }
             return new InferenceFinalCandidateResult("\"late\"");
         });
         var sink = new RecordingEvidenceSink();
@@ -672,6 +681,7 @@ public sealed partial class FuwenInferenceCoordinatorTests
                 .Should().Be(ExecutionFailureCode.Timeout);
             turns.ObservedRequests.Should().ContainSingle()
                 .Which.TimeoutSeconds.Should().Be(1);
+            observedCancellation.Should().BeTrue();
         }
         finally { DeleteDirectory(root); }
     }

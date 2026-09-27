@@ -917,15 +917,29 @@ internal static class FuwenInferenceCoordinator
                     maxNewToolCalls,
                     maxCompletionTokens: EffectiveMaxCompletionTokens(node, effective, state),
                     timeoutSeconds: node.Limits?.TimeoutSeconds);
+                using var callDeadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+                var timeoutSeconds = node.Limits?.TimeoutSeconds;
+                if (timeoutSeconds is int deadlineSeconds)
+                    callDeadline.CancelAfter(TimeSpan.FromSeconds(deadlineSeconds));
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 InferenceTurnResult turnResult;
                 try
                 {
-                    turnResult = await ports.TurnExecutor!.ExecuteTurnAsync(request, token).ConfigureAwait(false);
+                    turnResult = await ports.TurnExecutor!.ExecuteTurnAsync(request, callDeadline.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested || cancellationToken.IsCancellationRequested)
                 {
                     throw;
+                }
+                catch (Exception exception) when (exception is not Penghou.Zhinu.ZhinuException &&
+                    callDeadline.IsCancellationRequested && !token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+                {
+                    stopwatch.Stop();
+                    return TurnRecord(new FailureRecord(
+                        (int)ExecutionFailureKind.Timeout,
+                        (int)ExecutionFailureCode.Timeout,
+                        $"Model turn {operationId} exceeded its {timeoutSeconds}s per-call timeout and may have committed.",
+                        true, nameof(TimeoutException)), stopwatch.ElapsedMilliseconds);
                 }
                 catch (Penghou.Zhinu.ZhinuException)
                 {

@@ -5,7 +5,14 @@ Implementation work is tracked in the
 The plan makes Marang the first consumer proof while keeping all contracts
 product-neutral.
 
-Status: accepted product and architecture direction; not yet implemented.
+Status: the contracts and a bounded coordinator are implemented in the current
+source tree. A first corrective batch addresses invocation identity, final
+budget settlement, currency validation, and selected-executor preflight.
+Journal payload protection and hard pre-call budget enforcement remain open;
+serialized evidence reports now honor their byte limit. The intended
+guarantees below are normative design goals; the current
+implementation does not yet satisfy all of them. See the [implementation plan](complex-activities-implementation-plan.md)
+for corrective status and gates.
 
 ## Direction
 
@@ -63,8 +70,11 @@ formatter contract are designed together.
 
 ## Admission and identity
 
-Compilation proves the declared inference contract; adapter preflight proves a
-configured runtime can honor it; admission authorizes one exact combination.
+Compilation proves the declared inference contract; adapter preflight should
+prove a configured runtime can honor it; admission authorizes one exact
+combination. The coordinated path now requires a manifest from its selected
+turn executor. The remaining corrective gates must still prove runtime policy
+before registration or provider work.
 Preflight must report tool-loop support, prompt form, context delivery, output
 mode, limits, missing bindings, and unsupported effects before provider work.
 
@@ -115,6 +125,19 @@ through the execution boundary. At minimum the journal identifies:
 
 Workflow retry must resume or reconcile the same invocation. It must not
 silently restart a hidden loop, repeat a paid call, or duplicate a tool effect.
+Invocation identity now binds the run and input semantics. Successful coordinated
+read-tool results use a host-owned protected-payload store; ordinary step and
+conversation state retain a reference that is verified on authorized replay.
+Registration rejects coordinated tools when the store is absent. This covers
+tool results only: prompts, context, arguments, model candidates, and other
+sensitive workflow ingress/export paths still require the broader protected
+persistence boundary before private-history claims are justified.
+Hosts enabling coordinated read tools supply
+`IInferenceProtectedPayloadStore` in `FuwenZhinuExecutionPorts`. The store
+must durably bind each idempotent put to its interaction, tool, operation key
+and exact bytes; authorize reads for the original scope; and retain content
+for as long as that workflow may resume. A missing, inaccessible or corrupt
+payload stops recovery rather than repeating the completed tool call.
 Exactly-once remote execution is not assumed: ambiguous provider outcomes need
 idempotency keys, receipt lookup, or a conservative typed failure. Read-only
 calls may be safely repeatable in effect while still differing in cost or data,

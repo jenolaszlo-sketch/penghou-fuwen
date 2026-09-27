@@ -350,7 +350,7 @@ internal static class FuwenZhinuSequentialInterpreter
         if (node.Protocol is not null && ports.TurnExecutor is not null)
             return await FuwenInferenceCoordinator.ExecuteAsync(
                 node, plan, executionFingerprint, ports, RootLoopRunner(context), state, contextInputs,
-                node.StructuralPath, cancellationToken).ConfigureAwait(false);
+                context.WorkflowRunId, node.StructuralPath, cancellationToken).ConfigureAwait(false);
 
         var (requestJson, createRequest) = BuildInferenceRequest(node, plan, state, arguments, contextInputs);
         var envelopeJson = await context.StepAsync<JsonElement, JsonElement>(
@@ -751,7 +751,7 @@ internal static class FuwenZhinuSequentialInterpreter
                         break;
                     case InferenceNode inference:
                         state.Outputs[bodyNode.StructuralPath] = await ExecuteRepeatInferenceAsync(
-                            repeat, inference, plan, executionFingerprint, ports, iteration, state, cancellationToken).ConfigureAwait(false);
+                            repeat, inference, plan, executionFingerprint, ports, context, iteration, state, cancellationToken).ConfigureAwait(false);
                         break;
                     case ConditionalNode conditional:
                         await ExecuteRepeatConditionalAsync(
@@ -925,6 +925,7 @@ internal static class FuwenZhinuSequentialInterpreter
         WorkflowPlan plan,
         string executionFingerprint,
         FuwenZhinuExecutionPorts ports,
+        WorkflowContext context,
         WorkflowLoopIteration<JsonElement> iteration,
         FuwenInterpreterState state,
         CancellationToken cancellationToken)
@@ -953,6 +954,7 @@ internal static class FuwenZhinuSequentialInterpreter
         if (node.Protocol is not null && ports.TurnExecutor is not null)
             return await FuwenInferenceCoordinator.ExecuteAsync(
                 node, plan, executionFingerprint, ports, IterationLoopRunner(iteration), state, contextInputs,
+                context.WorkflowRunId,
                 RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, iteration.Iteration, stepSuffix),
                 cancellationToken).ConfigureAwait(false);
 

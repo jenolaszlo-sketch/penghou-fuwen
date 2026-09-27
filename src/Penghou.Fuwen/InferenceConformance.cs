@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Penghou.Fuwen;
@@ -7,9 +9,15 @@ public sealed class DeterministicFakeTurnExecutor : IInferenceTurnExecutor, IInf
 {
     private readonly Queue<InferenceTurnResult> script;
     private readonly Func<InferenceTurnRequest, CancellationToken, ValueTask<InferenceTurnResult>>? responder;
+    private readonly bool supportsHardCompletionTokenLimit;
 
     /// <summary>Creates a fake that replays one scripted result per turn.</summary>
-    public DeterministicFakeTurnExecutor(IEnumerable<InferenceTurnResult> script)
+    public DeterministicFakeTurnExecutor(IEnumerable<InferenceTurnResult> script) : this(false, script)
+    {
+    }
+
+    /// <summary>Creates a scripted fake that advertises an explicitly configured hard output-token capability.</summary>
+    public DeterministicFakeTurnExecutor(bool supportsHardCompletionTokenLimit, IEnumerable<InferenceTurnResult> script)
     {
         ArgumentNullException.ThrowIfNull(script);
         var copy = script.Select(static result =>
@@ -17,29 +25,55 @@ public sealed class DeterministicFakeTurnExecutor : IInferenceTurnExecutor, IInf
         if (copy.Length == 0)
             throw new ArgumentOutOfRangeException(nameof(script), "A scripted fake requires at least one result.");
         this.script = new Queue<InferenceTurnResult>(copy);
+        this.supportsHardCompletionTokenLimit = supportsHardCompletionTokenLimit;
     }
 
     /// <summary>Creates a fake that answers every turn through a deterministic responder.</summary>
     public DeterministicFakeTurnExecutor(Func<InferenceTurnRequest, InferenceTurnResult> responder)
-        : this((request, _) => ValueTask.FromResult(
+        : this(false, (request, _) => ValueTask.FromResult(
             responder(request ?? throw new ArgumentNullException(nameof(request)))))
     {
     }
 
-    private DeterministicFakeTurnExecutor(Func<InferenceTurnRequest, CancellationToken, ValueTask<InferenceTurnResult>> responder)
+    /// <summary>Creates a deterministic responder fake with an explicit hard output-token capability claim.</summary>
+    public DeterministicFakeTurnExecutor(
+        bool supportsHardCompletionTokenLimit,
+        Func<InferenceTurnRequest, InferenceTurnResult> responder)
+        : this(supportsHardCompletionTokenLimit, (request, _) => ValueTask.FromResult(
+            responder(request ?? throw new ArgumentNullException(nameof(request)))))
+    {
+    }
+
+    private DeterministicFakeTurnExecutor(
+        bool supportsHardCompletionTokenLimit,
+        Func<InferenceTurnRequest, CancellationToken, ValueTask<InferenceTurnResult>> responder)
     {
         this.responder = responder ?? throw new ArgumentNullException(nameof(responder));
         script = new Queue<InferenceTurnResult>();
+        this.supportsHardCompletionTokenLimit = supportsHardCompletionTokenLimit;
     }
 
     /// <summary>Creates a fake that answers through an async deterministic responder.</summary>
     public static DeterministicFakeTurnExecutor FromResponder(
         Func<InferenceTurnRequest, CancellationToken, ValueTask<InferenceTurnResult>> responder) =>
-        new(responder ?? throw new ArgumentNullException(nameof(responder)));
+        new(false, responder ?? throw new ArgumentNullException(nameof(responder)));
+
+    /// <summary>Creates an async responder fake with an explicit hard output-token capability claim.</summary>
+    public static DeterministicFakeTurnExecutor FromResponder(
+        bool supportsHardCompletionTokenLimit,
+        Func<InferenceTurnRequest, CancellationToken, ValueTask<InferenceTurnResult>> responder) =>
+        new(supportsHardCompletionTokenLimit, responder ?? throw new ArgumentNullException(nameof(responder)));
 
     /// <summary>A fake that returns one final candidate with exact usage.</summary>
     public static DeterministicFakeTurnExecutor FinalCandidate(string candidateJson, InferenceTurnUsage? usage = null) =>
         new([new InferenceFinalCandidateResult(candidateJson, usage)]);
+
+    /// <summary>Creates a final-candidate fake with an explicit hard output-token capability claim.</summary>
+    public static DeterministicFakeTurnExecutor FinalCandidate(
+        bool supportsHardCompletionTokenLimit,
+        string candidateJson,
+        InferenceTurnUsage? usage = null) =>
+        new(supportsHardCompletionTokenLimit, [new InferenceFinalCandidateResult(candidateJson, usage)]);
 
     /// <summary>A fake that proposes exact tool calls with unknown usage.</summary>
     public static DeterministicFakeTurnExecutor ToolCalls(params InferenceToolCallProposal[] proposals) =>
@@ -62,6 +96,7 @@ public sealed class DeterministicFakeTurnExecutor : IInferenceTurnExecutor, IInf
     /// scripts, so preflight succeeds exactly for the checked requirement.
     /// </summary>
     public InferenceFeatureManifest TurnFeatureManifest => new(
+        supportsHardCompletionTokenLimit,
         [InferencePromptForm.RegisteredTemplate, InferencePromptForm.WorkflowOwned],
         [InferenceModality.StructuredText],
         supportsContextDelivery: true,
@@ -79,6 +114,7 @@ public sealed class DeterministicFakeTurnExecutor : IInferenceTurnExecutor, IInf
     {
         ArgumentNullException.ThrowIfNull(requirement);
         var manifest = new InferenceFeatureManifest(
+            supportsHardCompletionTokenLimit && requirement.RequiresHardCompletionTokenLimit,
             [requirement.PromptForm],
             requirement.Modality is null ? [] : [requirement.Modality.Value],
             supportsContextDelivery: requirement.HasContextInputs,
@@ -292,13 +328,43 @@ public static class InferenceTurnToolConformance
         return $"{tool.Name}@{tool.Version}";
     }
 
-    /// <summary>Builds a stable operation key for one internal tool operation.</summary>
+    /// <summary>
+    /// Builds a fixed-size, versioned operation key for one internal tool operation.
+    /// The provider call ID remains a separate protocol value and is not embedded in this key.
+    /// </summary>
     public static string OperationKeyFor(string interactionId, int toolOrdinal, string callId)
     {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(interactionId);
         ArgumentNullException.ThrowIfNullOrWhiteSpace(callId);
         if (toolOrdinal < 0)
             throw new ArgumentOutOfRangeException(nameof(toolOrdinal));
-        return $"{interactionId}/tool/{toolOrdinal:0000}/{callId}";
+
+        // Hash an unambiguous canonical binary encoding. Length-prefixing UTF-16 code units
+        // preserves the exact .NET string identity (including unusual provider IDs) without
+        // delimiter ambiguity or replacement-character collisions from lossy UTF-8 encoding.
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        hash.AppendData("fuwen-tool-operation/v1"u8);
+        AppendCanonicalString(hash, interactionId);
+        Span<byte> ordinal = stackalloc byte[sizeof(int)];
+        BinaryPrimitives.WriteInt32LittleEndian(ordinal, toolOrdinal);
+        hash.AppendData(ordinal);
+        AppendCanonicalString(hash, callId);
+        return "fuwen-tool-op/v1/" + Convert.ToHexString(hash.GetHashAndReset());
+    }
+
+    private static void AppendCanonicalString(IncrementalHash hash, string value)
+    {
+        Span<byte> length = stackalloc byte[sizeof(int)];
+        BinaryPrimitives.WriteInt32LittleEndian(length, value.Length);
+        hash.AppendData(length);
+        Span<byte> chunk = stackalloc byte[256];
+        for (var offset = 0; offset < value.Length;)
+        {
+            var charCount = Math.Min(value.Length - offset, chunk.Length / sizeof(char));
+            for (var i = 0; i < charCount; i++)
+                BinaryPrimitives.WriteUInt16LittleEndian(chunk.Slice(i * sizeof(char), sizeof(char)), value[offset + i]);
+            hash.AppendData(chunk[..(charCount * sizeof(char))]);
+            offset += charCount;
+        }
     }
 }

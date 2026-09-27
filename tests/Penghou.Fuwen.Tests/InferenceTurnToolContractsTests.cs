@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using FluentAssertions;
 
@@ -81,6 +82,14 @@ public sealed class InferenceTurnToolContractsTests
         zero.Should().Throw<ArgumentOutOfRangeException>();
         Action tooMany = () => TurnRequest(maximumNewToolCalls: InferenceTurnRequest.MaximumProposals + 1);
         tooMany.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void Turn_request_allows_explicit_no_tools_finalization()
+    {
+        var request = TurnRequest(visibleTools: [], maximumNewToolCalls: 0);
+        request.VisibleTools.Should().BeEmpty();
+        request.MaximumNewToolCalls.Should().Be(0);
     }
 
     [Fact]
@@ -485,15 +494,31 @@ public sealed class InferenceTurnToolContractsTests
         InferenceTurnToolConformance.ScopeFor(ToolDescriptor("lookup")).Should().Be("lookup@1");
     }
 
-    [Theory]
-    [InlineData("interaction-1", 0, "call-1", "interaction-1/tool/0000/call-1")]
-    [InlineData("interaction-1", 7, "call-1", "interaction-1/tool/0007/call-1")]
-    [InlineData("ix", 42, "c", "ix/tool/0042/c")]
-    public void Operation_key_for_uses_exact_format(string interactionId, int ordinal, string callId, string expected)
+    [Fact]
+    public void Operation_key_for_is_fixed_size_versioned_and_deterministic()
     {
-        InferenceTurnToolConformance.OperationKeyFor(interactionId, ordinal, callId).Should().Be(expected);
+        var first = InferenceTurnToolConformance.OperationKeyFor("interaction-1", 0, "call-1");
+        first.Should().Be(InferenceTurnToolConformance.OperationKeyFor("interaction-1", 0, "call-1"));
+        first.Should().MatchRegex("^fuwen-tool-op/v1/[0-9A-F]{64}$");
+        Encoding.UTF8.GetByteCount(first).Should().BeLessThanOrEqualTo(InferenceReadToolRequest.MaximumOperationKeyUtf8Bytes);
     }
 
+    [Fact]
+    public void Operation_key_for_changes_when_any_identity_component_changes()
+    {
+        var baseline = InferenceTurnToolConformance.OperationKeyFor("interaction-1", 0, "call-1");
+        InferenceTurnToolConformance.OperationKeyFor("interaction-2", 0, "call-1").Should().NotBe(baseline);
+        InferenceTurnToolConformance.OperationKeyFor("interaction-1", 1, "call-1").Should().NotBe(baseline);
+        InferenceTurnToolConformance.OperationKeyFor("interaction-1", 0, "call-2").Should().NotBe(baseline);
+    }
+
+    [Fact]
+    public void Operation_key_for_uses_unambiguous_component_boundaries()
+    {
+        var first = InferenceTurnToolConformance.OperationKeyFor("a/b", 1, "c");
+        var second = InferenceTurnToolConformance.OperationKeyFor("a", 1, "b/c");
+        first.Should().NotBe(second);
+    }
     [Fact]
     public void Operation_key_for_rejects_negative_ordinal()
     {

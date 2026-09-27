@@ -129,16 +129,30 @@ capabilities or activate work.
 
 `Penghou.Fuwen.Zhinu` supports IR v3 through v8. Its sequential interpreter
 executes context, inference, activity, conditional, fan-out, repeat, checkpoint,
-wait, and return semantics as stable Zhinu work. It verifies admission,
-definition storage, runtime identity, and workflow fingerprints before
-registration. Durable tests cover crash recovery, selective restart, focused
-fan-out recovery, bounded loop replay, interaction gates, cancellation,
-definition drift, corrupt evidence, and idempotent artifact publication.
+wait, and return semantics as Zhinu work. It verifies admission, definition
+storage, runtime identity, and workflow fingerprints before registration.
+Durable tests cover crash recovery, selective restart, focused fan-out recovery,
+bounded loop replay, interaction gates, cancellation, definition drift, corrupt
+evidence, and idempotent artifact publication. These tests establish the
+covered workflow behaviors; they do not by themselves establish every
+coordinated-inference guarantee.
 
 `Penghou.Fuwen.Baize` resolves host-owned logical bindings to exact Baize
-endpoints. It records provider/model identity, attempts, usage, duration,
-pricing revision, tools, and artifact-publication evidence. Retries occur only
-for explicitly classified representation or fallback failures.
+endpoints. The current source also contains a durable bounded inference
+coordinator. A first corrective batch fixes invocation identity, final budget
+settlement, declared cost-currency checks, selected-executor preflight, and
+tool operation-key length. Further work bounds serialized evidence, checks
+usage/cost overflow, requires hard completion-token enforcement where a
+completion ceiling is authored, and protects successful coordinated read-tool
+results through a host-owned durable store. Protection of other sensitive
+journal content and hard pre-call prompt, total-token, and cost guarantees
+remain open. Treat coordinated inference as
+limited pending the remaining gates; see the
+[capability matrix](docs/capability-matrix.md) and [implementation plan](docs/complex-activities-implementation-plan.md)
+for the current status. The Baize adapter records provider/model identity,
+attempts, usage, duration, pricing revision, tools, and artifact-publication
+evidence. Retries occur only for explicitly classified representation or
+fallback failures.
 
 ## Identity and evolution
 

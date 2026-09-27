@@ -74,7 +74,9 @@ public sealed class DocumentationContractTests
             Path.Combine(FindRepositoryRoot(), "docs", "complex-activities.md"),
             TestContext.Current.CancellationToken);
 
-        design.Should().Contain("not yet implemented");
+        design.Should().Contain("a bounded coordinator are implemented");
+        design.Should().Contain("Journal payload protection and hard pre-call budget enforcement remain open");
+        design.Should().Contain("serialized evidence reports now honor their byte limit");
         design.Should().Contain("existing `infer` node");
         design.Should().Contain("durable protocol journal");
         design.Should().Contain("remain explicit workflow activities initially");

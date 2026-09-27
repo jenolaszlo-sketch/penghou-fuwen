@@ -27,7 +27,9 @@ internal delegate Task<JsonElement> ProtocolLoopRunner(
 /// </summary>
 internal static class FuwenInferenceCoordinator
 {
-    private const string RequestFingerprintContract = "fuwen-request/v1";
+    private const string RequestFingerprintContract = "fuwen-request/v2";
+    private const string CoordinatorStateSemantics = "fuwen-inference-coordinator-state/v2-protected-tool-payloads";
+    private const string ToolResultDigestContract = "inference-tool-result/v1";
     private const int DefaultConversationCapUtf8Bytes = 262_144;
     private const int DefaultStepArgumentCapUtf8Bytes = 65_536;
 
@@ -39,6 +41,7 @@ internal static class FuwenInferenceCoordinator
         ProtocolLoopRunner loopRunner,
         FuwenInterpreterState state,
         IReadOnlyList<InferenceContextInput> contextInputs,
+        Guid workflowRunId,
         string runtimeScope,
         CancellationToken cancellationToken)
     {
@@ -48,6 +51,7 @@ internal static class FuwenInferenceCoordinator
         ArgumentNullException.ThrowIfNull(loopRunner);
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(contextInputs);
+        WorkflowPlanIdentity.ValidateExecutionFingerprint(executionFingerprint);
         ArgumentException.ThrowIfNullOrWhiteSpace(runtimeScope);
         if (node.Protocol is null)
             throw new FuwenZhinuExecutionException(
@@ -61,11 +65,19 @@ internal static class FuwenInferenceCoordinator
         if (required is not null)
             throw new FuwenZhinuExecutionException(required);
 
-        var prepared = Prepare(node, plan, state, contextInputs, effective, runtimeScope);
+        var prepared = Prepare(node, plan, executionFingerprint, state, contextInputs, effective, workflowRunId, runtimeScope);
         if (prepared.Failure is not null)
             throw new FuwenZhinuExecutionException(prepared.Failure);
 
         var initial = InitialState(prepared, effective);
+        if (effective.MaxRetainedEvidenceBytes is long evidenceBound &&
+            CanonicalJson.Serialize(BuildEvidence(effective, initial)).LongLength > evidenceBound)
+        {
+            throw new FuwenZhinuExecutionException(new ExecutionFailure(
+                ExecutionFailureKind.Contract,
+                ExecutionFailureCode.PayloadLimitExceeded,
+                $"Inference node '{node.StructuralPath}' retained-evidence bound is too small for its minimum evidence envelope."));
+        }
         var maxIterations = (int)Math.Min(int.MaxValue, Math.Min((long)int.MaxValue, effective.MaxTurns!.Value)
             + Math.Min((long)int.MaxValue, effective.MaxToolCalls ?? 0) + 2);
         JsonElement finalStateJson;
@@ -102,9 +114,19 @@ internal static class FuwenInferenceCoordinator
 
         var finalState = CanonicalJson.Deserialize<CoordinatorState>(
             CanonicalJson.Canonicalize(finalStateJson));
+        if (!string.Equals(finalState.InteractionId, prepared.InteractionId, StringComparison.Ordinal))
+            throw new FuwenZhinuExecutionException(new ExecutionFailure(
+                ExecutionFailureKind.Contract,
+                ExecutionFailureCode.InvalidInput,
+                $"Inference node '{node.StructuralPath}' recovered a protocol state with an incompatible invocation identity."));
+        if (!string.Equals(finalState.Semantics, CoordinatorStateSemantics, StringComparison.Ordinal))
+            throw new FuwenZhinuExecutionException(new ExecutionFailure(
+                ExecutionFailureKind.Contract,
+                ExecutionFailureCode.InvalidInput,
+                $"Inference node '{node.StructuralPath}' recovered protocol state with unsupported semantics; it was stopped without replaying legacy tool results."));
         if (finalState.Failure is not null)
         {
-            await RecordEvidenceAsync(ports, BuildEvidence(effective, finalState), cancellationToken).ConfigureAwait(false);
+            await RecordEvidenceAsync(ports, BuildEvidence(effective, finalState), effective.MaxRetainedEvidenceBytes, cancellationToken).ConfigureAwait(false);
             throw new FuwenZhinuExecutionException(RebuildFailure(finalState.Failure));
         }
         if (finalState.OutputJson is null)
@@ -113,10 +135,10 @@ internal static class FuwenInferenceCoordinator
                 ExecutionFailureKind.Provider,
                 ExecutionFailureCode.ProviderError,
                 $"Inference node '{node.StructuralPath}' completed coordination without a typed output."));
-            await RecordEvidenceAsync(ports, BuildEvidence(effective, finalState), cancellationToken).ConfigureAwait(false);
+            await RecordEvidenceAsync(ports, BuildEvidence(effective, finalState), effective.MaxRetainedEvidenceBytes, cancellationToken).ConfigureAwait(false);
             throw new FuwenZhinuExecutionException(RebuildFailure(finalState.Failure));
         }
-        await RecordEvidenceAsync(ports, BuildEvidence(effective, finalState), cancellationToken).ConfigureAwait(false);
+        await RecordEvidenceAsync(ports, BuildEvidence(effective, finalState), effective.MaxRetainedEvidenceBytes, cancellationToken).ConfigureAwait(false);
         var output = FuwenRuntimeValueWire.FromJson(
             JsonDocument.Parse(finalState.OutputJson).RootElement, node.OutputType, plan.Schemas);
         EnsureType(output, node.OutputType, plan.Schemas, $"coordinated inference '{node.StructuralPath}' output");
@@ -176,6 +198,11 @@ internal static class FuwenInferenceCoordinator
             totalTokens: tokensKnown ? checked((int)Math.Min(state.TotalTokens, int.MaxValue)) : null,
             usageQuality: tokensKnown ? InferenceUsageQuality.Exact : InferenceUsageQuality.Unknown,
             cost: cost,
+            protectedPayloads: state.Conversation
+                .Where(static message => message.ProtectedPayload is not null)
+                .Select(static message => message.ProtectedPayload!)
+                .TakeLast(InferenceProtocolEvidence.MaximumProtectedPayloads)
+                .ToArray(),
             pricingQuality: cost is null
                 ? InferencePricingQuality.Unknown
                 : (state.CostEstimated ? InferencePricingQuality.Estimated : InferencePricingQuality.Exact),
@@ -212,9 +239,12 @@ internal static class FuwenInferenceCoordinator
     private static async ValueTask RecordEvidenceAsync(
         FuwenZhinuExecutionPorts ports,
         InferenceProtocolEvidence evidence,
+        long? maximumBytes,
         CancellationToken cancellationToken)
     {
         if (ports.EvidenceSink is null)
+            return;
+        if (maximumBytes is long bound && CanonicalJson.Serialize(evidence).LongLength > bound)
             return;
         try
         {
@@ -235,9 +265,11 @@ internal static class FuwenInferenceCoordinator
     private static PreparedConversation Prepare(
         InferenceNode node,
         WorkflowPlan plan,
+        string executionFingerprint,
         FuwenInterpreterState state,
         IReadOnlyList<InferenceContextInput> contextInputs,
         EffectiveBounds effective,
+        Guid workflowRunId,
         string runtimeScope)
     {
         try
@@ -272,21 +304,32 @@ internal static class FuwenInferenceCoordinator
                 : DefaultConversationCapUtf8Bytes;
             long total = 0;
             foreach (var message in conversation)
-                total += Encoding.UTF8.GetByteCount(message.Text);
+                total += message.ProtectedPayload?.ByteLength ?? Encoding.UTF8.GetByteCount(message.Text ?? string.Empty);
             if (total > cap)
                 return Fail($"Inference node '{node.StructuralPath}' initial conversation exceeds its retained conversation bound.");
 
             var identity = new
             {
                 kind = "inference-protocol",
+                executionFingerprint,
+                workflowRunId = workflowRunId.ToString("N"),
                 node = node.StructuralPath,
                 // The runtime scope (loop iteration, fan-out item) keeps
                 // distinct invocations of the same structural node from
                 // sharing one interaction identity and operation journal.
                 scope = runtimeScope,
-                profile = new { kind = node.Profile.Kind.ToString(), node.Profile.Name, node.Profile.Version },
+                profile = node.Profile,
                 prompt = definition.GetSemanticDigest(),
-                tools = (node.Tools ?? []).Select(static tool => tool.Name + "@" + tool.Version).OrderBy(static value => value, StringComparer.Ordinal).ToArray(),
+                conversation,
+                contextSnapshots = contextInputs
+                    .OrderBy(static input => input.Name, StringComparer.Ordinal)
+                    .Select(static input => new { input.Name, input.ContextSnapshot })
+                    .ToArray(),
+                tools = (node.Tools ?? [])
+                    .OrderBy(static tool => tool.Name, StringComparer.Ordinal)
+                    .ThenBy(static tool => tool.Version, StringComparer.Ordinal)
+                    .ThenBy(static tool => tool.ContentDigest.Value, StringComparer.Ordinal)
+                    .ToArray(),
             };
             var interactionId = RequestFingerprint(FuwenRuntimeValueWire.Serialize(identity));
             return new PreparedConversation(conversation, interactionId, null);
@@ -377,7 +420,11 @@ internal static class FuwenInferenceCoordinator
         return null;
     }
 
-    private sealed record MessageRecord(string Role, string Text, string? ToolCallId);
+    private sealed record MessageRecord(
+        string Role,
+        string? Text,
+        string? ToolCallId,
+        ProtectedPayloadReference? ProtectedPayload = null);
     private sealed record PendingRecord(int ToolIndex, string CallId, string ArgumentsJson);
     private sealed record FailureRecord(int Kind, int Code, string Message, bool MayHaveCommitted, string? ProviderCode);
     private sealed record OperationEvidenceRecord(
@@ -393,6 +440,7 @@ internal static class FuwenInferenceCoordinator
 
     private sealed record CoordinatorState
     {
+        public string Semantics { get; set; } = string.Empty;
         public string Phase { get; set; } = "model";
         public int TurnOrdinal { get; set; }
         public int ModelCalls { get; set; }
@@ -428,6 +476,7 @@ internal static class FuwenInferenceCoordinator
         _ = effective;
         return new CoordinatorState
         {
+            Semantics = CoordinatorStateSemantics,
             InteractionId = prepared.InteractionId,
             Conversation = prepared.Conversation,
         };
@@ -481,7 +530,7 @@ internal static class FuwenInferenceCoordinator
         string operationKey,
         InferenceOperationDisposition disposition,
         bool mayHaveCommitted,
-        string? resultJson,
+        ProtectedPayloadReference? resultReference,
         long? durationMilliseconds,
         string? failureCode)
     {
@@ -492,22 +541,89 @@ internal static class FuwenInferenceCoordinator
             state.ToolOutcomesTruncated = true;
             return;
         }
-        ContentDigest? digest = null;
         int? byteLength = null;
-        if (resultJson is not null)
-        {
-            var bytes = Encoding.UTF8.GetBytes(resultJson);
-            byteLength = bytes.Length;
-            digest = new ContentDigest(
-                "sha256", "inference-tool-result/v1",
-                Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).ToLowerInvariant());
-        }
+        if (resultReference?.ByteLength is long length && length <= int.MaxValue)
+            byteLength = (int)length;
         state.ToolOutcomes.Add(new ToolEvidenceRecord(
             tool.Name, tool.Version,
             tool.ContentDigest.Algorithm, tool.ContentDigest.Contract, tool.ContentDigest.Value,
             operationKey, (int)disposition, mayHaveCommitted,
-            digest?.Algorithm, digest?.Contract, digest?.Value,
+            resultReference?.Digest.Algorithm, resultReference?.Digest.Contract, resultReference?.Digest.Value,
             byteLength, (int)InferenceReadToolRetrySafety.Safe, durationMilliseconds, failureCode));
+    }
+
+    /// <summary>
+    /// Keeps the serialized evidence envelope within the authored/host bound.
+    /// Conversation and provider/tool outputs have independent limits and are
+    /// deliberately not counted as evidence here.
+    /// </summary>
+    private static bool TryFitRetainedEvidence(EffectiveBounds effective, CoordinatorState state)
+    {
+        if (effective.MaxRetainedEvidenceBytes is not long maximumBytes)
+            return true;
+
+        var evidence = BuildEvidence(effective, state);
+        while (CanonicalJson.Serialize(evidence).LongLength > maximumBytes &&
+               (state.Operations.Count > 0 || state.ToolOutcomes.Count > 0))
+        {
+            // Prefer retaining the newest summaries: they explain the current
+            // disposition and the latest operator action. Truncation is explicit.
+            if (state.Operations.Count >= state.ToolOutcomes.Count && state.Operations.Count > 0)
+            {
+                state.Operations.RemoveAt(0);
+                state.OperationsTruncated = true;
+            }
+            else
+            {
+                state.ToolOutcomes.RemoveAt(0);
+                state.ToolOutcomesTruncated = true;
+            }
+            evidence = BuildEvidence(effective, state);
+        }
+
+        if (CanonicalJson.Serialize(evidence).LongLength <= maximumBytes)
+            return true;
+
+        // Failure messages can include provider diagnostics. Keep the typed
+        // class/code and commitment bit while replacing verbose text so the
+        // declared evidence limit does not retain unbounded diagnostic detail.
+        if (state.Failure is FailureRecord failure)
+        {
+            state.Failure = new FailureRecord(
+                failure.Kind,
+                failure.Code,
+                "Inference failed; diagnostic details were omitted by the retained-evidence limit.",
+                failure.MayHaveCommitted,
+                ProviderCode: null);
+            evidence = BuildEvidence(effective, state);
+            return CanonicalJson.Serialize(evidence).LongLength <= maximumBytes;
+        }
+
+        return false;
+    }
+
+    private static LoopBodyOutcome<JsonElement> FinishIteration(
+        InferenceNode node,
+        EffectiveBounds effective,
+        CoordinatorState state,
+        WorkflowLoopIteration<JsonElement> iteration,
+        bool canContinue)
+    {
+        if (!TryFitRetainedEvidence(effective, state))
+        {
+            state.Failure = ToRecord(new ExecutionFailure(
+                ExecutionFailureKind.Contract,
+                ExecutionFailureCode.PayloadLimitExceeded,
+                $"Inference node '{node.StructuralPath}' cannot retain its evidence within the declared byte bound."));
+            state.OutputJson = null;
+            state.CandidateJson = null;
+            state.Phase = "done";
+            _ = TryFitRetainedEvidence(effective, state);
+            return iteration.Break(FuwenRuntimeValueWire.Serialize(state));
+        }
+
+        var serialized = FuwenRuntimeValueWire.Serialize(state);
+        return canContinue ? iteration.Continue(serialized) : iteration.Break(serialized);
     }
 
     private static async Task<LoopBodyOutcome<JsonElement>> IterateAsync(
@@ -522,8 +638,33 @@ internal static class FuwenInferenceCoordinator
         cancellationToken.ThrowIfCancellationRequested();
         var state = CanonicalJson.Deserialize<CoordinatorState>(
             CanonicalJson.Canonicalize(iteration.State));
-        if (state.Failure is not null || state.OutputJson is not null)
+        if (!string.Equals(state.Semantics, CoordinatorStateSemantics, StringComparison.Ordinal))
+            throw new FuwenZhinuExecutionException(new ExecutionFailure(
+                ExecutionFailureKind.Contract,
+                ExecutionFailureCode.InvalidInput,
+                $"Inference node '{node.StructuralPath}' recovered protocol state with unsupported semantics; it was stopped without replaying legacy tool results."));
+        if (!TryFitRetainedEvidence(effective, state))
+        {
+            state.Failure = ToRecord(new ExecutionFailure(
+                ExecutionFailureKind.Contract,
+                ExecutionFailureCode.PayloadLimitExceeded,
+                $"Inference node '{node.StructuralPath}' cannot retain its evidence within the declared byte bound."));
+            state.OutputJson = null;
+            state.CandidateJson = null;
+            state.Phase = "done";
+            _ = TryFitRetainedEvidence(effective, state);
             return iteration.Break(FuwenRuntimeValueWire.Serialize(state));
+        }
+        if (!string.Equals(state.InteractionId, prepared.InteractionId, StringComparison.Ordinal))
+        {
+            state.Failure = ToRecord(new ExecutionFailure(
+                ExecutionFailureKind.Contract,
+                ExecutionFailureCode.InvalidInput,
+                $"Inference node '{node.StructuralPath}' recovered a protocol state with an incompatible invocation identity."));
+            return FinishIteration(node, effective, state, iteration, canContinue: false);
+        }
+        if (state.Failure is not null || state.OutputJson is not null)
+            return FinishIteration(node, effective, state, iteration, canContinue: false);
 
         var precheck = CheckBoundsBeforeOperation(node, effective, state);
         if (precheck is not null)
@@ -541,7 +682,7 @@ internal static class FuwenInferenceCoordinator
                 durationMilliseconds: null,
                 failureCode: precheck.Code.ToString(),
                 mayHaveCommitted: precheck.MayHaveCommittedEffect);
-            return iteration.Break(FuwenRuntimeValueWire.Serialize(state));
+            return FinishIteration(node, effective, state, iteration, canContinue: false);
         }
 
         if (state.Phase == "tool")
@@ -549,9 +690,9 @@ internal static class FuwenInferenceCoordinator
         else
             await ExecuteModelOperationAsync(node, plan, ports, effective, state, iteration, cancellationToken).ConfigureAwait(false);
 
-        if (state.Failure is not null || state.OutputJson is not null)
-            return iteration.Break(FuwenRuntimeValueWire.Serialize(state));
-        return iteration.Continue(FuwenRuntimeValueWire.Serialize(state));
+        return FinishIteration(
+            node, effective, state, iteration,
+            canContinue: state.Failure is null && state.OutputJson is null);
     }
 
     private static ExecutionFailure? CheckBoundsBeforeOperation(
@@ -591,6 +732,76 @@ internal static class FuwenInferenceCoordinator
 
         static ExecutionFailure Limit(InferenceNode node, ExecutionFailureCode code, string message) => new(
             ExecutionFailureKind.Contract, code, message);
+    }
+
+    private sealed record ProtectedPayloadResolution(string? Text, FailureRecord? Failure);
+
+    private static async ValueTask<ProtectedPayloadResolution> ResolveProtectedToolResultAsync(
+        FuwenZhinuExecutionPorts ports,
+        string interactionId,
+        MessageRecord message,
+        CancellationToken cancellationToken)
+    {
+        var reference = message.ProtectedPayload!;
+        var tool = reference.Descriptor;
+        if (ports.ProtectedPayloadStore is null || tool is null)
+            return Failed();
+
+        ReadOnlyMemory<byte>? payload;
+        try
+        {
+            payload = await ports.ProtectedPayloadStore.GetAsync(
+                new InferenceProtectedPayloadReadRequest(
+                    interactionId,
+                    InferenceTurnToolConformance.ScopeFor(tool),
+                    tool,
+                    reference),
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return Failed();
+        }
+
+        if (payload is null)
+            return Failed();
+        var bytes = payload.Value.ToArray();
+        if (reference.ByteLength != bytes.LongLength ||
+            !string.Equals(reference.Digest.Algorithm, "sha256", StringComparison.Ordinal) ||
+            !string.Equals(reference.Digest.Contract, ToolResultDigestContract, StringComparison.Ordinal) ||
+            !string.Equals(
+                reference.Digest.Value,
+                Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).ToLowerInvariant(),
+                StringComparison.Ordinal))
+        {
+            return Failed();
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(bytes);
+            var canonical = CanonicalJson.Canonicalize(document.RootElement);
+            if (!canonical.AsSpan().SequenceEqual(bytes))
+                return Failed();
+            return new ProtectedPayloadResolution(Encoding.UTF8.GetString(bytes), null);
+        }
+        catch (JsonException)
+        {
+            return Failed();
+        }
+
+        static ProtectedPayloadResolution Failed() => new(
+            null,
+            new FailureRecord(
+                (int)ExecutionFailureKind.Contract,
+                (int)ExecutionFailureCode.InvalidInput,
+                "A protected inference payload is unavailable, unauthorized, or failed integrity verification.",
+                false,
+                null));
     }
 
     private static bool FitsTokens(EffectiveBounds effective, CoordinatorState state, out ExecutionFailureCode code)
@@ -637,7 +848,12 @@ internal static class FuwenInferenceCoordinator
     {
         var ordinal = state.TurnOrdinal;
         var operationId = $"{state.InteractionId}/model/{ordinal + 1:0000}";
-        var visibleTools = (node.Tools ?? []).Select(static tool => new InferenceToolRequirement(tool)).ToArray();
+        var remainingToolCalls = effective.MaxToolCalls is long toolBound
+            ? Math.Max(0, toolBound - state.ToolOrdinal)
+            : 0;
+        var visibleTools = remainingToolCalls == 0
+            ? Array.Empty<InferenceToolRequirement>()
+            : (node.Tools ?? []).Select(static tool => new InferenceToolRequirement(tool)).ToArray();
         var turnInput = FuwenRuntimeValueWire.Serialize(new
         {
             kind = "inference-turn",
@@ -645,27 +861,45 @@ internal static class FuwenInferenceCoordinator
             ordinal,
             interaction = state.InteractionId,
         });
-        // When no tool budget remains the model turn is still allowed to
-        // finalize, so omit the advisory cap rather than passing an invalid
-        // zero. Any proposal it makes still fails closed at the tool pre-check.
-        int? maxNewToolCalls = effective.MaxToolCalls is long toolBound && toolBound - state.ToolOrdinal > 0
-            ? (int)Math.Min((long)InferenceTurnRequest.MaximumProposals, toolBound - state.ToolOrdinal)
-            : null;
+        // A finalization turn must not advertise tools after their budget is
+        // exhausted. Zero is an explicit no-tools request to the adapter.
+        int? maxNewToolCalls = remainingToolCalls == 0
+            ? 0
+            : (int)Math.Min((long)InferenceTurnRequest.MaximumProposals, remainingToolCalls);
         var output = await iteration.StepAsync(
             $"infer-model-turn-{ordinal:0000}",
             turnInput,
             async (_, _, token) =>
             {
-                var conversation = state.Conversation.Select(static message => new InferenceConversationMessage(
-                    message.Role switch
+                var conversation = new List<InferenceConversationMessage>(state.Conversation.Count);
+                foreach (var message in state.Conversation)
+                {
+                    var text = message.Text;
+                    if (message.ProtectedPayload is not null)
                     {
-                        "system" => InferenceTurnRole.System,
-                        "assistant" => InferenceTurnRole.Assistant,
-                        "tool" => InferenceTurnRole.Tool,
-                        _ => InferenceTurnRole.User,
-                    },
-                    message.Text,
-                    message.ToolCallId)).ToArray();
+                        var resolved = await ResolveProtectedToolResultAsync(
+                            ports, state.InteractionId, message, token).ConfigureAwait(false);
+                        if (resolved.Failure is not null)
+                            return TurnRecord(resolved.Failure, 0);
+                        text = resolved.Text;
+                    }
+                    if (text is null)
+                        return TurnRecord(new FailureRecord(
+                            (int)ExecutionFailureKind.Contract,
+                            (int)ExecutionFailureCode.InvalidInput,
+                            "A durable inference conversation message is missing its text or protected payload reference.",
+                            false, null), 0);
+                    conversation.Add(new InferenceConversationMessage(
+                        message.Role switch
+                        {
+                            "system" => InferenceTurnRole.System,
+                            "assistant" => InferenceTurnRole.Assistant,
+                            "tool" => InferenceTurnRole.Tool,
+                            _ => InferenceTurnRole.User,
+                        },
+                        text,
+                        message.ToolCallId));
+                }
                 var request = new InferenceTurnRequest(
                     state.InteractionId,
                     ordinal,
@@ -673,7 +907,7 @@ internal static class FuwenInferenceCoordinator
                     visibleTools,
                     RemainingLimits(effective, state),
                     maxNewToolCalls,
-                    maxCompletionTokens: node.Limits?.MaxTokens,
+                    maxCompletionTokens: EffectiveMaxCompletionTokens(node, effective, state),
                     timeoutSeconds: node.Limits?.TimeoutSeconds);
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 InferenceTurnResult turnResult;
@@ -798,6 +1032,17 @@ internal static class FuwenInferenceCoordinator
                 return;
             }
         }
+        var settledBudgetFailure = CheckSettledBudget(node, effective, state);
+        if (settledBudgetFailure is not null)
+        {
+            state.Failure = ToRecord(settledBudgetFailure);
+            AddOperation(state, state.OperationOrdinal, InferenceOperationKind.Validation,
+                $"{state.InteractionId}/validation/{state.OperationOrdinal:0000}",
+                InferenceOperationDisposition.Failed, usage: null, durationMilliseconds: null,
+                failureCode: settledBudgetFailure.Code.ToString(), mayHaveCommitted: false);
+            state.OperationOrdinal++;
+            return;
+        }
         if (record.Status == "final")
         {
             ValidateCandidate(node, plan, effective, state, record.Candidate!);
@@ -812,8 +1057,18 @@ internal static class FuwenInferenceCoordinator
                 DescriptorKind.Tool, proposal.ToolName, proposal.ToolVersion,
                 new ContentDigest(proposal.DigestAlgorithm, proposal.DigestContract, proposal.DigestValue)),
             proposal.ArgumentsJson)).ToArray();
-        var visibleTools = (node.Tools ?? []).Select(static tool => new InferenceToolRequirement(tool)).ToArray();
-        var failure = InferenceTurnValidation.ValidateProposals(proposals, visibleTools, maxArgBytes);
+        var remainingToolCalls = effective.MaxToolCalls is long toolBound
+            ? Math.Max(0, toolBound - state.ToolOrdinal)
+            : 0;
+        var visibleTools = remainingToolCalls == 0
+            ? Array.Empty<InferenceToolRequirement>()
+            : (node.Tools ?? []).Select(static tool => new InferenceToolRequirement(tool)).ToArray();
+        var failure = record.Proposals.Count > remainingToolCalls
+            ? new ExecutionFailure(
+                ExecutionFailureKind.Contract,
+                ExecutionFailureCode.ToolCallLimitExceeded,
+                $"Inference node '{node.StructuralPath}' received more tool calls than its remaining allowance.")
+            : InferenceTurnValidation.ValidateProposals(proposals, visibleTools, maxArgBytes);
         if (failure is not null)
         {
             state.Failure = ToRecord(failure);
@@ -1001,19 +1256,18 @@ internal static class FuwenInferenceCoordinator
                             return ToolRecord(new FailureRecord(
                                 (int)ExecutionFailureKind.Infrastructure,
                                 (int)ExecutionFailureCode.AmbiguousOperation,
-                                $"Tool call '{pending.CallId}' is ambiguous and may have committed: {failure.Message}.",
+                                $"Tool call '{pending.CallId}' is ambiguous and may have committed.",
                                 true, failure.ProviderCode), stopwatch.ElapsedMilliseconds);
                         return ToolRecord(new FailureRecord(
                             (int)failure.Kind, (int)failure.Code,
-                            $"Tool call '{pending.CallId}' failed: {failure.Message}.",
+                            $"Tool call '{pending.CallId}' failed with {failure.Code}.",
                             false, failure.ProviderCode), stopwatch.ElapsedMilliseconds);
                     }
-                    var outputText = Encoding.UTF8.GetString(CanonicalJson.Serialize(
-                        FuwenRuntimeValueWire.ToJson(toolResult.Output!))).TrimEnd('\r', '\n');
+                    var outputBytes = CanonicalJson.Serialize(FuwenRuntimeValueWire.ToJson(toolResult.Output!));
                     // Reject an oversized result before it is persisted in the
                     // step so the byte ceiling truly bounds retained payloads.
                     if (effective.MaxToolResultBytes is long resultBound &&
-                        Encoding.UTF8.GetByteCount(outputText) > resultBound)
+                        outputBytes.LongLength > resultBound)
                     {
                         return ToolRecord(new FailureRecord(
                             (int)ExecutionFailureKind.Contract,
@@ -1021,10 +1275,56 @@ internal static class FuwenInferenceCoordinator
                             $"Tool call '{pending.CallId}' exceeded the {resultBound}-byte result ceiling.",
                             false, null), stopwatch.ElapsedMilliseconds);
                     }
+
+                    if (ports.ProtectedPayloadStore is null)
+                        return ToolRecord(new FailureRecord(
+                            (int)ExecutionFailureKind.Contract,
+                            (int)ExecutionFailureCode.InvalidInput,
+                            "Coordinated tool results require a host-owned protected-payload store.",
+                            false, null), stopwatch.ElapsedMilliseconds);
+
+                    var digest = new ContentDigest(
+                        "sha256",
+                        ToolResultDigestContract,
+                        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(outputBytes)).ToLowerInvariant());
+                    ProtectedPayloadReference payloadReference;
+                    try
+                    {
+                        payloadReference = await ports.ProtectedPayloadStore.PutAsync(
+                            new InferenceProtectedPayloadWriteRequest(
+                                state.InteractionId,
+                                request.Scope,
+                                tool,
+                                operationKey,
+                                outputBytes),
+                            token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (token.IsCancellationRequested || cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Penghou.Zhinu.ZhinuException)
+                    {
+                        throw;
+                    }
+                    catch (Exception exception)
+                    {
+                        return ToolRecord(new FailureRecord(
+                            (int)ExecutionFailureKind.Infrastructure,
+                            (int)ExecutionFailureCode.AmbiguousOperation,
+                            $"Protected tool-result storage failed without a receipt and may have committed: {exception.GetType().Name}.",
+                            true, exception.GetType().Name), stopwatch.ElapsedMilliseconds);
+                    }
+
+                    if (!ValidStoredPayloadReference(payloadReference, tool, digest, outputBytes.LongLength))
+                        return ToolRecord(new FailureRecord(
+                            (int)ExecutionFailureKind.Infrastructure,
+                            (int)ExecutionFailureCode.AmbiguousOperation,
+                            "Protected tool-result storage returned a reference that failed identity or integrity checks.",
+                            true, null), stopwatch.ElapsedMilliseconds);
                     return ToolRecord(
-                        null,
-                        outputText,
-                        toolResult.Evidence?.ResultUtf8Bytes,
+                        payloadReference,
+                        checked((int)outputBytes.LongLength),
                         toolResult.Evidence?.DurationMilliseconds ?? stopwatch.ElapsedMilliseconds,
                         stopwatch.ElapsedMilliseconds);
                 }
@@ -1034,48 +1334,84 @@ internal static class FuwenInferenceCoordinator
         ApplyToolOutput(node, effective, state, output, pending, tool, operationKey, operationId);
     }
 
-    private sealed record ToolOutputRecord(string Status, string? Output, int? ResultBytes, long? DurationMs, FailureRecord? Failure, long? ElapsedMs = null);
+    private sealed record ToolOutputRecord(
+        string Status,
+        ProtectedPayloadReference? ProtectedPayload,
+        int? ResultBytes,
+        long? DurationMs,
+        FailureRecord? Failure,
+        long? ElapsedMs = null);
 
     private static JsonElement ToolRecord(FailureRecord failure, long elapsedMilliseconds) =>
         FuwenRuntimeValueWire.Serialize(new ToolOutputRecord("failed", null, null, null, failure, elapsedMilliseconds));
 
-    private static JsonElement ToolRecord(string? output, string? outputText, int? resultBytes, long? durationMs, long elapsedMilliseconds) =>
-        FuwenRuntimeValueWire.Serialize(new ToolOutputRecord("ok", outputText ?? output, resultBytes, durationMs, null, elapsedMilliseconds));
+    private static JsonElement ToolRecord(
+        ProtectedPayloadReference payload,
+        int resultBytes,
+        long? durationMs,
+        long elapsedMilliseconds) =>
+        FuwenRuntimeValueWire.Serialize(new ToolOutputRecord("ok", payload, resultBytes, durationMs, null, elapsedMilliseconds));
+
+    private static bool ValidStoredPayloadReference(
+        ProtectedPayloadReference? reference,
+        DescriptorReference tool,
+        ContentDigest expectedDigest,
+        long expectedLength) =>
+        reference is not null &&
+        reference.ByteLength == expectedLength &&
+        string.Equals(reference.Digest.Algorithm, expectedDigest.Algorithm, StringComparison.Ordinal) &&
+        string.Equals(reference.Digest.Contract, expectedDigest.Contract, StringComparison.Ordinal) &&
+        string.Equals(reference.Digest.Value, expectedDigest.Value, StringComparison.Ordinal) &&
+        DescriptorMatches(reference.Descriptor, tool);
+
+    private static bool DescriptorMatches(DescriptorReference? actual, DescriptorReference expected) =>
+        actual is not null &&
+        actual.Kind == expected.Kind &&
+        string.Equals(actual.Name, expected.Name, StringComparison.Ordinal) &&
+        string.Equals(actual.Version, expected.Version, StringComparison.Ordinal) &&
+        string.Equals(actual.ContentDigest.Algorithm, expected.ContentDigest.Algorithm, StringComparison.Ordinal) &&
+        string.Equals(actual.ContentDigest.Contract, expected.ContentDigest.Contract, StringComparison.Ordinal) &&
+        string.Equals(actual.ContentDigest.Value, expected.ContentDigest.Value, StringComparison.Ordinal);
 
     private static void ApplyToolOutput(
         InferenceNode node, EffectiveBounds effective, CoordinatorState state, JsonElement output,
         PendingRecord pending, DescriptorReference tool, string operationKey, string operationId)
     {
         var record = CanonicalJson.Deserialize<ToolOutputRecord>(CanonicalJson.Canonicalize(output));
-        if (record.Status != "ok" || record.Output is null)
+        if (record.Status != "ok" || record.ProtectedPayload is null || record.ResultBytes is null)
         {
-            state.Failure = record.Failure!;
-            var ambiguous = record.Failure!.MayHaveCommitted;
+            var failure = record.Failure ?? new FailureRecord(
+                (int)ExecutionFailureKind.Contract,
+                (int)ExecutionFailureCode.InvalidInput,
+                "The durable tool-result step did not contain a protected payload reference.",
+                false, null);
+            state.Failure = failure;
+            var ambiguous = failure.MayHaveCommitted;
             AddToolOutcome(state, tool, operationKey,
                 ambiguous ? InferenceOperationDisposition.Ambiguous : InferenceOperationDisposition.Failed,
-                ambiguous, resultJson: null, durationMilliseconds: record.ElapsedMs,
-                failureCode: ((ExecutionFailureCode)record.Failure.Code).ToString());
+                ambiguous, resultReference: null, durationMilliseconds: record.ElapsedMs,
+                failureCode: ((ExecutionFailureCode)failure.Code).ToString());
             AddOperation(state, state.OperationOrdinal++, InferenceOperationKind.ToolCall, operationId,
                 ambiguous ? InferenceOperationDisposition.Ambiguous : InferenceOperationDisposition.Failed,
                 usage: null, durationMilliseconds: record.ElapsedMs,
-                failureCode: ((ExecutionFailureCode)record.Failure.Code).ToString(), mayHaveCommitted: ambiguous);
+                failureCode: ((ExecutionFailureCode)failure.Code).ToString(), mayHaveCommitted: ambiguous);
             return;
         }
         if (effective.MaxToolResultBytes is long resultBound &&
-            Encoding.UTF8.GetByteCount(record.Output) > resultBound)
+            record.ResultBytes > resultBound)
         {
             state.Failure = ToRecord(new ExecutionFailure(
                 ExecutionFailureKind.Contract,
                 ExecutionFailureCode.PayloadLimitExceeded,
                 $"Tool call '{pending.CallId}' exceeded the {resultBound}-byte result ceiling."));
             AddToolOutcome(state, tool, operationKey, InferenceOperationDisposition.Failed, false,
-                record.Output, record.DurationMs ?? record.ElapsedMs, nameof(ExecutionFailureCode.PayloadLimitExceeded));
+                record.ProtectedPayload, record.DurationMs ?? record.ElapsedMs, nameof(ExecutionFailureCode.PayloadLimitExceeded));
             AddOperation(state, state.OperationOrdinal++, InferenceOperationKind.ToolCall, operationId,
                 InferenceOperationDisposition.Failed, usage: null, record.DurationMs ?? record.ElapsedMs,
                 nameof(ExecutionFailureCode.PayloadLimitExceeded), mayHaveCommitted: false);
             return;
         }
-        if (!TryAppendMessage(effective, state, new MessageRecord("tool", record.Output, pending.CallId)))
+        if (!TryAppendMessage(effective, state, new MessageRecord("tool", null, pending.CallId, record.ProtectedPayload)))
         {
             state.Failure = ToRecord(new ExecutionFailure(
                 ExecutionFailureKind.Contract,
@@ -1087,7 +1423,7 @@ internal static class FuwenInferenceCoordinator
             return;
         }
         AddToolOutcome(state, tool, operationKey, InferenceOperationDisposition.Succeeded, false,
-            record.Output, record.DurationMs ?? record.ElapsedMs, failureCode: null);
+            record.ProtectedPayload, record.DurationMs ?? record.ElapsedMs, failureCode: null);
         AddOperation(state, state.OperationOrdinal++, InferenceOperationKind.ToolCall, operationId,
             InferenceOperationDisposition.Succeeded, usage: null, record.DurationMs ?? record.ElapsedMs,
             failureCode: null, mayHaveCommitted: false);
@@ -1108,8 +1444,18 @@ internal static class FuwenInferenceCoordinator
             : DefaultConversationCapUtf8Bytes;
         long total = 0;
         foreach (var existing in state.Conversation)
-            total += Encoding.UTF8.GetByteCount(existing.Text);
-        total += Encoding.UTF8.GetByteCount(message.Text);
+        {
+            if (existing.ProtectedPayload?.ByteLength is long existingLength)
+                total += existingLength;
+            else if (existing.Text is not null)
+                total += Encoding.UTF8.GetByteCount(existing.Text);
+        }
+        if (message.ProtectedPayload?.ByteLength is long messageLength)
+            total += messageLength;
+        else if (message.Text is not null)
+            total += Encoding.UTF8.GetByteCount(message.Text);
+        else
+            return false;
         if (total > cap)
             return false;
         state.Conversation.Add(message);
@@ -1118,7 +1464,6 @@ internal static class FuwenInferenceCoordinator
 
     private static void AccumulateUsage(EffectiveBounds effective, CoordinatorState state, UsageRecord? usage)
     {
-        _ = effective;
         if (usage is null)
         {
             state.PromptUnknown = true;
@@ -1127,34 +1472,100 @@ internal static class FuwenInferenceCoordinator
             state.CostUnknown = true;
             return;
         }
-        if (usage.Prompt is null)
+        if (usage.Prompt is null || !TryAddNonnegative(state.PromptTokens, usage.Prompt.Value, out var promptTokens))
             state.PromptUnknown = true;
         else
-            state.PromptTokens += usage.Prompt.Value;
-        if (usage.Completion is null)
+            state.PromptTokens = promptTokens;
+        if (usage.Completion is null || !TryAddNonnegative(state.CompletionTokens, usage.Completion.Value, out var completionTokens))
             state.CompletionUnknown = true;
         else
-            state.CompletionTokens += usage.Completion.Value;
-        if (usage.Total is null)
+            state.CompletionTokens = completionTokens;
+        if (usage.Total is null || !TryAddNonnegative(state.TotalTokens, usage.Total.Value, out var totalTokens))
             state.TotalUnknown = true;
         else
-            state.TotalTokens += usage.Total.Value;
+            state.TotalTokens = totalTokens;
         if (usage.CostMicrounits is null || usage.CostCurrency is null)
         {
             state.CostUnknown = true;
         }
-        else if (state.CostCurrency is not null &&
-            !string.Equals(state.CostCurrency, usage.CostCurrency, StringComparison.Ordinal))
+        else if ((effective.Cost is not null &&
+            !string.Equals(effective.Cost.Currency, usage.CostCurrency, StringComparison.Ordinal)) ||
+            (state.CostCurrency is not null &&
+            !string.Equals(state.CostCurrency, usage.CostCurrency, StringComparison.Ordinal)))
         {
-            // Mixed cost currencies cannot be summed honestly; fail closed on
-            // the next pre-check rather than silently converting.
+            // A cost in another currency cannot satisfy the admitted ceiling.
+            state.CostUnknown = true;
+        }
+        else if (!TryAddNonnegative(state.CostMicrounits, usage.CostMicrounits.Value, out var costMicrounits))
+        {
             state.CostUnknown = true;
         }
         else
         {
             state.CostCurrency = usage.CostCurrency;
-            state.CostMicrounits += usage.CostMicrounits.Value;
+            state.CostMicrounits = costMicrounits;
         }
+    }
+
+    private static bool TryAddNonnegative(long accumulated, long next, out long sum)
+    {
+        if (accumulated < 0 || next < 0 || next > long.MaxValue - accumulated)
+        {
+            sum = accumulated;
+            return false;
+        }
+        sum = accumulated + next;
+        return true;
+    }
+
+    private static ExecutionFailure? CheckSettledBudget(
+        InferenceNode node, EffectiveBounds effective, CoordinatorState state)
+    {
+        static ExecutionFailure Failure(InferenceNode node, ExecutionFailureCode code, string dimension) => new(
+            ExecutionFailureKind.Contract, code,
+            $"Inference node '{node.StructuralPath}' cannot accept its last model turn against the {dimension} budget.");
+
+        if (effective.MaxPromptTokens is long prompt)
+        {
+            if (state.PromptUnknown) return Failure(node, ExecutionFailureCode.BudgetUnknown, "prompt-token");
+            if (state.PromptTokens > prompt) return Failure(node, ExecutionFailureCode.TokenLimitExceeded, "prompt-token");
+        }
+        if (effective.MaxCompletionTokens is long completion)
+        {
+            if (state.CompletionUnknown) return Failure(node, ExecutionFailureCode.BudgetUnknown, "completion-token");
+            if (state.CompletionTokens > completion) return Failure(node, ExecutionFailureCode.TokenLimitExceeded, "completion-token");
+        }
+        if (effective.MaxTotalTokens is long total)
+        {
+            if (state.TotalUnknown) return Failure(node, ExecutionFailureCode.BudgetUnknown, "total-token");
+            if (state.TotalTokens > total) return Failure(node, ExecutionFailureCode.TokenLimitExceeded, "total-token");
+        }
+        if (effective.CostCeilingMicrounits is long ceiling)
+        {
+            if (state.CostUnknown) return Failure(node, ExecutionFailureCode.BudgetUnknown, "cost");
+            if (state.CostMicrounits > ceiling) return Failure(node, ExecutionFailureCode.CostLimitExceeded, "cost");
+        }
+        return null;
+    }
+
+    private static int? EffectiveMaxCompletionTokens(
+        InferenceNode node, EffectiveBounds effective, CoordinatorState state)
+    {
+        var maximum = node.Limits?.MaxTokens;
+        if (effective.MaxCompletionTokens is not long aggregateMaximum)
+            return maximum;
+
+        // The pre-operation budget check rejects unknown or exhausted usage.
+        // Narrow the next request to the remaining completion-token allowance.
+        if (state.CompletionUnknown)
+            throw new InvalidOperationException("A completion-token request cannot be bounded while settled usage is unknown.");
+        var remaining = aggregateMaximum - state.CompletionTokens;
+        if (remaining <= 0)
+            throw new InvalidOperationException("A completion-token request cannot be issued after its aggregate budget is exhausted.");
+        var aggregateMaximumForTurn = (int)Math.Min(remaining, 1_000_000L);
+        return maximum is int perCallMaximum
+            ? Math.Min(perCallMaximum, aggregateMaximumForTurn)
+            : aggregateMaximumForTurn;
     }
 
     private static InferenceLimitSet RemainingLimits(EffectiveBounds effective, CoordinatorState state)

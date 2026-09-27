@@ -2,7 +2,9 @@
 
 Status: accepted direction; none of the gates below are met yet. The current
 packages (`0.1.0-preview.11`) are preview-grade: usable by downstream pilots
-on public artifacts, with no stability promises.
+on public artifacts, with no stability promises. A 2026-09-27 corrective review
+found defects in the coordinated-inference path; that capability remains limited
+until the linked corrective contract gates pass.
 
 ## Versioning direction
 
@@ -19,10 +21,19 @@ give it a distinct prerelease label rather than reusing `preview`.
   Nothing is frozen and everything may still break.
 - All provider behavior is proven against deterministic fakes only. No test
   has ever touched a real model provider.
-- The write-tool gate (CI-8) is closed by design, fan-out coordinated
-  inference is rejected at admission, pricing-revision pinning is host-owned,
-  and evidence has no read-back API without a sink. Each is documented, none
-  is resolved.
+- The write-tool gate (CI-8) is closed by design. The current coordinated
+  inference path has open corrective findings: protection of prompts/context/
+  arguments/model outputs and hard pre-call guarantees for prompt, total-token,
+  and cost budgets. Successful coordinated read-tool results now use a
+  host-owned protected store; ordinary history retains checked references.
+  The serialized evidence-report limit is enforced, with journal state governed
+  separately. Corrective batches address cross-run identity, final aggregate
+  settlement, currency mismatch, selected-executor preflight, and a hard
+  completion-token capability gate. The historical CI completion entries do not close the remaining
+  findings. Pricing-revision pinning remains host-owned, and evidence has no
+  read-back API without a sink. Fan-out support must be evaluated against the
+  current runtime and recovery contract rather than inferred from the old
+  admission-rejection statement.
 - Review is AI-only so far: no human security review and no external audit.
 
 ## RC exit criteria

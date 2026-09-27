@@ -140,7 +140,8 @@ public sealed class InferenceTurnRequest
             throw new ArgumentException("Visible tools must be unique.", nameof(visibleTools));
         VisibleTools = Array.AsReadOnly(tools);
         RemainingLimits = remainingLimits ?? new InferenceLimitSet();
-        if (maximumNewToolCalls is <= 0 || maximumNewToolCalls > MaximumProposals)
+        if (maximumNewToolCalls is < 0 || maximumNewToolCalls > MaximumProposals ||
+            (maximumNewToolCalls == 0 && tools.Length != 0))
             throw new ArgumentOutOfRangeException(nameof(maximumNewToolCalls));
         MaximumNewToolCalls = maximumNewToolCalls;
         if (maxCompletionTokens is <= 0 || maxCompletionTokens > 1_000_000)
@@ -161,7 +162,7 @@ public sealed class InferenceTurnRequest
     public IReadOnlyList<InferenceToolRequirement> VisibleTools { get; }
     /// <summary>The remaining aggregate bounds the turn must respect.</summary>
     public InferenceLimitSet RemainingLimits { get; }
-    /// <summary>Maximum tool-call proposals accepted from this turn, when bounded below the default.</summary>
+    /// <summary>Maximum tool-call proposals accepted from this turn; zero requires no visible tools and requests finalization.</summary>
     public int? MaximumNewToolCalls { get; }
     /// <summary>Maximum completion tokens for this turn, when the plan declares a per-call bound.</summary>
     public int? MaxCompletionTokens { get; }

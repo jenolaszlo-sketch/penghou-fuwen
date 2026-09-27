@@ -2,9 +2,38 @@
 
 Date created: 2026-09-21
 
-Status: implementation in progress; CI-0 through CI-7 complete
+Status: CI-0 through CI-7 were recorded complete in the historical log below. A
+corrective review on 2026-09-27 reopened the runtime-completeness claim: the
+bounded loop exists, but several advertised correctness guarantees are not
+currently met. CI milestone records are historical evidence of the work
+performed, not proof that the current source passes the corrective gates.
 
 Primary consumer: Marang supervisor-authored Fuwen workflows
+
+## Corrective status (2026-09-27)
+
+The completion log below records prior implementation and verification claims
+and is preserved as history. Review of the source and isolated contract probes
+found defects in invocation identity, final model budget settlement, cost
+currency, journal payload protection, retained-evidence bounds, selected
+turn-executor preflight, and long tool-call operation keys. A first corrective
+batch on 2026-09-27 addresses invocation identity, final settled usage/cost,
+currency matching, selected-executor preflight, and fixed-length tool operation
+keys. The full solution suite passes on .NET 8 and .NET 10 after these changes.
+Tool results can still be persisted as ordinary journal payloads.
+`MaxRetainedEvidenceBytes` now bounds canonical serialized evidence reports,
+truncating older detail summaries or rejecting an impossible minimum envelope;
+it does not bound journal state. Each turn request also receives a narrowed
+completion-token ceiling. Hard pre-call budget guarantees,
+ambiguous paid-call reconciliation, and complete request-contract delivery
+still need evidence before claiming safe recovery.
+
+Until fixed and verified, describe coordinated inference as
+limited/experimental. Do not use the historical CI-4 through CI-7 checkmarks as
+a current release gate. The corrective work is tracked in the dated [Fuwen
+hardening plan](inference-hardening-v2-prep-plan-2026-09-27.md) prepared for Sol;
+it is a follow-on to this design and does not erase the recorded historical
+completion entries.
 
 Source design: [Bounded complex activities](complex-activities.md)
 
@@ -413,6 +442,11 @@ This batch reduces design risk and creates an observable gate for every later
 protocol feature.
 
 ## Completion log
+
+The rows below are retained verbatim as dated historical records. Their
+recorded counts and checks describe the source and test state at that time. They
+do not assert that the current source is free of defects identified in the
+corrective status above.
 
 | Date | Task | Commit/PR | Verification | Notes |
 | --- | --- | --- | --- | --- |

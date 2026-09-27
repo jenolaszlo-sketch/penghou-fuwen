@@ -186,6 +186,44 @@ public sealed class InferenceFeatureManifest
         IReadOnlyList<DescriptorReference>? promptTemplates = null,
         IReadOnlyList<DescriptorReference>? tools = null,
         IReadOnlyList<string>? workflowPromptDigests = null)
+        : this(
+            supportsHardCompletionTokenLimit: false,
+            supportedPromptForms,
+            supportedModalities,
+            supportsContextDelivery,
+            maximumContextPayloadUtf8Bytes,
+            supportedToolEffects,
+            supportedLimits,
+            recoveryQuality,
+            usageQuality,
+            pricingQuality,
+            supportsStructuredOutput,
+            supportsSyntheticStructuredOutput,
+            profiles,
+            promptTemplates,
+            tools,
+            workflowPromptDigests)
+    {
+    }
+
+    /// <summary>Creates a bounded adapter manifest with an explicit hard output-token enforcement claim.</summary>
+    public InferenceFeatureManifest(
+        bool supportsHardCompletionTokenLimit,
+        IReadOnlyList<InferencePromptForm> supportedPromptForms,
+        IReadOnlyList<InferenceModality> supportedModalities,
+        bool supportsContextDelivery,
+        int? maximumContextPayloadUtf8Bytes,
+        IReadOnlyList<InferenceToolEffect> supportedToolEffects,
+        IReadOnlyList<InferenceLimit> supportedLimits,
+        InferenceRecoveryQuality recoveryQuality,
+        InferenceUsageQuality usageQuality,
+        InferencePricingQuality pricingQuality,
+        bool supportsStructuredOutput = true,
+        bool supportsSyntheticStructuredOutput = false,
+        IReadOnlyList<DescriptorReference>? profiles = null,
+        IReadOnlyList<DescriptorReference>? promptTemplates = null,
+        IReadOnlyList<DescriptorReference>? tools = null,
+        IReadOnlyList<string>? workflowPromptDigests = null)
     {
         SupportedPromptForms = EnumList(supportedPromptForms, nameof(supportedPromptForms));
         SupportedModalities = EnumList(supportedModalities, nameof(supportedModalities));
@@ -209,6 +247,7 @@ public sealed class InferenceFeatureManifest
         RecoveryQuality = recoveryQuality;
         UsageQuality = usageQuality;
         PricingQuality = pricingQuality;
+        SupportsHardCompletionTokenLimit = supportsHardCompletionTokenLimit;
         SupportsStructuredOutput = supportsStructuredOutput;
         SupportsSyntheticStructuredOutput = supportsSyntheticStructuredOutput;
         Profiles = BindingList(profiles, DescriptorKind.InferenceProfile, nameof(profiles));
@@ -235,6 +274,8 @@ public sealed class InferenceFeatureManifest
     public InferenceUsageQuality UsageQuality { get; }
     /// <summary>Pricing evidence quality.</summary>
     public InferencePricingQuality PricingQuality { get; }
+    /// <summary>Whether the adapter guarantees that every submitted hard completion-token ceiling is enforced by the paid operation.</summary>
+    public bool SupportsHardCompletionTokenLimit { get; }
     /// <summary>Whether declared structured output is supported.</summary>
     public bool SupportsStructuredOutput { get; }
     /// <summary>Whether structured output may be synthesized when the provider lacks native support.</summary>
@@ -324,6 +365,8 @@ public enum InferencePreflightDiagnosticCode
     PricingEvidenceUnavailable,
     /// <summary>The exact workflow-owned prompt digest is not bound.</summary>
     MissingWorkflowPromptBinding,
+    /// <summary>The adapter cannot guarantee enforcement of a hard completion-token ceiling.</summary>
+    HardCompletionTokenLimitUnavailable,
 }
 
 /// <summary>A bounded, stable explanation emitted by inference preflight.</summary>
@@ -567,6 +610,11 @@ public static class InferencePreflight
             diagnostics.Add(new(InferencePreflightDiagnosticCode.PricingEvidenceUnavailable, "The adapter does not provide exact pricing evidence."));
         else if (requirement.RequiresExactPricingEvidence)
             matched.Add("pricing-evidence");
+        if (requirement.RequiresHardCompletionTokenLimit && !manifest.SupportsHardCompletionTokenLimit)
+            diagnostics.Add(new(InferencePreflightDiagnosticCode.HardCompletionTokenLimitUnavailable,
+                "The adapter does not guarantee provider-side enforcement of the hard completion-token ceiling."));
+        else if (requirement.RequiresHardCompletionTokenLimit)
+            matched.Add("hard-completion-token-limit");
         if (requirement.HasContextInputs)
         {
             if (!manifest.SupportsContextDelivery)

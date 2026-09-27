@@ -872,6 +872,40 @@ public sealed class InferenceExecutionRequirement
         bool requiresExactUsageEvidence = false,
         bool requiresExactPricingEvidence = false,
         bool requiresStructuredOutput = false)
+        : this(
+            requiresHardCompletionTokenLimit: false,
+            profile,
+            promptTemplate,
+            promptDigest,
+            tools,
+            hasContextInputs,
+            modality,
+            toolRequirements,
+            limits,
+            minimumRecoveryQuality,
+            maximumContextPayloadUtf8Bytes,
+            requiresExactUsageEvidence,
+            requiresExactPricingEvidence,
+            requiresStructuredOutput)
+    {
+    }
+
+    /// <summary>Creates a detached inference requirement with an optional hard completion-token enforcement requirement.</summary>
+    public InferenceExecutionRequirement(
+        bool requiresHardCompletionTokenLimit,
+        DescriptorReference profile,
+        DescriptorReference? promptTemplate,
+        string? promptDigest,
+        IReadOnlyList<DescriptorReference>? tools,
+        bool hasContextInputs,
+        InferenceModality? modality,
+        IReadOnlyList<InferenceToolRequirement>? toolRequirements = null,
+        InferenceLimitSet? limits = null,
+        InferenceRecoveryQuality minimumRecoveryQuality = InferenceRecoveryQuality.Unsupported,
+        int? maximumContextPayloadUtf8Bytes = null,
+        bool requiresExactUsageEvidence = false,
+        bool requiresExactPricingEvidence = false,
+        bool requiresStructuredOutput = false)
     {
         Profile = ExecutionPortValidation.Descriptor(profile, DescriptorKind.InferenceProfile, nameof(profile));
         if ((promptTemplate is null) == (promptDigest is null))
@@ -910,6 +944,7 @@ public sealed class InferenceExecutionRequirement
         RequiresExactUsageEvidence = requiresExactUsageEvidence;
         RequiresExactPricingEvidence = requiresExactPricingEvidence;
         RequiresStructuredOutput = requiresStructuredOutput;
+        RequiresHardCompletionTokenLimit = requiresHardCompletionTokenLimit;
     }
 
     /// <summary>The exact admitted logical inference profile.</summary>
@@ -940,6 +975,8 @@ public sealed class InferenceExecutionRequirement
     public bool RequiresExactPricingEvidence { get; }
     /// <summary>Whether the adapter must provide the declared structured output contract.</summary>
     public bool RequiresStructuredOutput { get; }
+    /// <summary>Whether the adapter must guarantee provider-side enforcement of every completion-token ceiling.</summary>
+    public bool RequiresHardCompletionTokenLimit { get; }
 }
 
 /// <summary>Optional host capability for rejecting unavailable inference bindings before registration.</summary>

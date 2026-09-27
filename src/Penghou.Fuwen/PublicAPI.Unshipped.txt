@@ -34,6 +34,8 @@ Penghou.Fuwen.DeterministicFakeReadToolExecutor.RegisterSuccess(Penghou.Fuwen.De
 Penghou.Fuwen.DeterministicFakeTurnExecutor
 Penghou.Fuwen.DeterministicFakeTurnExecutor.DeterministicFakeTurnExecutor(System.Collections.Generic.IEnumerable<Penghou.Fuwen.InferenceTurnResult!>! script) -> void
 Penghou.Fuwen.DeterministicFakeTurnExecutor.DeterministicFakeTurnExecutor(System.Func<Penghou.Fuwen.InferenceTurnRequest!, Penghou.Fuwen.InferenceTurnResult!>! responder) -> void
+Penghou.Fuwen.DeterministicFakeTurnExecutor.DeterministicFakeTurnExecutor(bool supportsHardCompletionTokenLimit, System.Collections.Generic.IEnumerable<Penghou.Fuwen.InferenceTurnResult!>! script) -> void
+Penghou.Fuwen.DeterministicFakeTurnExecutor.DeterministicFakeTurnExecutor(bool supportsHardCompletionTokenLimit, System.Func<Penghou.Fuwen.InferenceTurnRequest!, Penghou.Fuwen.InferenceTurnResult!>! responder) -> void
 Penghou.Fuwen.DeterministicFakeTurnExecutor.ExecuteTurnAsync(Penghou.Fuwen.InferenceTurnRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceTurnResult!>
 Penghou.Fuwen.DeterministicFakeTurnExecutor.ObservedRequests.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceTurnRequest!>!
 Penghou.Fuwen.DeterministicFakeTurnExecutor.PreflightTurnDetailed(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.InferencePreflightReport!
@@ -63,6 +65,7 @@ Penghou.Fuwen.InferenceConversationMessage.Role.get -> Penghou.Fuwen.InferenceTu
 Penghou.Fuwen.InferenceConversationMessage.Text.get -> string!
 Penghou.Fuwen.InferenceConversationMessage.ToolCallId.get -> string?
 Penghou.Fuwen.InferenceExecutionRequirement.InferenceExecutionRequirement(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference? promptTemplate, string? promptDigest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? tools, bool hasContextInputs, Penghou.Fuwen.InferenceModality? modality, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolRequirement!>? toolRequirements = null, Penghou.Fuwen.InferenceLimitSet? limits = null, Penghou.Fuwen.InferenceRecoveryQuality minimumRecoveryQuality = Penghou.Fuwen.InferenceRecoveryQuality.Unsupported, int? maximumContextPayloadUtf8Bytes = null, bool requiresExactUsageEvidence = false, bool requiresExactPricingEvidence = false, bool requiresStructuredOutput = false) -> void
+Penghou.Fuwen.InferenceExecutionRequirement.InferenceExecutionRequirement(bool requiresHardCompletionTokenLimit, Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference? promptTemplate, string? promptDigest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? tools, bool hasContextInputs, Penghou.Fuwen.InferenceModality? modality, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolRequirement!>? toolRequirements = null, Penghou.Fuwen.InferenceLimitSet? limits = null, Penghou.Fuwen.InferenceRecoveryQuality minimumRecoveryQuality = Penghou.Fuwen.InferenceRecoveryQuality.Unsupported, int? maximumContextPayloadUtf8Bytes = null, bool requiresExactUsageEvidence = false, bool requiresExactPricingEvidence = false, bool requiresStructuredOutput = false) -> void
 Penghou.Fuwen.InferenceExecutionRequirement.Limits.get -> Penghou.Fuwen.InferenceLimitSet!
 Penghou.Fuwen.InferenceExecutionRequirement.MaximumContextPayloadUtf8Bytes.get -> int?
 Penghou.Fuwen.InferenceExecutionRequirement.MinimumRecoveryQuality.get -> Penghou.Fuwen.InferenceRecoveryQuality
@@ -71,9 +74,11 @@ Penghou.Fuwen.InferenceExecutionRequirement.PromptForm.get -> Penghou.Fuwen.Infe
 Penghou.Fuwen.InferenceExecutionRequirement.RequiresExactPricingEvidence.get -> bool
 Penghou.Fuwen.InferenceExecutionRequirement.RequiresExactUsageEvidence.get -> bool
 Penghou.Fuwen.InferenceExecutionRequirement.RequiresStructuredOutput.get -> bool
+Penghou.Fuwen.InferenceExecutionRequirement.RequiresHardCompletionTokenLimit.get -> bool
 Penghou.Fuwen.InferenceExecutionRequirement.ToolRequirements.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolRequirement!>!
 Penghou.Fuwen.InferenceFeatureManifest
 Penghou.Fuwen.InferenceFeatureManifest.InferenceFeatureManifest(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferencePromptForm>! supportedPromptForms, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceModality>! supportedModalities, bool supportsContextDelivery, int? maximumContextPayloadUtf8Bytes, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolEffect>! supportedToolEffects, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceLimit!>! supportedLimits, Penghou.Fuwen.InferenceRecoveryQuality recoveryQuality, Penghou.Fuwen.InferenceUsageQuality usageQuality, Penghou.Fuwen.InferencePricingQuality pricingQuality, bool supportsStructuredOutput = true, bool supportsSyntheticStructuredOutput = false, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? profiles = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? promptTemplates = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? tools = null, System.Collections.Generic.IReadOnlyList<string!>? workflowPromptDigests = null) -> void
+Penghou.Fuwen.InferenceFeatureManifest.InferenceFeatureManifest(bool supportsHardCompletionTokenLimit, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferencePromptForm>! supportedPromptForms, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceModality>! supportedModalities, bool supportsContextDelivery, int? maximumContextPayloadUtf8Bytes, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolEffect>! supportedToolEffects, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceLimit!>! supportedLimits, Penghou.Fuwen.InferenceRecoveryQuality recoveryQuality, Penghou.Fuwen.InferenceUsageQuality usageQuality, Penghou.Fuwen.InferencePricingQuality pricingQuality, bool supportsStructuredOutput = true, bool supportsSyntheticStructuredOutput = false, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? profiles = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? promptTemplates = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? tools = null, System.Collections.Generic.IReadOnlyList<string!>? workflowPromptDigests = null) -> void
 Penghou.Fuwen.InferenceFeatureManifest.MaximumContextPayloadUtf8Bytes.get -> int?
 Penghou.Fuwen.InferenceFeatureManifest.Preflight(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.InferencePreflightReport!
 Penghou.Fuwen.InferenceFeatureManifest.PricingQuality.get -> Penghou.Fuwen.InferencePricingQuality
@@ -85,6 +90,7 @@ Penghou.Fuwen.InferenceFeatureManifest.SupportedModalities.get -> System.Collect
 Penghou.Fuwen.InferenceFeatureManifest.SupportedPromptForms.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferencePromptForm>!
 Penghou.Fuwen.InferenceFeatureManifest.SupportedToolEffects.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolEffect>!
 Penghou.Fuwen.InferenceFeatureManifest.SupportsContextDelivery.get -> bool
+Penghou.Fuwen.InferenceFeatureManifest.SupportsHardCompletionTokenLimit.get -> bool
 Penghou.Fuwen.InferenceFeatureManifest.SupportsStructuredOutput.get -> bool
 Penghou.Fuwen.InferenceFeatureManifest.SupportsSyntheticStructuredOutput.get -> bool
 Penghou.Fuwen.InferenceFeatureManifest.Tools.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>!
@@ -161,6 +167,7 @@ Penghou.Fuwen.InferencePreflightDiagnosticCode.UnsupportedModality = 1 -> Pengho
 Penghou.Fuwen.InferencePreflightDiagnosticCode.UnsupportedPromptForm = 0 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
 Penghou.Fuwen.InferencePreflightDiagnosticCode.UnsupportedToolEffect = 8 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
 Penghou.Fuwen.InferencePreflightDiagnosticCode.UsageEvidenceUnavailable = 12 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
+Penghou.Fuwen.InferencePreflightDiagnosticCode.HardCompletionTokenLimitUnavailable = 15 -> Penghou.Fuwen.InferencePreflightDiagnosticCode
 Penghou.Fuwen.InferencePreflightReport
 Penghou.Fuwen.InferencePreflightReport.Diagnostics.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferencePreflightDiagnostic!>!
 Penghou.Fuwen.InferencePreflightReport.EffectiveLimits.get -> Penghou.Fuwen.InferenceLimitSet!
@@ -300,7 +307,9 @@ Penghou.Fuwen.ProtectedPayloadReference.StorageIdentity.get -> string?
 Penghou.Fuwen.RuntimeValueJson
 static Penghou.Fuwen.DeterministicFakeTurnExecutor.Cancelling() -> Penghou.Fuwen.DeterministicFakeTurnExecutor!
 static Penghou.Fuwen.DeterministicFakeTurnExecutor.FinalCandidate(string! candidateJson, Penghou.Fuwen.InferenceTurnUsage? usage = null) -> Penghou.Fuwen.DeterministicFakeTurnExecutor!
+static Penghou.Fuwen.DeterministicFakeTurnExecutor.FinalCandidate(bool supportsHardCompletionTokenLimit, string! candidateJson, Penghou.Fuwen.InferenceTurnUsage? usage = null) -> Penghou.Fuwen.DeterministicFakeTurnExecutor!
 static Penghou.Fuwen.DeterministicFakeTurnExecutor.FromResponder(System.Func<Penghou.Fuwen.InferenceTurnRequest!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceTurnResult!>>! responder) -> Penghou.Fuwen.DeterministicFakeTurnExecutor!
+static Penghou.Fuwen.DeterministicFakeTurnExecutor.FromResponder(bool supportsHardCompletionTokenLimit, System.Func<Penghou.Fuwen.InferenceTurnRequest!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceTurnResult!>>! responder) -> Penghou.Fuwen.DeterministicFakeTurnExecutor!
 static Penghou.Fuwen.DeterministicFakeTurnExecutor.ToolCalls(params Penghou.Fuwen.InferenceToolCallProposal![]! proposals) -> Penghou.Fuwen.DeterministicFakeTurnExecutor!
 static Penghou.Fuwen.InferencePreflight.Evaluate(Penghou.Fuwen.InferenceExecutionRequirement! requirement, Penghou.Fuwen.InferenceFeatureManifest! manifest) -> Penghou.Fuwen.InferencePreflightReport!
 static Penghou.Fuwen.InferencePreflightReportRenderer.RenderHuman(Penghou.Fuwen.InferencePreflightReport! report) -> string!
@@ -1207,3 +1216,19 @@ static Penghou.Fuwen.InferenceExecutionResult.Failed(Penghou.Fuwen.ExecutionFail
 static Penghou.Fuwen.InferenceExecutionResult.Succeeded(Penghou.Fuwen.RuntimeValue! output, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArtifactPublicationReceipt!>? publications = null, Penghou.Fuwen.InferenceExecutionEvidence? evidence = null) -> Penghou.Fuwen.InferenceExecutionResult!
 Penghou.Fuwen.IExecutionObserver
 Penghou.Fuwen.IExecutionObserver.ObserveAsync(Penghou.Fuwen.ExecutionObservation! observation, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Fuwen.IInferenceProtectedPayloadStore
+Penghou.Fuwen.IInferenceProtectedPayloadStore.GetAsync(Penghou.Fuwen.InferenceProtectedPayloadReadRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.ReadOnlyMemory<byte>?>
+Penghou.Fuwen.IInferenceProtectedPayloadStore.PutAsync(Penghou.Fuwen.InferenceProtectedPayloadWriteRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.ProtectedPayloadReference!>
+Penghou.Fuwen.InferenceProtectedPayloadReadRequest
+Penghou.Fuwen.InferenceProtectedPayloadReadRequest.InferenceProtectedPayloadReadRequest(string! interactionId, string! scope, Penghou.Fuwen.DescriptorReference! tool, Penghou.Fuwen.ProtectedPayloadReference! payload) -> void
+Penghou.Fuwen.InferenceProtectedPayloadReadRequest.InteractionId.get -> string!
+Penghou.Fuwen.InferenceProtectedPayloadReadRequest.Payload.get -> Penghou.Fuwen.ProtectedPayloadReference!
+Penghou.Fuwen.InferenceProtectedPayloadReadRequest.Scope.get -> string!
+Penghou.Fuwen.InferenceProtectedPayloadReadRequest.Tool.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.InferenceProtectedPayloadWriteRequest
+Penghou.Fuwen.InferenceProtectedPayloadWriteRequest.InferenceProtectedPayloadWriteRequest(string! interactionId, string! scope, Penghou.Fuwen.DescriptorReference! tool, string! operationKey, System.ReadOnlyMemory<byte> content) -> void
+Penghou.Fuwen.InferenceProtectedPayloadWriteRequest.Content.get -> System.ReadOnlyMemory<byte>
+Penghou.Fuwen.InferenceProtectedPayloadWriteRequest.InteractionId.get -> string!
+Penghou.Fuwen.InferenceProtectedPayloadWriteRequest.OperationKey.get -> string!
+Penghou.Fuwen.InferenceProtectedPayloadWriteRequest.Scope.get -> string!
+Penghou.Fuwen.InferenceProtectedPayloadWriteRequest.Tool.get -> Penghou.Fuwen.DescriptorReference!

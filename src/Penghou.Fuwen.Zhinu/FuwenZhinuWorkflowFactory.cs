@@ -131,6 +131,23 @@ public sealed class FuwenZhinuExecutionPorts
         IInferenceReadToolExecutor? readToolExecutor = null,
         InferenceLimitSet? inferenceHostCeilings = null,
         IInferenceEvidenceSink? evidenceSink = null)
+        : this(activityExecutor, contextProvider, inferenceExecutor, observer, options,
+            turnExecutor, readToolExecutor, inferenceHostCeilings, evidenceSink, protectedPayloadStore: null)
+    {
+    }
+
+    /// <summary>Creates a provider-port set with host-owned protected storage for coordinated tool results.</summary>
+    public FuwenZhinuExecutionPorts(
+        IActivityExecutor activityExecutor,
+        IContextProvider contextProvider,
+        IInferenceExecutor inferenceExecutor,
+        IExecutionObserver? observer,
+        Options options,
+        IInferenceTurnExecutor? turnExecutor,
+        IInferenceReadToolExecutor? readToolExecutor,
+        InferenceLimitSet? inferenceHostCeilings,
+        IInferenceEvidenceSink? evidenceSink,
+        IInferenceProtectedPayloadStore? protectedPayloadStore)
     {
         ActivityExecutor = activityExecutor ?? throw new ArgumentNullException(nameof(activityExecutor));
         ContextProvider = contextProvider ?? throw new ArgumentNullException(nameof(contextProvider));
@@ -141,6 +158,7 @@ public sealed class FuwenZhinuExecutionPorts
         ReadToolExecutor = readToolExecutor;
         InferenceHostCeilings = inferenceHostCeilings;
         EvidenceSink = evidenceSink;
+        ProtectedPayloadStore = protectedPayloadStore;
     }
 
     /// <summary>Executes trusted activity descriptors.</summary>
@@ -169,6 +187,8 @@ public sealed class FuwenZhinuExecutionPorts
     /// missing sink or a sink failure cannot alter execution truth.
     /// </summary>
     public IInferenceEvidenceSink? EvidenceSink { get; }
+    /// <summary>Host-owned durable storage for raw results of coordinated read-tool calls.</summary>
+    public IInferenceProtectedPayloadStore? ProtectedPayloadStore { get; }
     /// <summary>Receives best-effort lifecycle observations, or null when observations are disabled.</summary>
     public IExecutionObserver? Observer { get; }
     /// <summary>The validated bounded execution options.</summary>
@@ -309,7 +329,9 @@ public sealed class FuwenZhinuWorkflowFactory
                 executionPorts.InferenceExecutor as IInferenceExecutorPreflight,
                 executionPorts.TurnExecutor as IInferenceTurnExecutorManifest,
                 requiresProtocol: executionPorts.TurnExecutor is not null,
-                hasReadToolExecutor: executionPorts.ReadToolExecutor is not null);
+                hasReadToolExecutor: executionPorts.ReadToolExecutor is not null,
+                hostCeilings: executionPorts.InferenceHostCeilings,
+                hasProtectedPayloadStore: executionPorts.ProtectedPayloadStore is not null);
 
         await definitionStore.StoreAsync(definition, cancellationToken).ConfigureAwait(false);
         var stored = await definitionStore.ReadAsync(receipt.ExecutionFingerprint, cancellationToken).ConfigureAwait(false);
@@ -389,7 +411,9 @@ public sealed class FuwenZhinuWorkflowFactory
         IInferenceExecutorPreflight? preflight,
         IInferenceTurnExecutorManifest? turnManifest,
         bool requiresProtocol,
-        bool hasReadToolExecutor)
+        bool hasReadToolExecutor,
+        InferenceLimitSet? hostCeilings,
+        bool hasProtectedPayloadStore)
     {
         foreach (var node in EnumerateNodes(plan.Nodes).OfType<InferenceNode>())
         {
@@ -410,21 +434,32 @@ public sealed class FuwenZhinuWorkflowFactory
                 }
             }
 
-            if (manifest is null && preflight is null && turnManifest is null)
-            {
-                throw new FuwenZhinuAdmissionException(
-                    $"Inference node '{node.StructuralPath}' requires an adapter manifest or preflight implementation.");
-            }
-
             // Only nodes carrying aggregate protocol limits take the
             // coordinated path; one-call nodes keep their established behavior
             // even when a turn executor is configured for other nodes.
             var coordinated = requiresProtocol && node.Protocol is not null;
+            if (coordinated && turnManifest is null)
+            {
+                throw new FuwenZhinuAdmissionException(
+                    $"Inference node '{node.StructuralPath}' requires a manifest from the configured turn executor; " +
+                    "preflight from a different inference executor cannot establish turn capabilities.");
+            }
+            if (!coordinated && manifest is null && preflight is null)
+            {
+                throw new FuwenZhinuAdmissionException(
+                    $"Inference node '{node.StructuralPath}' requires an inference executor manifest or preflight implementation.");
+            }
             if (coordinated && !hasReadToolExecutor && node.Tools is { Count: > 0 })
             {
                 throw new FuwenZhinuAdmissionException(
                     $"Inference node '{node.StructuralPath}' declares model-callable tools for coordinated inference, " +
                     "but no read-tool executor is configured.");
+            }
+            if (coordinated && !hasProtectedPayloadStore && node.Tools is { Count: > 0 })
+            {
+                throw new FuwenZhinuAdmissionException(
+                    $"Inference node '{node.StructuralPath}' declares model-callable tools for coordinated inference, " +
+                    "but no host-owned protected-payload store is configured for durable tool results.");
             }
 
             // The coordinator renders workflow-owned prompts itself; a
@@ -437,31 +472,61 @@ public sealed class FuwenZhinuWorkflowFactory
                     "but coordinated inference requires a workflow-owned prompt.");
             }
 
+            var requiresHardCompletionTokenLimit = coordinated &&
+                (node.Limits?.MaxTokens is not null ||
+                 node.Protocol?.Limits.MaxCompletionTokens is not null ||
+                 hostCeilings?.GetMaximum(InferenceLimitDimension.CompletionTokens) is not null);
+            var requiredLimits = node.Protocol is null
+                ? new InferenceLimitSet()
+                : ToInferenceLimitSet(node.Protocol.Limits);
+            if (coordinated && hostCeilings?.GetMaximum(InferenceLimitDimension.CompletionTokens) is long hostCompletionMaximum)
+            {
+                var authoredCompletionMaximum = requiredLimits.GetMaximum(InferenceLimitDimension.CompletionTokens);
+                var effectiveCompletionMaximum = authoredCompletionMaximum is long authoredMaximum
+                    ? Math.Min(authoredMaximum, hostCompletionMaximum)
+                    : hostCompletionMaximum;
+                requiredLimits = new InferenceLimitSet(requiredLimits.Limits
+                    .Where(static limit => limit.Dimension != InferenceLimitDimension.CompletionTokens)
+                    .Append(new InferenceLimit(InferenceLimitDimension.CompletionTokens, effectiveCompletionMaximum))
+                    .ToArray());
+            }
             var requirement = new InferenceExecutionRequirement(
-                node.Profile,
-                promptTemplate,
-                promptDigest,
-                node.Tools,
-                node.ContextRequirements is { Count: > 0 },
+                requiresHardCompletionTokenLimit: requiresHardCompletionTokenLimit,
+                profile: node.Profile,
+                promptTemplate: promptTemplate,
+                promptDigest: promptDigest,
+                tools: node.Tools,
+                hasContextInputs: node.ContextRequirements is { Count: > 0 },
                 modality: null,
-                limits: node.Protocol is null ? null : ToInferenceLimitSet(node.Protocol.Limits));
+                limits: requiredLimits);
             // Only coordinated nodes are preflighted against the turn
             // executor; one-call nodes keep the one-call executor's manifest
             // or preflight hook even when a turn executor is configured.
-            var nodeTurnManifest = coordinated ? turnManifest : null;
-            var failure = nodeTurnManifest is not null
-                ? (nodeTurnManifest.PreflightTurnDetailed(requirement) ?? throw new FuwenZhinuAdmissionException(
-                    "The configured turn executor returned no structured preflight report."))
-                    .Failure
-                : manifest is not null
-                    ? (manifest.PreflightDetailed(requirement) ?? throw new FuwenZhinuAdmissionException(
-                        "The configured inference executor returned no structured preflight report."))
-                        .Failure
-                    : preflight!.Preflight(requirement);
+            ExecutionFailure? failure;
+            if (coordinated)
+            {
+                var turnReport = turnManifest!.PreflightTurnDetailed(requirement) ??
+                    throw new FuwenZhinuAdmissionException("The configured turn executor returned no structured preflight report.");
+                var advertisedManifest = turnManifest.TurnFeatureManifest ??
+                    throw new FuwenZhinuAdmissionException("The configured turn executor returned no capability manifest.");
+                // A custom preflight hook may add restrictions, but it cannot override
+                // or contradict the immutable capabilities the executor advertises.
+                failure = turnReport.Failure;
+                if (requirement.RequiresHardCompletionTokenLimit && !advertisedManifest.SupportsHardCompletionTokenLimit)
+                    failure ??= new ExecutionFailure(
+                        ExecutionFailureKind.Admission,
+                        ExecutionFailureCode.NotAdmitted,
+                        "The adapter does not guarantee provider-side enforcement of the hard completion-token ceiling.");
+            }
+            else if (manifest is not null)
+                failure = (manifest.PreflightDetailed(requirement) ?? throw new FuwenZhinuAdmissionException(
+                    "The configured inference executor returned no structured preflight report.")).Failure;
+            else
+                failure = preflight!.Preflight(requirement);
             // Preserve the established failure vocabulary when a dual-
             // capability adapter can explain the same structured rejection
             // more specifically through its compatibility surface.
-            if (failure is not null && manifest is not null && preflight is not null)
+            if (!coordinated && failure is not null && manifest is not null && preflight is not null)
                 failure = preflight.Preflight(requirement) ?? failure;
             if (failure is not null)
             {

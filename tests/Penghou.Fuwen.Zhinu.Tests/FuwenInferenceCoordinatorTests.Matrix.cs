@@ -77,7 +77,8 @@ public sealed partial class FuwenInferenceCoordinatorTests
                     turnExecutor,
                     readToolExecutor,
                     hostCeilings,
-                    evidenceSink))
+                    evidenceSink,
+                    protectedPayloadStore: new InMemoryProtectedPayloadStore()))
             .CreateAsync(name, "1", admission, ct);
     }
 
@@ -115,8 +116,7 @@ public sealed partial class FuwenInferenceCoordinatorTests
 
             (await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: ct)).GetString().Should().Be("done");
             tools.ObservedRequests.Should().HaveCount(2);
-            tools.ObservedRequests[0].OperationKey.Should().EndWith("/call-1");
-            tools.ObservedRequests[1].OperationKey.Should().EndWith("/call-2");
+            tools.ObservedRequests.Select(request => request.OperationKey).Should().OnlyContain(key => System.Text.RegularExpressions.Regex.IsMatch(key, "^fuwen-tool-op/v1/[0-9A-F]{64}$"));
         }
         finally { DeleteDirectory(root); }
     }
@@ -145,7 +145,7 @@ public sealed partial class FuwenInferenceCoordinatorTests
     }
 
     [Fact]
-    public async Task Tool_call_bound_stops_before_a_second_proposed_tool()
+    public async Task Tool_call_bound_rejects_oversized_batch_before_any_tool()
     {
         var ct = TestContext.Current.CancellationToken;
         var plan = CreatePlan(Limits(turns: 4, modelCalls: 4, toolCalls: 1), [Search]);
@@ -169,7 +169,9 @@ public sealed partial class FuwenInferenceCoordinatorTests
             await engine.ExecuteAsync(runId, ct);
 
             (await engine.GetRunAsync(runId, ct))!.Status.Should().Be(WorkflowStatus.Failed);
-            tools.ObservedRequests.Should().ContainSingle();
+            turns.ObservedRequests.Should().ContainSingle();
+            turns.ObservedRequests[0].MaximumNewToolCalls.Should().Be(1);
+            tools.ObservedRequests.Should().BeEmpty();
         }
         finally { DeleteDirectory(root); }
     }
@@ -400,8 +402,7 @@ public sealed partial class FuwenInferenceCoordinatorTests
 
             turns.ObservedRequests.Should().HaveCount(3);
             tools.ObservedRequests.Should().HaveCount(2);
-            tools.ObservedRequests[0].OperationKey.Should().EndWith("/model-call-1");
-            tools.ObservedRequests[1].OperationKey.Should().EndWith("/model-call-2");
+            tools.ObservedRequests.Select(request => request.OperationKey).Should().OnlyContain(key => System.Text.RegularExpressions.Regex.IsMatch(key, "^fuwen-tool-op/v1/[0-9A-F]{64}$"));
 
             var evidence = sink.Items.Should().ContainSingle().Subject;
             evidence.Failure.Should().BeNull();
@@ -538,12 +539,45 @@ public sealed partial class FuwenInferenceCoordinatorTests
     }
 
     [Fact]
+    public async Task Aggregate_completion_budget_caps_each_turn_to_remaining_tokens()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var plan = CreatePlan(
+            Limits(turns: 2, modelCalls: 2, toolCalls: 1, completionTokens: 9),
+            [Search],
+            perCall: new InferenceLimits(MaxTokens: 10, TimeoutSeconds: null));
+        var turns = DeterministicFakeTurnExecutor.FromResponder(true, (request, _) => ValueTask.FromResult<InferenceTurnResult>(
+            request.TurnOrdinal == 0
+                ? new InferenceToolCallTurnResult(
+                    [new InferenceToolCallProposal("call-1", Search, "{\"q\":1}")],
+                    new InferenceTurnUsage(promptTokens: 5, completionTokens: 4, totalTokens: 9))
+                : new InferenceFinalCandidateResult(
+                    "\"done\"",
+                    new InferenceTurnUsage(promptTokens: 5, completionTokens: 3, totalTokens: 8))));
+        var tools = new DeterministicFakeReadToolExecutor().RegisterSuccess(Search, Json("{\"answer\":1}"));
+        var registration = await RegisterAsync(plan, turns, tools, ct: ct);
+        var root = NewRoot();
+
+        try
+        {
+            await using var engine = CreateEngine(root, registration);
+            using var input = JsonDocument.Parse("\"q\"");
+            var runId = await engine.StartAsync("coord", "1", input.RootElement.Clone(), cancellationToken: ct);
+            await engine.ExecuteAsync(runId, ct);
+
+            (await engine.GetRunAsync(runId, ct))!.Status.Should().Be(WorkflowStatus.Completed);
+            turns.ObservedRequests.Select(request => request.MaxCompletionTokens).Should().Equal(9, 5);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    [Fact]
     public async Task Per_call_completion_bound_fails_closed_when_exceeded()
     {
         var ct = TestContext.Current.CancellationToken;
         var plan = CreatePlan(Limits(turns: 2, modelCalls: 2), perCall: new InferenceLimits(MaxTokens: 10, TimeoutSeconds: null));
         var turns = DeterministicFakeTurnExecutor.FinalCandidate(
-            "\"hi\"", new InferenceTurnUsage(promptTokens: 5, completionTokens: 50, totalTokens: 55));
+            true, "\"hi\"", new InferenceTurnUsage(promptTokens: 5, completionTokens: 50, totalTokens: 55));
         var sink = new RecordingEvidenceSink();
         var registration = await RegisterAsync(plan, turns, evidenceSink: sink, ct: ct);
         var root = NewRoot();
@@ -565,12 +599,35 @@ public sealed partial class FuwenInferenceCoordinatorTests
         finally { DeleteDirectory(root); }
     }
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    public async Task Completion_limit_rejects_executor_without_hard_completion_capability(
+        bool perCallLimit, bool hostCompletionLimit)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var plan = perCallLimit
+            ? CreatePlan(Limits(turns: 2, modelCalls: 2), perCall: new InferenceLimits(MaxTokens: 10, TimeoutSeconds: null))
+            : CreatePlan(Limits(turns: 2, modelCalls: 2, completionTokens: hostCompletionLimit ? null : 10));
+        var hostCeilings = hostCompletionLimit
+            ? new InferenceLimitSet([new InferenceLimit(InferenceLimitDimension.CompletionTokens, 10)])
+            : null;
+        var turns = DeterministicFakeTurnExecutor.FinalCandidate(
+            "\"hi\"", new InferenceTurnUsage(promptTokens: 5, completionTokens: 50, totalTokens: 55));
+        var act = async () => await RegisterAsync(plan, turns, hostCeilings: hostCeilings, ct: ct);
+
+        await act.Should().ThrowAsync<FuwenZhinuAdmissionException>()
+            .WithMessage("*provider-side enforcement of the hard completion-token ceiling*");
+        turns.ObservedRequests.Should().BeEmpty();
+    }
+
     [Fact]
     public async Task Per_call_completion_bound_with_unknown_usage_stops_as_budget_unknown()
     {
         var ct = TestContext.Current.CancellationToken;
         var plan = CreatePlan(Limits(turns: 2, modelCalls: 2), perCall: new InferenceLimits(MaxTokens: 100, TimeoutSeconds: null));
-        var turns = DeterministicFakeTurnExecutor.FinalCandidate("\"hi\"", usage: null);
+        var turns = DeterministicFakeTurnExecutor.FinalCandidate(true, "\"hi\"", usage: null);
         var sink = new RecordingEvidenceSink();
         var registration = await RegisterAsync(plan, turns, evidenceSink: sink, ct: ct);
         var root = NewRoot();
@@ -822,8 +879,16 @@ public sealed partial class FuwenInferenceCoordinatorTests
     }
 
     /// <summary>Blocks on the first model turn, then succeeds on every retry.</summary>
-    private sealed class FirstTurnBlockingExecutor : IInferenceTurnExecutor
+    private sealed class FirstTurnBlockingExecutor : IInferenceTurnExecutor, IInferenceTurnExecutorManifest
     {
+        private static readonly DeterministicFakeTurnExecutor ManifestFixture =
+            DeterministicFakeTurnExecutor.FinalCandidate("\"unused\"");
+
+        public InferenceFeatureManifest TurnFeatureManifest => ManifestFixture.TurnFeatureManifest;
+
+        public InferencePreflightReport PreflightTurnDetailed(InferenceExecutionRequirement requirement) =>
+            ManifestFixture.PreflightTurnDetailed(requirement);
+
         private int calls;
 
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);

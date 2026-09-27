@@ -37,14 +37,16 @@ public sealed partial class FuwenInferenceCoordinatorTests
         long? totalTokens = null,
         long? promptTokens = null,
         long? completionTokens = null,
-        long durationMs = 60_000) => new(
+        long durationMs = 60_000,
+        long? retainedEvidenceBytes = null) => new(
             maxTurns: turns,
             maxModelCalls: modelCalls,
             maxToolCalls: toolCalls,
             maxPromptTokens: promptTokens,
             maxCompletionTokens: completionTokens,
             maxTotalTokens: totalTokens,
-            maxDurationMilliseconds: durationMs);
+            maxDurationMilliseconds: durationMs,
+            maxRetainedEvidenceBytes: retainedEvidenceBytes);
 
     private static WorkflowPlan CreatePlan(
         InferenceProtocolLimits limits,
@@ -111,6 +113,8 @@ public sealed partial class FuwenInferenceCoordinatorTests
         IInferenceReadToolExecutor? readToolExecutor = null,
         InferenceLimitSet? hostCeilings = null,
         IInferenceEvidenceSink? evidenceSink = null,
+        IInferenceProtectedPayloadStore? protectedPayloadStore = null,
+        bool omitProtectedPayloadStore = false,
         CancellationToken ct = default)
     {
         var admission = await AdmitAsync(plan, ct);
@@ -128,7 +132,10 @@ public sealed partial class FuwenInferenceCoordinatorTests
                     turnExecutor,
                     readToolExecutor,
                     hostCeilings,
-                    evidenceSink))
+                    evidenceSink,
+                    protectedPayloadStore: omitProtectedPayloadStore
+                        ? null
+                        : protectedPayloadStore ?? new InMemoryProtectedPayloadStore()))
             .CreateAsync("coord", "1", admission, ct);
     }
 
@@ -226,12 +233,94 @@ public sealed partial class FuwenInferenceCoordinatorTests
             turns.ObservedRequests.Should().HaveCount(2);
             tools.ObservedRequests.Should().ContainSingle();
             var operationKey = tools.ObservedRequests[0].OperationKey;
-            operationKey.Should().StartWith(turns.ObservedRequests[0].InteractionId + "/tool/");
-            operationKey.Should().EndWith("/call-1");
+            operationKey.Should().MatchRegex("^fuwen-tool-op/v1/[0-9A-F]{64}$");
+            System.Text.Encoding.UTF8.GetByteCount(operationKey).Should().BeLessThanOrEqualTo(InferenceReadToolRequest.MaximumOperationKeyUtf8Bytes);
 
             var secondTurn = turns.ObservedRequests[1];
             secondTurn.Conversation.Should().Contain(message =>
                 message.Role == InferenceTurnRole.Tool && message.ToolCallId == "call-1");
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    [Fact]
+    public async Task Tool_result_is_protected_from_workflow_database_and_resolved_for_the_next_turn()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        const string marker = "PRIVATE_TOOL_RESULT_MARKER_91D720";
+        var plan = CreatePlan(Limits(turns: 3, modelCalls: 3, toolCalls: 2), [Search]);
+        var turns = DeterministicFakeTurnExecutor.FromResponder((request, _) => ValueTask.FromResult<InferenceTurnResult>(
+            request.TurnOrdinal == 0
+                ? new InferenceToolCallTurnResult(
+                    [new InferenceToolCallProposal("call-private", Search, "{}")], ExactUsage())
+                : new InferenceFinalCandidateResult("\"done\"", ExactUsage())));
+        var tools = new DeterministicFakeReadToolExecutor().RegisterSuccess(Search, Json("{\"private\":\"" + marker + "\"}"));
+        var payloads = new InMemoryProtectedPayloadStore();
+        var registration = await RegisterAsync(plan, turns, tools, protectedPayloadStore: payloads, ct: ct);
+        var root = NewRoot();
+
+        try
+        {
+            await using (var engine = CreateEngine(root, registration))
+            {
+                using var input = JsonDocument.Parse("\"q\"");
+                var runId = await engine.StartAsync("coord", "1", input.RootElement.Clone(), cancellationToken: ct);
+                await engine.ExecuteAsync(runId, ct);
+                (await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: ct)).GetString().Should().Be("done");
+            }
+
+            payloads.ContainsText(marker).Should().BeTrue();
+            turns.ObservedRequests.Should().HaveCount(2);
+            turns.ObservedRequests[1].Conversation.Should().Contain(message =>
+                message.Role == InferenceTurnRole.Tool && message.ToolCallId == "call-private" && message.Text.Contains(marker, StringComparison.Ordinal));
+            var journalBytes = await File.ReadAllBytesAsync(Path.Combine(root, "workflow.db"), ct);
+            System.Text.Encoding.UTF8.GetString(journalBytes).Should().NotContain(marker);
+            payloads.ReadCount.Should().BeGreaterThan(0);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    [Fact]
+    public async Task Coordinated_tool_workflow_rejects_registration_without_protected_payload_store()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var plan = CreatePlan(Limits(turns: 3, modelCalls: 3, toolCalls: 2), [Search]);
+        var turns = DeterministicFakeTurnExecutor.FromResponder((_, _) =>
+            ValueTask.FromResult<InferenceTurnResult>(new InferenceFinalCandidateResult("\"done\"", ExactUsage())));
+        var tools = new DeterministicFakeReadToolExecutor().RegisterSuccess(Search, Json("{\"answer\":1}"));
+
+        Func<Task> act = async () => await RegisterAsync(
+            plan, turns, tools, omitProtectedPayloadStore: true, ct: ct);
+        await act.Should().ThrowAsync<FuwenZhinuAdmissionException>()
+            .WithMessage("*protected-payload store*");
+    }
+
+    [Fact]
+    public async Task Missing_or_corrupt_protected_payload_fails_closed_without_repeating_tool()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var plan = CreatePlan(Limits(turns: 3, modelCalls: 3, toolCalls: 2), [Search]);
+        var turns = DeterministicFakeTurnExecutor.ToolCalls(
+            new InferenceToolCallProposal("call-protected", Search, "{}"));
+        var tools = new DeterministicFakeReadToolExecutor().RegisterSuccess(Search, Json("{\"answer\":42}"));
+        var payloads = new InMemoryProtectedPayloadStore { CorruptReads = true };
+        var sink = new RecordingEvidenceSink();
+        var registration = await RegisterAsync(plan, turns, tools, evidenceSink: sink,
+            protectedPayloadStore: payloads, ct: ct);
+        var root = NewRoot();
+
+        try
+        {
+            await using var engine = CreateEngine(root, registration);
+            using var input = JsonDocument.Parse("\"q\"");
+            var runId = await engine.StartAsync("coord", "1", input.RootElement.Clone(), cancellationToken: ct);
+            await engine.ExecuteAsync(runId, ct);
+
+            (await engine.GetRunAsync(runId, ct))!.Status.Should().Be(WorkflowStatus.Failed);
+            sink.Items.Should().ContainSingle().Subject.Failure!.Code.Should().Be(ExecutionFailureCode.InvalidInput);
+            tools.ObservedRequests.Should().ContainSingle();
+            turns.ObservedRequests.Should().ContainSingle();
+            payloads.ReadCount.Should().BeGreaterThan(0);
         }
         finally { DeleteDirectory(root); }
     }
@@ -243,7 +332,8 @@ public sealed partial class FuwenInferenceCoordinatorTests
         var plan = CreatePlan(Limits(turns: 3, modelCalls: 3, toolCalls: 2), [Search]);
         var turns = new BlockingTurnExecutor();
         var tools = new DeterministicFakeReadToolExecutor().RegisterSuccess(Search, Json("{\"answer\":42}"));
-        var registration = await RegisterAsync(plan, turns, tools, ct: ct);
+        var payloads = new InMemoryProtectedPayloadStore();
+        var registration = await RegisterAsync(plan, turns, tools, protectedPayloadStore: payloads, ct: ct);
         var root = NewRoot();
 
         try
@@ -268,6 +358,7 @@ public sealed partial class FuwenInferenceCoordinatorTests
             turns.TurnZeroCalls.Should().Be(1);
             turns.TurnOneCalls.Should().Be(2);
             tools.ObservedRequests.Should().ContainSingle();
+            payloads.ReadCount.Should().BeGreaterThan(0);
         }
         finally { DeleteDirectory(root); }
     }
@@ -293,6 +384,36 @@ public sealed partial class FuwenInferenceCoordinatorTests
             (await engine.GetRunAsync(runId, ct))!.Status.Should().Be(WorkflowStatus.Failed);
             turns.ObservedRequests.Should().ContainSingle();
             tools.ObservedRequests.Should().BeEmpty();
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    [Fact]
+    public async Task Exhausted_tool_allowance_requests_a_no_tools_final_turn()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var plan = CreatePlan(Limits(turns: 3, modelCalls: 3, toolCalls: 1), [Search]);
+        var turns = DeterministicFakeTurnExecutor.FromResponder((request, _) =>
+            ValueTask.FromResult<InferenceTurnResult>(request.TurnOrdinal == 0
+                ? new InferenceToolCallTurnResult(
+                    [new InferenceToolCallProposal("call-1", Search, "{\"q\":1}")])
+                : new InferenceFinalCandidateResult("\"done\"")));
+        var tools = new DeterministicFakeReadToolExecutor().RegisterSuccess(Search, Json("{\"answer\":1}"));
+        var registration = await RegisterAsync(plan, turns, tools, ct: ct);
+        var root = NewRoot();
+
+        try
+        {
+            await using var engine = CreateEngine(root, registration);
+            using var input = JsonDocument.Parse("\"q\"");
+            var runId = await engine.StartAsync("coord", "1", input.RootElement.Clone(), cancellationToken: ct);
+            await engine.ExecuteAsync(runId, ct);
+
+            (await engine.GetRunAsync(runId, ct))!.Status.Should().Be(WorkflowStatus.Completed);
+            turns.ObservedRequests.Should().HaveCount(2);
+            turns.ObservedRequests[1].VisibleTools.Should().BeEmpty();
+            turns.ObservedRequests[1].MaximumNewToolCalls.Should().Be(0);
+            tools.ObservedRequests.Should().ContainSingle();
         }
         finally { DeleteDirectory(root); }
     }
@@ -525,7 +646,94 @@ public sealed partial class FuwenInferenceCoordinatorTests
             evidence.ToolOutcomes[0].ResultDigest.Should().NotBeNull();
             evidence.UsageQuality.Should().Be(InferenceUsageQuality.Exact);
             evidence.EffectiveLimits.GetMaximum(InferenceLimitDimension.TotalTokens).Should().Be(10_000);
-            evidence.ProtectedPayloads.Should().BeEmpty();
+            evidence.ProtectedPayloads.Should().ContainSingle()
+                .Which.Descriptor.Should().Be(Search);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    [Fact]
+    public async Task Retained_evidence_limit_truncates_details_and_caps_the_canonical_report()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var baselineSink = new RecordingEvidenceSink();
+        var baselinePlan = CreatePlan(Limits(turns: 2, modelCalls: 2, retainedEvidenceBytes: 1_000_000));
+        var baselineTurns = DeterministicFakeTurnExecutor.FinalCandidate("\"done\"", ExactUsage());
+        var baselineRegistration = await RegisterAsync(baselinePlan, baselineTurns, evidenceSink: baselineSink, ct: ct);
+        var baselineRoot = NewRoot();
+        long cap;
+        try
+        {
+            await using var engine = CreateEngine(baselineRoot, baselineRegistration);
+            using var input = JsonDocument.Parse("\"q\"");
+            var runId = await engine.StartAsync("coord", "1", input.RootElement.Clone(), cancellationToken: ct);
+            await engine.ExecuteAsync(runId, ct);
+            var baseline = baselineSink.Items.Should().ContainSingle().Subject;
+            var oneSummary = new InferenceProtocolEvidence(
+                baseline.InteractionId,
+                baseline.EffectiveLimits,
+                baseline.Operations.Take(1).ToArray(),
+                [],
+                baseline.ValidationAttempts,
+                baseline.RecoveryDisposition,
+                baseline.CommitmentUncertainty,
+                baseline.PromptTokens,
+                baseline.CompletionTokens,
+                baseline.TotalTokens,
+                baseline.UsageQuality,
+                baseline.Cost,
+                baseline.PricingQuality,
+                baseline.DurationMilliseconds,
+                baseline.Failure,
+                baseline.ProtectedPayloads,
+                baseline.Semantics,
+                operationsTruncated: true,
+                toolOutcomesTruncated: baseline.ToolOutcomesTruncated);
+            cap = CanonicalJson.Serialize(oneSummary).LongLength + 64;
+            cap.Should().BeLessThan(CanonicalJson.Serialize(baseline).LongLength);
+        }
+        finally { DeleteDirectory(baselineRoot); }
+
+        var sink = new RecordingEvidenceSink();
+        var plan = CreatePlan(Limits(turns: 2, modelCalls: 2, retainedEvidenceBytes: cap));
+        var turns = DeterministicFakeTurnExecutor.FinalCandidate("\"done\"", ExactUsage());
+        var registration = await RegisterAsync(plan, turns, evidenceSink: sink, ct: ct);
+        var root = NewRoot();
+        try
+        {
+            await using var engine = CreateEngine(root, registration);
+            using var input = JsonDocument.Parse("\"q\"");
+            var runId = await engine.StartAsync("coord", "1", input.RootElement.Clone(), cancellationToken: ct);
+            await engine.ExecuteAsync(runId, ct);
+            (await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: ct)).GetString().Should().Be("done");
+
+            var evidence = sink.Items.Should().ContainSingle().Subject;
+            CanonicalJson.Serialize(evidence).LongLength.Should().BeLessThanOrEqualTo(cap);
+            (evidence.OperationsTruncated || evidence.ToolOutcomesTruncated).Should().BeTrue();
+            turns.ObservedRequests.Should().ContainSingle();
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    [Fact]
+    public async Task Retained_evidence_bound_smaller_than_minimum_envelope_fails_before_model_work()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var plan = CreatePlan(Limits(turns: 2, modelCalls: 2, retainedEvidenceBytes: 1));
+        var turns = DeterministicFakeTurnExecutor.FinalCandidate("\"unreachable\"");
+        var sink = new RecordingEvidenceSink();
+        var registration = await RegisterAsync(plan, turns, evidenceSink: sink, ct: ct);
+        var root = NewRoot();
+        try
+        {
+            await using var engine = CreateEngine(root, registration);
+            using var input = JsonDocument.Parse("\"q\"");
+            var runId = await engine.StartAsync("coord", "1", input.RootElement.Clone(), cancellationToken: ct);
+            await engine.ExecuteAsync(runId, ct);
+
+            (await engine.GetRunAsync(runId, ct))!.Status.Should().Be(WorkflowStatus.Failed);
+            turns.ObservedRequests.Should().BeEmpty();
+            sink.Items.Should().BeEmpty();
         }
         finally { DeleteDirectory(root); }
     }
@@ -638,8 +846,16 @@ public sealed partial class FuwenInferenceCoordinatorTests
     /// the run can be interrupted mid-turn, and every later second-turn attempt
     /// returns the final candidate so recovery can complete.
     /// </summary>
-    private sealed class BlockingTurnExecutor : IInferenceTurnExecutor
+    private sealed class BlockingTurnExecutor : IInferenceTurnExecutor, IInferenceTurnExecutorManifest
     {
+        private static readonly DeterministicFakeTurnExecutor ManifestFixture =
+            DeterministicFakeTurnExecutor.FinalCandidate("\"unused\"");
+
+        public InferenceFeatureManifest TurnFeatureManifest => ManifestFixture.TurnFeatureManifest;
+
+        public InferencePreflightReport PreflightTurnDetailed(InferenceExecutionRequirement requirement) =>
+            ManifestFixture.PreflightTurnDetailed(requirement);
+
         private int turnZero;
         private int turnOne;
 

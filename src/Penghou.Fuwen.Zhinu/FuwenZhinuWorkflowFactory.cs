@@ -187,6 +187,8 @@ public sealed class FuwenZhinuExecutionPorts
     /// missing sink or a sink failure cannot alter execution truth.
     /// </summary>
     public IInferenceEvidenceSink? EvidenceSink { get; }
+    /// <summary>Host-owned durable leaf-account ledger for coordinated inference budgets.</summary>
+    public IInferenceBudgetLedger? BudgetLedger { get; init; }
     /// <summary>Host-owned durable storage for raw results of coordinated read-tool calls.</summary>
     public IInferenceProtectedPayloadStore? ProtectedPayloadStore { get; }
     /// <summary>Receives best-effort lifecycle observations, or null when observations are disabled.</summary>

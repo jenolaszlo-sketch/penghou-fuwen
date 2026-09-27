@@ -124,6 +124,25 @@ internal static class FuwenInferenceCoordinator
                 ExecutionFailureKind.Contract,
                 ExecutionFailureCode.InvalidInput,
                 $"Inference node '{node.StructuralPath}' recovered protocol state with unsupported semantics; it was stopped without replaying legacy tool results."));
+        if (ports.BudgetLedger is not null && ports.TurnExecutor is IInferenceTurnBudgetAuthority)
+        {
+            try
+            {
+                await ports.BudgetLedger.FinalizeAsync(finalState.InteractionId, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                finalState.Failure ??= new FailureRecord(
+                    (int)ExecutionFailureKind.Infrastructure,
+                    (int)ExecutionFailureCode.BudgetUnknown,
+                    $"Inference budget account finalization failed: {exception.GetType().Name}.",
+                    true, exception.GetType().Name);
+            }
+        }
         if (finalState.Failure is not null)
         {
             await RecordEvidenceAsync(ports, BuildEvidence(effective, finalState), effective.MaxRetainedEvidenceBytes, cancellationToken).ConfigureAwait(false);
@@ -923,6 +942,47 @@ internal static class FuwenInferenceCoordinator
                     maxNewToolCalls,
                     maxCompletionTokens: EffectiveMaxCompletionTokens(node, effective, state),
                     timeoutSeconds: node.Limits?.TimeoutSeconds);
+                InferenceTurnBudgetQuote? budgetQuote = null;
+                var budgetLedger = ports.BudgetLedger;
+                if (budgetLedger is not null && ports.TurnExecutor is IInferenceTurnBudgetAuthority budgetAuthority)
+                {
+                    try
+                    {
+                        budgetQuote = await budgetAuthority.QuoteMaximumAsync(request, token).ConfigureAwait(false);
+                        var quoteFailure = CheckTurnBudgetQuote(node, request, budgetQuote);
+                        if (quoteFailure is not null)
+                            return TurnRecord(quoteFailure, 0);
+                        var requestDigest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+                            CanonicalJson.Serialize(request))).ToLowerInvariant();
+                        var reservation = await budgetLedger.ReserveAsync(
+                            new InferenceBudgetReservationRequest(
+                                state.InteractionId, operationId, requestDigest,
+                                ToLimitSet(effective), budgetQuote), token).ConfigureAwait(false);
+                        if (reservation != InferenceBudgetReservationDecision.Reserved)
+                        {
+                            var repeated = reservation == InferenceBudgetReservationDecision.Existing;
+                            return TurnRecord(new FailureRecord(
+                                (int)ExecutionFailureKind.Contract,
+                                (int)(repeated ? ExecutionFailureCode.AmbiguousOperation : ExecutionFailureCode.BudgetUnknown),
+                                repeated
+                                    ? $"Model turn {operationId} already has a durable reservation; provider work was not repeated."
+                                    : $"Model turn {operationId} cannot fit its durable budget reservation.",
+                                repeated, null), 0);
+                        }
+                    }
+                    catch (OperationCanceledException) when (token.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception exception)
+                    {
+                        return TurnRecord(new FailureRecord(
+                            (int)ExecutionFailureKind.Infrastructure,
+                            (int)ExecutionFailureCode.BudgetUnknown,
+                            $"Model turn {operationId} could not establish a durable budget reservation: {exception.GetType().Name}.",
+                            false, exception.GetType().Name), 0);
+                    }
+                }
                 using var callDeadline = CancellationTokenSource.CreateLinkedTokenSource(token);
                 var timeoutSeconds = node.Limits?.TimeoutSeconds;
                 if (timeoutSeconds is int deadlineSeconds)
@@ -935,11 +995,16 @@ internal static class FuwenInferenceCoordinator
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested || cancellationToken.IsCancellationRequested)
                 {
+                    // A cancelled submission may already have committed. The
+                    // durable reservation remains consumed even if this worker
+                    // no longer has authority to update its marker.
                     throw;
                 }
                 catch (Exception exception) when (exception is not Penghou.Zhinu.ZhinuException &&
                     callDeadline.IsCancellationRequested && !token.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
                 {
+                    if (budgetQuote is not null)
+                        await RetainBudgetUncertaintyAsync(budgetLedger!, state.InteractionId, operationId).ConfigureAwait(false);
                     stopwatch.Stop();
                     return TurnRecord(new FailureRecord(
                         (int)ExecutionFailureKind.Timeout,
@@ -953,6 +1018,8 @@ internal static class FuwenInferenceCoordinator
                 }
                 catch (Exception exception)
                 {
+                    if (budgetQuote is not null)
+                        await RetainBudgetUncertaintyAsync(budgetLedger!, state.InteractionId, operationId).ConfigureAwait(false);
                     stopwatch.Stop();
                     return TurnRecord(new FailureRecord(
                         (int)ExecutionFailureKind.Infrastructure,
@@ -964,17 +1031,101 @@ internal static class FuwenInferenceCoordinator
                 if (node.Limits?.TimeoutSeconds is int timeout &&
                     stopwatch.Elapsed > TimeSpan.FromSeconds(timeout))
                 {
+                    if (budgetQuote is not null)
+                        await RetainBudgetUncertaintyAsync(budgetLedger!, state.InteractionId, operationId).ConfigureAwait(false);
                     return TurnRecord(new FailureRecord(
                         (int)ExecutionFailureKind.Timeout,
                         (int)ExecutionFailureCode.Timeout,
                         $"Model turn {operationId} exceeded its {timeout}s per-call timeout.",
                         true, nameof(TimeoutException)), stopwatch.ElapsedMilliseconds);
                 }
+                if (budgetQuote is not null)
+                {
+                    var usageFailure = CheckTurnUsageAgainstQuote(operationId, turnResult.Usage, budgetQuote);
+                    if (usageFailure is not null)
+                    {
+                        await RetainBudgetUncertaintyAsync(budgetLedger!, state.InteractionId, operationId).ConfigureAwait(false);
+                        return TurnRecord(usageFailure, stopwatch.ElapsedMilliseconds);
+                    }
+                    try
+                    {
+                        await budgetLedger!.SettleAsync(
+                            state.InteractionId, operationId,
+                            turnResult.Usage ?? new InferenceTurnUsage(), token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (token.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception exception)
+                    {
+                        await RetainBudgetUncertaintyAsync(budgetLedger!, state.InteractionId, operationId).ConfigureAwait(false);
+                        return TurnRecord(new FailureRecord(
+                            (int)ExecutionFailureKind.Infrastructure,
+                            (int)ExecutionFailureCode.AmbiguousOperation,
+                            $"Model turn {operationId} completed but its budget settlement is uncertain: {exception.GetType().Name}.",
+                            true, exception.GetType().Name), stopwatch.ElapsedMilliseconds);
+                    }
+                }
                 return TurnRecord(turnResult, stopwatch.ElapsedMilliseconds);
             },
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         ApplyTurnOutput(node, plan, trustedToolSignatures, effective, state, output, ordinal, operationId);
+    }
+
+    private static FailureRecord? CheckTurnBudgetQuote(
+        InferenceNode node, InferenceTurnRequest request, InferenceTurnBudgetQuote quote)
+    {
+        if (quote is null)
+            return Invalid("The selected executor returned no maximum-charge quote.");
+        var limits = request.RemainingLimits;
+        if (limits.GetMaximum(InferenceLimitDimension.PromptTokens) is long prompt &&
+            (quote.MaximumPromptTokens is not long quotedPrompt || quotedPrompt > prompt))
+            return Invalid("The maximum prompt charge is unknown or exceeds the remaining allowance.");
+        if (limits.GetMaximum(InferenceLimitDimension.TotalTokens) is long total &&
+            (quote.MaximumTotalTokens is not long quotedTotal || quotedTotal > total))
+            return Invalid("The maximum total-token charge is unknown or exceeds the remaining allowance.");
+        if (limits.GetMaximum(InferenceLimitDimension.CostMicrounits) is long cost &&
+            (quote.MaximumCost is null || quote.MaximumCost.AmountMicrounits > cost ||
+             !string.Equals(quote.MaximumCost.CurrencyCode, node.Protocol?.Limits.Cost?.Currency, StringComparison.Ordinal)))
+            return Invalid("The maximum monetary charge is unknown, incompatible, or exceeds the remaining allowance.");
+        return null;
+
+        static FailureRecord Invalid(string message) => new(
+            (int)ExecutionFailureKind.Contract, (int)ExecutionFailureCode.BudgetUnknown,
+            message, false, null);
+    }
+
+    private static FailureRecord? CheckTurnUsageAgainstQuote(
+        string operationId, InferenceTurnUsage? usage, InferenceTurnBudgetQuote quote)
+    {
+        if (usage?.PromptTokens is int prompt && quote.MaximumPromptTokens is long maxPrompt && prompt > maxPrompt ||
+            usage?.CompletionTokens is int completion && quote.MaximumCompletionTokens is long maxCompletion && completion > maxCompletion ||
+            usage?.TotalTokens is int total && quote.MaximumTotalTokens is long maxTotal && total > maxTotal ||
+            usage?.Cost is { } cost && quote.MaximumCost is { } maxCost &&
+            (cost.AmountMicrounits > maxCost.AmountMicrounits || cost.IsEstimated ||
+             !string.Equals(cost.CurrencyCode, maxCost.CurrencyCode, StringComparison.Ordinal) ||
+             !string.Equals(cost.PricingRevision, maxCost.PricingRevision, StringComparison.Ordinal)))
+            return new FailureRecord(
+                (int)ExecutionFailureKind.Contract, (int)ExecutionFailureCode.BudgetUnknown,
+                $"Model turn {operationId} reported usage outside its trusted maximum-charge quote.",
+                true, null);
+        return null;
+    }
+
+    private static async ValueTask RetainBudgetUncertaintyAsync(
+        IInferenceBudgetLedger ledger, string interactionId, string operationId)
+    {
+        try
+        {
+            await ledger.RetainUncertainAsync(interactionId, operationId, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch
+        {
+            // The original durable reservation remains consumed even when the
+            // additional uncertainty marker cannot be written.
+        }
     }
 
     private static JsonElement TurnRecord(InferenceTurnResult result, long elapsedMilliseconds)

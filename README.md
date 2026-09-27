@@ -177,7 +177,7 @@ whole-batch tool allowance checks. Coordinated admission rejects duplicate
 provider-visible tool names and carries exact trusted callable signatures to
 runtime argument/result validation.
 
-Authored prompt, total-token, and cost limits are strict by default and currently fail coordinated registration before paid work. Explicit `aggregate advisory` enables after-call monitoring; host strict ceilings cannot be downgraded.
+Authored prompt, total-token, and cost limits are strict by default and currently fail coordinated registration before paid work. An optional SQLite leaf ledger can now durably reserve a selected executor’s pre-call maximum, settle known usage, and retain uncertain charges. The host-configured Baize path has no trustworthy maximum-charge quote, so this does not yet open strict admission. Explicit `aggregate advisory` enables after-call monitoring; host strict ceilings cannot be downgraded.
 
 Before a production claim, this path still needs provider-facing tool schemas
 and resource grants, hard pre-call prompt/total-token/cost enforcement,

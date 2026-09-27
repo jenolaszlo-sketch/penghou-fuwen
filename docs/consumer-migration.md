@@ -38,8 +38,9 @@ preview tag.
   is a test fixture, not a production storage adapter.
 - **Host cost ceilings:** a coordinated host-only `CostMicrounits` ceiling
   now fails admission unless the authored protocol supplies the currency.
-  Strict host monetary ceilings still fail admission because the coordinated
-  runtime cannot reserve a trusted maximum charge before work. Authored cost
+  Strict host monetary ceilings still fail admission. The optional SQLite
+  leaf ledger reserves quoted charges before a turn, but the configured Baize
+  path cannot supply a trusted maximum quote. Authored cost
   limits also fail by default; use explicit `aggregate advisory` only if
   after-call monitoring is acceptable. Successive advisory turn requests
   receive the remaining monetary allowance; mixed pricing revisions produce

@@ -123,7 +123,8 @@ public sealed partial class FuwenInferenceCoordinatorTests
         IInferenceProtectedPayloadStore? protectedPayloadStore = null,
         bool omitProtectedPayloadStore = false,
         CancellationToken ct = default,
-        CallableContract? toolContract = null)
+        CallableContract? toolContract = null,
+        IInferenceBudgetLedger? budgetLedger = null)
     {
         var admission = await AdmitAsync(plan, ct, toolContract);
         return await new FuwenZhinuWorkflowFactory(
@@ -143,7 +144,8 @@ public sealed partial class FuwenInferenceCoordinatorTests
                     evidenceSink,
                     protectedPayloadStore: omitProtectedPayloadStore
                         ? null
-                        : protectedPayloadStore ?? new InMemoryProtectedPayloadStore()))
+                        : protectedPayloadStore ?? new InMemoryProtectedPayloadStore())
+                { BudgetLedger = budgetLedger })
             .CreateAsync("coord", "1", admission, ct);
     }
 

@@ -1,4 +1,11 @@
 #nullable enable
+Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger
+Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger.SqliteInferenceBudgetLedger(string! databasePath) -> void
+Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger.ReserveAsync(Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Zhinu.InferenceBudgetReservationDecision>
+Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger.SettleAsync(string! interactionId, string! operationId, Penghou.Fuwen.InferenceTurnUsage! actual, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger.RetainUncertainAsync(string! interactionId, string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger.ReleaseProvenUnusedAsync(string! interactionId, string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger.FinalizeAsync(string! interactionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Penghou.Fuwen.Zhinu.FuwenZhinuAdapterException
 Penghou.Fuwen.Zhinu.FuwenZhinuAdapterException.FuwenZhinuAdapterException(string! message) -> void
 Penghou.Fuwen.Zhinu.FuwenZhinuExecutionException
@@ -48,3 +55,22 @@ Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowRegistration.ZhinuRegistration.get -> Peng
 Penghou.Fuwen.Zhinu.IFuwenZhinuProviderRuntimeIdentity
 Penghou.Fuwen.Zhinu.IFuwenZhinuProviderRuntimeIdentity.CatalogueSnapshotRevision.get -> string!
 Penghou.Fuwen.Zhinu.IFuwenZhinuProviderRuntimeIdentity.ResolvedDescriptorSetFingerprint.get -> string!
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.BudgetLedger.get -> Penghou.Fuwen.Zhinu.IInferenceBudgetLedger?
+Penghou.Fuwen.Zhinu.FuwenZhinuExecutionPorts.BudgetLedger.init -> void
+Penghou.Fuwen.Zhinu.IInferenceBudgetLedger
+Penghou.Fuwen.Zhinu.IInferenceBudgetLedger.FinalizeAsync(string! interactionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Fuwen.Zhinu.IInferenceBudgetLedger.ReleaseProvenUnusedAsync(string! interactionId, string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Fuwen.Zhinu.IInferenceBudgetLedger.ReserveAsync(Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Zhinu.InferenceBudgetReservationDecision>
+Penghou.Fuwen.Zhinu.IInferenceBudgetLedger.RetainUncertainAsync(string! interactionId, string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Fuwen.Zhinu.IInferenceBudgetLedger.SettleAsync(string! interactionId, string! operationId, Penghou.Fuwen.InferenceTurnUsage! actual, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Fuwen.Zhinu.InferenceBudgetReservationDecision
+Penghou.Fuwen.Zhinu.InferenceBudgetReservationDecision.Reserved = 0 -> Penghou.Fuwen.Zhinu.InferenceBudgetReservationDecision
+Penghou.Fuwen.Zhinu.InferenceBudgetReservationDecision.Existing = 1 -> Penghou.Fuwen.Zhinu.InferenceBudgetReservationDecision
+Penghou.Fuwen.Zhinu.InferenceBudgetReservationDecision.ExceedsCeiling = 2 -> Penghou.Fuwen.Zhinu.InferenceBudgetReservationDecision
+Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest
+Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest.InferenceBudgetReservationRequest(string! interactionId, string! operationId, string! requestDigest, Penghou.Fuwen.InferenceLimitSet! effectiveLimits, Penghou.Fuwen.InferenceTurnBudgetQuote! quote) -> void
+Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest.InteractionId.get -> string!
+Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest.OperationId.get -> string!
+Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest.RequestDigest.get -> string!
+Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest.EffectiveLimits.get -> Penghou.Fuwen.InferenceLimitSet!
+Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest.Quote.get -> Penghou.Fuwen.InferenceTurnBudgetQuote!

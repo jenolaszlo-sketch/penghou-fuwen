@@ -1237,3 +1237,12 @@ Penghou.Fuwen.InferenceProtectedPayloadWriteRequest.InteractionId.get -> string!
 Penghou.Fuwen.InferenceProtectedPayloadWriteRequest.OperationKey.get -> string!
 Penghou.Fuwen.InferenceProtectedPayloadWriteRequest.Scope.get -> string!
 Penghou.Fuwen.InferenceProtectedPayloadWriteRequest.Tool.get -> Penghou.Fuwen.DescriptorReference!
+Penghou.Fuwen.IInferenceTurnBudgetAuthority
+Penghou.Fuwen.IInferenceTurnBudgetAuthority.QuoteMaximumAsync(Penghou.Fuwen.InferenceTurnRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceTurnBudgetQuote!>
+Penghou.Fuwen.InferenceTurnBudgetQuote
+Penghou.Fuwen.InferenceTurnBudgetQuote.BindingRevision.get -> string!
+Penghou.Fuwen.InferenceTurnBudgetQuote.InferenceTurnBudgetQuote(string! bindingRevision, long? maximumPromptTokens, long? maximumCompletionTokens, long? maximumTotalTokens, Penghou.Fuwen.InferenceCostEvidence? maximumCost = null) -> void
+Penghou.Fuwen.InferenceTurnBudgetQuote.MaximumCompletionTokens.get -> long?
+Penghou.Fuwen.InferenceTurnBudgetQuote.MaximumCost.get -> Penghou.Fuwen.InferenceCostEvidence?
+Penghou.Fuwen.InferenceTurnBudgetQuote.MaximumPromptTokens.get -> long?
+Penghou.Fuwen.InferenceTurnBudgetQuote.MaximumTotalTokens.get -> long?

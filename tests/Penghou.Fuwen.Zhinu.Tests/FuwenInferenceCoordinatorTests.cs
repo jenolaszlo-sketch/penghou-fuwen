@@ -280,7 +280,21 @@ public sealed partial class FuwenInferenceCoordinatorTests
             turns.ObservedRequests.Should().HaveCount(2);
             turns.ObservedRequests[1].Conversation.Should().Contain(message =>
                 message.Role == InferenceTurnRole.Tool && message.ToolCallId == "call-private" && message.Text.Contains(marker, StringComparison.Ordinal));
-            var journalBytes = await File.ReadAllBytesAsync(Path.Combine(root, "workflow.db"), ct);
+            // SQLite can release its final Windows file handle just after engine disposal.
+            var journalPath = Path.Combine(root, "workflow.db");
+            byte[] journalBytes = [];
+            for (var attempt = 0; attempt < 10; attempt++)
+            {
+                try
+                {
+                    journalBytes = await File.ReadAllBytesAsync(journalPath, ct);
+                    break;
+                }
+                catch (IOException) when (attempt < 9)
+                {
+                    await Task.Delay(50, ct);
+                }
+            }
             System.Text.Encoding.UTF8.GetString(journalBytes).Should().NotContain(marker);
             payloads.ReadCount.Should().BeGreaterThan(0);
         }

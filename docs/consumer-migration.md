@@ -36,6 +36,11 @@ preview tag.
   descriptor, operation key and exact bytes; authorize reads and retain
   results for the workflow's recovery lifetime. The included in-memory store
   is a test fixture, not a production storage adapter.
+- **Host cost ceilings:** a coordinated host-only `CostMicrounits` ceiling
+  now fails admission unless the authored protocol supplies the currency.
+  Successive turn requests receive the remaining monetary allowance; mixed
+  pricing revisions produce unknown aggregate cost. This still does not
+  provide a hard pre-call cost guarantee.
 - **Persisted runs:** interaction and operation-key identities changed, and
   coordinator state now binds admitted tool signatures as well as protected
   tool payload semantics. Do not

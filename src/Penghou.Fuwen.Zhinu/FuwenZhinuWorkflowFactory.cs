@@ -457,6 +457,12 @@ public sealed class FuwenZhinuWorkflowFactory
             // coordinated path; one-call nodes keep their established behavior
             // even when a turn executor is configured for other nodes.
             var coordinated = requiresProtocol && node.Protocol is not null;
+            if (coordinated && hostCeilings?.GetMaximum(InferenceLimitDimension.CostMicrounits) is not null &&
+                node.Protocol!.Limits.Cost is null)
+            {
+                throw new FuwenZhinuAdmissionException(
+                    $"Inference node '{node.StructuralPath}' has a host cost ceiling without an admitted source currency; a currency-free amount cannot bound monetary spend.");
+            }
             if (coordinated && turnManifest is null)
             {
                 throw new FuwenZhinuAdmissionException(

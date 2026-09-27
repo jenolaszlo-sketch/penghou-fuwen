@@ -32,6 +32,10 @@ contract versions. Consumer-visible breaking changes are called out under
   before protected storage. Durable interaction identity now binds these
   signatures; older in-flight coordinator state stops on the new semantics.
   Provider-facing tool schemas and resource-level authorization remain open.
+- Reject currency-free host-only cost ceilings at coordinated registration;
+  include remaining monetary allowance in turn requests and mark mixed
+  pricing revisions as unknown rather than summing them. Coordinator state
+  semantics advance again, so older in-flight runs require migration or stop.
 - Reconcile README and capability documentation with the still-open budget,
   recovery, privacy, provider, and operator gates. No new NuGet package is
   published by these source changes.

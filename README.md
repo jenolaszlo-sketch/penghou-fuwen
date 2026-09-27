@@ -171,7 +171,7 @@ endpoints and records provider/model, usage, timing, and publication evidence.
 The current source also contains a durable bounded inference coordinator, but
 coordinated model → read-tool → model execution remains **limited/experimental**.
 Its corrective work now covers run/request identity, final usage and cost
-settlement, currency checks, selected-executor preflight, evidence size,
+settlement, currency and pricing-revision checks, selected-executor preflight, evidence size,
 completion-token capability checks, protected successful tool results, and
 whole-batch tool allowance checks. Coordinated admission rejects duplicate
 provider-visible tool names and carries exact trusted callable signatures to

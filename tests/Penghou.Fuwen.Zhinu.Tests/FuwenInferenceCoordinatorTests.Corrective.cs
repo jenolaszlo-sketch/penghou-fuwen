@@ -156,6 +156,81 @@ public sealed partial class FuwenInferenceCoordinatorTests
         finally { DeleteDirectory(root); }
     }
 
+    [Fact]
+    public async Task Host_only_cost_ceiling_without_currency_fails_admission()
+    {
+        var turns = DeterministicFakeTurnExecutor.FinalCandidate("\"ok\"", ExactUsage());
+        var hostCeiling = new InferenceLimitSet([
+            new InferenceLimit(InferenceLimitDimension.CostMicrounits, 100),
+        ]);
+        var act = async () => await RegisterAsync(CreatePlan(Limits(2, 2)), turns,
+            hostCeilings: hostCeiling, ct: TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<FuwenZhinuAdmissionException>()
+            .WithMessage("*host cost ceiling without an admitted source currency*");
+        turns.ObservedRequests.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Stable_pricing_revision_is_preserved_in_aggregate_cost_evidence()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var turns = DeterministicFakeTurnExecutor.FinalCandidate("\"done\"",
+            new InferenceTurnUsage(1, 1, 2,
+                new InferenceCostEvidence("USD", 25, true, "pricing/1")));
+        var sink = new RecordingEvidenceSink();
+        var registration = await RegisterAsync(CreatePlan(CostLimit(100)), turns,
+            evidenceSink: sink, ct: ct);
+        var root = NewRoot();
+        try
+        {
+            await using var engine = CreateEngine(root, registration);
+            var run = await engine.StartAsync("coord", "1", JsonSerializer.SerializeToElement("q"), cancellationToken: ct);
+            await engine.ExecuteAsync(run, ct);
+            (await engine.GetRunAsync(run, ct))!.Status.Should().Be(WorkflowStatus.Completed);
+            var evidence = sink.Items.Should().ContainSingle().Subject;
+            evidence.Cost!.AmountMicrounits.Should().Be(25);
+            evidence.Cost.PricingRevision.Should().Be("pricing/1");
+            evidence.PricingQuality.Should().Be(InferencePricingQuality.Estimated);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    [Fact]
+    public async Task Mixed_pricing_revisions_cannot_form_one_admitted_cost_total()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var turns = DeterministicFakeTurnExecutor.FromResponder((request, _) =>
+            ValueTask.FromResult<InferenceTurnResult>(request.TurnOrdinal == 0
+                ? new InferenceToolCallTurnResult(
+                    [new InferenceToolCallProposal("call-1", Search, "{\"q\":1}")],
+                    new InferenceTurnUsage(1, 1, 2,
+                        new InferenceCostEvidence("USD", 10, true, "pricing/1")))
+                : new InferenceFinalCandidateResult("\"done\"",
+                    new InferenceTurnUsage(1, 1, 2,
+                        new InferenceCostEvidence("USD", 10, true, "pricing/2")))));
+        var tools = new DeterministicFakeReadToolExecutor().RegisterSuccess(Search, Json("{\"answer\":1}"));
+        var sink = new RecordingEvidenceSink();
+        var registration = await RegisterAsync(CreatePlan(CostLimit(100), [Search]), turns, tools,
+            evidenceSink: sink, ct: ct);
+        var root = NewRoot();
+        try
+        {
+            await using var engine = CreateEngine(root, registration);
+            var run = await engine.StartAsync("coord", "1", JsonSerializer.SerializeToElement("q"), cancellationToken: ct);
+            await engine.ExecuteAsync(run, ct);
+            (await engine.GetRunAsync(run, ct))!.Status.Should().Be(WorkflowStatus.Failed);
+            turns.ObservedRequests.Should().HaveCount(2);
+            turns.ObservedRequests[0].RemainingLimits.GetMaximum(InferenceLimitDimension.CostMicrounits).Should().Be(100);
+            turns.ObservedRequests[1].RemainingLimits.GetMaximum(InferenceLimitDimension.CostMicrounits).Should().Be(90);
+            var evidence = sink.Items.Should().ContainSingle().Subject;
+            evidence.Failure!.Code.Should().Be(ExecutionFailureCode.BudgetUnknown);
+            evidence.Cost.Should().BeNull();
+            evidence.PricingQuality.Should().Be(InferencePricingQuality.Unknown);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
     private static CallableContract StrictReviewToolContract() => new(
         new CallableSignature([new CallableParameter("q", Text)], Text),
         CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe);

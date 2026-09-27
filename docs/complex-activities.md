@@ -7,7 +7,8 @@ product-neutral.
 
 Status: the contracts and a bounded coordinator are implemented in the current
 source tree, but coordinated inference remains limited/experimental. Corrective
-work covers invocation identity, final budget settlement, currency validation,
+work covers invocation identity, final budget settlement, currency and
+pricing-revision validation,
 selected-executor preflight, bounded evidence reports, hard completion-token
 capability checks, protected successful read-tool results, and whole-batch
 tool allowance checks. Duplicate provider-visible tool names now fail

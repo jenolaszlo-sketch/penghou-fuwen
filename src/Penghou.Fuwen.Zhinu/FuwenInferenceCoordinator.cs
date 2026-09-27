@@ -28,7 +28,7 @@ internal delegate Task<JsonElement> ProtocolLoopRunner(
 internal static class FuwenInferenceCoordinator
 {
     private const string RequestFingerprintContract = "fuwen-request/v2";
-    private const string CoordinatorStateSemantics = "fuwen-inference-coordinator-state/v3-admitted-tool-signatures";
+    private const string CoordinatorStateSemantics = "fuwen-inference-coordinator-state/v4-priced-usage-revision";
     private const string ToolResultDigestContract = "inference-tool-result/v1";
     private const int DefaultConversationCapUtf8Bytes = 262_144;
     private const int DefaultStepArgumentCapUtf8Bytes = 65_536;
@@ -181,7 +181,7 @@ internal static class FuwenInferenceCoordinator
 
         var tokensKnown = !state.PromptUnknown && !state.CompletionUnknown && !state.TotalUnknown;
         InferenceCostEvidence? cost = !state.CostUnknown && state.CostCurrency is not null
-            ? new InferenceCostEvidence(state.CostCurrency, state.CostMicrounits, state.CostEstimated)
+            ? new InferenceCostEvidence(state.CostCurrency, state.CostMicrounits, state.CostEstimated, state.CostRevision)
             : null;
         return new InferenceProtocolEvidence(
             state.InteractionId,
@@ -377,10 +377,9 @@ internal static class FuwenInferenceCoordinator
             };
         }
         var hostCost = host?.GetMaximum(InferenceLimitDimension.CostMicrounits);
-        // The cost ceiling is enforced in microunits regardless of currency so
-        // a host-only ceiling still bounds spend; the currency-bearing source
-        // limit additionally gates currency-mismatched cost evidence as
-        // unknown rather than silently converting it.
+        // A host ceiling may narrow a source cost limit, but the source
+        // must supply the currency identity. Registration and the runtime
+        // guard below reject a currency-free host-only monetary ceiling.
         long? costCeiling = (source.Cost?.MaximumMicrounits, hostCost) switch
         {
             (long s, long h) => Math.Min(s, h),
@@ -413,6 +412,11 @@ internal static class FuwenInferenceCoordinator
                 ExecutionFailureKind.Contract,
                 ExecutionFailureCode.InvalidInput,
                 $"Inference node '{node.StructuralPath}' requires finite turns, model-calls, and duration bounds for coordinated inference.");
+        if (effective.CostCeilingMicrounits is not null && effective.Cost is null)
+            return new ExecutionFailure(
+                ExecutionFailureKind.Contract,
+                ExecutionFailureCode.InvalidInput,
+                $"Inference node '{node.StructuralPath}' has a monetary ceiling without an admitted currency.");
         if ((node.Tools is { Count: > 0 }) && effective.MaxToolCalls is null)
             return new ExecutionFailure(
                 ExecutionFailureKind.Contract,
@@ -456,6 +460,7 @@ internal static class FuwenInferenceCoordinator
         public bool CostUnknown { get; set; }
         public bool CostEstimated { get; set; }
         public string? CostCurrency { get; set; }
+        public string? CostRevision { get; set; }
         public int OperationOrdinal { get; set; }
         public string InteractionId { get; set; } = string.Empty;
         public List<MessageRecord> Conversation { get; set; } = [];
@@ -1541,9 +1546,10 @@ internal static class FuwenInferenceCoordinator
         else if ((effective.Cost is not null &&
             !string.Equals(effective.Cost.Currency, usage.CostCurrency, StringComparison.Ordinal)) ||
             (state.CostCurrency is not null &&
-            !string.Equals(state.CostCurrency, usage.CostCurrency, StringComparison.Ordinal)))
+                (!string.Equals(state.CostCurrency, usage.CostCurrency, StringComparison.Ordinal) ||
+                 !string.Equals(state.CostRevision, usage.CostRevision, StringComparison.Ordinal))))
         {
-            // A cost in another currency cannot satisfy the admitted ceiling.
+            // Currency or pricing-revision drift makes the aggregate cost unprovable.
             state.CostUnknown = true;
         }
         else if (!TryAddNonnegative(state.CostMicrounits, usage.CostMicrounits.Value, out var costMicrounits))
@@ -1553,6 +1559,7 @@ internal static class FuwenInferenceCoordinator
         else
         {
             state.CostCurrency = usage.CostCurrency;
+            state.CostRevision = usage.CostRevision;
             state.CostMicrounits = costMicrounits;
         }
     }
@@ -1632,6 +1639,7 @@ internal static class FuwenInferenceCoordinator
         Add(remaining, InferenceLimitDimension.PromptTokens, effective.MaxPromptTokens, state.PromptTokens);
         Add(remaining, InferenceLimitDimension.CompletionTokens, effective.MaxCompletionTokens, state.CompletionTokens);
         Add(remaining, InferenceLimitDimension.TotalTokens, effective.MaxTotalTokens, state.TotalTokens);
+        Add(remaining, InferenceLimitDimension.CostMicrounits, effective.CostCeilingMicrounits, state.CostMicrounits);
         return new InferenceLimitSet(remaining);
     }
 

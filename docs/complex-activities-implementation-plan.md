@@ -24,6 +24,8 @@ accounting, a hard completion-token capability gate, protected successful
 read-tool results, and whole-batch tool allowance rejection. Duplicate
 provider-visible tool names now fail admission. Admitted catalogue callable
 signatures now validate tool arguments before I/O and results before storage.
+Currency-free host-only cost ceilings now fail admission; turn requests
+carry remaining cost, and mixed pricing revisions become unknown.
 Journal state remains separate from the evidence-report cap. Other sensitive
 journal paths, hard pre-call prompt/total-token/cost guarantees, provider-facing
 tool schemas and resource grants, ambiguous paid-call

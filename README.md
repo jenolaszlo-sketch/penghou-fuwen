@@ -177,6 +177,8 @@ whole-batch tool allowance checks. Coordinated admission rejects duplicate
 provider-visible tool names and carries exact trusted callable signatures to
 runtime argument/result validation.
 
+Authored prompt, total-token, and cost limits are strict by default and currently fail coordinated registration before paid work. Explicit `aggregate advisory` enables after-call monitoring; host strict ceilings cannot be downgraded.
+
 Before a production claim, this path still needs provider-facing tool schemas
 and resource grants, hard pre-call prompt/total-token/cost enforcement,
 protection of other sensitive journal content, complete ambiguous-call

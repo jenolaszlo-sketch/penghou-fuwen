@@ -38,9 +38,12 @@ preview tag.
   is a test fixture, not a production storage adapter.
 - **Host cost ceilings:** a coordinated host-only `CostMicrounits` ceiling
   now fails admission unless the authored protocol supplies the currency.
-  Successive turn requests receive the remaining monetary allowance; mixed
-  pricing revisions produce unknown aggregate cost. This still does not
-  provide a hard pre-call cost guarantee.
+  Strict host monetary ceilings still fail admission because the coordinated
+  runtime cannot reserve a trusted maximum charge before work. Authored cost
+  limits also fail by default; use explicit `aggregate advisory` only if
+  after-call monitoring is acceptable. Successive advisory turn requests
+  receive the remaining monetary allowance; mixed pricing revisions produce
+  unknown aggregate cost.
 - **Persisted runs:** interaction and operation-key identities changed, and
   coordinator state now binds admitted tool signatures as well as protected
   tool payload semantics. Do not
@@ -49,8 +52,9 @@ preview tag.
   Plan IR and package versions are separate from this journal contract.
 - **Limits and evidence:** final usage/cost settlement, currency checks,
   overflow handling, and serialized evidence caps now fail closed. Prompt,
-  total-token and cost ceilings are not yet guaranteed before a paid call;
-  applications must not present them as hard spend limits. Protected storage
+  total-token and cost strict ceilings now fail admission before a paid call.
+  Advisory monitoring cannot prevent a paid overrun; applications must not
+  present it as a hard spend limit. Protected storage
   currently covers successful coordinated read-tool results, not prompts,
   arguments, model outputs, or other workflow history.
 

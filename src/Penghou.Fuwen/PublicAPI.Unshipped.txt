@@ -667,8 +667,13 @@ Penghou.Fuwen.InferenceCostLimit
 Penghou.Fuwen.InferenceCostLimit.Currency.get -> string!
 Penghou.Fuwen.InferenceCostLimit.InferenceCostLimit(string! currency, long maximumMicrounits) -> void
 Penghou.Fuwen.InferenceCostLimit.MaximumMicrounits.get -> long
+Penghou.Fuwen.InferenceBudgetEnforcement
+Penghou.Fuwen.InferenceBudgetEnforcement.Strict = 0 -> Penghou.Fuwen.InferenceBudgetEnforcement
+Penghou.Fuwen.InferenceBudgetEnforcement.Advisory = 1 -> Penghou.Fuwen.InferenceBudgetEnforcement
 Penghou.Fuwen.InferenceProtocol
 Penghou.Fuwen.InferenceProtocol.InferenceProtocol(Penghou.Fuwen.InferenceProtocolLimits! limits) -> void
+Penghou.Fuwen.InferenceProtocol.InferenceProtocol(Penghou.Fuwen.InferenceProtocolLimits! limits, Penghou.Fuwen.InferenceBudgetEnforcement budgetEnforcement) -> void
+Penghou.Fuwen.InferenceProtocol.BudgetEnforcement.get -> Penghou.Fuwen.InferenceBudgetEnforcement
 Penghou.Fuwen.InferenceProtocol.Limits.get -> Penghou.Fuwen.InferenceProtocolLimits!
 Penghou.Fuwen.InferenceProtocolLimits
 Penghou.Fuwen.InferenceProtocolLimits.Cost.get -> Penghou.Fuwen.InferenceCostLimit?

@@ -51,7 +51,8 @@ public sealed partial class FuwenInferenceCoordinatorTests
     private static WorkflowPlan CreatePlan(
         InferenceProtocolLimits limits,
         IReadOnlyList<DescriptorReference>? tools = null,
-        InferenceLimits? perCall = null)
+        InferenceLimits? perCall = null,
+        InferenceBudgetEnforcement budgetEnforcement = InferenceBudgetEnforcement.Advisory)
     {
         var inferPath = StructuralNodeIdentity.Create("coord", "infer");
         var returnPath = StructuralNodeIdentity.Create("coord", "return_result");
@@ -71,7 +72,7 @@ public sealed partial class FuwenInferenceCoordinatorTests
                 [new PromptBinding("question", new InputBinding([]))],
                 Tools: tools,
                 Limits: perCall,
-                Protocol: new InferenceProtocol(limits)))
+                Protocol: new InferenceProtocol(limits, budgetEnforcement)))
             .AddNode(new ReturnNode("return_result", returnPath, new NodeOutputBinding(inferPath, [])))
             .SetExecutionOrder(new WorkflowExecutionOrder([
                 new WorkflowExecutionRegion("coord", [

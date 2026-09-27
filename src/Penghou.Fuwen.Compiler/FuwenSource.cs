@@ -984,6 +984,9 @@ internal sealed class SourceParser
 
             if (Match("aggregate"))
             {
+                var budgetEnforcement = Match("advisory")
+                    ? InferenceBudgetEnforcement.Advisory
+                    : InferenceBudgetEnforcement.Strict;
                 var seenDimensions = new HashSet<string>(StringComparer.Ordinal);
                 long? maxTurns = null;
                 long? maxModelCalls = null;
@@ -1066,7 +1069,8 @@ internal sealed class SourceParser
                             maxTurns, maxModelCalls, maxToolCalls, maxPromptTokens,
                             maxCompletionTokens, maxTotalTokens, maxDurationMilliseconds,
                             maxToolArgumentBytes, maxToolResultBytes,
-                            maxRetainedConversationBytes, maxRetainedEvidenceBytes, cost));
+                            maxRetainedConversationBytes, maxRetainedEvidenceBytes, cost),
+                        budgetEnforcement);
                 }
                 catch (ArgumentException exception)
                 {

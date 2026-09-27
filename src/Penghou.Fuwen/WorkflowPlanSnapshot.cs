@@ -234,7 +234,8 @@ internal static class WorkflowPlanSnapshot
                                     ? null
                                     : new InferenceCostLimit(
                                         value.Protocol.Limits.Cost.Currency,
-                                        value.Protocol.Limits.Cost.MaximumMicrounits)))),
+                                        value.Protocol.Limits.Cost.MaximumMicrounits)),
+                            value.Protocol.BudgetEnforcement)),
                 ActivityNode value => new ActivityNode(
                     value.Name,
                     value.StructuralPath,

@@ -29,14 +29,14 @@ wall-clock time per attempt without retry.
 That tool effect rule describes compiler admission, not every execution
 strategy. The current coordinated model/tool loop executes read-only tools
 only, requires unique provider-visible tool names and a host-owned protected
-result store, and does not yet validate proposed argument names/types or
-returned values against exact trusted callable signatures. Check the
+result store. It validates proposed argument names/types against admitted
+callable signatures before tool I/O and validates results before storage. Check the
 [capability matrix](capability-matrix.md) before choosing an adapter.
 
 An inference may also declare aggregate limits after the per-call limits:
 
 ```fuwen
-limits maxTokens 800 timeout 30 aggregate turns 8 modelCalls 6 toolCalls 4
+limits maxTokens 800 timeout 30 aggregate advisory turns 8 modelCalls 6 toolCalls 4
   promptTokens 12000 completionTokens 4000 totalTokens 16000 durationMs 300000
   cost "USD" 250000 toolArgumentBytes 65536 toolResultBytes 262144
   retainedConversationBytes 524288 retainedEvidenceBytes 524288
@@ -46,7 +46,14 @@ Aggregate dimensions are positive, unique, and bounded. The `cost` form
 requires a quoted currency and positive integer microunits. Aggregate limits
 are part of the current inference protocol; authors do not select a protocol
 revision or adapter implementation. Source bounds may only narrow finite host
-ceilings. Per-call limits retain their per-attempt meaning.
+ceilings. Per-call limits retain their per-attempt meaning. Without the
+`advisory` keyword, authored prompt-token, total-token and monetary limits
+are strict: coordinated registration rejects them until a durable pre-call
+reservation and trusted maximum-charge implementation is available. Explicit
+`aggregate advisory` permits after-call monitoring and failure on measured
+overrun; it cannot prevent a provider charge. Host prompt, total-token and
+monetary ceilings remain strict and cannot be downgraded by source advisory
+mode. Completion-token limits retain their separate hard-executor gate.
 
 Inline prompt declarations contain at least one `system` or `user` message.
 A registered prompt alias instead declares `uses registered <descriptor>` and

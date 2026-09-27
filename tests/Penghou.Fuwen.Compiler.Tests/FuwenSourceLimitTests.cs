@@ -145,6 +145,20 @@ public sealed class FuwenSourceLimitTests
     }
 
     [Fact]
+    public async Task Advisory_budget_monitoring_is_explicit_and_changes_plan_identity()
+    {
+        var strict = await CompileAsync(WorkflowWithLimits(
+            "limits aggregate turns 2 modelCalls 2 totalTokens 20 cost \"USD\" 100 durationMs 60000"));
+        var advisory = await CompileAsync(WorkflowWithLimits(
+            "limits aggregate advisory turns 2 modelCalls 2 totalTokens 20 cost \"USD\" 100 durationMs 60000"));
+
+        SingleInference(strict).Protocol!.BudgetEnforcement.Should().Be(InferenceBudgetEnforcement.Strict);
+        SingleInference(advisory).Protocol!.BudgetEnforcement.Should().Be(InferenceBudgetEnforcement.Advisory);
+        WorkflowPlanIdentity.ComputeExecutionFingerprint(advisory)
+            .Should().NotBe(WorkflowPlanIdentity.ComputeExecutionFingerprint(strict));
+    }
+
+    [Fact]
     public async Task Aggregate_limits_require_a_dimension_and_reject_duplicate_or_malformed_values()
     {
         foreach (var clause in new[]

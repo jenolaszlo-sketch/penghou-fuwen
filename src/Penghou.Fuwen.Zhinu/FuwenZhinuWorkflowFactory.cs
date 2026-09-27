@@ -463,6 +463,14 @@ public sealed class FuwenZhinuWorkflowFactory
                 throw new FuwenZhinuAdmissionException(
                     $"Inference node '{node.StructuralPath}' has a host cost ceiling without an admitted source currency; a currency-free amount cannot bound monetary spend.");
             }
+            if (coordinated &&
+                CoordinatedInferenceBudgetPolicy.RequiresUnsupportedHardCeiling(node, hostCeilings))
+            {
+                throw new FuwenZhinuAdmissionException(
+                    $"Inference node '{node.StructuralPath}' requires a hard prompt, total-token, or cost ceiling, " +
+                    "but this coordinated runtime has no durable pre-call reservation and trusted maximum-charge contract. " +
+                    "Use explicit aggregate advisory monitoring only when an after-call overrun is acceptable.");
+            }
             if (coordinated && turnManifest is null)
             {
                 throw new FuwenZhinuAdmissionException(

@@ -196,6 +196,15 @@ public sealed record InferenceCostLimit
     }
 }
 
+/// <summary>Whether aggregate prompt, total-token, and cost limits require pre-call enforcement.</summary>
+public enum InferenceBudgetEnforcement
+{
+    /// <summary>Reject admission unless every declared or host-imposed ceiling can be enforced before paid work.</summary>
+    Strict,
+    /// <summary>Pass remaining allowances and reject measured overruns after work; spend may already have occurred.</summary>
+    Advisory,
+}
+
 /// <summary>
 /// Current implementation contract for bounded inference.
 /// </summary>
@@ -203,11 +212,26 @@ public sealed record InferenceProtocol
 {
     /// <summary>Immutable aggregate bounds for the logical inference activity.</summary>
     public InferenceProtocolLimits Limits { get; }
+    /// <summary>Enforcement semantics for authored aggregate prompt, total-token, and cost limits.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public InferenceBudgetEnforcement BudgetEnforcement { get; }
 
-    /// <summary>Creates an immutable protocol contract.</summary>
+    /// <summary>Creates an immutable protocol contract with strict budget semantics.</summary>
     public InferenceProtocol(InferenceProtocolLimits limits)
+        : this(limits, InferenceBudgetEnforcement.Strict)
+    {
+    }
+
+    /// <summary>Creates an immutable protocol contract with explicit budget semantics.</summary>
+    [System.Text.Json.Serialization.JsonConstructor]
+    public InferenceProtocol(
+        InferenceProtocolLimits limits,
+        InferenceBudgetEnforcement budgetEnforcement)
     {
         Limits = limits ?? throw new ArgumentNullException(nameof(limits));
+        if (!Enum.IsDefined(budgetEnforcement))
+            throw new ArgumentOutOfRangeException(nameof(budgetEnforcement));
+        BudgetEnforcement = budgetEnforcement;
     }
 }
 

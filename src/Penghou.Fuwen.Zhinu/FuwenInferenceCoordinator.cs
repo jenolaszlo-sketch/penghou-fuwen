@@ -61,7 +61,7 @@ internal static class FuwenInferenceCoordinator
                 $"Inference node '{node.StructuralPath}' requires a turn executor for coordinated inference.");
 
         var effective = EffectiveLimits(node.Protocol.Limits, ports.InferenceHostCeilings);
-        var required = RequireFiniteBounds(node, effective);
+        var required = RequireFiniteBounds(node, effective, ports.InferenceHostCeilings);
         if (required is not null)
             throw new FuwenZhinuExecutionException(required);
 
@@ -405,13 +405,19 @@ internal static class FuwenInferenceCoordinator
             costCeiling);
     }
 
-    private static ExecutionFailure? RequireFiniteBounds(InferenceNode node, EffectiveBounds effective)
+    private static ExecutionFailure? RequireFiniteBounds(
+        InferenceNode node, EffectiveBounds effective, InferenceLimitSet? hostCeilings)
     {
         if (effective.MaxTurns is null || effective.MaxModelCalls is null || effective.MaxDurationMilliseconds is null)
             return new ExecutionFailure(
                 ExecutionFailureKind.Contract,
                 ExecutionFailureCode.InvalidInput,
                 $"Inference node '{node.StructuralPath}' requires finite turns, model-calls, and duration bounds for coordinated inference.");
+        if (CoordinatedInferenceBudgetPolicy.RequiresUnsupportedHardCeiling(node, hostCeilings))
+            return new ExecutionFailure(
+                ExecutionFailureKind.Contract,
+                ExecutionFailureCode.NotAdmitted,
+                $"Inference node '{node.StructuralPath}' requires a hard prompt, total-token, or cost ceiling without durable pre-call reservation.");
         if (effective.CostCeilingMicrounits is not null && effective.Cost is null)
             return new ExecutionFailure(
                 ExecutionFailureKind.Contract,

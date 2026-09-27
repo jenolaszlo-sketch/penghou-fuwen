@@ -156,6 +156,43 @@ public sealed partial class FuwenInferenceCoordinatorTests
         finally { DeleteDirectory(root); }
     }
 
+    [Theory]
+    [InlineData("prompt")]
+    [InlineData("total")]
+    [InlineData("cost")]
+    public async Task Strict_unreservable_budget_fails_admission_before_paid_work(string dimension)
+    {
+        var limits = dimension switch
+        {
+            "prompt" => Limits(2, 2, promptTokens: 10),
+            "total" => Limits(2, 2, totalTokens: 10),
+            _ => CostLimit(100),
+        };
+        var turns = DeterministicFakeTurnExecutor.FinalCandidate("\"ok\"", ExactUsage());
+        var act = async () => await RegisterAsync(
+            CreatePlan(limits, budgetEnforcement: InferenceBudgetEnforcement.Strict),
+            turns, ct: TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<FuwenZhinuAdmissionException>()
+            .WithMessage("*no durable pre-call reservation*");
+        turns.ObservedRequests.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Host_strict_budget_cannot_be_downgraded_by_source_advisory_mode()
+    {
+        var turns = DeterministicFakeTurnExecutor.FinalCandidate("\"ok\"", ExactUsage());
+        var hostCeiling = new InferenceLimitSet([
+            new InferenceLimit(InferenceLimitDimension.TotalTokens, 10),
+        ]);
+        var act = async () => await RegisterAsync(CreatePlan(Limits(2, 2)), turns,
+            hostCeilings: hostCeiling, ct: TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<FuwenZhinuAdmissionException>()
+            .WithMessage("*no durable pre-call reservation*");
+        turns.ObservedRequests.Should().BeEmpty();
+    }
+
     [Fact]
     public async Task Host_only_cost_ceiling_without_currency_fails_admission()
     {

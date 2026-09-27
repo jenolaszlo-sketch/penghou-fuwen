@@ -56,6 +56,9 @@ does not rebuild packages.
 
 - [ ] `CHANGELOG.md`, `README.md`, API documentation, security guidance, and
   package descriptions agree with the shipped surface.
+- [ ] The README's traditional-workflow comparison and current limitations
+  match the capability matrix; unreleased corrective behavior is not
+  described as already present in the published package.
 - [ ] The version in `Directory.Build.props` is the intended preview version.
 - [ ] CI passes on the release commit and the tag exactly matches the package
   version (`v<version>`).

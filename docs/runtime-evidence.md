@@ -88,12 +88,15 @@ recovery disposition, and a commitment-uncertainty flag. It never contains raw
 prompts, context values, tool arguments or results, provider payloads,
 credentials, or chain-of-thought.
 
-Sensitive content is represented only through `ProtectedPayloadReference`,
-which is a provider/payload identity plus a content digest, optional descriptor,
-length, retention-policy revision, and storage identity. It is a reference, not
-an implicit dereference: the host owns storage, access control, retention, and
+Successful coordinated read-tool results are retained outside ordinary
+workflow state through `ProtectedPayloadReference`, which carries a
+provider/payload identity, content digest, optional descriptor, length,
+retention-policy revision, and storage identity. It is a reference, not an
+implicit dereference: the host owns storage, access control, retention, and
 byte verification. `InferenceProtocolEvidenceRenderer` produces deterministic
-human and JSON reports containing digests and safe summaries only.
+human and JSON reports containing digests and safe summaries only. This
+evidence-report boundary does not yet protect prompts, context, tool arguments,
+model outputs, or every other ordinary journal path.
 
 A host may observe evidence through the optional, non-authoritative
 `IInferenceEvidenceSink`. A missing sink, or a sink that throws, never alters

@@ -17,16 +17,16 @@ and is preserved as history. Review of the source and isolated contract probes
 found defects in invocation identity, final model budget settlement, cost
 currency, journal payload protection, retained-evidence bounds, selected
 turn-executor preflight, and long tool-call operation keys. A first corrective
-batch on 2026-09-27 addresses invocation identity, final settled usage/cost,
+batch on 2026-09-27 addressed invocation identity, final settled usage/cost,
 currency matching, selected-executor preflight, and fixed-length tool operation
-keys. The full solution suite passes on .NET 8 and .NET 10 after these changes.
-Tool results can still be persisted as ordinary journal payloads.
-`MaxRetainedEvidenceBytes` now bounds canonical serialized evidence reports,
-truncating older detail summaries or rejecting an impossible minimum envelope;
-it does not bound journal state. Each turn request also receives a narrowed
-completion-token ceiling. Hard pre-call budget guarantees,
-ambiguous paid-call reconciliation, and complete request-contract delivery
-still need evidence before claiming safe recovery.
+keys. Later batches added the serialized evidence cap, overflow-safe
+accounting, a hard completion-token capability gate, protected successful
+read-tool results, and whole-batch tool allowance rejection. Duplicate
+provider-visible tool names now fail admission. Journal state remains separate
+from the evidence-report cap. Other sensitive journal paths, hard pre-call
+prompt/total-token/cost guarantees, exact tool typing, ambiguous paid-call
+reconciliation, and complete request-contract delivery still need evidence
+before claiming safe recovery.
 
 Until fixed and verified, describe coordinated inference as
 limited/experimental. Do not use the historical CI-4 through CI-7 checkmarks as

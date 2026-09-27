@@ -2,12 +2,15 @@
 
 ## Status
 
-**IR v8 compiler and durable adapters complete — Delivery F consumer pilot is next**
+**IR v8 compiler and core durable adapters are available; coordinated inference remains limited while corrective gates are open**
 
-Last reviewed: **2026-09-21**
+Last reviewed: **2026-09-27**
 
 The authoritative shipped-surface summary is the
-[capability matrix](capability-matrix.md). The numbered long-range milestones
+[capability matrix](capability-matrix.md). The current coordinated-inference
+gates and V2 preparation work are tracked in the
+[corrective implementation plan](inference-hardening-v2-prep-plan-2026-09-27.md).
+The numbered long-range milestones
 below preserve design history; unchecked historical boxes are not a claim that
 already listed IR v4-v8 capabilities are absent.
 
@@ -1184,5 +1187,6 @@ identity, cancellation, and corruption rejection. The admission receipt remains
 its authorization seam; it is not itself an executor. Bounded keyed fan-out,
 repeat, checkpoint, and wait execution are implemented through IR v7, while
 IR v8 adds workflow-owned prompts, registered aliases, declared tools, and
-inference limits. Transition activation, a general model/tool/result loop, and
-artifact-reuse authorization remain outside the current preview.
+inference limits. A bounded model/tool/result loop exists but remains limited
+while corrective gates are open. Transition activation and artifact-reuse
+authorization remain outside the current preview.

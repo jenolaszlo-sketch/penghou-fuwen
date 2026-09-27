@@ -138,6 +138,8 @@ public sealed class InferenceTurnRequest
                 tool.Effect)).ToArray();
         if (tools.Select(static tool => tool.Descriptor).Distinct().Count() != tools.Length)
             throw new ArgumentException("Visible tools must be unique.", nameof(visibleTools));
+        if (tools.Select(static tool => tool.Descriptor.Name).Distinct(StringComparer.Ordinal).Count() != tools.Length)
+            throw new ArgumentException("Visible tool names must be unique for provider mapping.", nameof(visibleTools));
         VisibleTools = Array.AsReadOnly(tools);
         RemainingLimits = remainingLimits ?? new InferenceLimitSet();
         if (maximumNewToolCalls is < 0 || maximumNewToolCalls > MaximumProposals ||

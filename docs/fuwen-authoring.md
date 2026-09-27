@@ -26,6 +26,13 @@ effect-free, read-only, and idempotent retry-safe write tools admit.
 `maxTokens` participates in execution fingerprints; `timeout` bounds
 wall-clock time per attempt without retry.
 
+That tool effect rule describes compiler admission, not every execution
+strategy. The current coordinated model/tool loop executes read-only tools
+only, requires unique provider-visible tool names and a host-owned protected
+result store, and does not yet validate proposed argument names/types or
+returned values against exact trusted callable signatures. Check the
+[capability matrix](capability-matrix.md) before choosing an adapter.
+
 An inference may also declare aggregate limits after the per-call limits:
 
 ```fuwen

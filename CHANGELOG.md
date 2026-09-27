@@ -10,6 +10,27 @@ contract versions. Consumer-visible breaking changes are called out under
 
 ## Unreleased
 
+**Coordinated inference corrective work** (migration:
+[consumer migration notes](docs/consumer-migration.md)):
+
+- Bind logical interactions to the workflow run and rendered request; use
+  fixed-length tool operation keys. Older in-flight coordinator journal state
+  has unsupported semantics and must be migrated or explicitly stopped.
+- Settle final usage/cost, validate currency, treat accumulator overflow as
+  unknown, cap serialized evidence reports, and require a selected turn
+  executor that declares hard completion-token enforcement when a completion
+  ceiling is authored or supplied by the host.
+- Require a host-owned durable protected-payload store for coordinated read
+  tools. Successful results are stored outside ordinary journal state and
+  verified on authorized replay. Other sensitive paths remain outside this
+  narrow protection.
+- Make exhausted tool allowances explicit no-tools finalization requests,
+  reject oversized proposal batches before any tool I/O, and reject duplicate
+  provider-visible tool names at registration.
+- Reconcile README and capability documentation with the still-open typed
+  tool, budget, recovery, privacy, provider, and operator gates. No new NuGet
+  package is published by these source changes.
+
 ## 0.1.0-preview.11
 
 **Breaking changes** (recipe:

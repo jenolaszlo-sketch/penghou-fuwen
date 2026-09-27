@@ -10,6 +10,8 @@ Third batch (2026-09-27): usage/cost accumulation now treats overflow as unknown
 
 Fourth batch (2026-09-27): the coordinator now removes tools from a finalization turn when the allowance is exhausted and passes an explicit zero-proposal ceiling. It rejects a proposed batch that exceeds the remaining allowance before running any tool in that batch. The target solution passed 712 tests on each of .NET 8 and .NET 10 (286 core, 222 compiler, 87 Baize, 117 Zhinu per framework). This is a narrow FI-04/FI-02 improvement, not typed tool validation. The current workflow plan retains tool descriptor references but not their trusted callable signatures; FI-04 must carry an exact versioned signature into durable admission before validating proposed argument names/types and returned values without trusting model or adapter claims.
 
+Fifth batch (2026-09-27): coordinated registration and normalized turn requests reject different tool descriptors that share one provider-visible name. This closes a name-to-descriptor ambiguity before model work, but exact model-facing signatures and typed arguments/results remain open. The README now compares Fuwen with application-led orchestration; the roadmap, capability matrix, complex-activities overview, migration notes, evidence/ports docs, threat model, changelog, and release checklist distinguish current source from the published preview. The target solution passed 714 tests on each of .NET 8 and .NET 10 (287 core, 222 compiler, 87 Baize, 118 Zhinu per framework), and format verification passed. No new NuGet package was published.
+
 Target repository: `Penghou.Fuwen`. Intended implementer: Sol. Planning baseline: commit `90d2fde73eaacd300aaefd6e347e2e53c49e1858`, plus the existing uncommitted V2 additions to `docs/roadmap.md`. Recheck HEAD and outstanding changes before starting; preserve the user's work.
 
 Source: [27 September review](review-2026-09-27.md). Portable reproduction seed: [nine regression probes](review-evidence-2026-09-27/FuwenInferenceCoordinatorTests.Review.cs.txt). The probes were run only in an isolated copy: nine failures confirming seven defects. The unchanged solution built with zero warnings/errors and passed 693 tests per framework on .NET 8 and .NET 10. Those numbers describe the review baseline, not a future completion gate.
@@ -308,16 +310,16 @@ Use representative full paths across sequential, repeat and fan-out when support
 
 | Work package | Status | Commit/PR | Contract/API decision | Verification and remaining limitation |
 | --- | --- | --- | --- | --- |
-| FI-00 baseline/containment | Not started | — | — | — |
-| FI-01 identity/admission/contracts | Partial | Uncommitted | Run/request identity and selected-executor preflight | Migration and remaining admission gates open. |
-| FI-02 budgets/bounds | Partial | Uncommitted | Final settlement, overflow handling, evidence cap, hard completion-token capability | Prompt, total-token, cost pre-call guarantees open. |
-| FI-03 protected durable recovery | Partial | Uncommitted | Host protected store for successful tool results and verified replay | Other sensitive paths and crash matrix open. |
-| FI-04 protocol/type validation | Partial | Uncommitted | Zero-tool finalization and whole-batch allowance rejection | Exact admitted tool signatures, typed arguments/results and pure transitions open. |
+| FI-00 baseline/containment | Partial | `14b9c54` | Review and portable regression seed recorded | Consumer and additional contract probes open. |
+| FI-01 identity/admission/contracts | Partial | `14b9c54` | Run/request identity and selected-executor preflight | Migration and remaining admission gates open. |
+| FI-02 budgets/bounds | Partial | `14b9c54` | Final settlement, overflow handling, evidence cap, hard completion-token capability | Prompt, total-token, cost pre-call guarantees open. |
+| FI-03 protected durable recovery | Partial | `14b9c54` | Host protected store for successful tool results and verified replay | Other sensitive paths and crash matrix open. |
+| FI-04 protocol/type validation | Partial | `14b9c54` plus current work | Zero-tool finalization, whole-batch allowance rejection, unique provider-visible names | Exact admitted tool signatures, typed arguments/results and pure transitions open. |
 | FI-05 Baize integration | Not started | — | — | — |
 | FI-06 inspection/reference host | Not started | — | — | — |
 | FI-07 authored failure handling | Not started | — | — | — |
 | FI-08 fan-out/composition | Not started | — | — | — |
 | FI-09 V2 preparation | Not started | — | — | — |
-| FI-10 documentation/release validation | Not started | — | — | — |
+| FI-10 documentation/release validation | Partial | Current work | README, roadmap, capability, migration and release claims being reconciled | Package consumers, format, pack and live gates open. |
 
 Completion of the corrective slice, the requested next features, V2 preparation, and actual V2 delivery are four separate claims. Keep them separate in the final implementation report.

@@ -9,6 +9,42 @@ Publish order matters: **Fuwen → Guihua (or any adapter) → applications**
 dependency chain is indexed on NuGet.org, because a preview adapter pins the
 exact Fuwen preview it was built against.
 
+## Unreleased source after preview.11
+
+These changes are in the source tree and are **not yet a published NuGet
+version**. Rebuild and test adapters and hosts before selecting a future
+preview tag.
+
+- **Coordinated turn executors:** implement
+  `IInferenceTurnExecutorManifest` on the selected executor. When the authored
+  plan or host sets a completion-token ceiling, advertise
+  `SupportsHardCompletionTokenLimit` only if the executor actually enforces
+  each request's `MaxCompletionTokens`. Treat
+  `MaximumNewToolCalls == 0` with an empty `VisibleTools` list as a
+  finalization-only request; no tool proposals are allowed. The coordinator
+  rejects a batch larger than the remaining allowance before running any
+  tool. Different descriptors with the same provider-visible name now fail
+  coordinated registration.
+- **Hosts using coordinated read tools:** supply an
+  `IInferenceProtectedPayloadStore` through the expanded
+  `FuwenZhinuExecutionPorts` constructor. The old constructor remains
+  available, but registration of a coordinated tool workflow fails without
+  the store. It must durably bind idempotent writes to interaction, scope,
+  descriptor, operation key and exact bytes; authorize reads and retain
+  results for the workflow's recovery lifetime. The included in-memory store
+  is a test fixture, not a production storage adapter.
+- **Persisted runs:** interaction and operation-key identities changed, and
+  coordinator state now requires protected-tool-payload semantics. Do not
+  resume an older in-flight coordinator journal with the new implementation
+  unless it is explicitly migrated; the runtime stops unsupported state.
+  Plan IR and package versions are separate from this journal contract.
+- **Limits and evidence:** final usage/cost settlement, currency checks,
+  overflow handling, and serialized evidence caps now fail closed. Prompt,
+  total-token and cost ceilings are not yet guaranteed before a paid call;
+  applications must not present them as hard spend limits. Protected storage
+  currently covers successful coordinated read-tool results, not prompts,
+  arguments, model outputs, or other workflow history.
+
 ## preview.10 → preview.11
 
 Verified by migrating Guyabano (`Penghou.Guihua` `0.1.0-preview.1` →

@@ -461,6 +461,12 @@ public sealed class FuwenZhinuWorkflowFactory
                     $"Inference node '{node.StructuralPath}' declares model-callable tools for coordinated inference, " +
                     "but no host-owned protected-payload store is configured for durable tool results.");
             }
+            if (coordinated && node.Tools is { Count: > 0 } declaredTools &&
+                declaredTools.Select(static tool => tool.Name).Distinct(StringComparer.Ordinal).Count() != declaredTools.Count)
+            {
+                throw new FuwenZhinuAdmissionException(
+                    $"Inference node '{node.StructuralPath}' declares multiple tools with the same provider-visible name.");
+            }
 
             // The coordinator renders workflow-owned prompts itself; a
             // registered template or alias has no renderer on this path, so

@@ -41,9 +41,37 @@ The host remains responsible for trusted catalogues, credentials, artifact
 storage, authorization, admission policy, and resource limits. Provider output
 is untrusted until it passes the declared Fuwen type.
 
+## Where Fuwen fits
+
+Ordinary application code or a workflow engine can orchestrate model calls and
+tools. The difficulty grows when several teams need to review the same workflow
+before it runs: input and output types, exact tool versions, capabilities,
+limits, and the identity used for recovery can be scattered across code and
+runtime configuration. Fuwen puts those declarations in one bounded source
+contract. Its compiler checks them and produces an immutable plan; the host
+still decides whether that plan may execute.
+
+| Concern | Application-led orchestration | Fuwen with a host and Zhinu |
+| --- | --- | --- |
+| Definition | Steps live in application code, engine declarations, or both. | A bounded `.fuwen` source compiles to a typed, immutable plan. |
+| Before execution | Each integration supplies its own type, policy, and limit checks. | Compilation checks structure, types, exact catalogue references, and declared capabilities; admission binds host policy and grants. |
+| AI and tools | The application decides how model turns, tool calls, and workflow decisions fit together. | An `infer` node declares its prompt, profile, tools, output type, and bounds. Supported internal turn mechanics stay behind that node; meaningful decisions and effects remain explicit. |
+| Recovery | Guarantees depend on the selected engine and each provider/tool integration. | Zhinu owns durable scheduling. Fuwen's adapters add only the recovery guarantees listed in the [capability matrix](docs/capability-matrix.md). |
+| Authority | The application or host owns credentials and access. | The host still owns them. A fingerprint or compiled plan is never a permission grant. |
+
+This comparison describes responsibilities; conventional workflow systems can
+also provide typing and durable recovery. Fuwen is most useful when an authored
+AI workflow needs a shared, inspectable compile-and-admit boundary. A fixed job
+whose contracts already live clearly in one application may not need another
+language.
+
 ## Packages
 
 All packages target .NET 8 and .NET 10.
+The source tree contains unreleased corrective changes after
+`0.1.0-preview.11`; NuGet badges and the install commands below refer to
+published packages. See the [changelog](CHANGELOG.md) and
+[migration notes](docs/consumer-migration.md) before upgrading.
 
 | Package | Responsibility |
 | --- | --- |
@@ -101,8 +129,9 @@ workflow greeting(input: string) -> string {
 
 Descriptor pins are resolved against the host's trusted catalogue. Prompt and
 tool declarations are part of plan identity: changing their semantic content
-changes the execution fingerprint. Inference admits effect-free and read-only
-tools, plus retry-safe writes whose callable contract is idempotent.
+changes the execution fingerprint. The compiler admits effect-free and read-only
+tools, plus retry-safe writes whose callable contract is idempotent. The current
+coordinated model/tool loop is narrower: it executes read-only tools only.
 
 See the [authoring contract](docs/fuwen-authoring.md) for the complete compact
 syntax and catalogue inputs. The [capability matrix](docs/capability-matrix.md)
@@ -138,21 +167,22 @@ covered workflow behaviors; they do not by themselves establish every
 coordinated-inference guarantee.
 
 `Penghou.Fuwen.Baize` resolves host-owned logical bindings to exact Baize
-endpoints. The current source also contains a durable bounded inference
-coordinator. A first corrective batch fixes invocation identity, final budget
-settlement, declared cost-currency checks, selected-executor preflight, and
-tool operation-key length. Further work bounds serialized evidence, checks
-usage/cost overflow, requires hard completion-token enforcement where a
-completion ceiling is authored, and protects successful coordinated read-tool
-results through a host-owned durable store. Protection of other sensitive
-journal content and hard pre-call prompt, total-token, and cost guarantees
-remain open. Treat coordinated inference as
-limited pending the remaining gates; see the
-[capability matrix](docs/capability-matrix.md) and [implementation plan](docs/complex-activities-implementation-plan.md)
-for the current status. The Baize adapter records provider/model identity,
-attempts, usage, duration, pricing revision, tools, and artifact-publication
-evidence. Retries occur only for explicitly classified representation or
-fallback failures.
+endpoints and records provider/model, usage, timing, and publication evidence.
+The current source also contains a durable bounded inference coordinator, but
+coordinated model → read-tool → model execution remains **limited/experimental**.
+Its corrective work now covers run/request identity, final usage and cost
+settlement, currency checks, selected-executor preflight, evidence size,
+completion-token capability checks, protected successful tool results, and
+whole-batch tool allowance checks. Coordinated admission rejects duplicate
+provider-visible tool names.
+
+Before a production claim, this path still needs exact admitted tool
+argument/result typing, hard pre-call prompt/total-token/cost enforcement,
+protection of other sensitive journal content, complete ambiguous-call
+recovery, and a stock Baize turn adapter. Older in-flight coordinator journals
+need migration or an explicit stop. See the [capability matrix](docs/capability-matrix.md),
+[corrective plan](docs/inference-hardening-v2-prep-plan-2026-09-27.md), and
+[consumer migration notes](docs/consumer-migration.md).
 
 ## Identity and evolution
 

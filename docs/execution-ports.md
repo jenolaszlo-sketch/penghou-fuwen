@@ -42,17 +42,21 @@ accepts bounded normalized conversation state, the exact model-visible tool
 requirements, and the remaining aggregate bounds, and returns either a final
 candidate or exact tool-call proposals with normalized per-turn usage (unknown
 stays null, never zero). `IInferenceReadToolExecutor` accepts one exact
-admitted descriptor, typed bounded arguments, capability scope, stable
-operation key, and retry safety, and returns a typed result with bounded
+admitted descriptor, bounded runtime-value arguments, capability scope, stable
+operation key, and retry safety, and returns a runtime-value result with bounded
 evidence. Neither port embeds credentials, filesystem paths, provider clients,
 or Zhinu contexts. `InferenceTurnValidation` rejects undeclared,
-write-capable, duplicate, oversized, or mistyped proposals before any tool
-execution. Each turn request also carries the plan's per-call completion and
-timeout bounds, and each read-tool request carries the effective result-byte
-ceiling, so hosts can enforce them before returning. Turn executors may
-advertise `IInferenceTurnExecutorManifest` for structured preflight of the
-exact requirement. Baize maps its provider tool-call shapes through
-`BaizeOneTurnMapper` under the same rules. Deterministic fake turn and
+write-capable, duplicate-call-ID, oversized, and malformed-JSON proposals;
+coordinated admission also rejects duplicate provider-visible tool names.
+An oversized batch fails before any tool execution. Exact callable
+argument/result type validation is not yet implemented on this path. Each turn
+request carries a completion ceiling narrowed by the remaining aggregate
+allowance and its per-call timeout; read-tool requests carry the effective
+result-byte ceiling. The selected coordinated turn executor must expose
+`IInferenceTurnExecutorManifest` for structured preflight, and must declare
+hard completion-token enforcement when a completion ceiling is required.
+`BaizeOneTurnMapper` maps one-turn provider shapes; a stock Baize
+model → tool → model adapter remains open. Deterministic fake turn and
 read-tool executors plus `InferenceTurnToolConformance` suites let provider
 transport and host tools be tested independently of the durable coordinator.
 The durable model → tool → model loop remains a Zhinu concern.

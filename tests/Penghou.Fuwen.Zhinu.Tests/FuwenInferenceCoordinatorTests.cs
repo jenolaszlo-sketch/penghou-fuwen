@@ -296,6 +296,22 @@ public sealed partial class FuwenInferenceCoordinatorTests
     }
 
     [Fact]
+    public async Task Coordinated_tools_with_one_provider_visible_name_fail_registration()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var alternate = new DescriptorReference(DescriptorKind.Tool, Search.Name, "2", Digest('d'));
+        var plan = CreatePlan(Limits(turns: 3, modelCalls: 3, toolCalls: 2), [Search, alternate]);
+        var turns = DeterministicFakeTurnExecutor.FinalCandidate("\"unreachable\"");
+        var tools = new DeterministicFakeReadToolExecutor().RegisterSuccess(Search, Json("{\"answer\":1}"));
+
+        Func<Task> act = async () => await RegisterAsync(plan, turns, tools, ct: ct);
+        await act.Should().ThrowAsync<FuwenZhinuAdmissionException>()
+            .WithMessage("*same provider-visible name*");
+        turns.ObservedRequests.Should().BeEmpty();
+        tools.ObservedRequests.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Missing_or_corrupt_protected_payload_fails_closed_without_repeating_tool()
     {
         var ct = TestContext.Current.CancellationToken;

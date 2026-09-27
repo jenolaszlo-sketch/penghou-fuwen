@@ -76,6 +76,18 @@ public sealed class InferenceTurnToolContractsTests
     }
 
     [Fact]
+    public void Turn_request_rejects_distinct_descriptors_with_the_same_provider_name()
+    {
+        var tools = new List<InferenceToolRequirement>
+        {
+            new(ToolDescriptor("lookup", "a")),
+            new(ToolDescriptor("lookup", "b")),
+        };
+        Action act = () => TurnRequest(visibleTools: tools);
+        act.Should().Throw<ArgumentException>().WithMessage("*names must be unique*");
+    }
+
+    [Fact]
     public void Turn_request_rejects_out_of_range_maximum_new_tool_calls()
     {
         Action zero = () => TurnRequest(maximumNewToolCalls: 0);

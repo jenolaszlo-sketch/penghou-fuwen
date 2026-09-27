@@ -6,13 +6,15 @@ The plan makes Marang the first consumer proof while keeping all contracts
 product-neutral.
 
 Status: the contracts and a bounded coordinator are implemented in the current
-source tree. A first corrective batch addresses invocation identity, final
-budget settlement, currency validation, and selected-executor preflight.
-Journal payload protection and hard pre-call budget enforcement remain open;
-serialized evidence reports now honor their byte limit. The intended
-guarantees below are normative design goals; the current
-implementation does not yet satisfy all of them. See the [implementation plan](complex-activities-implementation-plan.md)
-for corrective status and gates.
+source tree, but coordinated inference remains limited/experimental. Corrective
+work covers invocation identity, final budget settlement, currency validation,
+selected-executor preflight, bounded evidence reports, hard completion-token
+capability checks, protected successful read-tool results, and whole-batch
+tool allowance checks. Duplicate provider-visible tool names now fail
+admission. Hard pre-call prompt, total-token, and cost guarantees, typed
+tool arguments/results, full private history, and ambiguous-call recovery
+remain open. The intended guarantees below are normative design goals; see
+the [corrective plan](inference-hardening-v2-prep-plan-2026-09-27.md) for gates.
 
 ## Direction
 

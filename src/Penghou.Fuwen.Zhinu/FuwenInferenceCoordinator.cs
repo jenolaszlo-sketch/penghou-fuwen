@@ -116,7 +116,7 @@ internal static class FuwenInferenceCoordinator
         }
 
         var finalState = ReadCoordinatorState(finalStateJson, node.StructuralPath);
-        if (ValidateRecoveredState(finalState, node.Tools?.Count ?? 0, effective) is { } finalStateFailure)
+        if (ValidateRecoveredState(finalState, node.Tools, effective) is { } finalStateFailure)
             throw new FuwenZhinuExecutionException(finalStateFailure);
         if (!string.Equals(finalState.InteractionId, prepared.InteractionId, StringComparison.Ordinal))
             throw new FuwenZhinuExecutionException(new ExecutionFailure(
@@ -684,7 +684,7 @@ internal static class FuwenInferenceCoordinator
                 ExecutionFailureKind.Contract,
                 ExecutionFailureCode.InvalidInput,
                 $"Inference node '{node.StructuralPath}' recovered protocol state with unsupported semantics; it was stopped without replaying legacy tool results."));
-        if (ValidateRecoveredState(state, node.Tools?.Count ?? 0, effective) is { } stateFailure)
+        if (ValidateRecoveredState(state, node.Tools, effective) is { } stateFailure)
             throw new FuwenZhinuExecutionException(stateFailure);
         if (!TryFitRetainedEvidence(effective, state))
         {
@@ -754,7 +754,7 @@ internal static class FuwenInferenceCoordinator
     }
 
     private static ExecutionFailure? ValidateRecoveredState(
-        CoordinatorState state, int admittedToolCount, EffectiveBounds effective)
+        CoordinatorState state, IReadOnlyList<DescriptorReference>? admittedTools, EffectiveBounds effective)
     {
         static ExecutionFailure Corrupt() => new(
             ExecutionFailureKind.Contract,
@@ -793,7 +793,7 @@ internal static class FuwenInferenceCoordinator
             : DefaultStepArgumentCapUtf8Bytes;
         foreach (var pending in state.Pending)
         {
-            if (pending is null || pending.ToolIndex < 0 || pending.ToolIndex >= admittedToolCount ||
+            if (pending is null || pending.ToolIndex < 0 || pending.ToolIndex >= (admittedTools?.Count ?? 0) ||
                 string.IsNullOrWhiteSpace(pending.CallId) ||
                 string.IsNullOrWhiteSpace(pending.ArgumentsJson) ||
                 Encoding.UTF8.GetByteCount(pending.ArgumentsJson) > maximumArgumentBytes)
@@ -805,8 +805,56 @@ internal static class FuwenInferenceCoordinator
             if (message is null || message.Role is not ("system" or "user" or "assistant" or "tool") ||
                 (message.Text is null) == (message.ProtectedPayload is null) ||
                 (message.Role == "tool" &&
-                 (message.ProtectedPayload is null || string.IsNullOrWhiteSpace(message.ToolCallId))))
+                 (message.ProtectedPayload is null || string.IsNullOrWhiteSpace(message.ToolCallId))) ||
+                (message.Role != "tool" && (message.ProtectedPayload is not null || message.ToolCallId is not null)) ||
+                (message.ToolCalls is not null &&
+                 (message.Role != "assistant" || message.ToolCalls.Count == 0 ||
+                  message.ToolCalls.Any(static call => call is null ||
+                      string.IsNullOrWhiteSpace(call.CallId) ||
+                      string.IsNullOrWhiteSpace(call.ArgumentsJson) ||
+                      string.IsNullOrWhiteSpace(call.ToolName) ||
+                      string.IsNullOrWhiteSpace(call.ToolVersion) ||
+                      string.IsNullOrWhiteSpace(call.DigestAlgorithm) ||
+                      string.IsNullOrWhiteSpace(call.DigestContract) ||
+                      string.IsNullOrWhiteSpace(call.DigestValue)))))
                 return Corrupt();
+        }
+
+        // The pending batch is executable state, not merely display history.
+        // Bind it to the exact assistant call and to the already committed tool
+        // results before a recovered worker can issue the next tool operation.
+        if (state.Phase == "tool" && state.Failure is null)
+        {
+            var assistantIndex = state.Conversation.Count - state.PendingIndex - 1;
+            if (assistantIndex < 0 || state.Conversation[assistantIndex] is not
+                { Role: "assistant", ToolCalls: { } calls } ||
+                calls.Count != state.Pending.Count ||
+                state.Pending.Count > InferenceTurnRequest.MaximumProposals ||
+                state.TurnOrdinal == 0)
+                return Corrupt();
+            var callIds = new HashSet<string>(StringComparer.Ordinal);
+            for (var index = 0; index < state.Pending.Count; index++)
+            {
+                var pending = state.Pending[index];
+                var call = calls[index];
+                var descriptor = admittedTools![pending.ToolIndex];
+                if (!callIds.Add(call.CallId) ||
+                    !string.Equals(call.CallId, pending.CallId, StringComparison.Ordinal) ||
+                    !string.Equals(call.ArgumentsJson, pending.ArgumentsJson, StringComparison.Ordinal) ||
+                    !string.Equals(call.ToolName, descriptor.Name, StringComparison.Ordinal) ||
+                    !string.Equals(call.ToolVersion, descriptor.Version, StringComparison.Ordinal) ||
+                    !string.Equals(call.DigestAlgorithm, descriptor.ContentDigest.Algorithm, StringComparison.Ordinal) ||
+                    !string.Equals(call.DigestContract, descriptor.ContentDigest.Contract, StringComparison.Ordinal) ||
+                    !string.Equals(call.DigestValue, descriptor.ContentDigest.Value, StringComparison.Ordinal))
+                    return Corrupt();
+                if (index < state.PendingIndex)
+                {
+                    if (state.Conversation[assistantIndex + index + 1] is not
+                        { Role: "tool", ToolCallId: var completedId } ||
+                        !string.Equals(completedId, call.CallId, StringComparison.Ordinal))
+                        return Corrupt();
+                }
+            }
         }
         return null;
     }

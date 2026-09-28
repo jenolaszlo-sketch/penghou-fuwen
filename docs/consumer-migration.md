@@ -16,7 +16,7 @@ version**. Rebuild and test adapters and hosts before selecting a future
 preview tag.
 
 - **Coordinated turn requests:** InferenceTurnRequest.BudgetEnforcement now carries the admitted strict/advisory mode. The legacy constructor defaults to strict. Custom turn executors may honor advisory prompt, total-token and cost allowances as monitoring only; they must reject unsupported hard ceilings before submission. Assistant history now carries native ToolCalls, and tool results carry the exact Tool descriptor. Preserve these fields when adapting provider conversations. InferenceToolCallTurnResult.AssistantText retains mixed text/tool responses. InferenceTurnFailureException preserves pre-submit versus possibly committed failures.
-- **Baize hosts:** BaizeInferenceTurnExecutor can bind an exact configured profile and tool schemas for coordinated turns. It makes one provider call per turn and does not supply a trusted maximum-charge quote; strict aggregate prompt, total-token and cost registration remains closed. Unsupported provider continuation blobs fail with possible-commitment evidence.
+- **Baize hosts:** BaizeInferenceTurnExecutor can bind an exact configured profile and tool schemas for coordinated turns. It rejects endpoints unable to combine native tools with structured output, makes one provider call per turn, and does not supply a trusted maximum-charge quote; strict aggregate prompt, total-token and cost registration remains closed. Unsupported provider continuation blobs fail with possible-commitment evidence.
 - **Coordinated turn executors:** implement
   `IInferenceTurnExecutorManifest` on the selected executor. When the authored
   plan or host sets a completion-token ceiling, advertise

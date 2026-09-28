@@ -40,7 +40,7 @@ public sealed class BaizeInferenceTurnExecutor : IInferenceTurnExecutor, IInfere
                 // invocation still submits exactly one request and performs no retry.
                 new(InferenceLimitDimension.Turns, 1_000_000),
                 new(InferenceLimitDimension.ModelCalls, 1_000_000),
-                new(InferenceLimitDimension.ToolCalls, InferenceTurnRequest.MaximumProposals),
+                new(InferenceLimitDimension.ToolCalls, 1_000_000),
                 new(InferenceLimitDimension.DurationMilliseconds, 3_600_000),
                 new(InferenceLimitDimension.ToolArgumentBytes, InferenceToolCallProposal.MaximumArgumentsUtf8Bytes),
                 new(InferenceLimitDimension.RetainedConversationBytes,
@@ -73,7 +73,11 @@ public sealed class BaizeInferenceTurnExecutor : IInferenceTurnExecutor, IInfere
             .Where(IsExactModelContract)
             .Select(static tool => tool.Descriptor)
             .ToArray();
-        var selectedManifest = exactMatch ? WithTools(manifest, eligibleTools) : WithoutBindings(manifest);
+        var supportsToolStructuredCombination =
+            requirement.Tools.Count == 0 || endpoint.Client.Capabilities.ToolsWithStructuredOutput;
+        var selectedManifest = exactMatch && supportsToolStructuredCombination
+            ? WithTools(manifest, eligibleTools)
+            : WithoutBindings(manifest);
         return InferencePreflight.Evaluate(requirement, selectedManifest);
     }
 
@@ -101,6 +105,14 @@ public sealed class BaizeInferenceTurnExecutor : IInferenceTurnExecutor, IInfere
             visibleBindings.Add(match);
         }
 
+        if (visibleBindings.Count > 0 &&
+            (!endpoint.Client.Capabilities.NativeStructuredOutput ||
+             !endpoint.Client.Capabilities.ToolsWithStructuredOutput))
+            throw new InferenceTurnFailureException(new ExecutionFailure(
+                ExecutionFailureKind.Admission,
+                ExecutionFailureCode.NotAdmitted,
+                "The configured Baize endpoint cannot combine native tools with structured output."));
+
         var messages = request.Conversation.Select(message => ToBaizeMessage(message, tools)).ToArray();
         var selectedTools = visibleBindings.Select(static tool => tool.Tool).ToList();
         var tokenLimit = request.MaxCompletionTokens;
@@ -109,7 +121,7 @@ public sealed class BaizeInferenceTurnExecutor : IInferenceTurnExecutor, IInfere
             messages,
             maxTokens: tokenLimit,
             tools: selectedTools,
-            responseFormat: selectedTools.Count == 0 ? LlmResponseFormat.Json() : null,
+            responseFormat: LlmResponseFormat.Json(),
             metadata: new Dictionary<string, object?>(StringComparer.Ordinal)
             {
                 ["fuwen.interaction.id"] = request.InteractionId,

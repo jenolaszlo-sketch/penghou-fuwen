@@ -304,7 +304,7 @@ Create concrete owning-project work only when source inspection proves it is mis
 
 | Owner | Potential required work | Until available |
 | --- | --- | --- |
-| Zhinu | Durable external-operation claim/receipt/reconciliation and disposition; item-scoped nested durable work; authoritative reservation integration/read APIs | Conservative ambiguous stop; unsupported fan-out/strict shared limits rejected. No process-local substitute. |
+| Zhinu | Fenced/idempotent administration and item-scoped nested durable work; see [concrete dependency tickets](zhinu-inference-dependencies.md). Existing IWorkflowReader already supplies bounded run/step/event queries. | Conservative ambiguous stop; unsupported fan-out/strict shared limits rejected. No process-local substitute. |
 | Baize | Native turn tool-call/continuation representation, exact capability manifests, provider usage/commitment metadata and required tool schema validation | Support only proven provider shapes/capabilities; retain explicit unsupported diagnostics. |
 | Host/artifact provider | Protected payload storage/read/retention, exact resource grants, trusted pricing and parent budget account | Reject execution needing unavailable policies; deterministic implementations support tests/sample only. |
 | Guihua/Guyabano/Marang | Real consumer scenarios and migration to new requests/configuration; domain evaluator/acceptance ownership | Package-consumer tests plus documented pending pilot; no product types in core. |
@@ -326,10 +326,10 @@ Use representative full paths across sequential, repeat and fan-out when support
 | FI-03 protected durable recovery | Partial | `14b9c54` | Host protected store for successful tool results and verified replay | Other sensitive paths and crash matrix open. |
 | FI-04 protocol/type validation | Partial | `14b9c54` plus current work | Zero-tool finalization, whole-batch allowance rejection, unique provider-visible names, admitted callable signatures, typed arguments/results, model-facing schemas and native tool history | Resource grants, pure transitions and broader failure distinctions open. |
 | FI-05 Baize integration | Partial | Current work | Stock single-turn Baize executor, exact configured profile/tool schemas, native call identities, typed failure, deterministic transport tests and public-package model → tool → model review consumer | Provider continuation/provenance fields, multi-profile consumer, live-provider proof open. |
-| FI-06 inspection/reference host | Partial | Current work | Review package consumer renders human/JSON preflight and post-run evidence, including a failed run | Durable query/admin commands and standalone walkthrough open. |
+| FI-06 inspection/reference host | Partial | Current work | Review package consumer renders human/JSON preflight and post-run evidence, including a failed run; stock Baize proof queries bounded Zhinu run/step/event state without more provider work | Durable query/admin commands and standalone walkthrough open. |
 | FI-07 authored failure handling | Not started | — | — | — |
-| FI-08 fan-out/composition | Not started | — | — | — |
-| FI-09 V2 preparation | Not started | — | — | — |
-| FI-10 documentation/release validation | Partial | Current work | README, capability, migration, scenario and release claims reconciled for this slice | Release solution: 757 tests per framework; local pack; Review 3/3 and Marang 7/7 per framework from packages; format and canonical vector pass. Roadmap remains user-edited; live provider, independent review and downstream pilot gates open. |
+| FI-08 fan-out/composition | Deferred on Zhinu | — | Exact missing nested durable item scope and shared parent reservation are specified in [dependency tickets](zhinu-inference-dependencies.md) | Current fan-out callback cannot journal model/tool operations under a stable item key; admission remains closed. |
+| FI-09 V2 preparation | Partial | Existing revision contracts | Evidence-only lineage reference changes preserve executable fingerprint in PlanRevisionDocumentTests | Evaluation outcomes, pinned planning context, dependency categories and two-candidate accounting await their stated FI-07/FI-08 gates. |
+| FI-10 documentation/release validation | Partial | Current work | README, capability, migration, scenario and release claims reconciled for this slice | Release solution: 758 tests per framework; local pack; Review 3/3 and Marang 7/7 per framework from packages; format and canonical vector pass. Roadmap remains user-edited; live provider, independent review and downstream pilot gates open. |
 
 Completion of the corrective slice, the requested next features, V2 preparation, and actual V2 delivery are four separate claims. Keep them separate in the final implementation report.

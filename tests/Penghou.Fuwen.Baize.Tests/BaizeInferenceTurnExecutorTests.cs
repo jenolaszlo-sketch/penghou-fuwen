@@ -97,11 +97,46 @@ public sealed class BaizeInferenceTurnExecutorTests
         var result = await executor.ExecuteTurnAsync(request, TestContext.Current.CancellationToken);
 
         Assert.True(preflight.IsExecutable);
+        var multiTurnPreflight = executor.PreflightTurnDetailed(new InferenceExecutionRequirement(
+            profile, prompt, null, [tool], false, InferenceModality.StructuredText, [requirement],
+            limits: new InferenceLimitSet([new(InferenceLimitDimension.ToolCalls, 20)])));
+        Assert.True(multiTurnPreflight.IsExecutable);
         var turn = Assert.IsType<InferenceToolCallTurnResult>(result);
         Assert.Equal("provider-call-7", turn.Proposals.Single().CallId);
         Assert.Equal(tool, turn.Proposals.Single().Tool);
         Assert.Equal("lookup", client.LastRequest!.Tools!.Single().Name);
         Assert.Equal(schema, client.LastRequest.Tools.Single().InputSchemaJson);
+    }
+
+    [Fact]
+    public async Task Rejects_tool_route_without_combined_structured_capability_before_submission()
+    {
+        const string schema = "{\"type\":\"object\"}";
+        var tool = Descriptor(DescriptorKind.Tool, "lookup-descriptor");
+        var client = new FakeClient(new LlmResponse("never"), toolsWithStructuredOutput: false);
+        var (profile, prompt) = Descriptors();
+        var binding = new BaizeInferenceBinding(
+            profile,
+            prompt,
+            [new BaizeEndpointBinding("primary", "provider", "model", client)],
+            tools: [new BaizeToolBinding(tool, new LlmTool("lookup", "Lookup", schema))]);
+        var executor = new BaizeInferenceTurnExecutor(binding);
+        var contract = new InferenceModelToolContract(
+            "lookup", schema, "{\"type\":\"string\"}", tool.ContentDigest.Value, "validator/v1", "contract/v1");
+        var requirement = new InferenceToolRequirement(tool, modelContract: contract);
+        var report = executor.PreflightTurnDetailed(new InferenceExecutionRequirement(
+            profile, prompt, null, [tool], false, InferenceModality.StructuredText, [requirement]));
+        var request = new InferenceTurnRequest(
+            "interaction-1", 0,
+            [new InferenceConversationMessage(InferenceTurnRole.User, "Look up x")],
+            [requirement], maximumNewToolCalls: 1);
+
+        Assert.False(report.IsExecutable);
+        var exception = await Assert.ThrowsAsync<InferenceTurnFailureException>(async () =>
+            await executor.ExecuteTurnAsync(request, TestContext.Current.CancellationToken));
+        Assert.Equal(ExecutionFailureCode.NotAdmitted, exception.Failure.Code);
+        Assert.False(exception.Failure.MayHaveCommittedEffect);
+        Assert.Equal(0, client.Calls);
     }
 
     [Fact]
@@ -183,7 +218,7 @@ public sealed class BaizeInferenceTurnExecutorTests
         "1",
         new ContentDigest("sha256", "test", new string('a', 64)));
 
-    private sealed class FakeClient(LlmResponse response) : ILlmClient, ILlmCompletionClient
+    private sealed class FakeClient(LlmResponse response, bool toolsWithStructuredOutput = true) : ILlmClient, ILlmCompletionClient
     {
         public int Calls { get; private set; }
         public LlmRequest? LastRequest { get; private set; }
@@ -192,7 +227,7 @@ public sealed class BaizeInferenceTurnExecutorTests
             NativeStructuredOutput = true,
             StructuredOutputViaTool = true,
             NativeToolCalling = true,
-            ToolsWithStructuredOutput = true,
+            ToolsWithStructuredOutput = toolsWithStructuredOutput,
             StrictToolArguments = true,
         };
 

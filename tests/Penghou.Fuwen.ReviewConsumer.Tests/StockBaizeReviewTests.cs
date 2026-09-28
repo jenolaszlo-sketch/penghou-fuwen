@@ -78,6 +78,7 @@ public sealed partial class ReviewConsumerTests
 
             output.GetString().Should().Be("Reads clearly; checklist passes.");
             client.Requests.Should().HaveCount(2);
+            client.Requests[0].ResponseFormat.Should().NotBeNull();
             var toolResult = client.Requests[1].Messages
                 .SelectMany(message => message.Parts).OfType<LlmToolResultContent>()
                 .Should().ContainSingle().Subject;
@@ -85,6 +86,13 @@ public sealed partial class ReviewConsumerTests
             toolResult.Result.ToolName.Should().Be("review.read");
             tools.Requests.Should().ContainSingle();
             sink.Items.Should().ContainSingle().Which.Failure.Should().BeNull();
+
+            var submittedCalls = client.Requests.Count;
+            (await engine.GetRunAsync(run, ct))!.Status.Should().Be(WorkflowStatus.Completed);
+            (await engine.GetStepsAsync(run, ct)).Should().NotBeEmpty();
+            (await engine.GetEventsAsync(run, afterSequence: 0, limit: 10, cancellationToken: ct))
+                .Count.Should().BeLessThanOrEqualTo(10);
+            client.Requests.Should().HaveCount(submittedCalls);
         }
         finally { DeleteDirectory(root); }
     }

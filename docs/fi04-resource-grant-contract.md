@@ -1,6 +1,12 @@
 # FI-04 resource-grant contract
 
-Status: design gate. The current coordinator still uses `tool.Name@tool.Version` as
+Status: design gate. Penghou.Hufu is the selected owner of grant
+evaluation, envelopes, revocation, and the authority store. The host supplies
+concrete resource binders and the broker that checks actual I/O. Fuwen
+represents requirements and binds admitted execution; Zhinu owns the fenced
+operation journal. Hufu's repository is still a scaffold and design, not an
+implemented enforcement dependency. The current coordinator still uses
+`tool.Name@tool.Version` as
 `InferenceReadToolRequest.Scope`; that value identifies a behavior, not the resource
 that behavior may read. Do not claim resource-scope enforcement until the runtime
 and host-executor checks below ship and pass together.
@@ -11,7 +17,9 @@ The model proposes arguments, not authority. A trusted host grant names the exac
 resource set a descriptor may read (for example repository revision and path set,
 database/tenant and query class, or a bounded artifact collection). Its opaque
 reference is finite, versioned, and bound to the host policy identity used at
-admission. The host alone interprets it. A descriptor digest and a capability
+admission. Hufu evaluates it through a host-registered versioned resource
+binder; the host broker performs the final check against the actual resource.
+A descriptor digest and a capability
 *class* remain separate metadata; neither stands in for a grant.
 
 Admission must bind each model-callable tool to an exact grant reference and a
@@ -44,11 +52,16 @@ runtimes cannot silently ignore the new bindings.
    remain protected and are reused only under the same admitted execution and
    grant identity.
 
+The Hufu operation-start ordering contract is authoritative: after a
+revocation is acknowledged, an operation ordered later at that service cannot
+start on the revoked grant. A completed result may be reused only under a
+separate recorded-result read policy.
+
 Grant checking is read-only and bounded. It must not fetch the protected
-resource or call the model. Grant revocation requires an explicit policy:
-registration/recovery checks reject a revoked grant before new I/O; previously
-durable output may only be replayed according to the host's recorded-run access
-policy. Do not silently reinterpret an old grant reference.
+resource or call the model. Registration/recovery checks reject a revoked
+grant before new I/O; previously durable output may only be replayed under
+the host's recorded-run access policy. Do not silently reinterpret an old
+grant reference.
 
 ## Acceptance cases
 

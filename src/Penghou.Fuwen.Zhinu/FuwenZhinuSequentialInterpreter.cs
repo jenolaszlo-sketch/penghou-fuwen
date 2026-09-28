@@ -349,9 +349,20 @@ internal static class FuwenZhinuSequentialInterpreter
         // logical node. It runs only when the host supplies a turn executor;
         // otherwise the node keeps its established one-call step behavior.
         if (node.Protocol is not null && ports.TurnExecutor is not null)
-            return await FuwenInferenceCoordinator.ExecuteAsync(
-                node, plan, executionFingerprint, ports, RootLoopRunner(context), state, contextInputs,
-                context.WorkflowRunId, node.StructuralPath, cancellationToken).ConfigureAwait(false);
+        {
+            try
+            {
+                return await FuwenInferenceCoordinator.ExecuteAsync(
+                    node, plan, executionFingerprint, ports, RootLoopRunner(context), state, contextInputs,
+                    context.WorkflowRunId, node.StructuralPath, cancellationToken).ConfigureAwait(false);
+            }
+            catch (FuwenZhinuExecutionException exception) when (
+                exception.Failure is { } handledFailure && node.FailureFallback?.CanHandle(handledFailure) == true)
+            {
+                return await ExecuteInferenceFallbackAsync(
+                    node, plan, context, state, inheritedDependencies, handledFailure, cancellationToken).ConfigureAwait(false);
+            }
+        }
 
         var (requestJson, createRequest) = BuildInferenceRequest(node, plan, state, arguments, contextInputs);
         var envelopeJson = await context.StepAsync<JsonElement, JsonElement>(
@@ -392,9 +403,44 @@ internal static class FuwenZhinuSequentialInterpreter
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         var envelope = FuwenEnvelopeValidator.Read(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId, ports.PriorExecutionFingerprints);
+        if (envelope.Failure is { } failure && node.FailureFallback?.CanHandle(failure) == true)
+            return await ExecuteInferenceFallbackAsync(
+                node, plan, context, state, inheritedDependencies, failure, cancellationToken).ConfigureAwait(false);
         FuwenEnvelopeValidator.ThrowIfFailed(envelope, node.StructuralPath);
         EnsureType(envelope.Output!, node.OutputType, plan.Schemas, $"inference node '{node.StructuralPath}' output");
         return envelope.Output!;
+    }
+
+    private static async Task<RuntimeValue> ExecuteInferenceFallbackAsync(
+        InferenceNode node,
+        WorkflowPlan plan,
+        WorkflowContext context,
+        FuwenInterpreterState state,
+        IReadOnlyCollection<string> inheritedDependencies,
+        ExecutionFailure failure,
+        CancellationToken cancellationToken)
+    {
+        // The provider or protocol failure remains durable. This separate
+        // deterministic step records the authored disposition without turning
+        // the failed operation itself into a successful provider result.
+        var value = FuwenBindingEvaluator.Evaluate(node.FailureFallback!.Value, plan, state);
+        EnsureType(value, node.OutputType, plan.Schemas, $"inference fallback '{node.StructuralPath}'");
+        var request = FuwenRuntimeValueWire.Serialize(new
+        {
+            kind = "inference-fallback",
+            node = node.StructuralPath,
+            code = failure.Code.ToString(),
+            value = FuwenRuntimeValueWire.ToJson(value),
+        });
+        var output = await context.StepAsync<JsonElement, JsonElement>(
+            node.StructuralPath + "/$fallback",
+            request,
+            (_, _, _) => Task.FromResult(FuwenRuntimeValueWire.ToJson(value)),
+            stepOptions: StepOptionsFor(inheritedDependencies, []),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var resumed = FuwenRuntimeValueWire.FromJson(output, node.OutputType, plan.Schemas);
+        EnsureType(resumed, node.OutputType, plan.Schemas, $"inference fallback '{node.StructuralPath}' output");
+        return resumed;
     }
 
     private static async Task<RuntimeValue> ExecuteActivityAsync(

@@ -148,6 +148,11 @@ public static class WorkflowPlanIdentity
                 : inference.Tools
                     .OrderBy(DescriptorSortKey, StringComparer.Ordinal)
                     .ToArray(),
+            FailureFallback = inference.FailureFallback is null
+                ? null
+                : new InferenceFailureFallback(
+                    inference.FailureFallback.Codes.OrderBy(static code => code).ToArray(),
+                    NormalizeBinding(inference.FailureFallback.Value)),
         },
         ActivityNode activity => activity with { Arguments = NormalizeArguments(activity.Arguments) },
         ConditionalNode conditional => conditional with

@@ -50,9 +50,13 @@ public static class WorkflowPlanValidator
     internal static void ValidateCompatibility(WorkflowPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersion, StringComparison.Ordinal))
+        if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersion, StringComparison.Ordinal) &&
+            !string.Equals(plan.IrVersion, FuwenContracts.InferenceFallbackIrVersion, StringComparison.Ordinal))
             throw new NotSupportedException(
-                $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'. Expected '{FuwenContracts.IrVersion}'.");
+                $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'.");
+        if (string.Equals(plan.IrVersion, FuwenContracts.IrVersion, StringComparison.Ordinal) &&
+            FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.FailureFallback is not null))
+            throw new NotSupportedException("Inference fallbacks require the inference-fallback IR version.");
 
         RequireVersion(plan.CanonicalJsonVersion, FuwenContracts.CanonicalJsonVersion, nameof(plan.CanonicalJsonVersion));
         RequireVersion(plan.FingerprintVersion, FuwenContracts.ExecutionFingerprintVersion, nameof(plan.FingerprintVersion));
@@ -130,6 +134,9 @@ public static class WorkflowPlanValidator
                     ValidateArguments(inference.Arguments);
                     ValidateType(inference.OutputType);
                     ValidateContextRequirementsShape(inference.ContextRequirements);
+                    ValidateInferenceFallbackShape(inference.FailureFallback);
+                    if (inference.FailureFallback is not null && regionPath.Contains("/$body", StringComparison.Ordinal))
+                        throw new ArgumentException("Inference fallbacks inside fan-out or repeat bodies require item-scoped durable failure evidence and are not supported.", nameof(nodes));
                     break;
                 case ActivityNode activity:
                     RequireKind(activity.Activity, DescriptorKind.Activity);
@@ -440,6 +447,28 @@ public static class WorkflowPlanValidator
             }
         }
     }
+
+    private static void ValidateInferenceFallbackShape(InferenceFailureFallback? fallback)
+    {
+        if (fallback is null)
+            return;
+        if (fallback.Codes is null || fallback.Codes.Count is < 1 or > 16 ||
+            fallback.Codes.Distinct().Count() != fallback.Codes.Count ||
+            fallback.Codes.Any(static code => !InferenceFailureFallback.IsSupportedCode(code)))
+            throw new ArgumentException("An inference fallback must select distinct supported failure codes.", nameof(fallback));
+        if (!IsStaticFallbackValue(fallback.Value))
+            throw new ArgumentException("An inference fallback must be a static literal, list, or object value.", nameof(fallback));
+        if (CanonicalJson.Serialize(fallback.Value).Length > InferenceFailureFallback.MaximumValueUtf8Bytes)
+            throw new ArgumentException("An inference fallback exceeds its static byte bound.", nameof(fallback));
+    }
+
+    private static bool IsStaticFallbackValue(Binding? value) => value switch
+    {
+        LiteralBinding literal => literal.Value.ValueKind != System.Text.Json.JsonValueKind.Undefined,
+        ListBinding list => list.Items is not null && list.Items.All(IsStaticFallbackValue),
+        ObjectBinding obj => obj.Properties is not null && obj.Properties.Values.All(IsStaticFallbackValue),
+        _ => false,
+    };
 
     private static void ValidateContextRequirementsShape(IReadOnlyList<ContextRequirement>? requirements)
     {

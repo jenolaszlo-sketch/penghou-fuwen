@@ -421,6 +421,7 @@ const Penghou.Fuwen.FuwenContracts.CanonicalJsonVersion = "penghou-canonical-jso
 const Penghou.Fuwen.FuwenContracts.CompilerSemanticVersion = "compiler-semantics/1" -> string!
 const Penghou.Fuwen.FuwenContracts.ExecutionFingerprintVersion = "fuwen-execution/v1" -> string!
 const Penghou.Fuwen.FuwenContracts.IrVersion = "fuwen-ir/v1" -> string!
+const Penghou.Fuwen.FuwenContracts.InferenceFallbackIrVersion = "fuwen-ir/v2-inference-fallback" -> string!
 const Penghou.Fuwen.FuwenContracts.MaximumCanonicalPlanBytes = 4194304 -> int
 const Penghou.Fuwen.FuwenContracts.SourceFingerprintVersion = "fuwen-source/v1" -> string!
 const Penghou.Fuwen.JsonRuntimeValue.MaximumJsonDepth = 128 -> int
@@ -702,7 +703,18 @@ Penghou.Fuwen.InferenceProtocolLimits.MaxToolCalls.get -> long?
 Penghou.Fuwen.InferenceProtocolLimits.MaxToolResultBytes.get -> long?
 Penghou.Fuwen.InferenceProtocolLimits.MaxTotalTokens.get -> long?
 Penghou.Fuwen.InferenceProtocolLimits.MaxTurns.get -> long?
+Penghou.Fuwen.InferenceFailureFallback
+Penghou.Fuwen.InferenceFailureFallback.CanHandle(Penghou.Fuwen.ExecutionFailure! failure) -> bool
+Penghou.Fuwen.InferenceFailureFallback.Codes.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ExecutionFailureCode>!
+Penghou.Fuwen.InferenceFailureFallback.Codes.init -> void
+Penghou.Fuwen.InferenceFailureFallback.InferenceFailureFallback(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ExecutionFailureCode>! Codes, Penghou.Fuwen.Binding! Value) -> void
+const Penghou.Fuwen.InferenceFailureFallback.MaximumValueUtf8Bytes = 65536 -> int
+static Penghou.Fuwen.InferenceFailureFallback.IsSupportedCode(Penghou.Fuwen.ExecutionFailureCode code) -> bool
+Penghou.Fuwen.InferenceFailureFallback.Value.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.InferenceFailureFallback.Value.init -> void
 Penghou.Fuwen.InferenceNode
+Penghou.Fuwen.InferenceNode.FailureFallback.get -> Penghou.Fuwen.InferenceFailureFallback?
+Penghou.Fuwen.InferenceNode.FailureFallback.init -> void
 Penghou.Fuwen.InferenceNode.Arguments.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ArgumentBinding!>!
 Penghou.Fuwen.InferenceNode.Arguments.init -> void
 Penghou.Fuwen.InferenceNode.ContextSnapshots.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.NodeOutputBinding!>!

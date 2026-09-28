@@ -177,6 +177,8 @@ whole-batch tool allowance checks. Coordinated admission rejects duplicate
 provider-visible tool names and carries exact trusted callable signatures to
 runtime argument/result validation.
 
+The unreleased source also lets authors declare a typed static fallback for selected definitive inference failures. It preserves the failed operation in durable evidence and records a separate fallback step. Possibly committed, cancelled, and unknown-budget outcomes still stop. General failure regions and human gates are not yet implemented; fallback-bearing plans use a new IR version that older runtimes reject.
+
 Authored prompt, total-token, and cost limits are strict by default and currently fail coordinated registration before paid work. An optional SQLite leaf ledger can now durably reserve a selected executor’s pre-call maximum, settle known usage, and retain uncertain charges. The host-configured Baize path has no trustworthy maximum-charge quote, so this does not yet open strict admission. Explicit `aggregate advisory` enables after-call monitoring; host strict ceilings cannot be downgraded.
 
 Before a production claim, this path still needs resource grants, hard pre-call prompt/total-token/cost enforcement, protection of other sensitive journal content, and complete ambiguous-call recovery. Provider continuation blobs and resolved endpoint/pricing identity are not yet carried by the normalized turn result. Unsupported continuation shapes fail with possible-commitment evidence. Older in-flight coordinator journals

@@ -7,6 +7,8 @@ public static class FuwenContracts
 {
     /// <summary>The current executable-plan contract.</summary>
     public const string IrVersion = "fuwen-ir/v1";
+    /// <summary>The executable IR required for authored inference fallbacks.</summary>
+    public const string InferenceFallbackIrVersion = "fuwen-ir/v2-inference-fallback";
     /// <summary>The current compiler-semantics contract.</summary>
     public const string CompilerSemanticVersion = "compiler-semantics/1";
     /// <summary>The canonical JSON contract used by all currently supported IR versions.</summary>
@@ -74,7 +76,44 @@ public sealed record InferenceNode(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     InferenceLimits? Limits = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    InferenceProtocol? Protocol = null) : WorkflowNode(Name, StructuralPath);
+    InferenceProtocol? Protocol = null) : WorkflowNode(Name, StructuralPath)
+{
+    /// <summary>Optional authored fallback for a closed set of definitive failures.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public InferenceFailureFallback? FailureFallback { get; init; }
+}
+
+/// <summary>
+/// A static, typed fallback for explicitly named definitive inference failures.
+/// The failed inference retains its own durable evidence; a fallback never
+/// changes the failure into a successful provider operation.
+/// </summary>
+public sealed record InferenceFailureFallback(
+    IReadOnlyList<ExecutionFailureCode> Codes,
+    Binding Value)
+{
+    /// <summary>Maximum canonical bytes in one static fallback binding.</summary>
+    public const int MaximumValueUtf8Bytes = 65_536;
+
+    /// <summary>Whether a code is eligible for an authored fallback at all.</summary>
+    public static bool IsSupportedCode(ExecutionFailureCode code) => code is
+        ExecutionFailureCode.TurnLimitExceeded or
+        ExecutionFailureCode.ModelCallLimitExceeded or
+        ExecutionFailureCode.ToolCallLimitExceeded or
+        ExecutionFailureCode.TokenLimitExceeded or
+        ExecutionFailureCode.CostLimitExceeded or
+        ExecutionFailureCode.PerCallLimitExceeded or
+        ExecutionFailureCode.MalformedOutput or
+        ExecutionFailureCode.RepairedOutputSchemaInvalid or
+        ExecutionFailureCode.SchemaMismatch or
+        ExecutionFailureCode.ToolMappingFailure or
+        ExecutionFailureCode.TruncatedOutput;
+
+    /// <summary>Checks the admitted code and the actual operation disposition.</summary>
+    public bool CanHandle(ExecutionFailure failure) =>
+        failure is not null && !failure.MayHaveCommittedEffect &&
+        IsSupportedCode(failure.Code) && Codes is not null && Codes.Contains(failure.Code);
+}
 
 /// <summary>Executes one trusted catalogue activity.</summary>
 public sealed record ActivityNode(

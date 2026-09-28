@@ -1002,7 +1002,7 @@ internal sealed class SourceParser
                 InferenceCostLimit? cost = null;
                 var dimensionCount = 0;
 
-                while (!AtEnd && Current.Text is not ("->" or ":" or ";" or "}"))
+                while (!AtEnd && Current.Text is not ("->" or ":" or ";" or "}" or "on"))
                 {
                     var dimension = Current.Text;
                     if (!IsAggregateDimension(dimension))
@@ -1086,6 +1086,27 @@ internal sealed class SourceParser
                 : new InferenceLimits(maxTokens, timeoutSeconds);
         }
         if (Match("->") || Match(":")) declared = ParseType();
+        InferenceFailureFallback? fallback = null;
+        if (Match("on"))
+        {
+            Expect("failure");
+            Expect("[");
+            var codes = new List<ExecutionFailureCode>();
+            while (!AtEnd && Current.Text != "]")
+            {
+                var codeName = ReadIdentifier("failure code");
+                if (!Enum.TryParse<ExecutionFailureCode>(codeName, ignoreCase: false, out var code) ||
+                    !InferenceFailureFallback.IsSupportedCode(code))
+                    Error(CompilerDiagnosticCodes.SemanticValidationFailed,
+                        $"Failure code '{codeName}' cannot be handled by an inference fallback.", Previous);
+                else
+                    codes.Add(code);
+                if (Current.Text != "]" && !Match(",")) Expect(",");
+            }
+            Expect("]");
+            Expect("fallback");
+            fallback = new InferenceFailureFallback(codes, ParseBinding());
+        }
         Match(";");
         var type = declared ?? CallableOutput(profile); var path = parentPath + "/" + name;
         if (declared is null) inferredOutputPaths.Add(path);
@@ -1094,7 +1115,8 @@ internal sealed class SourceParser
             promptName, promptBindings is null || promptBindings.Count == 0 ? null : promptBindings,
             tools is null || tools.Count == 0 ? null : tools,
             limits,
-            protocol);
+            protocol)
+        { FailureFallback = fallback };
         nodeTypes[name] = type; nodePaths[name] = path; AddSpan(path, start, Previous); Ast(); return node;
     }
 

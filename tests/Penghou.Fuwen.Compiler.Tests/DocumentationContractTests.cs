@@ -140,7 +140,7 @@ public sealed class DocumentationContractTests
         plans.SelectMany(plan => plan.CapabilityManifest.Requirements).Should().ContainSingle();
 
         var inferencePlan = plans.Single(plan => plan.Name == "documented_inference");
-        inferencePlan.IrVersion.Should().Be(FuwenContracts.IrVersion);
+        inferencePlan.IrVersion.Should().Be(FuwenContracts.InferenceFallbackIrVersion);
         inferencePlan.Prompts!.Any(prompt => prompt.Messages.Count > 0).Should().BeTrue();
         inferencePlan.Prompts!.Any(prompt => prompt.RegisteredSource is not null).Should().BeTrue();
         var inferences = inferencePlan.Nodes.OfType<InferenceNode>().ToArray();
@@ -150,6 +150,7 @@ public sealed class DocumentationContractTests
         inferences.Any(node => node.Tools is { Count: > 0 }).Should().BeTrue();
         inferences.Any(node => node.Tools is null or { Count: 0 }).Should().BeTrue();
         inferences.Any(node => node.Protocol is not null).Should().BeTrue();
+        inferences.Any(node => node.FailureFallback is not null).Should().BeTrue();
     }
 
     [Fact]

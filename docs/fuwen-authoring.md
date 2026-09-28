@@ -56,6 +56,14 @@ overrun; it cannot prevent a provider charge. Host prompt, total-token and
 monetary ceilings remain strict and cannot be downgraded by source advisory
 mode. Completion-token limits retain their separate hard-executor gate.
 
+An inference can select definitive failure codes and a static fallback value after its output type:
+
+```fuwen
+infer answer = infer "sample.profile@1#dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" using "sample.prompt@1#eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" (request: input;) -> string on failure [SchemaMismatch, TurnLimitExceeded] fallback "manual review";
+```
+
+The fallback must have the exact declared output type and may contain only literals, lists, and objects of literals. Its selected codes are checked at compile and admission time. The runtime uses it only when the actual failure reports no possibly committed effect. It records a separate durable `$fallback` step while retaining the failed provider/protocol evidence. It does not retry inference, reset its budget, treat a failed operation as a provider success, or handle cancellation, timeout, fencing loss, ambiguous commitment, unknown budget, or unavailable evidence. Authors should give the fallback value an explicit status field when their output schema represents both normal and fallback outcomes. Plans with this clause use `fuwen-ir/v2-inference-fallback`; plans without it retain their existing IR version and fingerprints. Fallbacks in repeat and fan-out bodies are currently rejected because those paths do not yet retain item-scoped failed-operation evidence. General handler regions, human gates, and evaluator decisions remain future work.
+
 Inline prompt declarations contain at least one `system` or `user` message.
 A registered prompt alias instead declares `uses registered <descriptor>` and
 may have no local messages because the host resolves its exact template.

@@ -95,7 +95,9 @@ public sealed class WorkflowPlanBuilder
     public WorkflowPlan Build()
     {
         var plan = new WorkflowPlan(
-            FuwenContracts.IrVersion,
+            HasInferenceFallback(nodes)
+                ? FuwenContracts.InferenceFallbackIrVersion
+                : FuwenContracts.IrVersion,
             languageVersion,
             FuwenContracts.CompilerSemanticVersion,
             FuwenContracts.CanonicalJsonVersion,
@@ -117,6 +119,25 @@ public sealed class WorkflowPlanBuilder
         // recursive plan graph. This keeps builder and future parser paths
         // identical and prevents caller mutation after Build returns.
         return WorkflowPlanSnapshot.Create(plan);
+    }
+
+    private static bool HasInferenceFallback(IEnumerable<WorkflowNode> values)
+    {
+        foreach (var node in values)
+        {
+            if (node is InferenceNode { FailureFallback: not null })
+                return true;
+            var children = node switch
+            {
+                ConditionalNode conditional => conditional.Then.Concat(conditional.Else),
+                FanOutNode fanOut => fanOut.Body,
+                RepeatNode repeat => repeat.Body,
+                _ => [],
+            };
+            if (HasInferenceFallback(children))
+                return true;
+        }
+        return false;
     }
 
     private static IReadOnlyList<DescriptorReference> MergeDescriptors(

@@ -235,7 +235,15 @@ internal static class WorkflowPlanSnapshot
                                     : new InferenceCostLimit(
                                         value.Protocol.Limits.Cost.Currency,
                                         value.Protocol.Limits.Cost.MaximumMicrounits)),
-                            value.Protocol.BudgetEnforcement)),
+                            value.Protocol.BudgetEnforcement))
+                {
+                    FailureFallback = value.FailureFallback is null
+                            ? null
+                            : new InferenceFailureFallback(
+                                SnapshotList(value.FailureFallback.Codes, "inference fallback codes",
+                                    static (code, _) => code, state),
+                                CloneBinding(value.FailureFallback.Value, state)),
+                },
                 ActivityNode value => new ActivityNode(
                     value.Name,
                     value.StructuralPath,

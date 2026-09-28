@@ -567,6 +567,9 @@ internal static class WorkflowBindingValidator
                         ValidateCallableNode(inference.Profile, DescriptorKind.InferenceProfile, inference.Arguments, inference.OutputType, location, plan, locations, descriptors, diagnostics);
                     ValidateInferenceTools(inference, location, descriptors, diagnostics);
                     ValidateInferenceLimits(inference, diagnostics);
+                    if (inference.FailureFallback is { } fallback)
+                        ValidateBinding(fallback.Value, inference.OutputType, location, plan, locations,
+                            diagnostics, CompilerDiagnosticCodes.BindingTypeMismatch, exact: true);
                     {
                         var contextNames = new HashSet<string>(StringComparer.Ordinal);
                         var contextSources = new HashSet<string>(StringComparer.Ordinal);

@@ -1190,3 +1190,57 @@ IR v8 adds workflow-owned prompts, registered aliases, declared tools, and
 inference limits. A bounded model/tool/result loop exists but remains limited
 while corrective gates are open. Transition activation and artifact-reuse
 authorization remain outside the current preview.
+
+## V2 — Evidence-driven workflow evolution (deferred)
+
+Status: **future work after V1; not a current release gate**. Added 2026-09-26.
+V2.1/V2.2/V2.3 name cross-project delivery stages, not package or IR versions.
+Existing near-term priorities and completed work retain their current status.
+
+Architecture and shared acceptance gates: [reviewed V2 specification](../../Penghou.Guihua/docs/evidence-driven-workflow-evolution-v2.md).
+Cross-repository links assume sibling checkouts.
+
+### V2.1 — Typed outcome and repair intent
+
+- [ ] Extend Delivery H's opaque planning-context references with exact
+  evaluation subjects, evaluator/rubric versions, acceptance decisions and
+  proposal evidence snapshots. Keep lineage/evidence metadata separate from
+  executable semantics according to the versioned fingerprint contract.
+- [ ] Represent evaluation and acceptance as typed activities/values over
+  immutable artifacts. Completed execution, rejected output and superseded
+  revision are independent dimensions; source cannot redefine runtime status.
+- [ ] Reuse current admission, revision envelopes and semantic comparison for
+  repair proposals. Expose validation-only changes separately from changed
+  producers/dependencies; only Zhinu plus host policy may authorize reuse.
+- [ ] Keep recovery on the original admitted plan. Evidence-informed changes
+  produce new proposals/revisions; compilation performs no live memory query
+  and cannot relax mandatory criteria or capabilities on its own.
+
+Gate: compile and compare a replacement plus a rubric-only change with stable
+node correspondence, explainable differences and no implied reuse authority.
+
+### V2.2 — Comparative workflow composition
+
+- [ ] Prove candidates, evaluation, constraints and deterministic selection
+  using existing keyed fan-out, typed activities and immutable artifact
+  references before proposing `experiment`/`select` syntax.
+- [ ] Bind candidate definitions, input/context identities, evaluation criteria,
+  effect policy and effective bounds into the appropriate admitted contracts;
+  preserve experiment-candidate versus provider-candidate identity mappings.
+- [ ] Model selected, inconclusive and none-acceptable results explicitly;
+  source cannot grant experiment authority or erase losing candidates.
+- [ ] Reject plans/adapters that cannot enforce required bounds. Add dedicated
+  syntax only after two consumers demonstrate a necessary reusable semantic gap.
+
+Gate: a bounded two-candidate fixture selects once or returns no winner, with
+separate evidence and identical behavior after durable recovery.
+
+### V2.3 — Evidence-informed proposal provenance
+
+- [ ] Complete Delivery H against stable Hongxian recall and host compatibility
+  policies: pin retrieval checkpoint, scope, planner/evaluator/policy versions
+  and supporting/contradicting references. Changing advisory history alone must
+  not mutate an already admitted plan.
+
+These entries refine Delivery H and adaptive-planning work; they do not reopen
+completed compiler/IR milestones or introduce a memory-system dependency.

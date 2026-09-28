@@ -11,7 +11,7 @@ namespace Penghou.Fuwen.ReviewConsumer.Tests;
 // published Fuwen packages. It reuses the shipped deterministic turn fixture
 // as its model and implements its own read tools, catalogue, and evidence
 // sink, proving Fuwen carries no Marang-specific semantics.
-public sealed class ReviewConsumerTests
+public sealed partial class ReviewConsumerTests
 {
     private static ContentDigest Digest(char value) =>
         new("sha256", "descriptor/v1", new string(value, 64));

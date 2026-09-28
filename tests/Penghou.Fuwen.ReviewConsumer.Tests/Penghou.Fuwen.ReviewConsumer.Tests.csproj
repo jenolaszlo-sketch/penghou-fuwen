@@ -15,6 +15,7 @@
     <PackageReference Include="Penghou.Zhinu.Sqlite" Version="0.1.0-preview.14" />
     <PackageReference Include="Penghou.Fuwen" Version="$(FuwenPackageVersion)" />
     <PackageReference Include="Penghou.Fuwen.Compiler" Version="$(FuwenPackageVersion)" />
+    <PackageReference Include="Penghou.Fuwen.Baize" Version="$(FuwenPackageVersion)" />
     <PackageReference Include="Penghou.Fuwen.Zhinu" Version="$(FuwenPackageVersion)" />
   </ItemGroup>
 

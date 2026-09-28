@@ -169,7 +169,7 @@ coordinated-inference guarantee.
 `Penghou.Fuwen.Baize` resolves host-owned logical bindings to exact Baize
 endpoints and records provider/model, usage, timing, and publication evidence.
 The current source also contains a durable bounded inference coordinator, but
-coordinated model → read-tool → model execution remains **limited/experimental**. A stock BaizeInferenceTurnExecutor now supplies a configured one-turn transport with native assistant calls, matching tool results, and exact provider-facing schemas.
+coordinated model → read-tool → model execution remains **limited/experimental**. A stock BaizeInferenceTurnExecutor now supplies a configured one-turn transport with native assistant calls, matching tool results, and exact provider-facing schemas. The isolated Review consumer proves model → read tool → model → typed output from locally packed public packages with a scripted Baize endpoint.
 Its corrective work now covers run/request identity, final usage and cost
 settlement, currency and pricing-revision checks, selected-executor preflight, evidence size,
 completion-token capability checks, protected successful tool results, and

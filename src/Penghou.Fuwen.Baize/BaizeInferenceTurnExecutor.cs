@@ -41,6 +41,7 @@ public sealed class BaizeInferenceTurnExecutor : IInferenceTurnExecutor, IInfere
                 new(InferenceLimitDimension.Turns, 1_000_000),
                 new(InferenceLimitDimension.ModelCalls, 1_000_000),
                 new(InferenceLimitDimension.ToolCalls, InferenceTurnRequest.MaximumProposals),
+                new(InferenceLimitDimension.DurationMilliseconds, 3_600_000),
                 new(InferenceLimitDimension.ToolArgumentBytes, InferenceToolCallProposal.MaximumArgumentsUtf8Bytes),
                 new(InferenceLimitDimension.RetainedConversationBytes,
                     InferenceTurnRequest.MaximumMessages * InferenceConversationMessage.MaximumTextUtf8Bytes),

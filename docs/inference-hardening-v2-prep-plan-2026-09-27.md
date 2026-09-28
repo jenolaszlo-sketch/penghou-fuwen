@@ -102,6 +102,8 @@ Keep PRs small enough to demonstrate a single invariant. Split contract and impl
 
 Track product outcomes alongside correctness: time and steps from a fresh package install to the first successful run; proportion of unsupported combinations rejected before paid work; whether an operator can identify the exact failing operation, spend quality and safe next action without raw payload access; and whether a consumer needs custom adapter code for the advertised read-tool path. Record a baseline with the reference consumer, then compare after the provider preview. These are acceptance evidence, not targets invented before a consumer exists.
 
+Current product-policy decisions, engineering work, external dependencies, and release holds are tracked in the [open decision register](open-decisions-and-blockers.md).
+
 ## 4. Implementation work packages
 
 ### FI-00 — Establish regressions, containment and contract decisions

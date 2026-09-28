@@ -152,6 +152,84 @@ public sealed class InferenceTurnToolContractsTests
     }
 
     [Fact]
+    public void Assistant_history_preserves_detached_exact_tool_calls()
+    {
+        var descriptor = ToolDescriptor("lookup", "b");
+        var call = Proposal("provider-call-42", descriptor, "{\"q\":\"exact\"}");
+        var calls = new List<InferenceToolCallProposal> { call };
+        var message = new InferenceConversationMessage(InferenceTurnRole.Assistant, "checking", toolCalls: calls);
+
+        calls.Clear();
+
+        message.ToolCalls.Should().ContainSingle();
+        message.ToolCalls![0].Should().NotBeSameAs(call);
+        message.ToolCalls[0].CallId.Should().Be("provider-call-42");
+        message.ToolCalls[0].Tool.Should().Be(descriptor);
+        message.ToolCalls[0].Tool.Name.Should().Be("lookup");
+        message.ToolCalls[0].ArgumentsJson.Should().Be("{\"q\":\"exact\"}");
+    }
+
+    [Fact]
+    public void Tool_result_history_preserves_exact_call_id_and_tool_descriptor()
+    {
+        var descriptor = ToolDescriptor("lookup", "b");
+        var message = new InferenceConversationMessage(
+            InferenceTurnRole.Tool,
+            "{\"answer\":42}",
+            toolCallId: "provider-call-42",
+            tool: descriptor);
+
+        message.ToolCallId.Should().Be("provider-call-42");
+        message.Tool.Should().Be(descriptor);
+        message.ToolName.Should().Be("lookup");
+    }
+
+    [Fact]
+    public void Tool_result_history_preserves_legacy_unnamed_result()
+    {
+        var message = new InferenceConversationMessage(
+            InferenceTurnRole.Tool,
+            "result",
+            toolCallId: "provider-call-42");
+
+        message.ToolCallId.Should().Be("provider-call-42");
+        message.Tool.Should().BeNull();
+        message.ToolName.Should().BeNull();
+    }
+
+    [Fact]
+    public void Assistant_history_rejects_duplicate_call_ids()
+    {
+        var duplicate = new[] { Proposal("same"), Proposal("same") };
+        Action act = () => new InferenceConversationMessage(InferenceTurnRole.Assistant, "", toolCalls: duplicate);
+        act.Should().Throw<ArgumentException>().WithMessage("*identities must be unique*");
+    }
+
+    [Fact]
+    public void Turn_request_detaches_native_assistant_and_tool_history()
+    {
+        var assistant = new InferenceConversationMessage(
+            InferenceTurnRole.Assistant,
+            "",
+            toolCalls: [Proposal("provider-call-42", argsJson: "{\"q\":1}")]);
+        var tool = new InferenceConversationMessage(
+            InferenceTurnRole.Tool,
+            "{\"answer\":42}",
+            toolCallId: "provider-call-42",
+            tool: ToolDescriptor("lookup"));
+
+        var request = new InferenceTurnRequest("interaction-1", 0, [assistant, tool], [ToolRequirement("lookup")]);
+
+        var capturedCalls = request.Conversation[0].ToolCalls;
+        capturedCalls.Should().ContainSingle();
+        capturedCalls![0].CallId.Should().Be("provider-call-42");
+        capturedCalls[0].ArgumentsJson.Should().Be("{\"q\":1}");
+        request.Conversation[1].ToolCallId.Should().Be("provider-call-42");
+        request.Conversation[1].Tool.Should().Be(ToolDescriptor("lookup"));
+        request.Conversation[1].ToolName.Should().Be("lookup");
+    }
+
+    [Fact]
     public void Conversation_message_rejects_oversized_text()
     {
         var oversized = new string('x', InferenceConversationMessage.MaximumTextUtf8Bytes + 1);
@@ -251,6 +329,30 @@ public sealed class InferenceTurnToolContractsTests
         result.Usage.Should().NotBeNull();
         result.Usage!.TotalTokens.Should().Be(5);
         result.Usage.Should().NotBeSameAs(usage);
+    }
+
+    [Fact]
+    public void Tool_call_result_preserves_bounded_assistant_text()
+    {
+        var result = new InferenceToolCallTurnResult([Proposal("call-1")], assistantText: "Checking the source.");
+        result.AssistantText.Should().Be("Checking the source.");
+
+        Action oversized = () => new InferenceToolCallTurnResult(
+            [Proposal("call-1")],
+            assistantText: new string('x', InferenceConversationMessage.MaximumTextUtf8Bytes + 1));
+        oversized.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void Assistant_call_history_allows_empty_content()
+    {
+        var message = new InferenceConversationMessage(
+            InferenceTurnRole.Assistant,
+            "",
+            toolCalls: [Proposal("call-1")]);
+
+        message.Text.Should().BeEmpty();
+        message.ToolCalls.Should().ContainSingle();
     }
 
     [Fact]

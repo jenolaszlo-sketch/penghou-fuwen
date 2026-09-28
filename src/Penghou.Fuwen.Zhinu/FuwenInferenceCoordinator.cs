@@ -28,7 +28,7 @@ internal delegate Task<JsonElement> ProtocolLoopRunner(
 internal static class FuwenInferenceCoordinator
 {
     private const string RequestFingerprintContract = "fuwen-request/v2";
-    private const string CoordinatorStateSemantics = "fuwen-inference-coordinator-state/v4-priced-usage-revision";
+    private const string CoordinatorStateSemantics = "fuwen-inference-coordinator-state/v5-native-tool-history";
     private const string ToolResultDigestContract = "inference-tool-result/v1";
     private const int DefaultConversationCapUtf8Bytes = 262_144;
     private const int DefaultStepArgumentCapUtf8Bytes = 65_536;
@@ -115,8 +115,9 @@ internal static class FuwenInferenceCoordinator
                 $"Inference node '{node.StructuralPath}' exceeded its {effective.MaxDurationMilliseconds}ms duration bound."));
         }
 
-        var finalState = CanonicalJson.Deserialize<CoordinatorState>(
-            CanonicalJson.Canonicalize(finalStateJson));
+        var finalState = ReadCoordinatorState(finalStateJson, node.StructuralPath);
+        if (ValidateRecoveredState(finalState, node.Tools?.Count ?? 0, effective) is { } finalStateFailure)
+            throw new FuwenZhinuExecutionException(finalStateFailure);
         if (!string.Equals(finalState.InteractionId, prepared.InteractionId, StringComparison.Ordinal))
             throw new FuwenZhinuExecutionException(new ExecutionFailure(
                 ExecutionFailureKind.Contract,
@@ -462,7 +463,8 @@ internal static class FuwenInferenceCoordinator
         string Role,
         string? Text,
         string? ToolCallId,
-        ProtectedPayloadReference? ProtectedPayload = null);
+        ProtectedPayloadReference? ProtectedPayload = null,
+        List<ProposalRecord>? ToolCalls = null);
     private sealed record PendingRecord(int ToolIndex, string CallId, string ArgumentsJson);
     private sealed record FailureRecord(int Kind, int Code, string Message, bool MayHaveCommitted, string? ProviderCode);
     private sealed record OperationEvidenceRecord(
@@ -676,13 +678,14 @@ internal static class FuwenInferenceCoordinator
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var state = CanonicalJson.Deserialize<CoordinatorState>(
-            CanonicalJson.Canonicalize(iteration.State));
+        var state = ReadCoordinatorState(iteration.State, node.StructuralPath);
         if (!string.Equals(state.Semantics, CoordinatorStateSemantics, StringComparison.Ordinal))
             throw new FuwenZhinuExecutionException(new ExecutionFailure(
                 ExecutionFailureKind.Contract,
                 ExecutionFailureCode.InvalidInput,
                 $"Inference node '{node.StructuralPath}' recovered protocol state with unsupported semantics; it was stopped without replaying legacy tool results."));
+        if (ValidateRecoveredState(state, node.Tools?.Count ?? 0, effective) is { } stateFailure)
+            throw new FuwenZhinuExecutionException(stateFailure);
         if (!TryFitRetainedEvidence(effective, state))
         {
             state.Failure = ToRecord(new ExecutionFailure(
@@ -733,6 +736,79 @@ internal static class FuwenInferenceCoordinator
         return FinishIteration(
             node, effective, state, iteration,
             canContinue: state.Failure is null && state.OutputJson is null);
+    }
+
+    private static CoordinatorState ReadCoordinatorState(JsonElement json, string nodePath)
+    {
+        try
+        {
+            return CanonicalJson.Deserialize<CoordinatorState>(CanonicalJson.Canonicalize(json));
+        }
+        catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidOperationException)
+        {
+            throw new FuwenZhinuExecutionException(new ExecutionFailure(
+                ExecutionFailureKind.Contract,
+                ExecutionFailureCode.InvalidInput,
+                $"Inference node '{nodePath}' recovered malformed protocol state."));
+        }
+    }
+
+    private static ExecutionFailure? ValidateRecoveredState(
+        CoordinatorState state, int admittedToolCount, EffectiveBounds effective)
+    {
+        static ExecutionFailure Corrupt() => new(
+            ExecutionFailureKind.Contract,
+            ExecutionFailureCode.InvalidInput,
+            "The recovered inference protocol state has incompatible phase or operation fields.");
+
+        if (state.Phase is not ("model" or "tool" or "done") ||
+            state.Conversation is null || state.Pending is null ||
+            state.Operations is null || state.ToolOutcomes is null ||
+            state.TurnOrdinal < 0 || state.ModelCalls < 0 || state.ToolOrdinal < 0 ||
+            state.PendingIndex < 0 || state.OperationOrdinal < 0 ||
+            state.ValidationAttempts < 0 || state.ModelCalls != state.TurnOrdinal ||
+            state.PromptTokens < 0 || state.CompletionTokens < 0 ||
+            state.TotalTokens < 0 || state.CostMicrounits < 0)
+            return Corrupt();
+
+        if (state.Phase == "tool")
+        {
+            if (state.Pending.Count == 0 || state.PendingIndex >= state.Pending.Count)
+                return Corrupt();
+        }
+        else if (state.Pending.Count != 0 || state.PendingIndex != 0)
+        {
+            return Corrupt();
+        }
+
+        if (state.OutputJson is not null &&
+            (state.Phase != "done" || state.Failure is not null ||
+             !string.Equals(state.OutputJson, state.CandidateJson, StringComparison.Ordinal)))
+            return Corrupt();
+        if (state.Phase == "done" && state.OutputJson is null && state.Failure is null)
+            return Corrupt();
+
+        var maximumArgumentBytes = effective.MaxToolArgumentBytes is long declared
+            ? Math.Min(declared, JsonRuntimeValue.MaximumJsonUtf8Bytes)
+            : DefaultStepArgumentCapUtf8Bytes;
+        foreach (var pending in state.Pending)
+        {
+            if (pending is null || pending.ToolIndex < 0 || pending.ToolIndex >= admittedToolCount ||
+                string.IsNullOrWhiteSpace(pending.CallId) ||
+                string.IsNullOrWhiteSpace(pending.ArgumentsJson) ||
+                Encoding.UTF8.GetByteCount(pending.ArgumentsJson) > maximumArgumentBytes)
+                return Corrupt();
+        }
+
+        foreach (var message in state.Conversation)
+        {
+            if (message is null || message.Role is not ("system" or "user" or "assistant" or "tool") ||
+                (message.Text is null) == (message.ProtectedPayload is null) ||
+                (message.Role == "tool" &&
+                 (message.ProtectedPayload is null || string.IsNullOrWhiteSpace(message.ToolCallId))))
+                return Corrupt();
+        }
+        return null;
     }
 
     private static ExecutionFailure? CheckBoundsBeforeOperation(
@@ -894,7 +970,10 @@ internal static class FuwenInferenceCoordinator
             : 0;
         var visibleTools = remainingToolCalls == 0
             ? Array.Empty<InferenceToolRequirement>()
-            : (node.Tools ?? []).Select(static tool => new InferenceToolRequirement(tool)).ToArray();
+            : (node.Tools ?? []).Select(tool => new InferenceToolRequirement(
+                tool,
+                modelContract: ModelFacingToolContractBuilder.Build(
+                    tool, trustedToolSignatures[tool], plan.Schemas))).ToArray();
         var turnInput = FuwenRuntimeValueWire.Serialize(new
         {
             kind = "inference-turn",
@@ -939,9 +1018,16 @@ internal static class FuwenInferenceCoordinator
                             _ => InferenceTurnRole.User,
                         },
                         text,
-                        message.ToolCallId));
+                        message.ToolCallId,
+                        message.ProtectedPayload?.Descriptor,
+                        message.ToolCalls?.Select(call => new InferenceToolCallProposal(
+                            call.CallId,
+                            new DescriptorReference(DescriptorKind.Tool, call.ToolName, call.ToolVersion,
+                                new ContentDigest(call.DigestAlgorithm, call.DigestContract, call.DigestValue)),
+                            call.ArgumentsJson)).ToArray()));
                 }
                 var request = new InferenceTurnRequest(
+                    node.Protocol!.BudgetEnforcement,
                     state.InteractionId,
                     ordinal,
                     conversation,
@@ -1023,6 +1109,13 @@ internal static class FuwenInferenceCoordinator
                 catch (Penghou.Zhinu.ZhinuException)
                 {
                     throw;
+                }
+                catch (InferenceTurnFailureException exception)
+                {
+                    if (budgetQuote is not null)
+                        await RetainBudgetUncertaintyAsync(budgetLedger!, state.InteractionId, operationId).ConfigureAwait(false);
+                    stopwatch.Stop();
+                    return TurnRecord(ToRecord(exception.Failure), stopwatch.ElapsedMilliseconds);
                 }
                 catch (Exception exception)
                 {
@@ -1149,7 +1242,7 @@ internal static class FuwenInferenceCoordinator
                 proposal.CallId, proposal.Tool.Name, proposal.Tool.Version,
                 proposal.Tool.ContentDigest.Algorithm, proposal.Tool.ContentDigest.Contract, proposal.Tool.ContentDigest.Value,
                 proposal.ArgumentsJson)).ToList(),
-            ToUsageRecord(result.Usage), null, elapsedMilliseconds));
+            ToUsageRecord(result.Usage), null, elapsedMilliseconds, calls.AssistantText));
     }
 
     private static JsonElement TurnRecord(FailureRecord failure, long elapsedMilliseconds) =>
@@ -1157,7 +1250,7 @@ internal static class FuwenInferenceCoordinator
 
     private sealed record UsageRecord(int? Prompt, int? Completion, int? Total, long? CostMicrounits, string? CostCurrency, string? CostRevision, bool CostEstimated);
     private sealed record ProposalRecord(string CallId, string ToolName, string ToolVersion, string DigestAlgorithm, string DigestContract, string DigestValue, string ArgumentsJson);
-    private sealed record TurnOutputRecord(string Status, string? Candidate, List<ProposalRecord> Proposals, UsageRecord? Usage, FailureRecord? Failure, long? ElapsedMs = null);
+    private sealed record TurnOutputRecord(string Status, string? Candidate, List<ProposalRecord> Proposals, UsageRecord? Usage, FailureRecord? Failure, long? ElapsedMs = null, string? AssistantText = null);
 
     private static UsageRecord? ToUsageRecord(InferenceTurnUsage? usage) => usage is null
         ? null
@@ -1250,7 +1343,10 @@ internal static class FuwenInferenceCoordinator
             : 0;
         var visibleTools = remainingToolCalls == 0
             ? Array.Empty<InferenceToolRequirement>()
-            : (node.Tools ?? []).Select(static tool => new InferenceToolRequirement(tool)).ToArray();
+            : (node.Tools ?? []).Select(tool => new InferenceToolRequirement(
+                tool,
+                modelContract: ModelFacingToolContractBuilder.Build(
+                    tool, trustedToolSignatures[tool], plan.Schemas))).ToArray();
         var failure = record.Proposals.Count > remainingToolCalls
             ? new ExecutionFailure(
                 ExecutionFailureKind.Contract,
@@ -1283,21 +1379,8 @@ internal static class FuwenInferenceCoordinator
         }).ToList();
         state.PendingIndex = 0;
         state.Phase = "tool";
-        var summary = new StringBuilder("{\"toolCalls\":[");
-        for (var i = 0; i < record.Proposals.Count; i++)
-        {
-            if (i > 0)
-                summary.Append(',');
-            summary.Append("{\"callId\":")
-                .Append(JsonSerializer.Serialize(record.Proposals[i].CallId))
-                .Append(",\"tool\":")
-                .Append(JsonSerializer.Serialize(record.Proposals[i].ToolName + "@" + record.Proposals[i].ToolVersion))
-                .Append(",\"arguments\":")
-                .Append(record.Proposals[i].ArgumentsJson)
-                .Append('}');
-        }
-        summary.Append("]}");
-        if (!TryAppendMessage(effective, state, new MessageRecord("assistant", summary.ToString(), null)))
+        if (!TryAppendMessage(effective, state, new MessageRecord(
+            "assistant", record.AssistantText ?? string.Empty, null, ToolCalls: record.Proposals)))
         {
             state.Failure = ToRecord(new ExecutionFailure(
                 ExecutionFailureKind.Contract,
@@ -1683,6 +1766,9 @@ internal static class FuwenInferenceCoordinator
                 total += existingLength;
             else if (existing.Text is not null)
                 total += Encoding.UTF8.GetByteCount(existing.Text);
+            if (existing.ToolCalls is not null)
+                total += existing.ToolCalls.Sum(static call =>
+                    Encoding.UTF8.GetByteCount(call.ArgumentsJson) + Encoding.UTF8.GetByteCount(call.CallId));
         }
         if (message.ProtectedPayload?.ByteLength is long messageLength)
             total += messageLength;
@@ -1690,6 +1776,9 @@ internal static class FuwenInferenceCoordinator
             total += Encoding.UTF8.GetByteCount(message.Text);
         else
             return false;
+        if (message.ToolCalls is not null)
+            total += message.ToolCalls.Sum(static call =>
+                Encoding.UTF8.GetByteCount(call.ArgumentsJson) + Encoding.UTF8.GetByteCount(call.CallId));
         if (total > cap)
             return false;
         state.Conversation.Add(message);

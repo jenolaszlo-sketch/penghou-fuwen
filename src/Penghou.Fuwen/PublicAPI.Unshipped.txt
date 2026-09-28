@@ -60,10 +60,13 @@ Penghou.Fuwen.IInferenceTurnExecutorManifest
 Penghou.Fuwen.IInferenceTurnExecutorManifest.PreflightTurnDetailed(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.InferencePreflightReport!
 Penghou.Fuwen.IInferenceTurnExecutorManifest.TurnFeatureManifest.get -> Penghou.Fuwen.InferenceFeatureManifest!
 Penghou.Fuwen.InferenceConversationMessage
-Penghou.Fuwen.InferenceConversationMessage.InferenceConversationMessage(Penghou.Fuwen.InferenceTurnRole role, string! text, string? toolCallId = null) -> void
+Penghou.Fuwen.InferenceConversationMessage.InferenceConversationMessage(Penghou.Fuwen.InferenceTurnRole role, string! text, string? toolCallId = null, Penghou.Fuwen.DescriptorReference? tool = null, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolCallProposal!>? toolCalls = null) -> void
 Penghou.Fuwen.InferenceConversationMessage.Role.get -> Penghou.Fuwen.InferenceTurnRole
 Penghou.Fuwen.InferenceConversationMessage.Text.get -> string!
+Penghou.Fuwen.InferenceConversationMessage.Tool.get -> Penghou.Fuwen.DescriptorReference?
 Penghou.Fuwen.InferenceConversationMessage.ToolCallId.get -> string?
+Penghou.Fuwen.InferenceConversationMessage.ToolCalls.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolCallProposal!>?
+Penghou.Fuwen.InferenceConversationMessage.ToolName.get -> string?
 Penghou.Fuwen.InferenceExecutionRequirement.InferenceExecutionRequirement(Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference? promptTemplate, string? promptDigest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? tools, bool hasContextInputs, Penghou.Fuwen.InferenceModality? modality, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolRequirement!>? toolRequirements = null, Penghou.Fuwen.InferenceLimitSet? limits = null, Penghou.Fuwen.InferenceRecoveryQuality minimumRecoveryQuality = Penghou.Fuwen.InferenceRecoveryQuality.Unsupported, int? maximumContextPayloadUtf8Bytes = null, bool requiresExactUsageEvidence = false, bool requiresExactPricingEvidence = false, bool requiresStructuredOutput = false) -> void
 Penghou.Fuwen.InferenceExecutionRequirement.InferenceExecutionRequirement(bool requiresHardCompletionTokenLimit, Penghou.Fuwen.DescriptorReference! profile, Penghou.Fuwen.DescriptorReference? promptTemplate, string? promptDigest, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.DescriptorReference!>? tools, bool hasContextInputs, Penghou.Fuwen.InferenceModality? modality, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolRequirement!>? toolRequirements = null, Penghou.Fuwen.InferenceLimitSet? limits = null, Penghou.Fuwen.InferenceRecoveryQuality minimumRecoveryQuality = Penghou.Fuwen.InferenceRecoveryQuality.Unsupported, int? maximumContextPayloadUtf8Bytes = null, bool requiresExactUsageEvidence = false, bool requiresExactPricingEvidence = false, bool requiresStructuredOutput = false) -> void
 Penghou.Fuwen.InferenceExecutionRequirement.Limits.get -> Penghou.Fuwen.InferenceLimitSet!
@@ -244,7 +247,8 @@ Penghou.Fuwen.InferenceToolCallProposal.CallId.get -> string!
 Penghou.Fuwen.InferenceToolCallProposal.InferenceToolCallProposal(string! callId, Penghou.Fuwen.DescriptorReference! tool, string! argumentsJson) -> void
 Penghou.Fuwen.InferenceToolCallProposal.Tool.get -> Penghou.Fuwen.DescriptorReference!
 Penghou.Fuwen.InferenceToolCallTurnResult
-Penghou.Fuwen.InferenceToolCallTurnResult.InferenceToolCallTurnResult(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolCallProposal!>! proposals, Penghou.Fuwen.InferenceTurnUsage? usage = null) -> void
+Penghou.Fuwen.InferenceToolCallTurnResult.InferenceToolCallTurnResult(System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolCallProposal!>! proposals, Penghou.Fuwen.InferenceTurnUsage? usage = null, string? assistantText = null) -> void
+Penghou.Fuwen.InferenceToolCallTurnResult.AssistantText.get -> string?
 Penghou.Fuwen.InferenceToolCallTurnResult.Proposals.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolCallProposal!>!
 Penghou.Fuwen.InferenceToolEffect
 Penghou.Fuwen.InferenceToolEffect.Destructive = 3 -> Penghou.Fuwen.InferenceToolEffect
@@ -265,7 +269,16 @@ Penghou.Fuwen.InferenceToolOutcomeEvidence.Tool.get -> Penghou.Fuwen.DescriptorR
 Penghou.Fuwen.InferenceToolRequirement
 Penghou.Fuwen.InferenceToolRequirement.Descriptor.get -> Penghou.Fuwen.DescriptorReference!
 Penghou.Fuwen.InferenceToolRequirement.Effect.get -> Penghou.Fuwen.InferenceToolEffect
-Penghou.Fuwen.InferenceToolRequirement.InferenceToolRequirement(Penghou.Fuwen.DescriptorReference! descriptor, Penghou.Fuwen.InferenceToolEffect effect = Penghou.Fuwen.InferenceToolEffect.ReadOnly) -> void
+Penghou.Fuwen.InferenceToolRequirement.InferenceToolRequirement(Penghou.Fuwen.DescriptorReference! descriptor, Penghou.Fuwen.InferenceToolEffect effect = Penghou.Fuwen.InferenceToolEffect.ReadOnly, Penghou.Fuwen.InferenceModelToolContract? modelContract = null) -> void
+Penghou.Fuwen.InferenceToolRequirement.ModelContract.get -> Penghou.Fuwen.InferenceModelToolContract?
+Penghou.Fuwen.InferenceModelToolContract
+Penghou.Fuwen.InferenceModelToolContract.ContractDigest.get -> string!
+Penghou.Fuwen.InferenceModelToolContract.DescriptorDigest.get -> string!
+Penghou.Fuwen.InferenceModelToolContract.InferenceModelToolContract(string! providerName, string! parametersSchemaJson, string! resultSchemaJson, string! descriptorDigest, string! validatorIdentity, string! contractDigest) -> void
+Penghou.Fuwen.InferenceModelToolContract.ParametersSchemaJson.get -> string!
+Penghou.Fuwen.InferenceModelToolContract.ProviderName.get -> string!
+Penghou.Fuwen.InferenceModelToolContract.ResultSchemaJson.get -> string!
+Penghou.Fuwen.InferenceModelToolContract.ValidatorIdentity.get -> string!
 Penghou.Fuwen.InferenceTurnRequest
 Penghou.Fuwen.InferenceTurnRequest.Conversation.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceConversationMessage!>!
 Penghou.Fuwen.InferenceTurnRequest.InferenceTurnRequest(string! interactionId, int turnOrdinal, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceConversationMessage!>! conversation, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolRequirement!>! visibleTools, Penghou.Fuwen.InferenceLimitSet? remainingLimits = null, int? maximumNewToolCalls = null, int? maxCompletionTokens = null, int? timeoutSeconds = null) -> void
@@ -1246,3 +1259,8 @@ Penghou.Fuwen.InferenceTurnBudgetQuote.MaximumCompletionTokens.get -> long?
 Penghou.Fuwen.InferenceTurnBudgetQuote.MaximumCost.get -> Penghou.Fuwen.InferenceCostEvidence?
 Penghou.Fuwen.InferenceTurnBudgetQuote.MaximumPromptTokens.get -> long?
 Penghou.Fuwen.InferenceTurnBudgetQuote.MaximumTotalTokens.get -> long?
+Penghou.Fuwen.InferenceTurnFailureException
+Penghou.Fuwen.InferenceTurnFailureException.Failure.get -> Penghou.Fuwen.ExecutionFailure!
+Penghou.Fuwen.InferenceTurnFailureException.InferenceTurnFailureException(Penghou.Fuwen.ExecutionFailure! failure) -> void
+Penghou.Fuwen.InferenceTurnRequest.BudgetEnforcement.get -> Penghou.Fuwen.InferenceBudgetEnforcement
+Penghou.Fuwen.InferenceTurnRequest.InferenceTurnRequest(Penghou.Fuwen.InferenceBudgetEnforcement budgetEnforcement, string! interactionId, int turnOrdinal, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceConversationMessage!>! conversation, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolRequirement!>! visibleTools, Penghou.Fuwen.InferenceLimitSet? remainingLimits = null, int? maximumNewToolCalls = null, int? maxCompletionTokens = null, int? timeoutSeconds = null) -> void

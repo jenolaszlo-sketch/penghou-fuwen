@@ -169,7 +169,7 @@ coordinated-inference guarantee.
 `Penghou.Fuwen.Baize` resolves host-owned logical bindings to exact Baize
 endpoints and records provider/model, usage, timing, and publication evidence.
 The current source also contains a durable bounded inference coordinator, but
-coordinated model → read-tool → model execution remains **limited/experimental**.
+coordinated model → read-tool → model execution remains **limited/experimental**. A stock BaizeInferenceTurnExecutor now supplies a configured one-turn transport with native assistant calls, matching tool results, and exact provider-facing schemas.
 Its corrective work now covers run/request identity, final usage and cost
 settlement, currency and pricing-revision checks, selected-executor preflight, evidence size,
 completion-token capability checks, protected successful tool results, and
@@ -179,10 +179,7 @@ runtime argument/result validation.
 
 Authored prompt, total-token, and cost limits are strict by default and currently fail coordinated registration before paid work. An optional SQLite leaf ledger can now durably reserve a selected executor’s pre-call maximum, settle known usage, and retain uncertain charges. The host-configured Baize path has no trustworthy maximum-charge quote, so this does not yet open strict admission. Explicit `aggregate advisory` enables after-call monitoring; host strict ceilings cannot be downgraded.
 
-Before a production claim, this path still needs provider-facing tool schemas
-and resource grants, hard pre-call prompt/total-token/cost enforcement,
-protection of other sensitive journal content, complete ambiguous-call
-recovery, and a stock Baize turn adapter. Older in-flight coordinator journals
+Before a production claim, this path still needs resource grants, hard pre-call prompt/total-token/cost enforcement, protection of other sensitive journal content, and complete ambiguous-call recovery. Provider continuation blobs and resolved endpoint/pricing identity are not yet carried by the normalized turn result. Unsupported continuation shapes fail with possible-commitment evidence. Older in-flight coordinator journals
 need migration or an explicit stop. See the [capability matrix](docs/capability-matrix.md),
 [corrective plan](docs/inference-hardening-v2-prep-plan-2026-09-27.md), and
 [consumer migration notes](docs/consumer-migration.md).

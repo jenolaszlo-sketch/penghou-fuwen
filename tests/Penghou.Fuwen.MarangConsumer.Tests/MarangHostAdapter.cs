@@ -60,7 +60,7 @@ internal static class MarangScenario
 
         workflow marang_planning(objective: string) -> PlanningResult {
           context workspace = context "{{{MarangDescriptors.Pin(MarangDescriptors.Workspace)}}}" (revision: "main@scenario-fixed-revision";) -> json;
-          infer planning = infer "{{{MarangDescriptors.Pin(MarangDescriptors.Profile)}}}" prompt marang_planning(objective: input;) tools marang_read_tools with workspace limits maxTokens 800 timeout 30 aggregate turns 3 modelCalls 3 toolCalls 4 promptTokens 12000 completionTokens 3000 totalTokens 15000 durationMs 90000 toolArgumentBytes 24000 toolResultBytes 24000 -> PlanningResult;
+          infer planning = infer "{{{MarangDescriptors.Pin(MarangDescriptors.Profile)}}}" prompt marang_planning(objective: input;) tools marang_read_tools with workspace limits timeout 30 aggregate advisory turns 3 modelCalls 3 toolCalls 4 promptTokens 12000 totalTokens 15000 durationMs 90000 toolArgumentBytes 24000 toolResultBytes 24000 -> PlanningResult;
           activity promote = activity "{{{MarangDescriptors.Pin(MarangDescriptors.Promote)}}}" (proposal: planning.proposedMutation; approved: planning.requiresExplicitActivity;) -> string;
           return planning;
         }
@@ -88,9 +88,31 @@ internal static class MarangScenario
                         new SchemaField("requiresExplicitActivity", boolean),
                     ])),
             new TrustedCatalogueDescriptor(MarangDescriptors.Profile, callableContract: Simple(text)),
-            new TrustedCatalogueDescriptor(MarangDescriptors.Search, callableContract: Simple(text)),
-            new TrustedCatalogueDescriptor(MarangDescriptors.ReadFile, callableContract: Simple(text)),
-            new TrustedCatalogueDescriptor(MarangDescriptors.Impact, callableContract: Simple(text)),
+            new TrustedCatalogueDescriptor(
+                MarangDescriptors.Search,
+                callableContract: new CallableContract(
+                    new CallableSignature(
+                    [
+                        new CallableParameter("query", text),
+                        new CallableParameter("pathPrefix", text),
+                        new CallableParameter("maxResults", new PrimitiveType(FuwenPrimitiveKind.Integer)),
+                    ], json),
+                    CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+            new TrustedCatalogueDescriptor(
+                MarangDescriptors.ReadFile,
+                callableContract: new CallableContract(
+                    new CallableSignature(
+                    [
+                        new CallableParameter("path", text),
+                        new CallableParameter("startLine", new PrimitiveType(FuwenPrimitiveKind.Integer)),
+                        new CallableParameter("endLine", new PrimitiveType(FuwenPrimitiveKind.Integer)),
+                    ], json),
+                    CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+            new TrustedCatalogueDescriptor(
+                MarangDescriptors.Impact,
+                callableContract: new CallableContract(
+                    new CallableSignature([new CallableParameter("request", text)], json),
+                    CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
             new TrustedCatalogueDescriptor(
                 MarangDescriptors.Workspace,
                 callableContract: new CallableContract(
@@ -115,7 +137,6 @@ internal static class MarangScenario
         new InferenceLimit(InferenceLimitDimension.Turns, 4),
         new InferenceLimit(InferenceLimitDimension.ModelCalls, 4),
         new InferenceLimit(InferenceLimitDimension.ToolCalls, 6),
-        new InferenceLimit(InferenceLimitDimension.TotalTokens, 18000),
         new InferenceLimit(InferenceLimitDimension.DurationMilliseconds, 120000),
         new InferenceLimit(InferenceLimitDimension.ToolArgumentBytes, 32000),
         new InferenceLimit(InferenceLimitDimension.ToolResultBytes, 32000),

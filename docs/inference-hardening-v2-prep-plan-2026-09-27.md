@@ -322,14 +322,14 @@ Use representative full paths across sequential, repeat and fan-out when support
 | --- | --- | --- | --- | --- |
 | FI-00 baseline/containment | Partial | `14b9c54` | Review and portable regression seed recorded | Consumer and additional contract probes open. |
 | FI-01 identity/admission/contracts | Partial | `14b9c54` | Run/request identity and selected-executor preflight | Migration and remaining admission gates open. |
-| FI-02 budgets/bounds | Partial | `14b9c54` plus current work | Final settlement, overflow handling, evidence cap, hard completion-token capability, currency-bound host cost ceilings, revision consistency, remaining-cost requests, optional SQLite leaf reservations and quote/settlement contracts | Prompt, total-token and cost strict admission remains closed: the configured Baize path has no trusted maximum quote or stock turn executor; the leaf ledger identity is bound to replay. |
+| FI-02 budgets/bounds | Partial | `14b9c54` plus current work | Final settlement, overflow handling, evidence cap, hard completion-token capability, currency-bound host cost ceilings, revision consistency, remaining-cost requests, optional SQLite leaf reservations and quote/settlement contracts | Prompt, total-token and cost strict admission remains closed: the configured Baize endpoint has no trusted maximum quote; the stock turn executor is present and the leaf ledger identity is bound to replay. |
 | FI-03 protected durable recovery | Partial | `14b9c54` | Host protected store for successful tool results and verified replay | Other sensitive paths and crash matrix open. |
-| FI-04 protocol/type validation | Partial | `14b9c54` plus current work | Zero-tool finalization, whole-batch allowance rejection, unique provider-visible names, admitted callable signatures and typed arguments/results | Provider-facing schema contract, resource grants, pure transitions and failure distinctions open. |
-| FI-05 Baize integration | Not started | — | — | — |
-| FI-06 inspection/reference host | Not started | — | — | — |
+| FI-04 protocol/type validation | Partial | `14b9c54` plus current work | Zero-tool finalization, whole-batch allowance rejection, unique provider-visible names, admitted callable signatures, typed arguments/results, model-facing schemas and native tool history | Resource grants, pure transitions and broader failure distinctions open. |
+| FI-05 Baize integration | Partial | Current work | Stock single-turn Baize executor, exact configured profile/tool schemas, native call identities, typed failure, deterministic transport tests | Provider continuation/provenance fields, multi-profile consumer, live-provider proof open. |
+| FI-06 inspection/reference host | Partial | Current work | Review package consumer renders human/JSON preflight and post-run evidence, including a failed run | Durable query/admin commands and standalone walkthrough open. |
 | FI-07 authored failure handling | Not started | — | — | — |
 | FI-08 fan-out/composition | Not started | — | — | — |
 | FI-09 V2 preparation | Not started | — | — | — |
-| FI-10 documentation/release validation | Partial | Current work | README, roadmap, capability, migration and release claims being reconciled | Package consumers, format, pack and live gates open. |
+| FI-10 documentation/release validation | Partial | Current work | README, capability, migration, scenario and release claims reconciled for this slice | Release solution: 757 tests per framework; local pack; Review 2/2 and Marang 7/7 per framework from packages; format and canonical vector pass. Roadmap remains user-edited; live provider, independent review and downstream pilot gates open. |
 
 Completion of the corrective slice, the requested next features, V2 preparation, and actual V2 delivery are four separate claims. Keep them separate in the final implementation report.

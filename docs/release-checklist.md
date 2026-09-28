@@ -30,6 +30,7 @@ not satisfy a semantic release gate.
 - [ ] Every packable project produces an `.nupkg` and `.snupkg`; package
   validation reports no unintended compatibility change.
 - [ ] A clean restore and consumer sample build use only public packages.
+- [ ] The stock Baize turn adapter is exercised through packed-package consumers with exact schemas and native tool-call history; live-provider conformance is recorded separately.
 
 ## Evidence and safety
 

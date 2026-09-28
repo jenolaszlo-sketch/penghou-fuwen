@@ -15,6 +15,8 @@ These changes are in the source tree and are **not yet a published NuGet
 version**. Rebuild and test adapters and hosts before selecting a future
 preview tag.
 
+- **Coordinated turn requests:** InferenceTurnRequest.BudgetEnforcement now carries the admitted strict/advisory mode. The legacy constructor defaults to strict. Custom turn executors may honor advisory prompt, total-token and cost allowances as monitoring only; they must reject unsupported hard ceilings before submission. Assistant history now carries native ToolCalls, and tool results carry the exact Tool descriptor. Preserve these fields when adapting provider conversations. InferenceToolCallTurnResult.AssistantText retains mixed text/tool responses. InferenceTurnFailureException preserves pre-submit versus possibly committed failures.
+- **Baize hosts:** BaizeInferenceTurnExecutor can bind an exact configured profile and tool schemas for coordinated turns. It makes one provider call per turn and does not supply a trusted maximum-charge quote; strict aggregate prompt, total-token and cost registration remains closed. Unsupported provider continuation blobs fail with possible-commitment evidence.
 - **Coordinated turn executors:** implement
   `IInferenceTurnExecutorManifest` on the selected executor. When the authored
   plan or host sets a completion-token ceiling, advertise
@@ -46,8 +48,7 @@ preview tag.
   receive the remaining monetary allowance; mixed pricing revisions produce
   unknown aggregate cost.
 - **Persisted runs:** interaction and operation-key identities changed, and
-  coordinator state now binds admitted tool signatures as well as protected
-  tool payload semantics. Do not
+  coordinator state now binds admitted tool signatures and native assistant/tool history as well as protected tool payload semantics. Do not
   resume an older in-flight coordinator journal with the new implementation
   unless it is explicitly migrated; the runtime stops unsupported state.
   Plan IR and package versions are separate from this journal contract.

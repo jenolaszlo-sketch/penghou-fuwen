@@ -37,6 +37,7 @@ contract versions. Consumer-visible breaking changes are called out under
   pricing revisions as unknown rather than summing them. Coordinator state
   semantics advance again, so older in-flight runs require migration or stop.
 - Enforce coordinated per-call deadlines through cancellation while retaining possibly-committed timeout evidence. Strict prompt, total-token, and cost ceilings now fail admission before paid work until a durable reservation and trusted maximum-charge path exists. Authors may explicitly select `aggregate advisory` for after-call monitoring; host strict ceilings cannot be downgraded.
+- Add a stock Baize coordinated-turn executor with exact profile/tool schema preflight, native assistant/tool history, bounded one-call transport and typed commitment failures. Carry explicit strict/advisory budget mode in requests; derive model-facing schemas from admitted callable signatures. Durable coordinator state advances to v5 and older in-flight states stop. Provider continuation blobs and resolved endpoint metadata remain unsupported on this contract.
 - Reconcile README and capability documentation with the still-open budget,
   recovery, privacy, provider, and operator gates. No new NuGet package is
   published by these source changes.

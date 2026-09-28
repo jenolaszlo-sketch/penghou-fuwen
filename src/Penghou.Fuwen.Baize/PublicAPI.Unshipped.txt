@@ -106,5 +106,10 @@ Penghou.Fuwen.Baize.BaizeInferenceExecutor.ExecuteAsync(Penghou.Fuwen.InferenceE
 Penghou.Fuwen.Baize.BaizeInferenceExecutor.FeatureManifest.get -> Penghou.Fuwen.InferenceFeatureManifest!
 Penghou.Fuwen.Baize.BaizeInferenceExecutor.Preflight(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.ExecutionFailure?
 Penghou.Fuwen.Baize.BaizeInferenceExecutor.PreflightDetailed(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.InferencePreflightReport!
+Penghou.Fuwen.Baize.BaizeInferenceTurnExecutor
+Penghou.Fuwen.Baize.BaizeInferenceTurnExecutor.BaizeInferenceTurnExecutor(Penghou.Fuwen.Baize.BaizeInferenceBinding! binding) -> void
+Penghou.Fuwen.Baize.BaizeInferenceTurnExecutor.ExecuteTurnAsync(Penghou.Fuwen.InferenceTurnRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceTurnResult!>
+Penghou.Fuwen.Baize.BaizeInferenceTurnExecutor.PreflightTurnDetailed(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.InferencePreflightReport!
+Penghou.Fuwen.Baize.BaizeInferenceTurnExecutor.TurnFeatureManifest.get -> Penghou.Fuwen.InferenceFeatureManifest!
 static Penghou.Fuwen.Baize.BaizeOneTurnMapper.MapToolCalls(System.Collections.Generic.IReadOnlyList<Penghou.Baize.LlmToolCall!>? toolCalls, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Baize.BaizeToolBinding!>! declaredTools, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolRequirement!>! visibleRequirements, int maximumArgumentBytes) -> (System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolCallProposal!>? Proposals, Penghou.Fuwen.ExecutionFailure? Failure)
 static Penghou.Fuwen.Baize.BaizeOneTurnMapper.MapUsage(Penghou.Baize.LlmUsage? usage) -> Penghou.Fuwen.InferenceTurnUsage!

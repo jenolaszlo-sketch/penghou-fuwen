@@ -41,7 +41,7 @@ public sealed class ReviewConsumerTests
         }
 
         workflow doc_review(target: string) -> string {
-          infer review = infer "{{{Pin(Profile)}}}" prompt review_doc(target: input;) tools review_tools limits maxTokens 200 timeout 30 aggregate turns 2 modelCalls 2 toolCalls 2 totalTokens 4000 durationMs 60000 -> string;
+          infer review = infer "{{{Pin(Profile)}}}" prompt review_doc(target: input;) tools review_tools limits timeout 30 aggregate advisory turns 2 modelCalls 2 toolCalls 2 totalTokens 4000 durationMs 60000 -> string;
           return review;
         }
         """;
@@ -55,8 +55,12 @@ public sealed class ReviewConsumerTests
         return new InMemoryTrustedCatalogue(
         [
             new TrustedCatalogueDescriptor(Profile, callableContract: Simple(text)),
-            new TrustedCatalogueDescriptor(Read, callableContract: Simple(text)),
-            new TrustedCatalogueDescriptor(Checklist, callableContract: Simple(text)),
+            new TrustedCatalogueDescriptor(Read, callableContract: new CallableContract(
+                new CallableSignature([new CallableParameter("section", text)], new PrimitiveType(FuwenPrimitiveKind.Json)),
+                CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
+            new TrustedCatalogueDescriptor(Checklist, callableContract: new CallableContract(
+                new CallableSignature([new CallableParameter("request", text)], new PrimitiveType(FuwenPrimitiveKind.Json)),
+                CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe)),
         ]);
     }
 
@@ -105,7 +109,6 @@ public sealed class ReviewConsumerTests
     public async Task Compiles_admits_runs_and_returns_a_typed_review()
     {
         var ct = TestContext.Current.CancellationToken;
-        var admission = await AdmitAsync(ct);
         var turns = new DeterministicFakeTurnExecutor(
         [
             new InferenceToolCallTurnResult(
@@ -113,6 +116,22 @@ public sealed class ReviewConsumerTests
                 new InferenceTurnUsage(200, 30, 230)),
             new InferenceFinalCandidateResult("\"Reads clearly; checklist passes.\"", new InferenceTurnUsage(260, 40, 300)),
         ]);
+        var preflight = turns.PreflightTurnDetailed(new InferenceExecutionRequirement(
+            Profile,
+            promptTemplate: null,
+            promptDigest: "review-doc/v1",
+            tools: [Read, Checklist],
+            hasContextInputs: false,
+            modality: InferenceModality.StructuredText,
+            toolRequirements:
+            [
+                new InferenceToolRequirement(Read, InferenceToolEffect.ReadOnly),
+                new InferenceToolRequirement(Checklist, InferenceToolEffect.ReadOnly),
+            ]));
+        preflight.IsExecutable.Should().BeTrue(InferencePreflightReportRenderer.RenderHuman(preflight));
+        InferencePreflightReportRenderer.RenderJson(preflight).Should().Contain("\"executable\":true");
+
+        var admission = await AdmitAsync(ct);
         var tools = new ReviewReadTools();
         var sink = new ReviewEvidenceSink();
         var registration = await new FuwenZhinuWorkflowFactory(
@@ -123,7 +142,7 @@ public sealed class ReviewConsumerTests
                 new FuwenZhinuExecutionPorts(
                     new UnusedActivity(), new UnusedContext(), new UnusedInference(),
                     observer: null, new FuwenZhinuExecutionPorts.Options(), turns, tools,
-                    evidenceSink: sink))
+                    inferenceHostCeilings: null, evidenceSink: sink, protectedPayloadStore: new InMemoryProtectedPayloadStore()))
             .CreateAsync("doc_review", "1", admission, ct);
         var root = NewRoot();
 
@@ -174,7 +193,9 @@ public sealed class ReviewConsumerTests
                     admission.Receipt.ResolvedDescriptorSetFingerprint),
                 new FuwenZhinuExecutionPorts(
                     new UnusedActivity(), new UnusedContext(), new UnusedInference(),
-                    observer: null, new FuwenZhinuExecutionPorts.Options(), turns, tools))
+                    observer: null, new FuwenZhinuExecutionPorts.Options(), turns, tools,
+                    inferenceHostCeilings: null, evidenceSink: null,
+                    protectedPayloadStore: new InMemoryProtectedPayloadStore()))
             .CreateAsync("doc_review", "1", admission, ct);
         var root = NewRoot();
 
@@ -192,7 +213,8 @@ public sealed class ReviewConsumerTests
             var runId = await engine.StartAsync("doc_review", "1", Input("intro.md"), cancellationToken: ct);
             await engine.ExecuteAsync(runId, ct);
 
-            (await engine.GetRunAsync(runId, ct))!.Status.Should().Be(WorkflowStatus.Failed);
+            var inspectedRun = (await engine.GetRunAsync(runId, ct))!;
+            inspectedRun.Status.Should().Be(WorkflowStatus.Failed);
             tools.Requests.Should().BeEmpty();
         }
         finally { DeleteDirectory(root); }

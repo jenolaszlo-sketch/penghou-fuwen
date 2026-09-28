@@ -248,7 +248,10 @@ public sealed partial class FuwenInferenceCoordinatorTests
 
             var secondTurn = turns.ObservedRequests[1];
             secondTurn.Conversation.Should().Contain(message =>
-                message.Role == InferenceTurnRole.Tool && message.ToolCallId == "call-1");
+                message.Role == InferenceTurnRole.Tool && message.ToolCallId == "call-1" && message.Tool == Search);
+            secondTurn.Conversation.Should().Contain(message =>
+                message.Role == InferenceTurnRole.Assistant && message.ToolCalls != null && message.ToolCalls.Count == 1 &&
+                message.ToolCalls[0].CallId == "call-1" && message.ToolCalls[0].Tool == Search);
         }
         finally { DeleteDirectory(root); }
     }

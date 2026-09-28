@@ -143,7 +143,10 @@ public sealed class InferenceLimitSet
 public sealed class InferenceToolRequirement
 {
     /// <summary>Creates one detached tool requirement.</summary>
-    public InferenceToolRequirement(DescriptorReference descriptor, InferenceToolEffect effect = InferenceToolEffect.ReadOnly)
+    public InferenceToolRequirement(
+        DescriptorReference descriptor,
+        InferenceToolEffect effect = InferenceToolEffect.ReadOnly,
+        InferenceModelToolContract? modelContract = null)
     {
         if (descriptor is null)
             throw new ArgumentNullException(nameof(descriptor));
@@ -153,12 +156,74 @@ public sealed class InferenceToolRequirement
             throw new ArgumentOutOfRangeException(nameof(effect));
         Descriptor = RuntimeValueSnapshot.CloneDescriptor(descriptor);
         Effect = effect;
+        if (modelContract is not null && modelContract.DescriptorDigest != descriptor.ContentDigest.Value)
+            throw new ArgumentException("The model-facing contract must bind the exact tool descriptor digest.", nameof(modelContract));
+        ModelContract = modelContract is null ? null : new InferenceModelToolContract(
+            modelContract.ProviderName,
+            modelContract.ParametersSchemaJson,
+            modelContract.ResultSchemaJson,
+            modelContract.DescriptorDigest,
+            modelContract.ValidatorIdentity,
+            modelContract.ContractDigest);
     }
 
     /// <summary>The exact admitted tool descriptor.</summary>
     public DescriptorReference Descriptor { get; }
     /// <summary>The effect class the host must authorize.</summary>
     public InferenceToolEffect Effect { get; }
+    /// <summary>The exact provider-facing parameter and result schemas, when admitted from a trusted callable signature.</summary>
+    public InferenceModelToolContract? ModelContract { get; }
+}
+
+/// <summary>Provider-facing JSON schemas bound to one exact trusted tool descriptor and validator.</summary>
+public sealed class InferenceModelToolContract
+{
+    /// <summary>Creates a detached, bounded provider-facing tool contract.</summary>
+    public InferenceModelToolContract(
+        string providerName,
+        string parametersSchemaJson,
+        string resultSchemaJson,
+        string descriptorDigest,
+        string validatorIdentity,
+        string contractDigest)
+    {
+        ProviderName = RuntimeValueSnapshot.Text(providerName, nameof(providerName), 128);
+        if (ProviderName.Any(char.IsControl)) throw new ArgumentException("Provider tool names cannot contain control characters.", nameof(providerName));
+        ParametersSchemaJson = RuntimeValueSnapshot.Text(parametersSchemaJson, nameof(parametersSchemaJson), 32_768);
+        ResultSchemaJson = RuntimeValueSnapshot.Text(resultSchemaJson, nameof(resultSchemaJson), 32_768);
+        DescriptorDigest = RuntimeValueSnapshot.Text(descriptorDigest, nameof(descriptorDigest), 256);
+        ValidatorIdentity = RuntimeValueSnapshot.Text(validatorIdentity, nameof(validatorIdentity), 128);
+        ContractDigest = RuntimeValueSnapshot.Text(contractDigest, nameof(contractDigest), 256);
+        ValidateSchema(ParametersSchemaJson, nameof(parametersSchemaJson));
+        ValidateSchema(ResultSchemaJson, nameof(resultSchemaJson));
+    }
+
+    /// <summary>The exact name sent to the model provider.</summary>
+    public string ProviderName { get; }
+    /// <summary>JSON Schema describing the required argument object.</summary>
+    public string ParametersSchemaJson { get; }
+    /// <summary>JSON Schema describing the host tool result.</summary>
+    public string ResultSchemaJson { get; }
+    /// <summary>Value of the exact admitted tool descriptor digest.</summary>
+    public string DescriptorDigest { get; }
+    /// <summary>Stable identity of the trusted Fuwen runtime validator.</summary>
+    public string ValidatorIdentity { get; }
+    /// <summary>Digest of this full provider-facing contract.</summary>
+    public string ContractDigest { get; }
+
+    private static void ValidateSchema(string json, string parameter)
+    {
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(json, new System.Text.Json.JsonDocumentOptions { MaxDepth = 32 });
+            if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+                throw new ArgumentException("A tool schema must be a JSON object.", parameter);
+        }
+        catch (System.Text.Json.JsonException exception)
+        {
+            throw new ArgumentException("A tool schema must be valid bounded JSON.", parameter, exception);
+        }
+    }
 }
 
 /// <summary>Provider-neutral immutable capabilities exposed by one inference adapter.</summary>

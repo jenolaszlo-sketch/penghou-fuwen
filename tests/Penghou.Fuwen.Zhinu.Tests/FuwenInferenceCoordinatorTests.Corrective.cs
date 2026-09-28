@@ -174,7 +174,7 @@ public sealed partial class FuwenInferenceCoordinatorTests
             turns, ct: TestContext.Current.CancellationToken);
 
         await act.Should().ThrowAsync<FuwenZhinuAdmissionException>()
-            .WithMessage("*no durable pre-call reservation*");
+            .WithMessage("*no provider-backed maximum-charge guarantee*");
         turns.ObservedRequests.Should().BeEmpty();
     }
 
@@ -189,7 +189,7 @@ public sealed partial class FuwenInferenceCoordinatorTests
             hostCeilings: hostCeiling, ct: TestContext.Current.CancellationToken);
 
         await act.Should().ThrowAsync<FuwenZhinuAdmissionException>()
-            .WithMessage("*no durable pre-call reservation*");
+            .WithMessage("*no provider-backed maximum-charge guarantee*");
         turns.ObservedRequests.Should().BeEmpty();
     }
 

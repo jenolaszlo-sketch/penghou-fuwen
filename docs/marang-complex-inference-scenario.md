@@ -3,7 +3,7 @@
 Status: checked-in CI-0 scenario, proven by the CI-7 isolated-package Marang
 consumer (`tests/Penghou.Fuwen.MarangConsumer.Tests`). The proof implements
 the bounds table, the deterministic three-model/two-tool trace, crash
-recovery, evidence assertions, focused restart, same-fingerprint fork, and
+recovery, evidence assertions, focused restart, safe same-fingerprint fork rejection, and
 explicit side-effect promotion from this fixture. Two deliberate deviations
 from the sketch below: the proof uses a workflow-owned prompt (the
 coordinator has no registered-template renderer, and admission rejects
@@ -195,10 +195,7 @@ operation with a new identity.
 | after final validation, before node completion | worker crashes | validated result/evidence is replayed; enclosing workflow sees one logical result |
 | fence loss at any boundary | stale worker attempts continuation | Zhinu rejects the stale fence; a current worker resumes from the journal |
 
-Forks with the same execution fingerprint may reuse explicitly authorized
-completed evidence under the existing fork policy. A changed input, revision,
-plan fingerprint, or protocol/runtime admission identity starts a new
-interaction and cannot reuse the old paid-operation identity implicitly.
+The current coordinator binds interaction identity to the run. A fork that copies completed coordinator state into a new run stops on incompatible identity before provider or tool work, even with the same execution fingerprint. Authorized cross-run reuse needs a separate provenance and accounting contract. A changed input, revision, plan fingerprint, or protocol/runtime admission identity also starts new work.
 
 ## Evidence assertions
 

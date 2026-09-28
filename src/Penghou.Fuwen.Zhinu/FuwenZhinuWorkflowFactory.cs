@@ -351,7 +351,8 @@ public sealed class FuwenZhinuWorkflowFactory
                 requiresProtocol: executionPorts.TurnExecutor is not null,
                 hasReadToolExecutor: executionPorts.ReadToolExecutor is not null,
                 hostCeilings: executionPorts.InferenceHostCeilings,
-                hasProtectedPayloadStore: executionPorts.ProtectedPayloadStore is not null);
+                hasProtectedPayloadStore: executionPorts.ProtectedPayloadStore is not null,
+                trustedToolSignatures: admission.TrustedToolSignatures);
 
         await definitionStore.StoreAsync(definition, cancellationToken).ConfigureAwait(false);
         var stored = await definitionStore.ReadAsync(receipt.ExecutionFingerprint, cancellationToken).ConfigureAwait(false);
@@ -434,7 +435,8 @@ public sealed class FuwenZhinuWorkflowFactory
         bool requiresProtocol,
         bool hasReadToolExecutor,
         InferenceLimitSet? hostCeilings,
-        bool hasProtectedPayloadStore)
+        bool hasProtectedPayloadStore,
+        IReadOnlyDictionary<DescriptorReference, CallableSignature> trustedToolSignatures)
     {
         foreach (var node in EnumerateNodes(plan.Nodes).OfType<InferenceNode>())
         {
@@ -470,7 +472,7 @@ public sealed class FuwenZhinuWorkflowFactory
             {
                 throw new FuwenZhinuAdmissionException(
                     $"Inference node '{node.StructuralPath}' requires a hard prompt, total-token, or cost ceiling, " +
-                    "but this coordinated runtime has no durable pre-call reservation and trusted maximum-charge contract. " +
+                    "but the configured turn executor has no provider-backed maximum-charge guarantee for strict admission. " +
                     "Use explicit aggregate advisory monitoring only when an after-call overrun is acceptable.");
             }
             if (coordinated && turnManifest is null)
@@ -520,6 +522,14 @@ public sealed class FuwenZhinuWorkflowFactory
             var requiredLimits = node.Protocol is null
                 ? new InferenceLimitSet()
                 : ToInferenceLimitSet(node.Protocol.Limits);
+            if (coordinated && node.Protocol!.BudgetEnforcement == InferenceBudgetEnforcement.Advisory)
+            {
+                // These are post-call monitoring allowances, not capabilities
+                // the selected transport must claim to enforce before spend.
+                requiredLimits = new InferenceLimitSet(requiredLimits.Limits.Where(static limit =>
+                    limit.Dimension is not (InferenceLimitDimension.PromptTokens or
+                        InferenceLimitDimension.TotalTokens or InferenceLimitDimension.CostMicrounits)).ToArray());
+            }
             if (coordinated && hostCeilings?.GetMaximum(InferenceLimitDimension.CompletionTokens) is long hostCompletionMaximum)
             {
                 var authoredCompletionMaximum = requiredLimits.GetMaximum(InferenceLimitDimension.CompletionTokens);
@@ -531,6 +541,28 @@ public sealed class FuwenZhinuWorkflowFactory
                     .Append(new InferenceLimit(InferenceLimitDimension.CompletionTokens, effectiveCompletionMaximum))
                     .ToArray());
             }
+            IReadOnlyList<InferenceToolRequirement>? modelToolRequirements = null;
+            if (coordinated && node.Tools is { Count: > 0 } modelTools)
+            {
+                var requirements = new List<InferenceToolRequirement>(modelTools.Count);
+                foreach (var tool in modelTools)
+                {
+                    if (!trustedToolSignatures.TryGetValue(tool, out var signature))
+                        throw new FuwenZhinuAdmissionException(
+                            $"Inference node '{node.StructuralPath}' has no trusted model-facing signature for tool '{tool.Name}@{tool.Version}'.");
+                    try
+                    {
+                        var contract = ModelFacingToolContractBuilder.Build(tool, signature, plan.Schemas);
+                        requirements.Add(new InferenceToolRequirement(tool, modelContract: contract));
+                    }
+                    catch (ArgumentException exception)
+                    {
+                        throw new FuwenZhinuAdmissionException(
+                            $"Inference node '{node.StructuralPath}' cannot expose tool '{tool.Name}@{tool.Version}' to the model: {exception.Message}");
+                    }
+                }
+                modelToolRequirements = requirements;
+            }
             var requirement = new InferenceExecutionRequirement(
                 requiresHardCompletionTokenLimit: requiresHardCompletionTokenLimit,
                 profile: node.Profile,
@@ -539,6 +571,7 @@ public sealed class FuwenZhinuWorkflowFactory
                 tools: node.Tools,
                 hasContextInputs: node.ContextRequirements is { Count: > 0 },
                 modality: null,
+                toolRequirements: modelToolRequirements,
                 limits: requiredLimits);
             // Only coordinated nodes are preflighted against the turn
             // executor; one-call nodes keep the one-call executor's manifest

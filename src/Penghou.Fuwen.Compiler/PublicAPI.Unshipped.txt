@@ -349,6 +349,10 @@ Penghou.Fuwen.Compiler.DiagnosticRepairGuidance.Guidance.get -> string!
 Penghou.Fuwen.Compiler.DiagnosticRepairGuidance.Path.get -> string?
 Penghou.Fuwen.Compiler.WorkflowExplanation
 static Penghou.Fuwen.Compiler.RuntimeValueValidator.Validate(Penghou.Fuwen.RuntimeValue? value, Penghou.Fuwen.FuwenType! expectedType, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>! schemas, string! path = "value", int maximumDiagnostics = 100) -> Penghou.Fuwen.Compiler.RuntimeValueValidationResult!
+Penghou.Fuwen.Compiler.ModelFacingToolContractBuilder
+static Penghou.Fuwen.Compiler.ModelFacingToolContractBuilder.Build(Penghou.Fuwen.DescriptorReference! tool, Penghou.Fuwen.Compiler.CallableContract! callable, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>! schemas) -> Penghou.Fuwen.InferenceModelToolContract!
+static Penghou.Fuwen.Compiler.ModelFacingToolContractBuilder.Build(Penghou.Fuwen.DescriptorReference! tool, Penghou.Fuwen.Compiler.CallableSignature! signature, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ResolvedSchemaDefinition!>! schemas) -> Penghou.Fuwen.InferenceModelToolContract!
+const Penghou.Fuwen.Compiler.ModelFacingToolContractBuilder.ValidatorIdentity = "fuwen.runtime-value-validator/v1" -> string!
 static Penghou.Fuwen.Compiler.WorkflowExplanation.Create(Penghou.Fuwen.Compiler.CompilationResult! compilation) -> Penghou.Fuwen.Compiler.WorkflowExplanation!
 static Penghou.Fuwen.Compiler.WorkflowExplanation.Create(Penghou.Fuwen.Compiler.WorkflowAdmissionResult! admission) -> Penghou.Fuwen.Compiler.WorkflowExplanation!
 Penghou.Fuwen.Compiler.WorkflowExplanation.AdmissionEvaluated.get -> bool

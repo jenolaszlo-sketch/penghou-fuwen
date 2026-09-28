@@ -109,7 +109,8 @@ public sealed class MarangPlanningTests
                     turns,
                     tools,
                     MarangScenario.HostCeilings(),
-                    sink)
+                    sink,
+                    new InMemoryProtectedPayloadStore())
                 {
                     PriorExecutionFingerprints = priorFingerprints ?? new HashSet<string>(StringComparer.Ordinal),
                 })
@@ -204,7 +205,7 @@ public sealed class MarangPlanningTests
 
             // Authored per-call bounds reach the transport on every turn.
             turns.Requests.Should().OnlyContain(request =>
-                request.MaxCompletionTokens == 800 && request.TimeoutSeconds == 30);
+                request.MaxCompletionTokens == null && request.TimeoutSeconds == 30);
             // Every tool call carries its exact scope and the result ceiling.
             tools.Requests.Should().OnlyContain(request =>
                 request.Scope == $"{request.Tool.Name}@{request.Tool.Version}" &&
@@ -377,7 +378,7 @@ public sealed class MarangPlanningTests
     }
 
     [Fact]
-    public async Task Same_fingerprint_fork_reuses_committed_operations()
+    public async Task Same_fingerprint_fork_stops_on_run_bound_inference_identity_without_repeating_calls()
     {
         var ct = TestContext.Current.CancellationToken;
         var (admission, digest) = await AdmitAsync(ct);
@@ -398,14 +399,14 @@ public sealed class MarangPlanningTests
             var runId = await engine.StartAsync(
                 MarangScenario.WorkflowName, "1", Input(MarangScenario.Objective), cancellationToken: ct);
             await engine.ExecuteAsync(runId, ct);
-            var first = await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: ct);
+            _ = await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: ct);
             var turnCalls = turns.Requests.Count;
 
             var forkedId = await engine.ForkAsync(runId, "marang_planning/return_result", cancellationToken: ct);
             await engine.ExecuteAsync(forkedId, ct);
-            var forked = await engine.WaitForCompletionAsync<JsonElement>(forkedId, cancellationToken: ct);
-
-            forked.GetRawText().Should().Be(first.GetRawText());
+            var forkedResult = async () => await engine.WaitForCompletionAsync<JsonElement>(forkedId, cancellationToken: ct);
+            await forkedResult.Should().ThrowAsync<WorkflowExecutionFailedException>()
+                .WithMessage("*incompatible invocation identity*");
             turns.Requests.Should().HaveCount(turnCalls);
             tools.Requests.Should().HaveCount(2);
         }

@@ -24,15 +24,43 @@ public sealed class InferenceConversationMessage
     public const int MaximumToolCallIdUtf8Bytes = 256;
 
     /// <summary>Creates a detached conversation message.</summary>
-    public InferenceConversationMessage(InferenceTurnRole role, string text, string? toolCallId = null)
+    public InferenceConversationMessage(
+        InferenceTurnRole role,
+        string text,
+        string? toolCallId = null,
+        DescriptorReference? tool = null,
+        IReadOnlyList<InferenceToolCallProposal>? toolCalls = null)
     {
         if (!Enum.IsDefined(role))
             throw new ArgumentOutOfRangeException(nameof(role));
-        Text = RuntimeValueSnapshot.Text(text, nameof(text), MaximumTextUtf8Bytes);
+        Text = role == InferenceTurnRole.Assistant && toolCalls is not null && text is { Length: 0 }
+            ? string.Empty
+            : RuntimeValueSnapshot.Text(text, nameof(text), MaximumTextUtf8Bytes);
         if (role == InferenceTurnRole.Tool && string.IsNullOrWhiteSpace(toolCallId))
             throw new ArgumentException("A tool message requires the originating tool-call identity.", nameof(toolCallId));
         if (role != InferenceTurnRole.Tool && toolCallId is not null)
             throw new ArgumentException("Only a tool message may carry a tool-call identity.", nameof(toolCallId));
+        if (role == InferenceTurnRole.Tool)
+        {
+            Tool = tool is null ? null : ExecutionPortValidation.Descriptor(tool, DescriptorKind.Tool, nameof(tool));
+        }
+        else if (tool is not null)
+            throw new ArgumentException("Only a tool result message may carry a tool descriptor.", nameof(tool));
+        if (role != InferenceTurnRole.Assistant && toolCalls is not null)
+            throw new ArgumentException("Only an assistant message may carry tool calls.", nameof(toolCalls));
+        if (toolCalls is not null)
+        {
+            if (toolCalls.Count == 0 || toolCalls.Count > InferenceTurnRequest.MaximumProposals)
+                throw new ArgumentOutOfRangeException(nameof(toolCalls));
+            var calls = toolCalls.Select(static call =>
+                new InferenceToolCallProposal(
+                    (call ?? throw new ArgumentException("Assistant tool calls cannot contain null values.", nameof(toolCalls))).CallId,
+                    call.Tool,
+                    call.ArgumentsJson)).ToArray();
+            if (calls.Select(static call => call.CallId).Distinct(StringComparer.Ordinal).Count() != calls.Length)
+                throw new ArgumentException("Assistant tool-call identities must be unique.", nameof(toolCalls));
+            ToolCalls = Array.AsReadOnly(calls);
+        }
         ToolCallId = RuntimeValueSnapshot.OptionalText(toolCallId, nameof(toolCallId), MaximumToolCallIdUtf8Bytes);
         Role = role;
     }
@@ -43,6 +71,12 @@ public sealed class InferenceConversationMessage
     public string Text { get; }
     /// <summary>The originating tool-call identity, or null for non-tool messages.</summary>
     public string? ToolCallId { get; }
+    /// <summary>The exact tool descriptor for a tool result when known, or null for other messages and legacy history.</summary>
+    public DescriptorReference? Tool { get; }
+    /// <summary>The exact provider-visible tool name for a tool result, or null when unavailable.</summary>
+    public string? ToolName => Tool?.Name;
+    /// <summary>The exact bounded tool calls in an assistant message, or null when it contains no calls.</summary>
+    public IReadOnlyList<InferenceToolCallProposal>? ToolCalls { get; }
 }
 
 /// <summary>One exact model-proposed tool call awaiting host validation and execution.</summary>
@@ -108,7 +142,7 @@ public sealed class InferenceTurnRequest
     /// <summary>Maximum UTF-8 bytes in a stable interaction identity.</summary>
     public const int MaximumInteractionIdUtf8Bytes = 256;
 
-    /// <summary>Creates a detached one-turn inference request.</summary>
+    /// <summary>Creates a detached one-turn inference request with strict aggregate-budget semantics.</summary>
     public InferenceTurnRequest(
         string interactionId,
         int turnOrdinal,
@@ -118,7 +152,26 @@ public sealed class InferenceTurnRequest
         int? maximumNewToolCalls = null,
         int? maxCompletionTokens = null,
         int? timeoutSeconds = null)
+        : this(InferenceBudgetEnforcement.Strict, interactionId, turnOrdinal, conversation,
+            visibleTools, remainingLimits, maximumNewToolCalls, maxCompletionTokens, timeoutSeconds)
     {
+    }
+
+    /// <summary>Creates a detached request with explicit strict or advisory aggregate-budget semantics.</summary>
+    public InferenceTurnRequest(
+        InferenceBudgetEnforcement budgetEnforcement,
+        string interactionId,
+        int turnOrdinal,
+        IReadOnlyList<InferenceConversationMessage> conversation,
+        IReadOnlyList<InferenceToolRequirement> visibleTools,
+        InferenceLimitSet? remainingLimits = null,
+        int? maximumNewToolCalls = null,
+        int? maxCompletionTokens = null,
+        int? timeoutSeconds = null)
+    {
+        if (!Enum.IsDefined(budgetEnforcement))
+            throw new ArgumentOutOfRangeException(nameof(budgetEnforcement));
+        BudgetEnforcement = budgetEnforcement;
         InteractionId = RuntimeValueSnapshot.Text(interactionId, nameof(interactionId), MaximumInteractionIdUtf8Bytes);
         if (turnOrdinal < 0)
             throw new ArgumentOutOfRangeException(nameof(turnOrdinal), "Turn ordinals cannot be negative.");
@@ -130,12 +183,15 @@ public sealed class InferenceTurnRequest
             new InferenceConversationMessage(
                 (message ?? throw new ArgumentException("Conversation messages cannot contain null values.", nameof(conversation))).Role,
                 message.Text,
-                message.ToolCallId)).ToArray());
+                message.ToolCallId,
+                message.Tool,
+                message.ToolCalls)).ToArray());
         ArgumentNullException.ThrowIfNull(visibleTools);
         var tools = visibleTools.Select(static tool =>
             new InferenceToolRequirement(
                 (tool ?? throw new ArgumentException("Visible tools cannot contain null values.", nameof(visibleTools))).Descriptor,
-                tool.Effect)).ToArray();
+                tool.Effect,
+                tool.ModelContract)).ToArray();
         if (tools.Select(static tool => tool.Descriptor).Distinct().Count() != tools.Length)
             throw new ArgumentException("Visible tools must be unique.", nameof(visibleTools));
         if (tools.Select(static tool => tool.Descriptor.Name).Distinct(StringComparer.Ordinal).Count() != tools.Length)
@@ -154,6 +210,8 @@ public sealed class InferenceTurnRequest
         TimeoutSeconds = timeoutSeconds;
     }
 
+    /// <summary>Whether prompt, total-token, and cost allowances are hard ceilings or advisory monitoring values.</summary>
+    public InferenceBudgetEnforcement BudgetEnforcement { get; }
     /// <summary>The stable logical-activity interaction identity for this turn.</summary>
     public string InteractionId { get; }
     /// <summary>The zero-based turn ordinal within the interaction.</summary>
@@ -212,7 +270,8 @@ public sealed class InferenceToolCallTurnResult : InferenceTurnResult
     /// <summary>Creates a detached tool-call result.</summary>
     public InferenceToolCallTurnResult(
         IReadOnlyList<InferenceToolCallProposal> proposals,
-        InferenceTurnUsage? usage = null)
+        InferenceTurnUsage? usage = null,
+        string? assistantText = null)
         : base(usage)
     {
         ArgumentNullException.ThrowIfNull(proposals);
@@ -223,12 +282,17 @@ public sealed class InferenceToolCallTurnResult : InferenceTurnResult
                 (proposal ?? throw new ArgumentException("Proposals cannot contain null values.", nameof(proposals))).CallId,
                 proposal.Tool,
                 proposal.ArgumentsJson)).ToArray());
+        AssistantText = assistantText is null || assistantText.Length == 0
+            ? null
+            : RuntimeValueSnapshot.Text(assistantText, nameof(assistantText), InferenceConversationMessage.MaximumTextUtf8Bytes);
     }
 
     /// <inheritdoc />
     public override bool IsToolCall => true;
     /// <summary>The detached tool-call proposals in model order.</summary>
     public IReadOnlyList<InferenceToolCallProposal> Proposals { get; }
+    /// <summary>Optional bounded assistant text accompanying the calls.</summary>
+    public string? AssistantText { get; }
 }
 
 /// <summary>Executes one bounded, normalized model turn without durable coordination.</summary>

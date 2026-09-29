@@ -69,6 +69,26 @@ public sealed class ModelFacingToolContractBuilderTests
     }
 
     [Fact]
+    public void Builder_bounds_nested_types_inside_object_fields()
+    {
+        var tool = Descriptor(DescriptorKind.Tool, "catalog.lookup");
+        var request = Descriptor(DescriptorKind.Schema, "catalog.request");
+        FuwenType nested = new PrimitiveType(FuwenPrimitiveKind.String);
+        for (var depth = 0; depth < 32; depth++)
+            nested = new ListType(nested, 1);
+        var schemas = new ResolvedSchemaDefinition[]
+        {
+            new ObjectSchemaDefinition(request, [new SchemaField("value", nested)]),
+        };
+        var signature = new CallableSignature(
+            [new CallableParameter("request", new NamedTypeReference(request))],
+            new PrimitiveType(FuwenPrimitiveKind.String));
+
+        Action build = () => ModelFacingToolContractBuilder.Build(tool, signature, schemas);
+        build.Should().Throw<ArgumentException>().WithMessage("*nesting depth*");
+    }
+
+    [Fact]
     public void Model_contract_must_bind_exact_tool_digest_and_contain_json_schemas()
     {
         var tool = Descriptor(DescriptorKind.Tool, "catalog.lookup");

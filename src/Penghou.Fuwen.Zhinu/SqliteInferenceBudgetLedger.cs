@@ -55,7 +55,8 @@ public sealed class SqliteInferenceBudgetLedger : IInferenceBudgetLedger
         var quote = request.Quote;
         var currency = quote.MaximumCost?.CurrencyCode;
         var revision = quote.MaximumCost?.PricingRevision;
-        if (account is not null && (account.Currency != currency || account.Revision != revision))
+        if (account is not null && currency is not null && account.Currency is not null &&
+            (account.Currency != currency || account.Revision != revision))
             throw new InvalidOperationException("All operations in an interaction must use the same quoted currency and pricing revision.");
         if (account is null)
         {
@@ -69,6 +70,9 @@ public sealed class SqliteInferenceBudgetLedger : IInferenceBudgetLedger
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
             return InferenceBudgetReservationDecision.ExceedsCeiling;
         }
+        if (account is not null && account.Currency is null && currency is not null)
+            await ExecuteAsync(connection, transaction, "UPDATE accounts SET currency=$c,pricing_revision=$r WHERE interaction_id=$i", cancellationToken,
+                ("$c", currency), ("$r", revision), ("$i", request.InteractionId)).ConfigureAwait(false);
         await ExecuteAsync(connection, transaction, "INSERT INTO operations(interaction_id,operation_id,digest,binding,prompt_quote,completion_quote,total_quote,cost_quote,currency,pricing_revision,status) VALUES($i,$o,$d,$b,$p,$c,$t,$m,$u,$r,0)", cancellationToken,
             ("$i", request.InteractionId), ("$o", request.OperationId), ("$d", request.RequestDigest), ("$b", quote.BindingRevision), ("$p", quote.MaximumPromptTokens), ("$c", quote.MaximumCompletionTokens), ("$t", quote.MaximumTotalTokens), ("$m", quote.MaximumCost?.AmountMicrounits), ("$u", currency), ("$r", revision)).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);

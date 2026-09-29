@@ -62,6 +62,29 @@ public sealed class SqliteInferenceBudgetLedgerTests
     }
 
     [Fact]
+    public async Task First_priced_quote_sets_currency_after_unpriced_reservations()
+    {
+        var root = NewRoot();
+        try
+        {
+            var ledger = new SqliteInferenceBudgetLedger(Path.Combine(root, "budget.db"));
+            var limits = new InferenceLimitSet([new InferenceLimit(InferenceLimitDimension.TotalTokens, 30)]);
+            InferenceBudgetReservationRequest RequestWithCost(string operation, string? currency, string? revision) => new(
+                "mixed-quotes", operation, operation, limits,
+                new InferenceTurnBudgetQuote("binding/1", 3, 2, 5,
+                    currency is null ? null : new InferenceCostEvidence(currency, 10, false, revision!)));
+
+            var ct = TestContext.Current.CancellationToken;
+            (await ledger.ReserveAsync(RequestWithCost("unpriced", null, null), ct)).Should().Be(InferenceBudgetReservationDecision.Reserved);
+            (await ledger.ReserveAsync(RequestWithCost("priced", "USD", "pricing/1"), ct)).Should().Be(InferenceBudgetReservationDecision.Reserved);
+            (await ledger.ReserveAsync(RequestWithCost("unpriced-again", null, null), ct)).Should().Be(InferenceBudgetReservationDecision.Reserved);
+            var changed = async () => await ledger.ReserveAsync(RequestWithCost("changed", "USD", "pricing/2"), ct);
+            await changed.Should().ThrowAsync<InvalidOperationException>().WithMessage("*currency and pricing revision*");
+        }
+        finally { DeleteRoot(root); }
+    }
+
+    [Fact]
     public async Task Pricing_revision_and_actual_over_quote_fail_without_releasing_reservation()
     {
         var root = NewRoot();
@@ -81,6 +104,8 @@ public sealed class SqliteInferenceBudgetLedgerTests
             await overQuote.Should().ThrowAsync<InvalidOperationException>();
             (await ledger.ReserveAsync(Request("op/2", "digest/2", prompt: 12, total: 20, cost: 50), TestContext.Current.CancellationToken))
                 .Should().Be(InferenceBudgetReservationDecision.ExceedsCeiling);
+            await ledger.RetainUncertainAsync("interaction/1", "op/1", TestContext.Current.CancellationToken);
+            await ledger.FinalizeAsync("interaction/1", TestContext.Current.CancellationToken);
         }
         finally { DeleteRoot(root); }
     }

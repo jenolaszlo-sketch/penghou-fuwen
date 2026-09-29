@@ -1244,3 +1244,43 @@ separate evidence and identical behavior after durable recovery.
 
 These entries refine Delivery H and adaptive-planning work; they do not reopen
 completed compiler/IR milestones or introduce a memory-system dependency.
+
+## Follow-on candidates from the 2026-09-29 review
+
+These refine existing milestones and corrective work; they do not change the
+current release gates. Smaller or less grounded proposals are recorded in
+[ideas for later](ideas.md).
+
+- [ ] **Present actionable compiler diagnostics (Milestone 7, R10).** Render a
+  bounded source excerpt and location marker from the existing source map, with
+  code-specific repair suggestions where the compiler can justify one. Keep
+  stable `FWN-*` codes and machine-readable spans independent of presentation;
+  test multiline and Unicode locations without including source excerpts in
+  plan identity.
+- [ ] **Provide a read-only inference evidence view (FI-06).** Offer a small
+  CLI or public-library projection of the authoritative step timeline, model
+  and tool dispositions, token/cost usage, and missing or uncertain evidence.
+  Queries must do zero model/tool work; protected payload retrieval remains a
+  separate authorized operation. A credential-free walkthrough should show a
+  normal run and a budget or recovery failure.
+- [ ] **Allow item-local static fallback after FI-08 durability work.** Give
+  repeat iterations and fan-out items stable child operation identities and
+  item-scoped failure/evidence records before permitting the existing typed
+  fallback there. Define aggregate disposition, enforce the shared parent
+  budget, and prove crash/reorder recovery does not replay a settled provider
+  or tool call or contaminate another item.
+- [ ] **Prototype one explicitly bounded corrective model turn (FI-04/FI-07).**
+  For a definitive malformed structured candidate, retain the failed attempt
+  and require a fresh admitted budget reservation for one authored correction
+  attempt. Keep Nuwa representation repair, declared-type validation, and
+  domain acceptance distinct; reject hidden retries or retry after ambiguous
+  commitment. Add durable replay and exhaustion tests before adding syntax.
+- [ ] **Explore optional provider-neutral turn streaming (FI-05/FI-06).** Treat
+  chunks as provisional presentation, with bounded buffering and protected
+  content policy. Final durable candidate, usage, and operation disposition
+  remain authoritative; interruption and replay must never turn a partial
+  stream into a settled result or duplicate provider work.
+
+Resource authorization follows the [FI-04 grant contract](fi04-resource-grant-contract.md).
+Integrate Hufu's exact grant/receipt and operation-start checks rather than
+introducing a second Fuwen-only grant evaluator.

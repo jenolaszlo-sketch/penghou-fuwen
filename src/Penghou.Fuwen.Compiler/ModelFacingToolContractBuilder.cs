@@ -114,7 +114,7 @@ public static class ModelFacingToolContractBuilder
         {
             if (field is null || string.IsNullOrWhiteSpace(field.Name) || field.Name.Any(char.IsControl) || !seen.Add(field.Name))
                 throw new ArgumentException("Trusted schema fields must have unique valid names.", nameof(schema));
-            properties.Add(field.Name, TypeSchema(field.Type, schemas, 0));
+            properties.Add(field.Name, TypeSchema(field.Type, schemas, 1));
             required.Add(field.Name);
         }
         return new JsonObject { ["type"] = "object", ["properties"] = properties, ["required"] = required, ["additionalProperties"] = false };

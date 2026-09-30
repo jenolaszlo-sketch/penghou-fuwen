@@ -253,3 +253,8 @@ explicit IR, compiler-semantics, canonicalization, and fingerprint versions.
 [Apache-2.0](LICENSE)
 
 Copyright (c) 2026 Jenő Konrád László
+
+## Pending Hufu integration
+
+Penghou.Hufu integration is planned and not implemented. Represent Hufu authority requirements in immutable plans and bind them into exact admission.
+See [pending work and ownership boundaries](docs/hufu-integration.md).

@@ -1245,6 +1245,13 @@ separate evidence and identical behavior after durable recovery.
 These entries refine Delivery H and adaptive-planning work; they do not reopen
 completed compiler/IR milestones or introduce a memory-system dependency.
 
+## Pending dependency: Penghou.Hufu
+
+Recorded 2026-09-28. Hufu is currently a scaffold; its authority contracts, store,
+and enforcement integration are pending. Represent Hufu authority requirements in immutable plans and bind them into exact admission.
+See [the project-specific integration note](hufu-integration.md) for scope, dependencies,
+and completion evidence. This records future work without changing current release gates.
+
 ## Follow-on candidates from the 2026-09-29 review
 
 These refine existing milestones and corrective work; they do not change the

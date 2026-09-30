@@ -80,4 +80,82 @@ public sealed partial class FuwenInferenceCoordinatorTests
         }
         finally { DeleteDirectory(root); }
     }
+
+    [Fact]
+    public async Task Interrupted_failure_before_fallback_disposition_resumes_without_another_provider_call()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var plan = WithFallback(CreatePlan(Limits(turns: 1, modelCalls: 1, toolCalls: 1), [Search]),
+            ExecutionFailureCode.TurnLimitExceeded);
+        var turns = DeterministicFakeTurnExecutor.FromResponder((_, _) =>
+            ValueTask.FromResult<InferenceTurnResult>(new InferenceToolCallTurnResult(
+                [new InferenceToolCallProposal("call-1", Search, "{\"q\":1}")], ExactUsage())));
+        var tools = new DeterministicFakeReadToolExecutor().RegisterSuccess(Search, Json("{\"answer\":1}"));
+        var sink = new BlockingEvidenceSink();
+        var registration = await RegisterAsync(plan, turns, tools, evidenceSink: sink, ct: ct);
+        var root = NewRoot();
+        try
+        {
+            var engine1 = CreateEngine(root, registration, TimeSpan.FromMilliseconds(150));
+            using var input = JsonDocument.Parse("\"question\"");
+            var runId = await engine1.StartAsync("coord", "1", input.RootElement.Clone(), cancellationToken: ct);
+            using var interruption = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            var interrupted = engine1.ExecuteAsync(runId, interruption.Token);
+            await sink.FailureRecorded.Task.WaitAsync(ct);
+            turns.ObservedRequests.Should().ContainSingle();
+            sink.Items.Should().ContainSingle();
+            (await engine1.GetStepsAsync(runId, ct)).Should().NotContain(step =>
+                step.StepKey == "coord/infer/$fallback");
+            await interruption.CancelAsync();
+            sink.Release();
+            try
+            {
+                await interrupted;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            await engine1.DisposeAsync();
+
+            await Task.Delay(350, ct);
+            await using var engine2 = CreateEngine(root, registration, TimeSpan.FromMilliseconds(150));
+            await engine2.RunAvailableAsync(ct);
+            (await engine2.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: ct))
+                .GetString().Should().Be("fallback");
+
+            turns.ObservedRequests.Should().ContainSingle();
+            tools.ObservedRequests.Should().BeEmpty();
+            sink.Items.Should().HaveCount(2);
+            sink.Items.Should().OnlyContain(item =>
+                item.Failure != null && item.Failure.Code == ExecutionFailureCode.TurnLimitExceeded);
+            (await engine2.GetStepsAsync(runId, ct)).Should().Contain(step =>
+                step.StepKey == "coord/infer/$fallback" && step.Status == StepStatus.Completed);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    private sealed class BlockingEvidenceSink : IInferenceEvidenceSink
+    {
+        private readonly TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int records;
+
+        public List<InferenceProtocolEvidence> Items { get; } = [];
+
+        public TaskCompletionSource FailureRecorded { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public ValueTask RecordAsync(InferenceProtocolEvidence evidence, CancellationToken cancellationToken = default)
+        {
+            Items.Add(evidence);
+            if (evidence.Failure is not null && Interlocked.Increment(ref records) == 1)
+            {
+                FailureRecorded.TrySetResult();
+                return new ValueTask(gate.Task);
+            }
+
+            return ValueTask.CompletedTask;
+        }
+
+        public void Release() => gate.TrySetResult();
+    }
 }

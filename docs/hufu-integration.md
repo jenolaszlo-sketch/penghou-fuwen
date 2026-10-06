@@ -1,6 +1,9 @@
 # Penghou.Fuwen: pending Penghou.Hufu integration
 
-Status: **Pending integration; not implemented.** Recorded 2026-09-28.
+Status: **Pending integration; not implemented.** Recorded 2026-09-28, amended
+2026-10-06 by [ADR 0012](decisions/0012-defer-luban-decouple-hufu-from-command-language.md):
+Hufu authority MUST be language-neutral and MUST NOT depend on Penghou.Luban
+(deferred/parked).
 
 Penghou.Hufu is the new reusable authority library and authority-store boundary.
 It currently contains a buildable scaffold and design documents, with no public
@@ -27,6 +30,12 @@ execution state and recovery; existing budget services retain accounting.
 Fuwen continues to own compilation and plan semantics. It must not become the
 grant issuer, credential resolver, live authority store, or resource sandbox.
 Existing catalogue/capability checks are foundations, not proof of Hufu integration.
+
+Fuwen and Hufu MUST NOT take a dependency on Luban syntax, commands, cmdlets,
+or language semantics. Authority is expressed as neutral resource/effect
+operations (e.g. `filesystem.read`, `http.request`, `process.execute`) and
+native execution delegates to Gagamba; a future Luban frontend MAY produce the
+same execution requests without Hufu changes.
 
 ## Completion evidence
 

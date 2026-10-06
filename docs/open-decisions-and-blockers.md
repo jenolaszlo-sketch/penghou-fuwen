@@ -1,10 +1,16 @@
 # Open decisions and blockers
 
-Status checked 2026-09-28. This register distinguishes an unfinished
+Status checked 2026-09-28; Luban status amended 2026-10-06. This register distinguishes an unfinished
 implementation from a product-policy decision, an owning-project dependency,
 and a release validation gate. A pending decision blocks only the behavior
 named in its row. The implementation status remains in the
 [inference hardening plan](inference-hardening-v2-prep-plan-2026-09-27.md).
+
+**Penghou.Luban is deferred/parked** per
+[ADR 0012](decisions/0012-defer-luban-decouple-hufu-from-command-language.md).
+No Fuwen, Hufu, Zhinu, Gagamba, Baize, adapter, sandbox, debugger, or audit
+work is blocked on Luban, and no new core dependency on Luban may be added.
+Hufu authority MUST be language-neutral.
 
 Penghou.Hufu is now the selected home for reusable authority evaluation
 and its durable store. Its 2026-09-28 repository contains a scaffold and
@@ -48,6 +54,7 @@ later documentation-only commits did not change runtime behavior.
 | ID | Status | Unblock condition |
 | --- | --- | --- |
 | X-00 | **Hufu authority implementation:** selected library currently has only design/scaffold. Fuwen can prepare representation and exact binding independently, but cannot claim Hufu-backed resource-grant enforcement. This dependency is not an added gate for the current corrective slice. | Hufu M1–M3 contracts, durable store and broker conformance; Fuwen M4 integration proves zero unauthorized I/O and recovery. |
+| X-04 | **Penghou.Luban — deferred/parked (ADR 0012):** not a dependency. No Fuwen/Hufu work may depend on Luban syntax or commands; Hufu stays language-neutral, native execution delegates to Gagamba. | No unblock condition; re-entry only per ADR 0012 criteria. |
 | X-01 | **Configured Baize strict prompt/total-token/cost ceilings:** strict admission remains closed because the selected endpoint cannot provide a trusted pre-call maximum-charge quote. Advisory mode is explicit opt-in, never an automatic downgrade. | A provider/host maximum-charge contract with exact endpoint/pricing identity and deterministic plus opt-in live proof. Leaf ledger and quote-port work continue independently. |
 | X-02 | **Zhinu fenced admin commands:** read-only inspection can proceed; safe cancel/restart/resume commands need expected-state checks and idempotent receipts. | [Zhinu dependency ticket](zhinu-inference-dependencies.md) implemented and tested in the owning project. |
 | X-03 | **Zhinu coordinated fan-out:** admission remains closed until child durable item scopes exist; shared parent reservation is a separate host/ledger dependency. | Two-item crash/reorder proof and concurrent shared-budget proof in the [dependency ticket](zhinu-inference-dependencies.md). |

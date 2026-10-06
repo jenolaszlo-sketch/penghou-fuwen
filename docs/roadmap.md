@@ -1,5 +1,27 @@
 # Penghou.Fuwen Roadmap
 
+## Resource abstractions and WhatIf dependencies — 2026-10-02
+
+Follow the [resource-abstractions architecture](../../Penghou/docs/resource-abstractions-architecture.md).
+The immediate RA correction is owned by IO and Hufu; Fuwen core remains
+independent of physical resource providers. Penghou.Luban is deferred/parked
+per [ADR 0012](decisions/0012-defer-luban-decouple-hufu-from-command-language.md)
+and is not on the Fuwen critical path.
+
+- [ ] **VFS-5/6, deferred:** bind immutable workflow declarations and exact
+  node/attempt identities to a host-composed simulation environment. Compare
+  declared effects with attempted operations, decisions and resulting deltas;
+  report exercised branches and incomplete/unsupported coverage.
+- [ ] Keep preflight/capture distinct from executing a workflow on virtual
+  resources. Filesystem snapshots alone do not make inference or external effects
+  deterministic. Host composition must block or explicitly simulate those effects.
+- [ ] **VFS-7, deferred:** preserve plan/delta identity and read dependencies for
+  fresh real admission; simulation cannot authorize activation or physical writes.
+
+No new source syntax, provider dependency, SQLite split or package migration is
+part of this documentation update. Handoffs cite RA/VFS gates and the canonical
+review rather than infer implementation from the long-range architecture.
+
 ## Status
 
 **IR v8 compiler and core durable adapters are available; coordinated inference remains limited while corrective gates are open**
@@ -1247,10 +1269,29 @@ completed compiler/IR milestones or introduce a memory-system dependency.
 
 ## Pending dependency: Penghou.Hufu
 
-Recorded 2026-09-28. Hufu is currently a scaffold; its authority contracts, store,
+Recorded 2026-09-28; amended 2026-10-06 by
+[ADR 0012](decisions/0012-defer-luban-decouple-hufu-from-command-language.md).
+Hufu is currently a scaffold; its authority contracts, store,
 and enforcement integration are pending. Represent Hufu authority requirements in immutable plans and bind them into exact admission.
 See [the project-specific integration note](hufu-integration.md) for scope, dependencies,
-and completion evidence. This records future work without changing current release gates.
+and completion evidence. Hufu authority MUST stay language-neutral and MUST NOT
+depend on Luban syntax. This records future work without changing current release gates.
+
+## Deferred: Penghou.Luban — parked, not on the critical path
+
+Status: **Deferred / parked** since 2026-10-06. See
+[ADR 0012](decisions/0012-defer-luban-decouple-hufu-from-command-language.md).
+
+- Luban is a valid future frontend over neutral execution abstractions, not a
+  required layer between Hufu and execution.
+- Fuwen, Hufu, Zhinu, Gagamba, Baize authority integration, semantic adapters,
+  workflow execution, sandboxing, authority debugging, and audit work MUST NOT
+  block on Luban and MUST NOT add new core dependencies on it.
+- Safe execution comes from explicit authority, semantic operations, and
+  contained native execution (Hufu + Gagamba), not from a constrained language.
+- Re-entry only on concrete observed pressure (awkward workflow composition,
+  interactive shell need, proven security/cost/observability gain) once the
+  neutral execution contracts are stable.
 
 ## Follow-on candidates from the 2026-09-29 review
 

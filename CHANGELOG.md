@@ -43,6 +43,17 @@ contract versions. Consumer-visible breaking changes are called out under
   recovery, privacy, provider, and operator gates. No new NuGet package is
   published by these source changes.
 
+## 0.1.0-preview.12
+
+**Additive**: a first-class, neutral `ActivityExecutionIntent` on `ActivityNode`
+(a logical profile plus required/preferred neutral guarantees) under the new
+`fuwen-ir/v3-execution-intent` IR version. Plans without an intent keep
+`fuwen-ir/v1` and their existing canonical bytes, fingerprint, and admission
+receipts; an intent is included in the canonical plan and execution fingerprint
+and is rejected under the base IR version. Ordinary activity inputs are
+unchanged, and the plan still never names a provider, executable, environment,
+or authority.
+
 ## 0.1.0-preview.11
 
 **Breaking changes** (recipe:

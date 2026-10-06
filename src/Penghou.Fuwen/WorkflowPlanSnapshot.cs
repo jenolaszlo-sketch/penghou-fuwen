@@ -249,7 +249,12 @@ internal static class WorkflowPlanSnapshot
                     value.StructuralPath,
                     CloneDescriptor(value.Activity, state),
                     SnapshotList(value.Arguments, "activity arguments", CloneArgument, state),
-                    CloneType(value.OutputType, state)),
+                    CloneType(value.OutputType, state))
+                {
+                    ExecutionIntent = value.ExecutionIntent is null
+                        ? null
+                        : CloneExecutionIntent(value.ExecutionIntent, state),
+                },
                 ConditionalNode value => new ConditionalNode(
                     value.Name,
                     value.StructuralPath,
@@ -456,6 +461,37 @@ internal static class WorkflowPlanSnapshot
         finally
         {
             state.Exit(requirement);
+        }
+    }
+
+    private static ActivityExecutionIntent CloneExecutionIntent(ActivityExecutionIntent intent, SnapshotState state)
+    {
+        ArgumentNullException.ThrowIfNull(intent);
+        state.Enter(intent);
+        try
+        {
+            return new ActivityExecutionIntent(
+                intent.Profile,
+                SnapshotList(intent.Required, "required guarantees", CloneGuarantee, state),
+                SnapshotList(intent.Preferred, "preferred guarantees", CloneGuarantee, state));
+        }
+        finally
+        {
+            state.Exit(intent);
+        }
+    }
+
+    private static ExecutionGuarantee CloneGuarantee(ExecutionGuarantee guarantee, SnapshotState state)
+    {
+        ArgumentNullException.ThrowIfNull(guarantee);
+        state.Enter(guarantee);
+        try
+        {
+            return new ExecutionGuarantee(guarantee.Capability, guarantee.Minimum);
+        }
+        finally
+        {
+            state.Exit(guarantee);
         }
     }
 

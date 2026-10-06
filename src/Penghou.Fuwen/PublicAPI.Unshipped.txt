@@ -436,6 +436,8 @@ const Penghou.Fuwen.RuntimeNodeIdentity.MaximumKeyUtf8Bytes = 256 -> int
 const Penghou.Fuwen.StructuralNodeIdentity.MaximumPathUtf8Bytes = 1024 -> int
 const Penghou.Fuwen.StructuralNodeIdentity.MaximumSegmentCharacters = 64 -> int
 Penghou.Fuwen.ActivityExecutionRequest.ActivityExecutionRequest(Penghou.Fuwen.ExecutionInvocation! invocation, Penghou.Fuwen.DescriptorReference! activity, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.RuntimeArgument!>! arguments, Penghou.Fuwen.FuwenType! outputType) -> void
+Penghou.Fuwen.ActivityExecutionRequest.ActivityExecutionRequest(Penghou.Fuwen.ExecutionInvocation! invocation, Penghou.Fuwen.DescriptorReference! activity, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.RuntimeArgument!>! arguments, Penghou.Fuwen.FuwenType! outputType, Penghou.Fuwen.ActivityExecutionIntent? executionIntent) -> void
+Penghou.Fuwen.ActivityExecutionRequest.ExecutionIntent.get -> Penghou.Fuwen.ActivityExecutionIntent?
 Penghou.Fuwen.ActivityNode
 Penghou.Fuwen.ActivityNode.Activity.get -> Penghou.Fuwen.DescriptorReference!
 Penghou.Fuwen.ActivityNode.Activity.init -> void
@@ -444,6 +446,26 @@ Penghou.Fuwen.ActivityNode.Arguments.get -> System.Collections.Generic.IReadOnly
 Penghou.Fuwen.ActivityNode.Arguments.init -> void
 Penghou.Fuwen.ActivityNode.OutputType.get -> Penghou.Fuwen.FuwenType!
 Penghou.Fuwen.ActivityNode.OutputType.init -> void
+Penghou.Fuwen.ActivityNode.ExecutionIntent.get -> Penghou.Fuwen.ActivityExecutionIntent?
+Penghou.Fuwen.ActivityNode.ExecutionIntent.init -> void
+Penghou.Fuwen.ActivityExecutionIntent
+Penghou.Fuwen.ActivityExecutionIntent.ActivityExecutionIntent(string! Profile, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ExecutionGuarantee!>! Required, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ExecutionGuarantee!>! Preferred) -> void
+Penghou.Fuwen.ActivityExecutionIntent.Preferred.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ExecutionGuarantee!>!
+Penghou.Fuwen.ActivityExecutionIntent.Preferred.init -> void
+Penghou.Fuwen.ActivityExecutionIntent.Profile.get -> string!
+Penghou.Fuwen.ActivityExecutionIntent.Profile.init -> void
+Penghou.Fuwen.ActivityExecutionIntent.Required.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.ExecutionGuarantee!>!
+Penghou.Fuwen.ActivityExecutionIntent.Required.init -> void
+Penghou.Fuwen.ExecutionGuarantee
+Penghou.Fuwen.ExecutionGuarantee.Capability.get -> string!
+Penghou.Fuwen.ExecutionGuarantee.Capability.init -> void
+Penghou.Fuwen.ExecutionGuarantee.ExecutionGuarantee(string! Capability, Penghou.Fuwen.ExecutionGuaranteeLevel Minimum) -> void
+Penghou.Fuwen.ExecutionGuarantee.Minimum.get -> Penghou.Fuwen.ExecutionGuaranteeLevel
+Penghou.Fuwen.ExecutionGuarantee.Minimum.init -> void
+Penghou.Fuwen.ExecutionGuaranteeLevel
+Penghou.Fuwen.ExecutionGuaranteeLevel.Full = 1 -> Penghou.Fuwen.ExecutionGuaranteeLevel
+Penghou.Fuwen.ExecutionGuaranteeLevel.Partial = 0 -> Penghou.Fuwen.ExecutionGuaranteeLevel
+const Penghou.Fuwen.FuwenContracts.ExecutionIntentIrVersion = "fuwen-ir/v3-execution-intent" -> string!
 Penghou.Fuwen.ArgumentBinding
 Penghou.Fuwen.ArgumentBinding.ArgumentBinding(string! Name, Penghou.Fuwen.Binding! Value) -> void
 Penghou.Fuwen.ArgumentBinding.Name.get -> string!

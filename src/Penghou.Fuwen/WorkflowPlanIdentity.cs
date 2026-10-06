@@ -154,7 +154,11 @@ public static class WorkflowPlanIdentity
                     inference.FailureFallback.Codes.OrderBy(static code => code).ToArray(),
                     NormalizeBinding(inference.FailureFallback.Value)),
         },
-        ActivityNode activity => activity with { Arguments = NormalizeArguments(activity.Arguments) },
+        ActivityNode activity => activity with
+        {
+            Arguments = NormalizeArguments(activity.Arguments),
+            ExecutionIntent = NormalizeExecutionIntent(activity.ExecutionIntent),
+        },
         ConditionalNode conditional => conditional with
         {
             Then = NormalizeNodes(conditional.Then),
@@ -193,6 +197,20 @@ public static class WorkflowPlanIdentity
 
     private static ArgumentBinding[] NormalizeArguments(IEnumerable<ArgumentBinding> arguments) => arguments
         .OrderBy(argument => argument.Name, StringComparer.Ordinal)
+        .ToArray();
+
+    private static ActivityExecutionIntent? NormalizeExecutionIntent(ActivityExecutionIntent? intent) =>
+        intent is null
+            ? null
+            : intent with
+            {
+                Required = NormalizeGuarantees(intent.Required),
+                Preferred = NormalizeGuarantees(intent.Preferred),
+            };
+
+    private static ExecutionGuarantee[] NormalizeGuarantees(IEnumerable<ExecutionGuarantee> guarantees) => guarantees
+        .OrderBy(guarantee => guarantee.Capability, StringComparer.Ordinal)
+        .ThenBy(guarantee => guarantee.Minimum)
         .ToArray();
 
     private static Binding NormalizeBinding(Binding binding) => binding switch

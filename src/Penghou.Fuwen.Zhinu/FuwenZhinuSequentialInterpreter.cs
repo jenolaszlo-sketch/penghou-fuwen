@@ -454,7 +454,8 @@ internal static class FuwenZhinuSequentialInterpreter
         CancellationToken cancellationToken)
     {
         var arguments = FuwenBindingEvaluator.EvaluateArguments(node.Arguments, plan, state);
-        var identity = new NodeRequestIdentity("activity", node.StructuralPath, node.Activity, null, arguments, null);
+        var identity = new NodeRequestIdentity("activity", node.StructuralPath, node.Activity, null, arguments, null,
+            ExecutionIntent: node.ExecutionIntent);
         var requestJson = FuwenRuntimeValueWire.Serialize(identity);
         var envelopeJson = await context.StepAsync<JsonElement, JsonElement>(
             node.StructuralPath,
@@ -467,7 +468,7 @@ internal static class FuwenZhinuSequentialInterpreter
                     invocation,
                     node.StructuralPath,
                     token => ports.ActivityExecutor.ExecuteAsync(
-                        new ActivityExecutionRequest(invocation, node.Activity, arguments, node.OutputType), token),
+                        new ActivityExecutionRequest(invocation, node.Activity, arguments, node.OutputType, node.ExecutionIntent), token),
                     async result =>
                     {
                         EnsureType(result.Output!, node.OutputType, plan.Schemas, $"activity node '{node.StructuralPath}' output");
@@ -1566,7 +1567,9 @@ internal static class FuwenZhinuSequentialInterpreter
         [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         IReadOnlyList<DescriptorReference>? Tools = null,
         [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        InferenceLimits? Limits = null);
+        InferenceLimits? Limits = null,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        ActivityExecutionIntent? ExecutionIntent = null);
 
     private sealed record PromptNodeRequestIdentity(
         string Kind,

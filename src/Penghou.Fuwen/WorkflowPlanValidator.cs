@@ -50,11 +50,16 @@ public static class WorkflowPlanValidator
     internal static void ValidateCompatibility(WorkflowPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        var intentVersion = string.Equals(plan.IrVersion, FuwenContracts.ExecutionIntentIrVersion, StringComparison.Ordinal);
+        var fallbackVersion = string.Equals(plan.IrVersion, FuwenContracts.InferenceFallbackIrVersion, StringComparison.Ordinal);
         if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersion, StringComparison.Ordinal) &&
-            !string.Equals(plan.IrVersion, FuwenContracts.InferenceFallbackIrVersion, StringComparison.Ordinal))
+            !fallbackVersion && !intentVersion)
             throw new NotSupportedException(
                 $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'.");
-        if (string.Equals(plan.IrVersion, FuwenContracts.IrVersion, StringComparison.Ordinal) &&
+        if (!intentVersion &&
+            FlattenNodes(plan.Nodes).OfType<ActivityNode>().Any(static activity => activity.ExecutionIntent is not null))
+            throw new NotSupportedException("Activity execution intent requires the execution-intent IR version.");
+        if (!intentVersion && !fallbackVersion &&
             FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.FailureFallback is not null))
             throw new NotSupportedException("Inference fallbacks require the inference-fallback IR version.");
 

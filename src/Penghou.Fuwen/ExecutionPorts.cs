@@ -58,13 +58,28 @@ public sealed class ActivityExecutionRequest : ExecutionRequest
         DescriptorReference activity,
         IReadOnlyList<RuntimeArgument> arguments,
         FuwenType outputType)
+        : this(invocation, activity, arguments, outputType, executionIntent: null)
+    {
+    }
+
+    /// <summary>Creates an activity execution request carrying neutral execution intent.</summary>
+    public ActivityExecutionRequest(
+        ExecutionInvocation invocation,
+        DescriptorReference activity,
+        IReadOnlyList<RuntimeArgument> arguments,
+        FuwenType outputType,
+        ActivityExecutionIntent? executionIntent)
         : base(invocation, arguments, outputType)
     {
         Activity = ExecutionPortValidation.Descriptor(activity, DescriptorKind.Activity, nameof(activity));
+        ExecutionIntent = ExecutionPortValidation.CloneExecutionIntent(executionIntent);
     }
 
     /// <summary>The exact admitted activity descriptor.</summary>
     public DescriptorReference Activity { get; }
+
+    /// <summary>The frozen neutral execution intent requested by the plan node, if any.</summary>
+    public ActivityExecutionIntent? ExecutionIntent { get; }
 }
 
 /// <summary>Request sent to a durable context provider.</summary>
@@ -1011,6 +1026,34 @@ internal static class ExecutionPortValidation
         if (descriptor.Kind != expected)
             throw new ArgumentException($"Descriptor must be of kind '{expected}', not '{descriptor.Kind}'.", parameterName);
         return RuntimeValueSnapshot.CloneDescriptor(descriptor);
+    }
+
+    internal static ActivityExecutionIntent? CloneExecutionIntent(ActivityExecutionIntent? intent)
+    {
+        if (intent is null)
+            return null;
+        const int maximumGuarantees = 128;
+        if (intent.Required is null || intent.Preferred is null)
+            throw new ArgumentException("Execution intent guarantee lists are required.", nameof(intent));
+        if (intent.Required.Count > maximumGuarantees || intent.Preferred.Count > maximumGuarantees)
+            throw new ArgumentOutOfRangeException(nameof(intent), $"An execution intent supports at most {maximumGuarantees} guarantees per list.");
+        return new ActivityExecutionIntent(
+            RuntimeValueSnapshot.Text(intent.Profile, nameof(intent.Profile), 128),
+            CloneGuarantees(intent.Required),
+            CloneGuarantees(intent.Preferred));
+
+        static IReadOnlyList<ExecutionGuarantee> CloneGuarantees(IReadOnlyList<ExecutionGuarantee> guarantees)
+        {
+            var copy = new ExecutionGuarantee[guarantees.Count];
+            for (var i = 0; i < guarantees.Count; i++)
+            {
+                var guarantee = guarantees[i] ?? throw new ArgumentException("Execution intent guarantees cannot contain null values.", nameof(guarantees));
+                copy[i] = new ExecutionGuarantee(
+                    RuntimeValueSnapshot.Text(guarantee.Capability, nameof(guarantee.Capability), 256),
+                    guarantee.Minimum);
+            }
+            return Array.AsReadOnly(copy);
+        }
     }
 
     internal static IReadOnlyList<RuntimeArgument> CloneArguments(IReadOnlyList<RuntimeArgument> arguments)

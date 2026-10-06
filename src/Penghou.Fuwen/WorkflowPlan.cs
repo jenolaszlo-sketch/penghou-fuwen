@@ -9,6 +9,8 @@ public static class FuwenContracts
     public const string IrVersion = "fuwen-ir/v1";
     /// <summary>The executable IR required for authored inference fallbacks.</summary>
     public const string InferenceFallbackIrVersion = "fuwen-ir/v2-inference-fallback";
+    /// <summary>The executable IR required for neutral activity execution intent.</summary>
+    public const string ExecutionIntentIrVersion = "fuwen-ir/v3-execution-intent";
     /// <summary>The current compiler-semantics contract.</summary>
     public const string CompilerSemanticVersion = "compiler-semantics/1";
     /// <summary>The canonical JSON contract used by all currently supported IR versions.</summary>
@@ -121,7 +123,46 @@ public sealed record ActivityNode(
     string StructuralPath,
     DescriptorReference Activity,
     IReadOnlyList<ArgumentBinding> Arguments,
-    FuwenType OutputType) : WorkflowNode(Name, StructuralPath);
+    FuwenType OutputType) : WorkflowNode(Name, StructuralPath)
+{
+    /// <summary>
+    /// Optional neutral execution intent. Null for an ordinary activity; set to
+    /// request a logical execution profile within the descriptor's permitted
+    /// ceiling. Carried into the canonical plan, fingerprint, admission, and
+    /// replay validation.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ActivityExecutionIntent? ExecutionIntent { get; init; }
+}
+
+/// <summary>The neutral, requested floor level of one execution guarantee.</summary>
+public enum ExecutionGuaranteeLevel
+{
+    /// <summary>Best-effort; the host may satisfy a weaker level.</summary>
+    Partial,
+    /// <summary>A firm requirement.</summary>
+    Full,
+}
+
+/// <summary>
+/// One neutral execution guarantee request: a logical capability identifier and
+/// the requested floor. The vocabulary is Fuwen-owned and deliberately does not
+/// name any provider, Hufu grant, or Gagamba capability type; a trusted host
+/// composition maps it to a concrete provider requirement.
+/// </summary>
+public sealed record ExecutionGuarantee(string Capability, ExecutionGuaranteeLevel Minimum);
+
+/// <summary>
+/// Neutral, versioned execution intent attached to an activity node. It names a
+/// logical execution profile and requests guarantees; it never names an
+/// executable, arguments, environment, Hufu profile revision, or provider
+/// handle. A trusted host resolves the logical profile to a concrete approved
+/// invocation and remains the sole authority to authorize execution.
+/// </summary>
+public sealed record ActivityExecutionIntent(
+    string Profile,
+    IReadOnlyList<ExecutionGuarantee> Required,
+    IReadOnlyList<ExecutionGuarantee> Preferred);
 
 /// <summary>Optional per-inference execution bounds. Null means unbounded.</summary>
 /// <param name="MaxTokens">Maximum model output tokens.</param>

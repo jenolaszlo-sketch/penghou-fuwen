@@ -43,6 +43,26 @@ contract versions. Consumer-visible breaking changes are called out under
   recovery, privacy, provider, and operator gates. No new NuGet package is
   published by these source changes.
 
+## 0.1.0-preview.13
+
+- Authoritative Fuwen→Zhinu plan-to-step mapping: new public
+  `FuwenZhinuStepMapper` builds a plan/revision-scoped `FuwenZhinuStepMap`
+  describing every durable step the port can emit (declared, synthetic, and
+  repeat/fan-out parameterized) and classifies persisted step keys through
+  `TryMatchStepKey(map, stepKey, out match)` with no consumer-side parsing or
+  key reconstruction.
+- Shared adapter-owned `StepKey` construction: the interpreter and coordinators
+  now build every step key through one internal module (`FuwenZhinuStepKeys`),
+  so execution, mapping, and matching cannot drift. Because Zhinu's
+  durable-loop key helpers are internal, execution-backed exactness tests are
+  the compatibility guard against future key-convention drift.
+- Authoritative persisted-`StepKey` matching: exactness tests assert every
+  persisted `WorkflowStepRun.StepKey` is matched exactly once and every
+  declared node is represented even when it never executes.
+- Prior additive work included in this preview: `Fuwen.Inspect` read-only plan
+  verify/validate/explain consumer with explanatory plan compare, and ADR 0012
+  deferring Penghou.Luban and decoupling Hufu from the command language.
+
 ## 0.1.0-preview.12
 
 **Additive**: a first-class, neutral `ActivityExecutionIntent` on `ActivityNode`

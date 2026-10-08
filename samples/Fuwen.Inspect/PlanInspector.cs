@@ -43,6 +43,21 @@ public sealed record ExplainRecord(
     int PhaseCount)
     : InspectRecord(Status, Reason);
 
+/// <summary>One declared structural or semantic difference; a null path denotes plan-level semantics.</summary>
+public sealed record InspectedChange(string? Path, string Kind);
+
+/// <summary>
+/// Explanatory comparison of two verified plan revisions. Differences describe
+/// what changed between the revisions; they never assert that prior artifacts
+/// are reusable and never authorize execution.
+/// </summary>
+public sealed record CompareRecord(
+    string Status,
+    string Reason,
+    bool ExecutionFingerprintEqual,
+    IReadOnlyList<InspectedChange> Changes)
+    : InspectRecord(Status, Reason);
+
 /// <summary>
 /// Read-only inspection over persisted canonical plan files. Verify checks
 /// integrity against a claimed fingerprint; Validate checks structural
@@ -150,6 +165,54 @@ public static class PlanInspector
             // Validated plans always carry an execution order; validation above enforces it.
             plan.ExecutionOrder!.Regions.Count,
             plan.ExecutionOrder.Regions.Sum(region => region.Phases.Count));
+    }
+
+    public static CompareRecord Compare(
+        string beforeDefinitionPath,
+        string beforeRevisionPath,
+        string beforeRevisionFingerprint,
+        string afterDefinitionPath,
+        string afterRevisionPath,
+        string afterRevisionFingerprint)
+    {
+        try
+        {
+            var beforeRevision = LoadRevision(beforeRevisionPath, beforeRevisionFingerprint);
+            var afterRevision = LoadRevision(afterRevisionPath, afterRevisionFingerprint);
+            var beforeDefinition = LoadDefinition(
+                beforeDefinitionPath, beforeRevision.ReadEnvelope().ExecutionFingerprint);
+            var afterDefinition = LoadDefinition(
+                afterDefinitionPath, afterRevision.ReadEnvelope().ExecutionFingerprint);
+
+            var comparison = PlanRevisionComparer.Compare(
+                beforeRevision, beforeDefinition, afterRevision, afterDefinition);
+
+            return new CompareRecord(
+                "Succeeded",
+                "",
+                comparison.ExecutionFingerprintEqual,
+                comparison.Changes
+                    .Select(change => new InspectedChange(change.StructuralPath, change.Kind.ToString()))
+                    .ToList());
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or
+            ArgumentException or NotSupportedException or InvalidOperationException or
+            PlanRevisionIntegrityException or WorkflowDefinitionIntegrityException)
+        {
+            return new CompareRecord("Failed", error.Message, false, Array.Empty<InspectedChange>());
+        }
+    }
+
+    private static PlanRevisionDocument LoadRevision(string revisionPath, string envelopeFingerprint)
+    {
+        var bytes = File.ReadAllBytes(revisionPath);
+        return PlanRevisionDocument.LoadVerified(envelopeFingerprint, bytes);
+    }
+
+    private static WorkflowDefinitionDocument LoadDefinition(string definitionPath, string executionFingerprint)
+    {
+        var bytes = File.ReadAllBytes(definitionPath);
+        return WorkflowDefinitionDocument.LoadVerified(executionFingerprint, bytes);
     }
 
     private static WorkflowPlan ReadPlan(string planPath)

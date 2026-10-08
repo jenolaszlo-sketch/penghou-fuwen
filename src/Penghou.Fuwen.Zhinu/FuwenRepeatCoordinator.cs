@@ -33,12 +33,6 @@ internal static class FuwenRepeatCoordinator
         }
     }
 
-    internal static string StepSuffix(string nodePath, string repeatPath)
-    {
-        var marker = nodePath.IndexOf("/$body/", StringComparison.Ordinal);
-        var suffix = marker >= 0 ? nodePath[(marker + "/$body/".Length)..] : nodePath;
-        if (suffix.StartsWith(repeatPath + "/", StringComparison.Ordinal))
-            suffix = suffix[(repeatPath.Length + 1)..];
-        return suffix.Replace("/", "-", StringComparison.Ordinal).Replace("$", string.Empty, StringComparison.Ordinal);
-    }
+    internal static string StepSuffix(string nodePath, string repeatPath) =>
+        FuwenZhinuStepKeys.RepeatBodyStepName(nodePath, repeatPath);
 }

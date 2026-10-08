@@ -87,7 +87,7 @@ internal static class FuwenInferenceCoordinator
         try
         {
             finalStateJson = await loopRunner(
-                ProtocolLoopName(node.StructuralPath),
+                FuwenZhinuStepKeys.ProtocolLoopName(node.StructuralPath),
                 FuwenRuntimeValueWire.Serialize(initial),
                 (iteration, token) => IterateAsync(
                     node, plan, ports, state.TrustedToolSignatures, prepared, effective, iteration, token),
@@ -1035,7 +1035,7 @@ internal static class FuwenInferenceCoordinator
             ? 0
             : (int)Math.Min((long)InferenceTurnRequest.MaximumProposals, remainingToolCalls);
         var output = await iteration.StepAsync(
-            $"infer-model-turn-{ordinal:0000}",
+            FuwenZhinuStepKeys.ProtocolModelTurnStepName(ordinal),
             turnInput,
             async (_, _, token) =>
             {
@@ -1549,7 +1549,7 @@ internal static class FuwenInferenceCoordinator
             call = pending.CallId,
         });
         var output = await iteration.StepAsync(
-            $"infer-read-tool-{state.ToolOrdinal:0000}-{SanitizeStepSegment(pending.CallId)}",
+            FuwenZhinuStepKeys.ProtocolReadToolStepName(state.ToolOrdinal, pending.CallId),
             toolInput,
             async (_, _, token) =>
             {
@@ -1959,36 +1959,13 @@ internal static class FuwenInferenceCoordinator
         return new InferenceLimitSet(remaining);
     }
 
-    private static string SanitizeStepSegment(string value)
-    {
-        var builder = new StringBuilder(value.Length);
-        foreach (var character in value)
-            builder.Append(character is (>= 'a' and <= 'z') or (>= 'A' and <= 'Z') or (>= '0' and <= '9') or '-' or '_'
-                ? character
-                : '-');
-        var sanitized = builder.ToString().Trim('-');
-        return sanitized.Length == 0 ? "call" : (sanitized.Length > 64 ? sanitized[..64] : sanitized);
-    }
-
     private static string RequestFingerprint(JsonElement requestJson) =>
         $"sha256:{RequestFingerprintContract}:{Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(CanonicalJson.Canonicalize(requestJson))).ToLowerInvariant()}";
 
-    /// <summary>
-    /// Derives a stable durable loop name from the node's structural path.
-    /// The name is restricted to the characters Zhinu permits while remaining
-    /// deterministic and collision-resistant across sibling nodes.
-    /// </summary>
     private static TimeSpan ToTimeSpan(long milliseconds) =>
         milliseconds >= (long)TimeSpan.MaxValue.TotalMilliseconds
             ? TimeSpan.MaxValue
             : TimeSpan.FromMilliseconds(milliseconds);
-
-    private static string ProtocolLoopName(string structuralPath)
-    {
-        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-            Encoding.UTF8.GetBytes(structuralPath))).ToLowerInvariant()[..12];
-        return $"infer-protocol-{SanitizeStepSegment(structuralPath)}-{hash}";
-    }
 
     private static string BuildContextJson(IReadOnlyList<InferenceContextInput> contextInputs)
     {

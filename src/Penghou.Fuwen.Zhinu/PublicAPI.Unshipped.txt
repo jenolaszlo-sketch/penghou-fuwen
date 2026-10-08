@@ -76,3 +76,54 @@ Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest.OperationId.get -> string!
 Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest.RequestDigest.get -> string!
 Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest.EffectiveLimits.get -> Penghou.Fuwen.InferenceLimitSet!
 Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest.Quote.get -> Penghou.Fuwen.InferenceTurnBudgetQuote!
+Penghou.Fuwen.Zhinu.FuwenZhinuStepOrigin
+Penghou.Fuwen.Zhinu.FuwenZhinuStepOrigin.Declared = 0 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepOrigin
+Penghou.Fuwen.Zhinu.FuwenZhinuStepOrigin.Synthetic = 1 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepOrigin
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.Activity = 0 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.Context = 1 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.Inference = 2 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.Checkpoint = 3 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.Wait = 4 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.Return = 5 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.Condition = 6 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.ConditionalMerge = 7 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.InferenceFallback = 8 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.FanOutAggregate = 9 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.FanOutItem = 10 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.LoopControl = 11 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.InferenceProtocol = 12 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepScopeKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepScopeKind.Loop = 0 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepScopeKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepScopeKind.FanOutItem = 1 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepScopeKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepScope
+Penghou.Fuwen.Zhinu.FuwenZhinuStepScope.FuwenZhinuStepScope(Penghou.Fuwen.Zhinu.FuwenZhinuStepScopeKind kind, string! name, int? iteration = null, string? itemToken = null) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuStepScope.Kind.get -> Penghou.Fuwen.Zhinu.FuwenZhinuStepScopeKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepScope.Name.get -> string!
+Penghou.Fuwen.Zhinu.FuwenZhinuStepScope.Iteration.get -> int?
+Penghou.Fuwen.Zhinu.FuwenZhinuStepScope.ItemToken.get -> string?
+Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor
+Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor.FuwenZhinuStepDescriptor(string? declaredNodePath, System.Collections.Generic.IReadOnlyList<string!>! coveredDeclaredNodePaths, Penghou.Fuwen.Zhinu.FuwenZhinuStepOrigin origin, Penghou.Fuwen.Zhinu.FuwenZhinuStepKind kind, string? exactStepKey, System.Collections.Generic.IReadOnlyList<string!>! loopNames, string? bodyStepName, string? fanOutNodePath) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor.DeclaredNodePath.get -> string?
+Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor.CoveredDeclaredNodePaths.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor.Origin.get -> Penghou.Fuwen.Zhinu.FuwenZhinuStepOrigin
+Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor.Kind.get -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor.ExactStepKey.get -> string?
+Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor.LoopNames.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor.BodyStepName.get -> string?
+Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor.FanOutNodePath.get -> string?
+Penghou.Fuwen.Zhinu.FuwenZhinuStepMatch
+Penghou.Fuwen.Zhinu.FuwenZhinuStepMatch.FuwenZhinuStepMatch(Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor! descriptor, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Zhinu.FuwenZhinuStepScope!>! scope) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuStepMatch.Descriptor.get -> Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor!
+Penghou.Fuwen.Zhinu.FuwenZhinuStepMatch.Scope.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Zhinu.FuwenZhinuStepScope!>!
+Penghou.Fuwen.Zhinu.FuwenZhinuStepMap
+Penghou.Fuwen.Zhinu.FuwenZhinuStepMap.FuwenZhinuStepMap(string! schemaVersion, string! planRevision, string! executionFingerprint, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor!>! steps) -> void
+Penghou.Fuwen.Zhinu.FuwenZhinuStepMap.SchemaVersion.get -> string!
+Penghou.Fuwen.Zhinu.FuwenZhinuStepMap.PlanRevision.get -> string!
+Penghou.Fuwen.Zhinu.FuwenZhinuStepMap.ExecutionFingerprint.get -> string!
+Penghou.Fuwen.Zhinu.FuwenZhinuStepMap.Steps.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor!>!
+Penghou.Fuwen.Zhinu.FuwenZhinuStepMapper
+const Penghou.Fuwen.Zhinu.FuwenZhinuStepMapper.CurrentSchemaVersion = "fuwen-zhinu-step-map-v1" -> string!
+static Penghou.Fuwen.Zhinu.FuwenZhinuStepMapper.Map(Penghou.Fuwen.WorkflowPlan! plan) -> Penghou.Fuwen.Zhinu.FuwenZhinuStepMap!
+static Penghou.Fuwen.Zhinu.FuwenZhinuStepMapper.TryMatchStepKey(Penghou.Fuwen.Zhinu.FuwenZhinuStepMap! map, string! stepKey, out Penghou.Fuwen.Zhinu.FuwenZhinuStepMatch! match) -> bool
+static Penghou.Fuwen.Zhinu.FuwenZhinuStepMapper.ResolveStepKey(Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor! descriptor, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Zhinu.FuwenZhinuStepScope!>! scope) -> string!

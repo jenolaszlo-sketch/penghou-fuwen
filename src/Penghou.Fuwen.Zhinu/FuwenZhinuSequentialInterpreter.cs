@@ -100,7 +100,7 @@ internal static class FuwenZhinuSequentialInterpreter
                                 var selectedBinding = condition ? conditionalNode.Merge.ThenValue : conditionalNode.Merge.ElseValue;
                                 var mergedValue = FuwenBindingEvaluator.Evaluate(selectedBinding, plan, state);
                                 EnsureType(mergedValue, conditionalNode.Merge.ResultType, plan.Schemas, $"conditional merge '{conditionalNode.StructuralPath}'");
-                                var mergePath = conditionalNode.StructuralPath + "/$merge";
+                                var mergePath = FuwenZhinuStepKeys.ConditionalMerge(conditionalNode.StructuralPath);
                                 var requestJson = FuwenRuntimeValueWire.Serialize(new ConditionalMergeRequestIdentity(mergePath, mergedValue));
                                 var outputJson = await context.StepAsync<JsonElement, JsonElement>(
                                     mergePath,
@@ -433,7 +433,7 @@ internal static class FuwenZhinuSequentialInterpreter
             value = FuwenRuntimeValueWire.ToJson(value),
         });
         var output = await context.StepAsync<JsonElement, JsonElement>(
-            node.StructuralPath + "/$fallback",
+            FuwenZhinuStepKeys.InferenceFallback(node.StructuralPath),
             request,
             (_, _, _) => Task.FromResult(FuwenRuntimeValueWire.ToJson(value)),
             stepOptions: StepOptionsFor(inheritedDependencies, []),
@@ -547,7 +547,7 @@ internal static class FuwenZhinuSequentialInterpreter
         {
             var itemState = new FuwenInterpreterState(state.Input) { CurrentItem = item };
             var key = FuwenFanOutCoordinator.ToRuntimeKey(FuwenBindingEvaluator.Evaluate(node.Key, plan, itemState));
-            keyed.Add((key, item, RuntimeNodeIdentity.CreateFanOutItem(node.StructuralPath, key)));
+            keyed.Add((key, item, FuwenZhinuStepKeys.FanOutItem(node.StructuralPath, key)));
         }
         RuntimeNodeIdentity.ValidateUniqueKeys(keyed.Select(static value => value.Key));
 
@@ -848,8 +848,8 @@ internal static class FuwenZhinuSequentialInterpreter
             : conditional.Merge.ElseValue;
         var mergedValue = FuwenBindingEvaluator.Evaluate(selectedBinding, plan, state);
         EnsureType(mergedValue, conditional.Merge.ResultType, plan.Schemas, $"repeat conditional merge '{conditional.StructuralPath}'");
-        var stepSuffix = FuwenRepeatCoordinator.StepSuffix(conditional.StructuralPath, repeat.StructuralPath) + "-merge";
-        var mergePath = conditional.StructuralPath + "/$merge";
+        var stepSuffix = FuwenZhinuStepKeys.RepeatMergeStepName(conditional.StructuralPath, repeat.StructuralPath);
+        var mergePath = FuwenZhinuStepKeys.ConditionalMerge(conditional.StructuralPath);
         var requestJson = FuwenRuntimeValueWire.Serialize(new ConditionalMergeRequestIdentity(mergePath, mergedValue));
         var outputJson = await iteration.StepAsync(
             stepSuffix,

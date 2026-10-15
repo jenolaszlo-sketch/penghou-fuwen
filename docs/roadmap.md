@@ -28,6 +28,10 @@ review rather than infer implementation from the long-range architecture.
 
 Last reviewed: **2026-09-27**
 
+Roadmap addition reviewed **2026-10-15**: user-defined reusable macro activities
+and the paired Zhinu activity-group contract below are planned, not shipped.
+This addition does not change the capability matrix or current release gates.
+
 The authoritative shipped-surface summary is the
 [capability matrix](capability-matrix.md). The current coordinated-inference
 gates and V2 preparation work are tracked in the
@@ -277,6 +281,11 @@ language.
 
 ### Next usability direction — bounded complex activities
 
+Terminology: this existing work describes the runtime protocol behind one
+`infer` node. The separate macro milestone below composes multiple explicit
+workflow nodes at compile time. A macro may contain `infer`, but does not turn
+workflow decisions or externally meaningful effects into a hidden protocol.
+
 After the current reliability work, improve usability by treating the existing
 `infer` node as the first bounded complex activity. Authors declare one logical
 inference—prompt, typed inputs/context, output, profile, exact allowed tools and
@@ -299,6 +308,140 @@ Delivery order:
    harness;
 4. bounded durable model/tool loop with recovery and evidence;
 5. credential-free end-to-end sample and two-consumer dogfood evidence.
+
+### Planned composition milestone — user-defined reusable macro activities (FM)
+
+Added **2026-10-15** from the macro activities/activity groups proposal. This is
+the concrete composition direction for Milestone 11, after current reliability
+gates; it is not a new first-preview requirement or a claim of implementation.
+The paired runtime milestone is
+[Zhinu hierarchical durable activity groups (ZG)](../../Penghou.Zhinu/ROADMAP.md#planned-runtime-milestone--hierarchical-durable-activity-groups-zg).
+
+Runtime contract refined **2026-10-15** in the repository-reconciled
+[Zhinu group design](../../Penghou.Zhinu/docs/activity-groups-design.md) and
+[implementation plan](../../Penghou.Zhinu/docs/activity-groups-implementation-plan.md).
+Zhinu now tracks ZG-1 through ZG-7; FM-2 closes with its adapter and qualification
+stages ZG-6/7. Groups are optional: no synthetic persisted root or mandatory
+membership for ordinary activities. Each durable step belongs directly to its
+innermost occurrence; child workflows retain separate run-local trees.
+
+Two concrete integration gaps must be qualified: this repository's adapter
+references Zhinu **0.1.0-preview.14**, while the inspected runtime is a
+**0.2.0-preview.3 candidate**; and current Fuwen fan-out executes an entire item
+body inside one durable step. The existing `FuwenZhinuStepMapper` exposes this
+many-to-one coverage. Preserve historical plans. Macro-bearing fan-out requiring
+independent durable children needs a separately versioned adapter lowering, or
+must fail preflight until available. Merely adding group metadata cannot provide
+per-child recovery, and an interim rejection does not complete full FM/ZG
+qualification. Native Zhinu child/loop capabilities do not imply DSL support.
+
+Macros provide a methodology-neutral vocabulary. `SupervisedCoding`,
+`ProbeAndVerify`, `TDD`, `BDDImplementation`, and domain-specific approval or
+research procedures are ordinary user definitions, never privileged language
+constructs. Any shipped examples use exactly the same facilities, remain
+optional and replaceable, and confer no additional runtime authority.
+
+A macro is a reusable, parameterized workflow subtree expanded by the compiler
+into ordinary activities and structured control flow. It is neither a new
+opaque executable activity nor a Zhinu child workflow. Each invocation retains
+a macro group, nested invocations retain nested groups, and explicit logical
+groups may organize either. The containment tree is separate from dependency
+and control-flow relationships: membership alone never orders or authorizes work.
+
+#### FM-0 — contract and compatibility decisions
+
+- [ ] Specify declaration/invocation and explicit logical-group authoring, an
+  initial parameter schema, invocation identity, and closed input/result
+  bindings before freezing syntax. Proposal forms such as `macro`, `spec`,
+  `actor`, and `{{ ... }}` are illustrative, not supported grammar. Reuse the
+  existing typed inline-prompt/registered-template machinery where applicable.
+- [ ] Support a bounded initial set of strings/specification content, numbers,
+  booleans, host-resolved actor/role/profile references, and typed workflow
+  values/references. Distinguish compile-time configuration from runtime value
+  bindings: runtime values cannot decide expansion topology. Role/model
+  parameters cannot bypass trusted descriptor resolution or host routing.
+- [ ] Define safe placeholder binding, escaping, missing/extra argument and
+  type diagnostics, and source maps to both invocation and definition. Treat
+  supplied text as data; prohibit arbitrary AST manipulation, code execution,
+  model-driven expansion, and uncontrolled textual substitution.
+- [ ] Define the minimum explicit result/output binding needed for composition
+  using existing types. Internal names cannot leak across regions; broader
+  typed macro interfaces and exports may follow later, but basic output scope
+  and definite assignment must be settled before the first executable slice.
+- [ ] Pin definition identity/content and nested definitions, compiler semantics,
+  source workflow, invocation arguments and resolved catalogue inputs. Freeze
+  canonical expansion and fingerprint rules under an explicit versioned
+  contract: semantic changes require a new admitted plan; source locations,
+  display labels and audit provenance must not silently redefine execution
+  identity. Decide which hierarchy fields are semantic versus presentation.
+- [ ] Define deterministic, collision-safe invocation-local structural paths,
+  independent of source position and unrelated sibling order. Distinguish
+  structural group/node identity from display names and runtime loop/item/
+  attempt identities. Define rename/reparent behavior and plan comparison;
+  group similarity never establishes artifact reuse authority.
+- [ ] Prohibit direct and indirect recursive expansion initially. Bound source,
+  expansion depth, generated nodes/groups, substituted content, diagnostics and
+  total compile work, including nested expansion amplification. Apply normal
+  type, scope, effect, capability and adapter validation to the expanded plan.
+
+#### FM-1 — deterministic authoring and inspection
+
+- [ ] Implement local user macro declarations, named invocations, parameters,
+  specification placeholders and nested non-recursive composition. Parameters
+  can bind activity/control-flow configuration, roles/profiles and nested calls
+  within the supported primitive set and host ceilings.
+- [ ] Keep loops, fan-out, conditions and waits explicit in expanded IR; use
+  existing closed regions and bounds. A macro cannot enable an unsupported
+  primitive, import, write, or effect through expansion.
+- [ ] Preserve macro name, exact version or content identity, invocation ID,
+  definition/invocation source locations and safe parameter summaries/references.
+  Do not copy secrets or unrestricted prompt/argument payloads into provenance.
+- [ ] Provide deterministic human/machine expansion inspection (for example,
+  `fuwen expand`, command spelling to be decided), showing the full nested
+  hierarchy, generated primitives, bindings, identities and diagnostics before
+  execution, with the same disclosure policy as other plan inspection.
+- [ ] Keep ordinary macro-free workflows compatible and verify historical plans
+  using their original canonicalization/fingerprint rules. Initial local macros
+  do not require imports or a library registry.
+
+#### FM-2 — durable hierarchy handoff and qualification
+
+- [ ] Map explicit logical groups and every macro invocation through
+  `Penghou.Fuwen.Zhinu` to ZG's generic group/membership contract. Fuwen core stays
+  independent of Zhinu; Zhinu core takes no Fuwen compiler dependency. Preflight
+  must reject unsupported hierarchy contracts rather than silently flatten them.
+- [ ] Bind hierarchy and provenance to the exact admitted immutable plan and
+  runtime generation. Recovery uses the pinned expanded plan, not re-expansion
+  against a changed macro definition/library. Preserve activity-level retries,
+  evidence, authorization, checkpoints, cancellation, failures and recovery.
+- [ ] Bind a versioned immutable companion group manifest alongside the admitted
+  executable plan without changing historical canonical bytes/fingerprints.
+  Extend the existing step mapper for membership/occurrence coordinates; preserve
+  optional ungrouped execution and separate Work/Control projection roles.
+  Supply revision-bound selection/closure evidence for dynamic groups so known
+  children are not mistaken for a final total. Never decode a domain outcome in
+  Zhinu core to manufacture group success/failure.
+- [ ] Qualify repeated invocations, nested macros/logical groups, local-name
+  collisions, sibling insertion, rejected recursion and expansion limits, bad
+  bindings and capability violations. Golden vectors must prove deterministic
+  expansion and historical compatibility.
+- [ ] Run the shared FM/ZG qualification: supervised coding/probe-and-verify,
+  TDD/BDD, and a domain-specific approval workflow use the same generic runtime
+  representation. After process loss, the same hierarchy, provenance and durable
+  child states remain observable without repeating committed effects. Include
+  loops/keyed fan-out, partial failure, waiting and cancelled work, plus unchanged
+  execution of macro-free/ungrouped workflows. No macro-name switch exists in Zhinu.
+
+Delivery order: align FM-0 with the completed ZG-0 design checkpoint; implement
+FM-1 against the runtime contracts in ZG-1/2/3; close FM-2 with ZG-4/5 inspection
+and ZG-6/7 adapter/restart qualification. A compiler-only preview may
+demonstrate expansion, but the end-to-end milestone is incomplete until durable
+hierarchy is preserved. Group controls and a full operator UI are later work.
+
+Later candidates: richer typed parameters/results, explicit exports/interfaces,
+defaults/partial configuration, role profiles, and reusable versioned libraries.
+Libraries depend on immutable import locking, trust/cycle checks and fingerprint
+rules; they remain optional ordinary definitions with no methodology privilege.
 
 ### Delivery milestone A — Freeze the executable-plan contract (complete)
 
@@ -888,6 +1031,9 @@ from historical patterns.
 - Waits, user interaction, approvals, and Hongxian integration.
 - Child workflows, compensation declarations, imports, secrets, DSL templates,
   arbitrary write/external/destructive activities, and media-specific syntax.
+  User-defined workflow macros and logical groups are now planned under FM,
+  still outside the first-preview scope; DSL templates here does not mean the
+  already-supported inline prompts and registered prompt aliases.
 - Replacing all Guyabano orchestration. One phase is enough to prove or reject
   the abstraction.
 - Domain-specific grammar for code, documents, research, images, audio, or
@@ -1131,8 +1277,12 @@ Package: `Penghou.Fuwen.Baize`.
 
 ## Milestone 11 — Deferred composition and safety
 
-- [ ] Add subworkflows only through Zhinu child workflows.
-- [ ] Consider DSL templates after registered templates prove interpolation.
+- [ ] Deliver the FM macro milestone above with Zhinu ZG: deterministic local
+  composition, parameters/specification placeholders, nesting, inspection and
+  durable hierarchy. This replaces the previously unspecified DSL-template
+  exploration; optional imports/libraries remain a separate later gate.
+- [ ] Add separately executed subworkflows only through Zhinu child workflows.
+  Compile-time macro expansion is in-plan composition, not child-run execution.
 - [ ] Add compensation only as a thin declaration mapped to Zhinu.
 - [ ] Add `secret<T>` only with opaque handles, accepting descriptors,
   non-persistence, propagation, redaction, authorization, and full tests.
@@ -1179,7 +1329,11 @@ only after repeated integration demonstrates a real reusable boundary.
 
 ## Resume point
 
-Continue with Delivery milestone F:
+The Delivery F list below is the historical first-consumer follow-through.
+Current reliability status is governed by the capability matrix and corrective
+implementation plan. The new FM/ZG work follows those gates and starts with the
+joint identity, binding, aggregation and compatibility decisions; it does not
+reopen completed IR v4-v8 features or advance current release claims.
 
 1. Express one bounded Guyabano decomposition phase through IR v4 keyed fan-out.
 2. Run the recorded failure corpus and compare the old and Fuwen paths for

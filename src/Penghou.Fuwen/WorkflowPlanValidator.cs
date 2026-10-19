@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text;
 using System.Xml;
 
 namespace Penghou.Fuwen;
@@ -30,7 +31,8 @@ public static class WorkflowPlanValidator
             plan.Nodes,
             plan.Name,
             new HashSet<string>(StringComparer.Ordinal),
-            nodes);
+            nodes,
+            string.Equals(plan.IrVersion, FuwenContracts.GroupExpansionIrVersion, StringComparison.Ordinal));
         foreach (var conditional in FlattenNodes(plan.Nodes).OfType<ConditionalNode>())
         {
             if (conditional.Merge is not null)
@@ -52,14 +54,15 @@ public static class WorkflowPlanValidator
         ArgumentNullException.ThrowIfNull(plan);
         var intentVersion = string.Equals(plan.IrVersion, FuwenContracts.ExecutionIntentIrVersion, StringComparison.Ordinal);
         var fallbackVersion = string.Equals(plan.IrVersion, FuwenContracts.InferenceFallbackIrVersion, StringComparison.Ordinal);
+        var groupVersion = string.Equals(plan.IrVersion, FuwenContracts.GroupExpansionIrVersion, StringComparison.Ordinal);
         if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersion, StringComparison.Ordinal) &&
-            !fallbackVersion && !intentVersion)
+            !fallbackVersion && !intentVersion && !groupVersion)
             throw new NotSupportedException(
                 $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'.");
-        if (!intentVersion &&
+        if (!intentVersion && !groupVersion &&
             FlattenNodes(plan.Nodes).OfType<ActivityNode>().Any(static activity => activity.ExecutionIntent is not null))
             throw new NotSupportedException("Activity execution intent requires the execution-intent IR version.");
-        if (!intentVersion && !fallbackVersion &&
+        if (!intentVersion && !fallbackVersion && !groupVersion &&
             FlattenNodes(plan.Nodes).OfType<InferenceNode>().Any(static inference => inference.FailureFallback is not null))
             throw new NotSupportedException("Inference fallbacks require the inference-fallback IR version.");
 
@@ -105,12 +108,30 @@ public static class WorkflowPlanValidator
         }
     }
 
+    private static bool IsGroupScopedPath(string parentPath, string nodeName, string structuralPath)
+    {
+        if (!structuralPath.StartsWith(parentPath + "/", StringComparison.Ordinal) ||
+            Encoding.UTF8.GetByteCount(structuralPath) > StructuralNodeIdentity.MaximumPathUtf8Bytes)
+            return false;
+        var suffix = structuralPath[(parentPath.Length + 1)..].Split('/');
+        if (suffix.Length < 3 || suffix[^1] != nodeName || (suffix.Length - 1) % 2 != 0)
+            return false;
+        for (var index = 0; index < suffix.Length - 1; index += 2)
+        {
+            if (suffix[index] != "$group") return false;
+            try { StructuralNodeIdentity.ValidateSegment(suffix[index + 1]); }
+            catch (ArgumentException) { return false; }
+        }
+        return true;
+    }
+
     private static void ValidateNodes(
         string parentPath,
         IEnumerable<WorkflowNode> nodes,
         string regionPath,
         ISet<string> paths,
-        IDictionary<string, NodeLocation> locations)
+        IDictionary<string, NodeLocation> locations,
+        bool allowGroupScopes)
     {
         ArgumentNullException.ThrowIfNull(nodes);
         foreach (var node in nodes)
@@ -119,8 +140,11 @@ public static class WorkflowPlanValidator
             StructuralNodeIdentity.ValidateSegment(node.Name);
             RequireText(node.StructuralPath, nameof(node.StructuralPath));
             var expectedPath = $"{parentPath}/{node.Name}";
-            if (!string.Equals(node.StructuralPath, expectedPath, StringComparison.Ordinal))
+            if (!string.Equals(node.StructuralPath, expectedPath, StringComparison.Ordinal) &&
+                (!allowGroupScopes || !IsGroupScopedPath(parentPath, node.Name, node.StructuralPath)))
                 throw new ArgumentException($"Node path '{node.StructuralPath}' must equal '{expectedPath}'.", nameof(nodes));
+            if (allowGroupScopes && Encoding.UTF8.GetByteCount(node.StructuralPath) > StructuralNodeIdentity.MaximumPathUtf8Bytes)
+                throw new ArgumentException($"Node path '{node.StructuralPath}' exceeds the structural path limit.", nameof(nodes));
             if (!paths.Add(node.StructuralPath))
                 throw new ArgumentException($"Duplicate structural node path '{node.StructuralPath}'.", nameof(nodes));
             locations.Add(node.StructuralPath, new NodeLocation(node, regionPath));
@@ -155,13 +179,15 @@ public static class WorkflowPlanValidator
                         conditional.Then,
                         $"{conditional.StructuralPath}/$then",
                         paths,
-                        locations);
+                        locations,
+                        allowGroupScopes);
                     ValidateNodes(
                         $"{conditional.StructuralPath}/$else",
                         conditional.Else,
                         $"{conditional.StructuralPath}/$else",
                         paths,
-                        locations);
+                        locations,
+                        allowGroupScopes);
                     break;
                 case FanOutNode fanOut:
                     ValidateFanOutShape(fanOut);
@@ -170,7 +196,8 @@ public static class WorkflowPlanValidator
                         fanOut.Body,
                         $"{fanOut.StructuralPath}/$body",
                         paths,
-                        locations);
+                        locations,
+                        allowGroupScopes);
                     break;
                 case RepeatNode repeat:
                     if (repeat.MaxIterations <= 0 || repeat.MaxIterations > 1000)
@@ -188,7 +215,8 @@ public static class WorkflowPlanValidator
                         repeat.Body,
                         $"{repeat.StructuralPath}/$body",
                         paths,
-                        locations);
+                        locations,
+                        allowGroupScopes);
                     break;
                 case CheckpointNode checkpoint:
                     ArgumentNullException.ThrowIfNull(checkpoint.Value);

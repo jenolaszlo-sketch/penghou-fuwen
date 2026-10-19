@@ -11,6 +11,8 @@ public static class FuwenContracts
     public const string InferenceFallbackIrVersion = "fuwen-ir/v2-inference-fallback";
     /// <summary>The executable IR required for neutral activity execution intent.</summary>
     public const string ExecutionIntentIrVersion = "fuwen-ir/v3-execution-intent";
+    /// <summary>The executable IR required for bounded macro expansion and structural group scopes.</summary>
+    public const string GroupExpansionIrVersion = "fuwen-ir/v4-group-expansion";
     /// <summary>The current compiler-semantics contract.</summary>
     public const string CompilerSemanticVersion = "compiler-semantics/1";
     /// <summary>The canonical JSON contract used by all currently supported IR versions.</summary>

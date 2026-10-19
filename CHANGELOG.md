@@ -43,6 +43,26 @@ contract versions. Consumer-visible breaking changes are called out under
   recovery, privacy, provider, and operator gates. No new NuGet package is
   published by these source changes.
 
+## 0.1.0-preview.14
+
+Unpublished local candidate; full FM/ZG, Linux CI and release gates remain open.
+
+- Add bounded local macro and logical-group expansion using ordinary executable
+  IR under `fuwen-ir/v4-group-expansion`, with isolated named runtime bindings,
+  explicit yields, safe provenance and bounded nonrecursive composition.
+- Pin expanded IR and hierarchy in an immutable companion bundle; add verified
+  directory storage and opaque grouped admission/registration. Recovery re-admits
+  stored expansion without source or macro-library access.
+- Map static expanded children and signal waits to native Zhinu occurrences.
+  Consume the exact unpublished Zhinu `0.2.0-preview.5` package closure recorded
+  in the qualification pin; prepare the local feed before restore.
+- Preserve historical macro-free plan bytes and keys. Grouped repeat, fan-out
+  and coordinated inference fail preflight in this first integration profile.
+  See [the support and recovery contract](docs/activity-groups-static-profile.md).
+- **Breaking changes:** no existing public member is removed. The adapter now
+  depends on an unpublished local Zhinu candidate; this branch is not suitable
+  for publication until the normal dependency/release gates close.
+
 ## 0.1.0-preview.13
 
 - Authoritative Fuwen→Zhinu plan-to-step mapping: new public

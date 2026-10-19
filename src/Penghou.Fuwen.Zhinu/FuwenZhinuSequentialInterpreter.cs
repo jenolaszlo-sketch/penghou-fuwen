@@ -18,7 +18,7 @@ internal static class FuwenZhinuSequentialInterpreter
         IReadOnlyDictionary<DescriptorReference, CallableSignature> trustedToolSignatures,
         WorkflowContext context,
         JsonElement input,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, WorkflowGroupManifest? groups = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(ports);
@@ -31,7 +31,7 @@ internal static class FuwenZhinuSequentialInterpreter
         var inputValue = FuwenRuntimeValueWire.FromJson(input, plan.InputType, plan.Schemas);
         EnsureType(inputValue, plan.InputType, plan.Schemas, "workflow input");
 
-        var state = new FuwenInterpreterState(inputValue) { TrustedToolSignatures = trustedToolSignatures };
+        var state = new FuwenInterpreterState(inputValue) { TrustedToolSignatures = trustedToolSignatures, Groups = groups is null ? null : new FuwenGroupExecution(groups) };
         var schedule = new FuwenExecutionSchedule(plan);
         var result = await ExecuteRegionAsync(
             plan.Name,
@@ -106,7 +106,7 @@ internal static class FuwenZhinuSequentialInterpreter
                                     mergePath,
                                     requestJson,
                                     (_, _, _) => Task.FromResult(FuwenRuntimeValueWire.ToJson(mergedValue)),
-                                    stepOptions: StepOptionsFor(inheritedDependencies, []),
+                                    stepOptions: GroupOptions(state, context, conditionalNode.StructuralPath, StepOptionsFor(inheritedDependencies, []), ActivityGroupMemberRole.Control),
                                     cancellationToken: cancellationToken).ConfigureAwait(false);
                                 var output = FuwenRuntimeValueWire.FromJson(outputJson, conditionalNode.Merge.ResultType, plan.Schemas);
                                 EnsureType(output, conditionalNode.Merge.ResultType, plan.Schemas, $"conditional merge '{conditionalNode.StructuralPath}' output");
@@ -143,7 +143,7 @@ internal static class FuwenZhinuSequentialInterpreter
                             var value = FuwenBindingEvaluator.Evaluate(returnNode.Value, plan, state);
                             EnsureType(value, plan.OutputType, plan.Schemas, $"return node '{nodePath}'");
                             var output = await ExecuteReturnAsync(
-                                returnNode, value, plan, executionFingerprint, context, inheritedDependencies, cancellationToken).ConfigureAwait(false);
+                                returnNode, value, plan, executionFingerprint, context, state, inheritedDependencies, cancellationToken).ConfigureAwait(false);
                             return new RegionResult(output, true);
                         }
                     default:
@@ -200,7 +200,7 @@ internal static class FuwenZhinuSequentialInterpreter
                     },
                     token).ConfigureAwait(false));
             },
-            stepOptions: StepOptionsFor(inheritedDependencies, node.Arguments),
+            stepOptions: GroupOptions(state, context, node.StructuralPath, StepOptionsFor(inheritedDependencies, node.Arguments), ActivityGroupMemberRole.Work),
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         var envelope = FuwenEnvelopeValidator.Read(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId, ports.PriorExecutionFingerprints);
@@ -396,10 +396,10 @@ internal static class FuwenZhinuSequentialInterpreter
                     },
                     token).ConfigureAwait(false));
             },
-            stepOptions: StepOptionsFor(
+            stepOptions: GroupOptions(state, context, node.StructuralPath, StepOptionsFor(
                 inheritedDependencies,
                 node.Arguments,
-                node.ContextRequirements!.Select(static requirement => requirement.Source)),
+                node.ContextRequirements!.Select(static requirement => requirement.Source)), ActivityGroupMemberRole.Work),
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         var envelope = FuwenEnvelopeValidator.Read(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId, ports.PriorExecutionFingerprints);
@@ -436,7 +436,7 @@ internal static class FuwenZhinuSequentialInterpreter
             FuwenZhinuStepKeys.InferenceFallback(node.StructuralPath),
             request,
             (_, _, _) => Task.FromResult(FuwenRuntimeValueWire.ToJson(value)),
-            stepOptions: StepOptionsFor(inheritedDependencies, []),
+            stepOptions: GroupOptions(state, context, node.StructuralPath, StepOptionsFor(inheritedDependencies, []), ActivityGroupMemberRole.Control),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         var resumed = FuwenRuntimeValueWire.FromJson(output, node.OutputType, plan.Schemas);
         EnsureType(resumed, node.OutputType, plan.Schemas, $"inference fallback '{node.StructuralPath}' output");
@@ -488,7 +488,7 @@ internal static class FuwenZhinuSequentialInterpreter
                     },
                     token).ConfigureAwait(false));
             },
-            stepOptions: StepOptionsFor(inheritedDependencies, node.Arguments),
+            stepOptions: GroupOptions(state, context, node.StructuralPath, StepOptionsFor(inheritedDependencies, node.Arguments), ActivityGroupMemberRole.Work),
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         var envelope = FuwenEnvelopeValidator.Read(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId, ports.PriorExecutionFingerprints);
@@ -503,6 +503,7 @@ internal static class FuwenZhinuSequentialInterpreter
         WorkflowPlan plan,
         string executionFingerprint,
         WorkflowContext context,
+        FuwenInterpreterState state,
         IReadOnlyCollection<string> inheritedDependencies,
         CancellationToken cancellationToken)
     {
@@ -511,7 +512,7 @@ internal static class FuwenZhinuSequentialInterpreter
             node.StructuralPath,
             requestJson,
             (_, _, _) => Task.FromResult(FuwenRuntimeValueWire.ToJson(value)),
-            stepOptions: StepOptionsForBindings(inheritedDependencies, [node.Value]),
+            stepOptions: GroupOptions(state, context, node.StructuralPath, StepOptionsForBindings(inheritedDependencies, [node.Value]), ActivityGroupMemberRole.Control),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         var output = FuwenRuntimeValueWire.FromJson(outputJson, plan.OutputType, plan.Schemas);
         EnsureType(output, plan.OutputType, plan.Schemas, "workflow output");
@@ -689,7 +690,7 @@ internal static class FuwenZhinuSequentialInterpreter
             node.StructuralPath,
             valueJson,
             (_, _, _) => Task.FromResult(valueJson),
-            stepOptions: StepOptionsForBindings(inheritedDependencies, [node.Value]),
+            stepOptions: GroupOptions(state, context, node.StructuralPath, StepOptionsForBindings(inheritedDependencies, [node.Value]), ActivityGroupMemberRole.Control),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         var output = FuwenRuntimeValueWire.FromJson(outputJson, node.OutputType, plan.Schemas);
         EnsureType(output, node.OutputType, plan.Schemas, $"checkpoint '{node.StructuralPath}' output");
@@ -706,11 +707,10 @@ internal static class FuwenZhinuSequentialInterpreter
         CancellationToken cancellationToken)
     {
         var timeout = node.TimeoutSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : (TimeSpan?)null;
-        var outputJson = await context.WaitForSignalAsync<JsonElement>(
-            node.StructuralPath,
-            node.SignalName,
-            timeout,
-            cancellationToken).ConfigureAwait(false);
+        var group = GroupOptions(state, context, node.StructuralPath, null, ActivityGroupMemberRole.Work)?.Group;
+        var outputJson = group is null
+            ? await context.WaitForSignalAsync<JsonElement>(node.StructuralPath, node.SignalName, timeout, cancellationToken).ConfigureAwait(false)
+            : await context.WaitForGroupedSignalAsync<JsonElement>(node.StructuralPath, node.SignalName, group, timeout, cancellationToken).ConfigureAwait(false);
         var output = FuwenRuntimeValueWire.FromJson(outputJson, node.OutputType, plan.Schemas);
         EnsureType(output, node.OutputType, plan.Schemas, $"wait '{node.StructuralPath}' signal output");
         return output;
@@ -1276,11 +1276,11 @@ internal static class FuwenZhinuSequentialInterpreter
             node.StructuralPath,
             requestJson,
             (_, _, _) => Task.FromResult(FuwenConditionEvaluator.Evaluate(node.Condition.Operator, left, right)),
-            stepOptions: StepOptionsForBindings(
+            stepOptions: GroupOptions(state, context, node.StructuralPath, StepOptionsForBindings(
                 inheritedDependencies,
                 node.Condition.Right is null
                     ? [node.Condition.Left]
-                    : [node.Condition.Left, node.Condition.Right]),
+                    : [node.Condition.Left, node.Condition.Right]), ActivityGroupMemberRole.Control),
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -1380,6 +1380,9 @@ internal static class FuwenZhinuSequentialInterpreter
                 cancellationToken).ConfigureAwait(false);
         }
     }
+
+    private static StepOptions? GroupOptions(FuwenInterpreterState state, WorkflowContext context,
+        string path, StepOptions? options, ActivityGroupMemberRole role) => state.Groups?.Options(context, path, options, role) ?? options;
 
     private static StepOptions? StepOptionsFor(
         IReadOnlyCollection<string> inheritedDependencies,

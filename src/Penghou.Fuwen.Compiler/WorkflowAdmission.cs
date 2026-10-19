@@ -146,7 +146,7 @@ public sealed class WorkflowAdmissionResult
 }
 
 /// <summary>Issues an opaque receipt from the exact resolution trace produced by one compiler invocation.</summary>
-public sealed class WorkflowAdmissionService
+public sealed partial class WorkflowAdmissionService
 {
     private readonly WorkflowCompiler compiler;
 

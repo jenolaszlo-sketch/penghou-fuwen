@@ -33,6 +33,7 @@ Penghou.Fuwen.Compiler.FuwenSourceCompilationResult
 Penghou.Fuwen.Compiler.FuwenSourceCompilationResult.Compilation.get -> Penghou.Fuwen.Compiler.CompilationResult!
 Penghou.Fuwen.Compiler.FuwenSourceCompilationResult.Diagnostics.get -> Penghou.Fuwen.Compiler.DiagnosticCollection!
 Penghou.Fuwen.Compiler.FuwenSourceCompilationResult.FormattedSource.get -> string!
+Penghou.Fuwen.Compiler.FuwenSourceCompilationResult.GroupedDefinition.get -> Penghou.Fuwen.GroupedWorkflowDefinitionDocument?
 Penghou.Fuwen.Compiler.FuwenSourceCompilationResult.Plan.get -> Penghou.Fuwen.WorkflowPlan?
 Penghou.Fuwen.Compiler.FuwenSourceCompilationResult.SourceMap.get -> Penghou.Fuwen.WorkflowSourceMap?
 Penghou.Fuwen.Compiler.FuwenSourceCompilationResult.Succeeded.get -> bool
@@ -330,8 +331,13 @@ Penghou.Fuwen.Compiler.WorkflowAdmissionResult.Diagnostics.get -> Penghou.Fuwen.
 Penghou.Fuwen.Compiler.WorkflowAdmissionResult.Receipt.get -> Penghou.Fuwen.Compiler.WorkflowAdmissionReceipt?
 Penghou.Fuwen.Compiler.WorkflowAdmissionResult.Succeeded.get -> bool
 Penghou.Fuwen.Compiler.WorkflowAdmissionResult.TrustedToolSignatures.get -> System.Collections.Generic.IReadOnlyDictionary<Penghou.Fuwen.DescriptorReference!, Penghou.Fuwen.Compiler.CallableSignature!>!
+Penghou.Fuwen.Compiler.GroupedWorkflowAdmissionResult
+Penghou.Fuwen.Compiler.GroupedWorkflowAdmissionResult.Admission.get -> Penghou.Fuwen.Compiler.WorkflowAdmissionResult!
+Penghou.Fuwen.Compiler.GroupedWorkflowAdmissionResult.Definition.get -> Penghou.Fuwen.GroupedWorkflowDefinitionDocument!
+Penghou.Fuwen.Compiler.GroupedWorkflowAdmissionResult.Succeeded.get -> bool
 Penghou.Fuwen.Compiler.WorkflowAdmissionService
 Penghou.Fuwen.Compiler.WorkflowAdmissionService.AdmitAsync(Penghou.Fuwen.WorkflowPlan! plan, Penghou.Fuwen.Compiler.CompilationBudget? callerBudget = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.WorkflowAdmissionResult!>
+Penghou.Fuwen.Compiler.WorkflowAdmissionService.AdmitGroupedAsync(Penghou.Fuwen.GroupedWorkflowDefinitionDocument! definition, Penghou.Fuwen.Compiler.CompilationBudget? callerBudget = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Compiler.GroupedWorkflowAdmissionResult!>
 Penghou.Fuwen.Compiler.WorkflowAdmissionService.WorkflowAdmissionService(Penghou.Fuwen.Compiler.WorkflowCompiler! compiler) -> void
 Penghou.Fuwen.Compiler.CallableEffectSummary
 Penghou.Fuwen.Compiler.CallableEffectSummary.CallableEffectSummary(Penghou.Fuwen.DescriptorReference! descriptor, Penghou.Fuwen.Compiler.CallableEffect effect, Penghou.Fuwen.Compiler.CallableIdempotency idempotency, Penghou.Fuwen.Compiler.CallableRetrySafety retrySafety, System.Collections.Generic.IEnumerable<string!>! nodePaths) -> void

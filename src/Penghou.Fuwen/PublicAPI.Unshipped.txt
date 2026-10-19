@@ -23,6 +23,7 @@ const Penghou.Fuwen.InferenceTurnRequest.MaximumMessages = 64 -> int
 const Penghou.Fuwen.InferenceTurnRequest.MaximumProposals = 16 -> int
 const Penghou.Fuwen.ProtectedPayloadReference.MaximumIdentityUtf8Bytes = 256 -> int
 const Penghou.Fuwen.ProtectedPayloadReference.MaximumPayloadIdUtf8Bytes = 512 -> int
+const Penghou.Fuwen.WorkflowGroupManifest.ContractVersion = "fuwen-group-manifest/v1" -> string!
 override Penghou.Fuwen.InferenceFinalCandidateResult.IsToolCall.get -> bool
 override Penghou.Fuwen.InferenceToolCallTurnResult.IsToolCall.get -> bool
 Penghou.Fuwen.DeterministicFakeReadToolExecutor
@@ -40,6 +41,12 @@ Penghou.Fuwen.DeterministicFakeTurnExecutor.ExecuteTurnAsync(Penghou.Fuwen.Infer
 Penghou.Fuwen.DeterministicFakeTurnExecutor.ObservedRequests.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceTurnRequest!>!
 Penghou.Fuwen.DeterministicFakeTurnExecutor.PreflightTurnDetailed(Penghou.Fuwen.InferenceExecutionRequirement! requirement) -> Penghou.Fuwen.InferencePreflightReport!
 Penghou.Fuwen.DeterministicFakeTurnExecutor.TurnFeatureManifest.get -> Penghou.Fuwen.InferenceFeatureManifest!
+Penghou.Fuwen.DirectoryWorkflowDefinitionStore
+Penghou.Fuwen.DirectoryWorkflowDefinitionStore.DirectoryWorkflowDefinitionStore(string! directory) -> void
+Penghou.Fuwen.DirectoryWorkflowDefinitionStore.ReadAsync(string! executionFingerprint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.WorkflowDefinitionDocument?>
+Penghou.Fuwen.DirectoryWorkflowDefinitionStore.ReadGroupedAsync(string! fingerprint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.GroupedWorkflowDefinitionDocument?>
+Penghou.Fuwen.DirectoryWorkflowDefinitionStore.StoreAsync(Penghou.Fuwen.WorkflowDefinitionDocument! definition, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.WorkflowDefinitionWriteDisposition>
+Penghou.Fuwen.DirectoryWorkflowDefinitionStore.StoreGroupedAsync(Penghou.Fuwen.GroupedWorkflowDefinitionDocument! definition, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.WorkflowDefinitionWriteDisposition>
 Penghou.Fuwen.ExecutionFailureCode.AmbiguousOperation = 27 -> Penghou.Fuwen.ExecutionFailureCode
 Penghou.Fuwen.ExecutionFailureCode.BudgetUnknown = 26 -> Penghou.Fuwen.ExecutionFailureCode
 Penghou.Fuwen.ExecutionFailureCode.CostLimitExceeded = 24 -> Penghou.Fuwen.ExecutionFailureCode
@@ -50,6 +57,14 @@ Penghou.Fuwen.ExecutionFailureCode.TokenLimitExceeded = 23 -> Penghou.Fuwen.Exec
 Penghou.Fuwen.ExecutionFailureCode.ToolCallLimitExceeded = 22 -> Penghou.Fuwen.ExecutionFailureCode
 Penghou.Fuwen.ExecutionFailureCode.TurnLimitExceeded = 20 -> Penghou.Fuwen.ExecutionFailureCode
 Penghou.Fuwen.ExecutionFailureCode.Unknown = 29 -> Penghou.Fuwen.ExecutionFailureCode
+Penghou.Fuwen.GroupedWorkflowDefinitionDocument
+Penghou.Fuwen.GroupedWorkflowDefinitionDocument.CanonicalBytes.get -> System.ReadOnlyMemory<byte>
+Penghou.Fuwen.GroupedWorkflowDefinitionDocument.Definition.get -> Penghou.Fuwen.WorkflowDefinitionDocument!
+Penghou.Fuwen.GroupedWorkflowDefinitionDocument.Fingerprint.get -> string!
+Penghou.Fuwen.GroupedWorkflowDefinitionDocument.Groups.get -> Penghou.Fuwen.WorkflowGroupManifest!
+Penghou.Fuwen.IGroupedWorkflowDefinitionStore
+Penghou.Fuwen.IGroupedWorkflowDefinitionStore.ReadGroupedAsync(string! fingerprint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.GroupedWorkflowDefinitionDocument?>
+Penghou.Fuwen.IGroupedWorkflowDefinitionStore.StoreGroupedAsync(Penghou.Fuwen.GroupedWorkflowDefinitionDocument! definition, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.WorkflowDefinitionWriteDisposition>
 Penghou.Fuwen.IInferenceEvidenceSink
 Penghou.Fuwen.IInferenceEvidenceSink.RecordAsync(Penghou.Fuwen.InferenceProtocolEvidence! evidence, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Penghou.Fuwen.IInferenceReadToolExecutor
@@ -318,12 +333,54 @@ Penghou.Fuwen.ProtectedPayloadReference.Provider.get -> string!
 Penghou.Fuwen.ProtectedPayloadReference.RetentionPolicyRevision.get -> string?
 Penghou.Fuwen.ProtectedPayloadReference.StorageIdentity.get -> string?
 Penghou.Fuwen.RuntimeValueJson
+Penghou.Fuwen.WorkflowGroupDefinition
+Penghou.Fuwen.WorkflowGroupDefinition.ChildOrdinal.get -> int
+Penghou.Fuwen.WorkflowGroupDefinition.ChildOrdinal.init -> void
+Penghou.Fuwen.WorkflowGroupDefinition.DisplayName.get -> string!
+Penghou.Fuwen.WorkflowGroupDefinition.DisplayName.init -> void
+Penghou.Fuwen.WorkflowGroupDefinition.GroupKey.get -> string!
+Penghou.Fuwen.WorkflowGroupDefinition.GroupKey.init -> void
+Penghou.Fuwen.WorkflowGroupDefinition.Kind.get -> Penghou.Fuwen.WorkflowGroupKind
+Penghou.Fuwen.WorkflowGroupDefinition.Kind.init -> void
+Penghou.Fuwen.WorkflowGroupDefinition.ParentGroupKey.get -> string?
+Penghou.Fuwen.WorkflowGroupDefinition.ParentGroupKey.init -> void
+Penghou.Fuwen.WorkflowGroupDefinition.Provenance.get -> Penghou.Fuwen.WorkflowMacroProvenance?
+Penghou.Fuwen.WorkflowGroupDefinition.Provenance.init -> void
+Penghou.Fuwen.WorkflowGroupDefinition.WorkflowGroupDefinition(string! GroupKey, string? ParentGroupKey, Penghou.Fuwen.WorkflowGroupKind Kind, string! DisplayName, int ChildOrdinal, Penghou.Fuwen.WorkflowMacroProvenance? Provenance = null) -> void
+Penghou.Fuwen.WorkflowGroupKind
+Penghou.Fuwen.WorkflowGroupKind.Logical = 0 -> Penghou.Fuwen.WorkflowGroupKind
+Penghou.Fuwen.WorkflowGroupKind.Macro = 1 -> Penghou.Fuwen.WorkflowGroupKind
+Penghou.Fuwen.WorkflowGroupManifest
+Penghou.Fuwen.WorkflowGroupManifest.CanonicalBytes.get -> System.ReadOnlyMemory<byte>
+Penghou.Fuwen.WorkflowGroupManifest.Fingerprint.get -> string!
+Penghou.Fuwen.WorkflowGroupManifest.Groups.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowGroupDefinition!>!
+Penghou.Fuwen.WorkflowGroupManifest.Members.get -> System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.WorkflowGroupMember!>!
+Penghou.Fuwen.WorkflowGroupMember
+Penghou.Fuwen.WorkflowGroupMember.GroupKey.get -> string!
+Penghou.Fuwen.WorkflowGroupMember.GroupKey.init -> void
+Penghou.Fuwen.WorkflowGroupMember.NodePath.get -> string!
+Penghou.Fuwen.WorkflowGroupMember.NodePath.init -> void
+Penghou.Fuwen.WorkflowGroupMember.WorkflowGroupMember(string! NodePath, string! GroupKey) -> void
+Penghou.Fuwen.WorkflowMacroProvenance
+Penghou.Fuwen.WorkflowMacroProvenance.DefinitionFingerprint.get -> string!
+Penghou.Fuwen.WorkflowMacroProvenance.DefinitionFingerprint.init -> void
+Penghou.Fuwen.WorkflowMacroProvenance.DefinitionSource.get -> Penghou.Fuwen.SourceSpan?
+Penghou.Fuwen.WorkflowMacroProvenance.DefinitionSource.init -> void
+Penghou.Fuwen.WorkflowMacroProvenance.InvocationKey.get -> string!
+Penghou.Fuwen.WorkflowMacroProvenance.InvocationKey.init -> void
+Penghou.Fuwen.WorkflowMacroProvenance.InvocationSource.get -> Penghou.Fuwen.SourceSpan?
+Penghou.Fuwen.WorkflowMacroProvenance.InvocationSource.init -> void
+Penghou.Fuwen.WorkflowMacroProvenance.MacroName.get -> string!
+Penghou.Fuwen.WorkflowMacroProvenance.MacroName.init -> void
+Penghou.Fuwen.WorkflowMacroProvenance.WorkflowMacroProvenance(string! MacroName, string! DefinitionFingerprint, string! InvocationKey, Penghou.Fuwen.SourceSpan? DefinitionSource = null, Penghou.Fuwen.SourceSpan? InvocationSource = null) -> void
 static Penghou.Fuwen.DeterministicFakeTurnExecutor.Cancelling() -> Penghou.Fuwen.DeterministicFakeTurnExecutor!
 static Penghou.Fuwen.DeterministicFakeTurnExecutor.FinalCandidate(string! candidateJson, Penghou.Fuwen.InferenceTurnUsage? usage = null) -> Penghou.Fuwen.DeterministicFakeTurnExecutor!
 static Penghou.Fuwen.DeterministicFakeTurnExecutor.FinalCandidate(bool supportsHardCompletionTokenLimit, string! candidateJson, Penghou.Fuwen.InferenceTurnUsage? usage = null) -> Penghou.Fuwen.DeterministicFakeTurnExecutor!
 static Penghou.Fuwen.DeterministicFakeTurnExecutor.FromResponder(System.Func<Penghou.Fuwen.InferenceTurnRequest!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceTurnResult!>>! responder) -> Penghou.Fuwen.DeterministicFakeTurnExecutor!
 static Penghou.Fuwen.DeterministicFakeTurnExecutor.FromResponder(bool supportsHardCompletionTokenLimit, System.Func<Penghou.Fuwen.InferenceTurnRequest!, System.Threading.CancellationToken, System.Threading.Tasks.ValueTask<Penghou.Fuwen.InferenceTurnResult!>>! responder) -> Penghou.Fuwen.DeterministicFakeTurnExecutor!
 static Penghou.Fuwen.DeterministicFakeTurnExecutor.ToolCalls(params Penghou.Fuwen.InferenceToolCallProposal![]! proposals) -> Penghou.Fuwen.DeterministicFakeTurnExecutor!
+static Penghou.Fuwen.GroupedWorkflowDefinitionDocument.Create(Penghou.Fuwen.WorkflowDefinitionDocument! definition, Penghou.Fuwen.WorkflowGroupManifest! groups) -> Penghou.Fuwen.GroupedWorkflowDefinitionDocument!
+static Penghou.Fuwen.GroupedWorkflowDefinitionDocument.LoadVerified(string! fingerprint, System.ReadOnlySpan<byte> bytes) -> Penghou.Fuwen.GroupedWorkflowDefinitionDocument!
 static Penghou.Fuwen.InferencePreflight.Evaluate(Penghou.Fuwen.InferenceExecutionRequirement! requirement, Penghou.Fuwen.InferenceFeatureManifest! manifest) -> Penghou.Fuwen.InferencePreflightReport!
 static Penghou.Fuwen.InferencePreflightReportRenderer.RenderHuman(Penghou.Fuwen.InferencePreflightReport! report) -> string!
 static Penghou.Fuwen.InferencePreflightReportRenderer.RenderJson(Penghou.Fuwen.InferencePreflightReport! report) -> string!
@@ -466,6 +523,7 @@ Penghou.Fuwen.ExecutionGuaranteeLevel
 Penghou.Fuwen.ExecutionGuaranteeLevel.Full = 1 -> Penghou.Fuwen.ExecutionGuaranteeLevel
 Penghou.Fuwen.ExecutionGuaranteeLevel.Partial = 0 -> Penghou.Fuwen.ExecutionGuaranteeLevel
 const Penghou.Fuwen.FuwenContracts.ExecutionIntentIrVersion = "fuwen-ir/v3-execution-intent" -> string!
+const Penghou.Fuwen.FuwenContracts.GroupExpansionIrVersion = "fuwen-ir/v4-group-expansion" -> string!
 Penghou.Fuwen.ArgumentBinding
 Penghou.Fuwen.ArgumentBinding.ArgumentBinding(string! Name, Penghou.Fuwen.Binding! Value) -> void
 Penghou.Fuwen.ArgumentBinding.Name.get -> string!
@@ -1030,6 +1088,7 @@ static Penghou.Fuwen.StructuralNodeIdentity.Create(string! workflowName, params 
 static Penghou.Fuwen.StructuralNodeIdentity.ValidateSegment(string! segment) -> void
 static Penghou.Fuwen.WorkflowDefinitionDocument.Create(Penghou.Fuwen.WorkflowPlan! plan) -> Penghou.Fuwen.WorkflowDefinitionDocument!
 static Penghou.Fuwen.WorkflowDefinitionDocument.LoadVerified(string! executionFingerprint, System.ReadOnlySpan<byte> persistedBytes) -> Penghou.Fuwen.WorkflowDefinitionDocument!
+static Penghou.Fuwen.WorkflowGroupManifest.Create(System.Collections.Generic.IEnumerable<Penghou.Fuwen.WorkflowGroupDefinition!>! groups, System.Collections.Generic.IEnumerable<Penghou.Fuwen.WorkflowGroupMember!>! members) -> Penghou.Fuwen.WorkflowGroupManifest!
 static Penghou.Fuwen.WorkflowPlanIdentity.ComputeExecutionFingerprint(Penghou.Fuwen.WorkflowPlan! plan) -> string!
 static Penghou.Fuwen.WorkflowPlanIdentity.GetCanonicalBytes(Penghou.Fuwen.WorkflowPlan! plan) -> byte[]!
 static Penghou.Fuwen.WorkflowPlanIdentity.ValidateExecutionFingerprint(string! executionFingerprint) -> void

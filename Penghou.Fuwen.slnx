@@ -9,6 +9,7 @@
     <Project Path="samples/Fuwen.Inspect/Fuwen.Inspect.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Penghou.Fuwen.GroupProcessProbe/Penghou.Fuwen.GroupProcessProbe.csproj" />
     <Project Path="tests/Penghou.Fuwen.Tests/Penghou.Fuwen.Tests.csproj" />
     <Project Path="tests/Penghou.Fuwen.Compiler.Tests/Penghou.Fuwen.Compiler.Tests.csproj" />
     <Project Path="tests/Penghou.Fuwen.Zhinu.Tests/Penghou.Fuwen.Zhinu.Tests.csproj" />

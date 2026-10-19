@@ -296,11 +296,11 @@ public static class WorkflowFormatter
 /// <summary>Source compilation result, including canonical text and source map.</summary>
 public sealed class FuwenSourceCompilationResult
 {
-    internal FuwenSourceCompilationResult(CompilationResult compilation, WorkflowSourceMap? sourceMap, string formattedSource, IEnumerable<CompilerDiagnostic> diagnostics, CompilationUsageSummary usage)
+    internal FuwenSourceCompilationResult(CompilationResult compilation, WorkflowSourceMap? sourceMap, string formattedSource, IEnumerable<CompilerDiagnostic> diagnostics, CompilationUsageSummary usage, GroupedWorkflowDefinitionDocument? groupedDefinition = null)
     {
         Compilation = compilation; SourceMap = sourceMap; FormattedSource = formattedSource;
         Diagnostics = new DiagnosticCollection(diagnostics.Concat(compilation.Diagnostics).Distinct(), compilation.Budget.MaxDiagnostics);
-        Usage = usage;
+        Usage = usage; GroupedDefinition = groupedDefinition;
     }
     public CompilationResult Compilation { get; }
     public WorkflowPlan? Plan => Compilation.Plan;
@@ -308,6 +308,8 @@ public sealed class FuwenSourceCompilationResult
     public string FormattedSource { get; }
     public DiagnosticCollection Diagnostics { get; }
     public CompilationUsageSummary Usage { get; }
+    /// <summary>The immutable group companion for source that uses macros or logical groups.</summary>
+    public GroupedWorkflowDefinitionDocument? GroupedDefinition { get; }
     public bool Succeeded => Plan is not null && !Diagnostics.HasErrors;
 }
 
@@ -351,6 +353,7 @@ public sealed class FuwenSourceCompiler
         CompilationResult compilation;
         var ranWorkflowCompiler = false;
         WorkflowSourceMap? sourceMap = null;
+        GroupedWorkflowDefinitionDocument? groupedDefinition = null;
         if (parseDiagnostics.Any(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error) || parsedPlan is null)
             compilation = new CompilationResult(null, parseDiagnostics, MergeUsage(parsed.Usage, bindingUsage), budget);
         else
@@ -369,12 +372,14 @@ public sealed class FuwenSourceCompiler
                     [new SourceDocumentReference(documentId, logicalName, digest, Encoding.UTF8.GetByteCount(source))],
                     parsed.SourceEntries);
                 WorkflowSourceMapValidator.ValidateForPlan(sourceMap, compilation.Plan);
+                if (parsed.GroupManifest is not null)
+                    groupedDefinition = GroupedWorkflowDefinitionDocument.Create(compilation.Definition!, parsed.GroupManifest);
             }
         }
         var totalUsage = ranWorkflowCompiler
             ? MergeUsage(lex.Usage, parsed.Usage, bindingUsage, compilation.Usage)
             : MergeUsage(lex.Usage, compilation.Usage);
-        return new FuwenSourceCompilationResult(compilation, sourceMap, formatted, parseDiagnostics, totalUsage);
+        return new FuwenSourceCompilationResult(compilation, sourceMap, formatted, parseDiagnostics, totalUsage, groupedDefinition);
     }
 
     private static async ValueTask<BindingOutputResult> BindInferredOutputsAsync(
@@ -549,9 +554,9 @@ public sealed class FuwenSourceCompiler
         compilationMilliseconds: values.Sum(static value => value.CompilationMilliseconds));
 }
 
-internal sealed class SourceParser
+internal sealed partial class SourceParser
 {
-    private readonly IReadOnlyList<FuwenToken> tokens;
+    private IReadOnlyList<FuwenToken> tokens;
     private readonly string documentId;
     private readonly ITrustedCatalogue catalogue;
     private readonly CompilationBudget budget;
@@ -601,6 +606,7 @@ internal sealed class SourceParser
             else if (Match("capability")) ParseCapability();
             else if (Match("prompt")) ParsePrompt();
             else if (Match("toolset")) ParseToolset();
+            else if (Match("macro")) ParseMacroDeclaration(Previous);
             else if (Match("workflow"))
             {
                 if (workflowSeen)
@@ -630,15 +636,27 @@ internal sealed class SourceParser
                 foreach (var node in nodes) builder.AddNode(node);
                 builder.SetExecutionOrder(new WorkflowExecutionOrder(BuildRegions(workflowName, nodes)));
                 plan = builder.Build();
+                if (groupDefinitions.Count != 0)
+                    plan = plan with { IrVersion = FuwenContracts.GroupExpansionIrVersion };
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
             {
                 Error(CompilerDiagnosticCodes.SemanticValidationFailed, "Source could not be lowered to executable IR.", Current, exception.Message);
             }
         }
+        WorkflowGroupManifest? groupManifest = null;
+        if (plan is not null && groupDefinitions.Count != 0)
+        {
+            try { groupManifest = WorkflowGroupManifest.Create(groupDefinitions, groupMembers); }
+            catch (ArgumentException exception)
+            {
+                plan = null;
+                Error(CompilerDiagnosticCodes.SemanticValidationFailed, "Group metadata could not be frozen.", Current, exception.Message);
+            }
+        }
         var usage = new CompilationUsageSummary(astNodes: astNodes, workflowNodes: CountNodes(nodes),
             schemas: schemas.Count, schemaFields: schemaFields, expressions: checked((int)Math.Min(int.MaxValue, expressions)));
-        return new ParseOutput(plan, diagnostics.ToImmutable(), usage, sourceEntries.AsReadOnly(), inferredOutputPaths.ToHashSet(StringComparer.Ordinal));
+        return new ParseOutput(plan, diagnostics.ToImmutable(), usage, sourceEntries.AsReadOnly(), inferredOutputPaths.ToHashSet(StringComparer.Ordinal), groupManifest);
     }
 
     private void ParseSchema()
@@ -834,13 +852,23 @@ internal sealed class SourceParser
         ParseNodes(nodes, workflowName, true);
     }
 
-    private void ParseNodes(List<WorkflowNode> destination, string parentPath, bool allowReturn)
+    private void ParseNodes(List<WorkflowNode> destination, string parentPath, bool allowReturn, Action<Binding, FuwenToken>? onYield = null)
     {
         var closed = false;
         while (!AtEnd)
         {
             if (Match("}")) { closed = true; break; }
             cancellationToken.ThrowIfCancellationRequested();
+            if (Match("use")) { ParseMacroInvocation(destination, parentPath); continue; }
+            if (Match("group")) { ParseLogicalGroup(destination, parentPath); continue; }
+            if (Match("yield"))
+            {
+                var yieldToken = Previous;
+                var binding = ParseBinding(); Match(";");
+                if (onYield is null) Error(CompilerDiagnosticCodes.ParseUnexpectedToken, "'yield' is only valid inside a group or macro body.", yieldToken);
+                else onYield(binding, yieldToken);
+                continue;
+            }
             var node = ParseNode(parentPath, allowReturn);
             if (node is not null)
             {
@@ -852,7 +880,7 @@ internal sealed class SourceParser
                 else if (currentNodeCount == budget.MaxWorkflowNodes)
                     Error(CompilerDiagnosticCodes.BudgetWorkflowNodesExceeded, "Workflow node count exceeds the configured limit.", Current);
             }
-            else Recover("context", "activity", "infer", "if", "fanout", "repeat", "checkpoint", "wait", "return", "}");
+            else Recover("context", "activity", "infer", "if", "fanout", "repeat", "checkpoint", "wait", "return", "use", "group", "yield", "}");
         }
         if (!closed)
             Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected '}'.", Current);
@@ -1248,6 +1276,8 @@ internal sealed class SourceParser
             if (Match("}")) { closed = true; break; }
             cancellationToken.ThrowIfCancellationRequested();
             WorkflowNode? node = null;
+            if (Match("use")) { ParseMacroInvocation(destination, bodyPath); continue; }
+            if (Match("group")) { ParseLogicalGroup(destination, bodyPath); continue; }
             if (Current.Kind == FuwenTokenKind.Identifier && Current.Text is "activity" or "context" or "infer" or "if" or "return")
             {
                 node = ParseNode(bodyPath, allowReturn: false);
@@ -1325,6 +1355,8 @@ internal sealed class SourceParser
             if (Match("}")) { closed = true; break; }
             cancellationToken.ThrowIfCancellationRequested();
             WorkflowNode? node = null;
+            if (Match("use")) { ParseMacroInvocation(destination, bodyPath); continue; }
+            if (Match("group")) { ParseLogicalGroup(destination, bodyPath); continue; }
             if (Current.Kind == FuwenTokenKind.Identifier && Current.Text is "activity" or "context" or "infer" or "if" or "checkpoint" or "wait")
             {
                 node = ParseNode(bodyPath, allowReturn: false);
@@ -1486,7 +1518,17 @@ internal sealed class SourceParser
         }
         var name = ReadIdentifier("binding expression"); var projection = new List<string>();
         while (Match(".")) projection.Add(ReadIdentifier("projection field"));
-        if (name == "input") return new InputBinding(projection);
+        if (macroBindings.TryGetValue(name, out var macroBinding))
+            return AppendProjection(macroBinding, projection, Previous);
+        if (name == "input")
+        {
+            if (macroExpansionStack.Count != 0)
+            {
+                Error(CompilerDiagnosticCodes.BindingReferenceInvalid, "A macro body may reference caller input only through a declared parameter.", Previous);
+                return NullLiteral();
+            }
+            return new InputBinding(projection);
+        }
         if (fanOutItemName is not null && string.Equals(name, fanOutItemName, StringComparison.Ordinal))
             return new FanOutItemValueBinding(projection);
         if (loopStateName is not null && string.Equals(name, loopStateName, StringComparison.Ordinal))
@@ -1621,16 +1663,16 @@ internal sealed class SourceParser
         result.Add(new WorkflowExecutionRegion(path, values.Select(item => new WorkflowExecutionPhase(new[] { item.StructuralPath })).ToArray()));
         foreach (var conditional in values.OfType<ConditionalNode>())
         {
-            AddRegion(path + "/" + conditional.Name + "/$then", conditional.Then, result);
-            AddRegion(path + "/" + conditional.Name + "/$else", conditional.Else, result);
+            AddRegion(conditional.StructuralPath + "/$then", conditional.Then, result);
+            AddRegion(conditional.StructuralPath + "/$else", conditional.Else, result);
         }
         foreach (var fanOut in values.OfType<FanOutNode>())
         {
-            AddRegion(path + "/" + fanOut.Name + "/$body", fanOut.Body, result);
+            AddRegion(fanOut.StructuralPath + "/$body", fanOut.Body, result);
         }
         foreach (var repeat in values.OfType<RepeatNode>())
         {
-            AddRegion(path + "/" + repeat.Name + "/$body", repeat.Body, result);
+            AddRegion(repeat.StructuralPath + "/$body", repeat.Body, result);
         }
     }
     private static int CountNodes(IEnumerable<WorkflowNode> values) => values.Sum(item => 1 + (item is ConditionalNode conditional ? CountNodes(conditional.Then) + CountNodes(conditional.Else) : item is FanOutNode fanOut ? CountNodes(fanOut.Body) : item is RepeatNode repeat ? CountNodes(repeat.Body) : 0));
@@ -1746,6 +1788,7 @@ internal sealed class SourceParser
         var startOffset = start.Span.StartUtf8ByteOffset;
         var endOffset = end.Span.StartUtf8ByteOffset + end.Span.Utf8ByteLength;
         sourceEntries.Add(new SourceMapEntry(path, new SourceSpan(documentId, startOffset, Math.Max(0, endOffset - startOffset), start.Span.StartLine, start.Span.StartUtf16Column)));
+        RecordGroupMember(path);
     }
     private void Error(string code, string message, FuwenToken token, string? actual = null)
     {
@@ -1761,5 +1804,6 @@ internal sealed class SourceParser
         IReadOnlyList<CompilerDiagnostic> Diagnostics,
         CompilationUsageSummary Usage,
         IReadOnlyList<SourceMapEntry> SourceEntries,
-        IReadOnlySet<string> InferredOutputPaths);
+        IReadOnlySet<string> InferredOutputPaths,
+        WorkflowGroupManifest? GroupManifest);
 }

@@ -222,7 +222,13 @@ machine-assisted repair.
 
 ## Development
 
+On the activity-groups branch, prepare the exact unpublished Zhinu candidate
+feed before restoring. Package hashes and source are pinned; see the
+[static integration profile](docs/activity-groups-static-profile.md).
+These candidate dependencies leave normal public-package release and CI gates open.
+
 ```powershell
+./eng/Prepare-ZhinuCandidate.ps1 -ArtifactsDirectory <qualified-zhinu-packages>
 dotnet build Penghou.Fuwen.slnx --configuration Release
 dotnet test Penghou.Fuwen.slnx --configuration Release --no-build
 dotnet pack Penghou.Fuwen.slnx --configuration Release --no-build --output artifacts

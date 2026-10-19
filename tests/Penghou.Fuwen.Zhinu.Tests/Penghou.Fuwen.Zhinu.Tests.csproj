@@ -7,12 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Penghou.Fuwen.GroupProcessProbe\Penghou.Fuwen.GroupProcessProbe.csproj" ReferenceOutputAssembly="false" />
     <PackageReference Include="xunit.v3" Version="1.1.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0-pre.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="FluentAssertions" Version="7.2.2" />
     <PackageReference Include="coverlet.msbuild" Version="6.0.4" PrivateAssets="all" />
-    <PackageReference Include="Penghou.Zhinu.Sqlite" Version="0.1.0-preview.14" />
+    <PackageReference Include="Penghou.Zhinu.Sqlite" Version="[0.2.0-preview.5]" />
   </ItemGroup>
 
   <ItemGroup>

@@ -37,3 +37,15 @@ coordinator, provider adapter, and persistence path to pass their corrective
 contract tests. See [the authoring contract](fuwen-authoring.md) for syntax
 ownership and [the release checklist](release-checklist.md) for the validation
 required before publishing packages.
+
+
+## Unreleased activity-group checkpoint — 2026-10-19
+
+ZG-6.1 adds bounded local macro/logical-group expansion, pinned immutable group
+companions, grouped admission/registration, static native step membership and
+signal-wait recovery. See the [static profile](activity-groups-static-profile.md)
+and [qualification](qualification/activity-groups/zg6-static.md).
+Grouped repeat, fan-out and coordinated inference are rejected before execution;
+historical ungrouped behavior remains available. Full FM-2/ZG-6 and ZG-7,
+including per-child dynamic durability and cross-platform qualification, remain
+open. These candidate packages are not published.

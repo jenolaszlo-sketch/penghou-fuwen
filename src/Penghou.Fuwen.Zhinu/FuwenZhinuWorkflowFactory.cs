@@ -218,20 +218,22 @@ public sealed class FuwenZhinuWorkflowRegistration
         string version,
         WorkflowDefinitionDocument definition,
         FuwenZhinuExecutionPorts? executionPorts,
-        IReadOnlyDictionary<DescriptorReference, CallableSignature> trustedToolSignatures)
+        IReadOnlyDictionary<DescriptorReference, CallableSignature> trustedToolSignatures,
+        GroupedWorkflowDefinitionDocument? groupedDefinition = null)
     {
         TrustedToolSignatures = trustedToolSignatures ?? throw new ArgumentNullException(nameof(trustedToolSignatures));
         Name = RequireText(name, nameof(name));
         Version = RequireText(version, nameof(version));
         Definition = definition ?? throw new ArgumentNullException(nameof(definition));
         ExecutionPorts = executionPorts;
-        ZhinuRegistration = new WorkflowRegistration<JsonElement, JsonElement>(
-            new WorkflowDefinition { Name = Name, Version = Version },
-            () => new FuwenZhinuSequentialWorkflow(
-                Definition.ReadPlan(),
-                Definition.ExecutionFingerprint,
-                ExecutionPorts,
-                TrustedToolSignatures));
+        GroupedDefinition = groupedDefinition;
+        var workflowDefinition = new WorkflowDefinition { Name = Name, Version = Version };
+        Func<IWorkflow<JsonElement, JsonElement>> factory = () => new FuwenZhinuSequentialWorkflow(
+            Definition.ReadPlan(), Definition.ExecutionFingerprint, ExecutionPorts, TrustedToolSignatures,
+            GroupedDefinition?.Groups, GroupedDefinition?.Fingerprint);
+        ZhinuRegistration = GroupedDefinition is null
+            ? new WorkflowRegistration<JsonElement, JsonElement>(workflowDefinition, factory)
+            : new WorkflowRegistration<JsonElement, JsonElement>(workflowDefinition, factory, FuwenGroupExecution.Translate(GroupedDefinition.Groups));
     }
 
     /// <summary>The host-defined durable Zhinu workflow name.</summary>
@@ -242,6 +244,9 @@ public sealed class FuwenZhinuWorkflowRegistration
 
     /// <summary>The verified immutable definition stored for this registration.</summary>
     public WorkflowDefinitionDocument Definition { get; }
+
+    /// <summary>The exact hierarchy bundle pinned by this registration, when grouped.</summary>
+    public GroupedWorkflowDefinitionDocument? GroupedDefinition { get; }
 
     internal IReadOnlyDictionary<DescriptorReference, CallableSignature> TrustedToolSignatures { get; }
 
@@ -303,11 +308,25 @@ public sealed class FuwenZhinuWorkflowFactory
     /// <summary>
     /// Verifies, stores, reloads, and adapts one successfully admitted definition.
     /// </summary>
-    public async ValueTask<FuwenZhinuWorkflowRegistration> CreateAsync(
+    public ValueTask<FuwenZhinuWorkflowRegistration> CreateAsync(
         string name,
         string version,
         WorkflowAdmissionResult admission,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) => CreateCoreAsync(name, version, admission, null, cancellationToken);
+
+    /// <summary>Registers an admitted pinned expansion and its exact hierarchy companion.</summary>
+    public ValueTask<FuwenZhinuWorkflowRegistration> CreateGroupedAsync(
+        string name, string version, GroupedWorkflowAdmissionResult admission, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(admission);
+        if (!admission.Succeeded) throw new FuwenZhinuAdmissionException("Grouped registration requires successful admission of the exact bundle.");
+        var verified = GroupedWorkflowDefinitionDocument.LoadVerified(admission.Definition.Fingerprint, admission.Definition.CanonicalBytes.Span);
+        return CreateCoreAsync(name, version, admission.Admission, verified, cancellationToken);
+    }
+
+    private async ValueTask<FuwenZhinuWorkflowRegistration> CreateCoreAsync(
+        string name, string version, WorkflowAdmissionResult admission, GroupedWorkflowDefinitionDocument? groupedDefinition,
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(version);
@@ -326,6 +345,21 @@ public sealed class FuwenZhinuWorkflowFactory
         VerifyProviderRuntimeIdentity(receipt, providerRuntimeIdentity);
 
         var admittedPlan = definition.ReadPlan();
+        if (groupedDefinition is null && admittedPlan.IrVersion == FuwenContracts.GroupExpansionIrVersion)
+            throw new FuwenZhinuAdmissionException("Expanded group scopes require their admitted hierarchy companion.");
+        if (groupedDefinition is not null)
+        {
+            if (definitionStore is not IGroupedWorkflowDefinitionStore)
+                throw new FuwenZhinuAdmissionException("Grouped registration requires an immutable grouped-definition store.");
+            if (groupedDefinition.Definition.ExecutionFingerprint != definition.ExecutionFingerprint)
+                throw new FuwenZhinuAdmissionException("Grouped definition differs from the admitted execution plan.");
+            // This first integration profile has one static execution coordinate.
+            // Reject dynamic scopes before storage or provider execution rather than aliasing them.
+            if (EnumerateNodes(admittedPlan.Nodes).Any(node => node is RepeatNode or FanOutNode ||
+                node is InferenceNode { Protocol: not null }))
+                throw new FuwenZhinuAdmissionException("The static group profile does not support repeat, fan-out or coordinated inference; per-operation scoped lowering remains required.");
+            _ = FuwenGroupExecution.Translate(groupedDefinition.Groups);
+        }
         if (executionPorts?.TurnExecutor is not null)
         {
             foreach (var node in EnumerateNodes(admittedPlan.Nodes).OfType<InferenceNode>())
@@ -363,8 +397,18 @@ public sealed class FuwenZhinuWorkflowFactory
         }
 
         VerifyStoredDefinition(definition, stored);
+        if (groupedDefinition is not null)
+        {
+            var groupedStore = (IGroupedWorkflowDefinitionStore)definitionStore;
+            await groupedStore.StoreGroupedAsync(groupedDefinition, cancellationToken).ConfigureAwait(false);
+            var restored = await groupedStore.ReadGroupedAsync(groupedDefinition.Fingerprint, cancellationToken).ConfigureAwait(false);
+            if (restored is null || restored.Fingerprint != groupedDefinition.Fingerprint ||
+                !restored.CanonicalBytes.Span.SequenceEqual(groupedDefinition.CanonicalBytes.Span))
+                throw new FuwenZhinuAdmissionException("The stored group companion differs from the admitted bundle.");
+            groupedDefinition = restored;
+        }
         return new FuwenZhinuWorkflowRegistration(name, version, stored, executionPorts,
-            admission.TrustedToolSignatures);
+            admission.TrustedToolSignatures, groupedDefinition);
     }
 
     private static void ValidateExecutableSubset(IEnumerable<WorkflowNode> nodes, bool insideFanOut, bool insideRepeat, bool coordinated)
@@ -704,10 +748,12 @@ internal sealed class FuwenZhinuSequentialWorkflow(
     WorkflowPlan plan,
     string fingerprint,
     FuwenZhinuExecutionPorts? executionPorts,
-    IReadOnlyDictionary<DescriptorReference, CallableSignature> trustedToolSignatures)
+    IReadOnlyDictionary<DescriptorReference, CallableSignature> trustedToolSignatures,
+    WorkflowGroupManifest? groups = null,
+    string? groupedFingerprint = null)
     : IWorkflow<JsonElement, JsonElement>, IWorkflowFingerprint
 {
-    public string Fingerprint { get; } = fingerprint;
+    public string Fingerprint { get; } = groupedFingerprint ?? fingerprint;
 
     public Task<JsonElement> RunAsync(
         WorkflowContext context,
@@ -724,11 +770,11 @@ internal sealed class FuwenZhinuSequentialWorkflow(
 
         return FuwenZhinuSequentialInterpreter.ExecuteAsync(
             plan,
-            Fingerprint,
+            fingerprint,
             executionPorts,
             trustedToolSignatures,
             context,
             input,
-            cancellationToken);
+            cancellationToken, groups);
     }
 }

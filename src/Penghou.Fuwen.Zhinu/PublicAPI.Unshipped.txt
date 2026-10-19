@@ -1,4 +1,6 @@
 #nullable enable
+Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowFactory.CreateGroupedAsync(string! name, string! version, Penghou.Fuwen.Compiler.GroupedWorkflowAdmissionResult! admission, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowRegistration!>
+Penghou.Fuwen.Zhinu.FuwenZhinuWorkflowRegistration.GroupedDefinition.get -> Penghou.Fuwen.GroupedWorkflowDefinitionDocument?
 Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger
 Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger.SqliteInferenceBudgetLedger(string! databasePath) -> void
 Penghou.Fuwen.Zhinu.SqliteInferenceBudgetLedger.ReserveAsync(Penghou.Fuwen.Zhinu.InferenceBudgetReservationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Fuwen.Zhinu.InferenceBudgetReservationDecision>

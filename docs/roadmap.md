@@ -29,8 +29,10 @@ review rather than infer implementation from the long-range architecture.
 Last reviewed: **2026-09-27**
 
 Roadmap addition reviewed **2026-10-15**: user-defined reusable macro activities
-and the paired Zhinu activity-group contract below are planned, not shipped.
-This addition does not change the capability matrix or current release gates.
+and the paired Zhinu activity-group contract below remain unreleased. The
+2026-10-19 ZG-6.1 checkpoint implements a bounded static profile; see the
+[profile and remaining limits](activity-groups-static-profile.md). Full FM/ZG
+qualification and current release gates remain open.
 
 The authoritative shipped-surface summary is the
 [capability matrix](capability-matrix.md). The current coordinated-inference
@@ -313,7 +315,9 @@ Delivery order:
 
 Added **2026-10-15** from the macro activities/activity groups proposal. This is
 the concrete composition direction for Milestone 11, after current reliability
-gates; it is not a new first-preview requirement or a claim of implementation.
+gates; it is not a new first-preview requirement. A bounded static implementation
+is now available on the activity-groups branch as ZG-6.1; broader boxes below
+remain open until their full declared scope is qualified.
 The paired runtime milestone is
 [Zhinu hierarchical durable activity groups (ZG)](../../Penghou.Zhinu/ROADMAP.md#planned-runtime-milestone--hierarchical-durable-activity-groups-zg).
 
@@ -325,10 +329,13 @@ stages ZG-6/7. Groups are optional: no synthetic persisted root or mandatory
 membership for ordinary activities. Each durable step belongs directly to its
 innermost occurrence; child workflows retain separate run-local trees.
 
-Two concrete integration gaps must be qualified: this repository's adapter
-references Zhinu **0.1.0-preview.14**, while the inspected runtime is a
-**0.2.0-preview.3 candidate**; and current Fuwen fan-out executes an entire item
-body inside one durable step. The existing `FuwenZhinuStepMapper` exposes this
+The ZG-6.1 adapter consumes an exact, unpublished Zhinu **0.2.0-preview.5**
+package closure with pinned hashes/source. It maps static expanded macros and
+logical groups, including durable signal waits. See the
+[implementation profile](activity-groups-static-profile.md) and
+[qualification record](qualification/activity-groups/zg6-static.md).
+The remaining major integration gap is that historical Fuwen fan-out executes
+an entire item body inside one durable step. The existing `FuwenZhinuStepMapper` exposes this
 many-to-one coverage. Preserve historical plans. Macro-bearing fan-out requiring
 independent durable children needs a separately versioned adapter lowering, or
 must fail preflight until available. Merely adding group metadata cannot provide

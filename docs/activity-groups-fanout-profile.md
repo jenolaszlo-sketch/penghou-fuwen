@@ -1,17 +1,19 @@
 # Activity groups: keyed fan-out bodies
 
 ZG-6.2b extends the static and single-level repeat profiles with a separate,
-bounded keyed fan-out profile. [Qualification](qualification/activity-groups/zg6-fanout.md)
-passes on Windows .NET 8/10 against exact unpublished Fuwen preview.16 and Zhinu
-preview.8 candidates. This does not close
-Q45, full FM-2/ZG-6 or ZG-7. Candidate packages remain unpublished.
+bounded keyed fan-out profile. The original
+[qualification](qualification/activity-groups/zg6-fanout.md) passed on Windows
+.NET 8/10 against unpublished Fuwen preview.16 and Zhinu preview.8. The current
+preview.18/preview.9 [consolidation](qualification/activity-groups/zg7.md) adds
+progress, admission corrections and cross-platform gates. Original archives and
+counts retain their separate evidence; candidate packages remain unpublished.
 
 One fan-out scope is supported per grouped plan, optionally within static groups.
 Every body operation must belong to one explicit item-local root group or one of
 its nested logical/macro groups. Independent activities, context reads and
 one-call inference use native durable operations. Control-only conditionals
-remain pure decisions over persisted inputs. Preview.18 additionally rejects a possibly empty item path before definition
-writes. A logical group need not export a yield, so syntax alone cannot prove
+remain pure decisions over persisted inputs. Preview.18 additionally rejects a
+possibly empty item path before definition writes. A logical group need not export a yield, so syntax alone cannot prove
 that every selected item will execute durable work. Admission requires an
 unconditional provider operation or guaranteed provider work in both conditional
 branches, recursively; it does not infer relationships between separate conditions.
@@ -88,8 +90,9 @@ enumeration limits still apply independently.
 
 Recovery re-admits the exact stored expansion bundle, with no source recompilation
 or macro-library lookup. The repeat and static checkpoints retain their separate
-qualification evidence. Broader fan-out forms, mixed dynamic composition, Linux
-CI, public package adoption and full cross-repository qualification remain open.
+qualification evidence. Broader fan-out forms, mixed dynamic composition and
+public package adoption remain future work. Current cross-platform qualification
+is recorded separately in ZG-7, preserving the original Windows-only checkpoint.
 
 The qualified store is `SqliteWorkflowStore`. Custom stores need the optional
 `IWorkflowGroupFanOutBodyRepository` capability in addition to ordinary grouped

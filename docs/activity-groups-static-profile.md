@@ -93,21 +93,26 @@ total; existing Unknown/Partial coverage rules remain in effect.
 The historical fan-out item boundary remains unchanged. Independently durable
 macro children inside repeat/fan-out require versioned scoped lowering and
 separate qualification. Rejection is an interim limitation: Q45 and full ZG-6,
-FM-2 and ZG-7 remain open. Windows tests do not establish Linux CI qualification
-or permission to publish packages.
+FM-2 and ZG-7 remained open at that static checkpoint. The later
+[current consolidation](qualification/activity-groups/zg7.md) records repeat/fan-out
+lowering, mechanical progress and remote gates for the selected profile. The
+original static record remains Windows-only and does not authorize publication.
 
 ## Candidate package reproduction
 
-The current branch, including the repeat extension, restores the exact seven
-unpublished Zhinu preview.7 packages recorded in
+The current branch restores the exact seven unpublished Zhinu preview.9
+packages recorded in
 [`qualification/activity-groups/zhinu-candidate.json`](qualification/activity-groups/zhinu-candidate.json).
 Run `eng/Prepare-ZhinuCandidate.ps1 -ArtifactsDirectory <qualified-package-directory>`
-first with the current qualified preview.7 directory. The earlier static-only
+first with the exact preview.9 directory. The original repeat preview.7 pin is
+preserved in [its own record](qualification/activity-groups/zhinu-repeat-candidate.json).
+The earlier static-only
 preview.5 closure remains recorded in
 [the original static pin](qualification/activity-groups/zhinu-static-candidate.json)
 and requires the original static source checkout to reproduce. The preparation
 script checks all package hashes, versions and source commits before copying
 the closure to the local feed. `NuGet.config` maps those seven package IDs to
-that feed and uses a repository-local cache, preventing accidental adoption of
-different bytes with the same version from a global cache. Candidate packages
+that feed and uses a repository-local cache. A different source rebuild using
+the same version requires a fresh isolated cache; NuGet caches by ID/version,
+not archive hash. The consumer verifier rejects stale cached archive bytes. Candidate packages
 and caches are ignored by Git. Other dependencies continue to use NuGet.org.

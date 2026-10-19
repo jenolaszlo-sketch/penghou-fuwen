@@ -39,7 +39,7 @@ ownership and [the release checklist](release-checklist.md) for the validation
 required before publishing packages.
 
 
-## Unreleased activity-group checkpoint — 2026-10-19
+## Unreleased activity-group checkpoint — 2026-10-20
 
 ZG-6.1 adds bounded local macro/logical-group expansion, pinned immutable group
 companions, grouped admission/registration, static native step membership and
@@ -51,6 +51,11 @@ ZG-6.2b adds [one fixed keyed fan-out with independent body operations](activity
 with separate [qualification](qualification/activity-groups/zg6-fanout.md).
 Nested/mixed dynamic composition, item waits/checkpoints, conditional value
 merges, coordinated inference and item-local fallback remain rejected.
-Historical macro-free keys remain unchanged. Full FM-2/ZG-6,
-Q45 and ZG-7, including broader dynamic durability and cross-platform
-qualification, remain open. These candidate packages are not published.
+Historical macro-free keys remain unchanged. The
+[current supported profile](activity-groups-qualified-profile.md) and
+[ZG-7 evidence](qualification/activity-groups/zg7.md) consolidate mechanical
+progress, recovery, methodology-neutral vocabularies and immutable pin rejection.
+Native preview.9 / Fuwen preview.18 checks pass on Windows/Linux .NET 8/10;
+full Q33 remains partial. The broader rejected DSL combinations, richer macro interfaces
+and publication remain separate work. Earlier records retain their original
+version pins and exclusions.

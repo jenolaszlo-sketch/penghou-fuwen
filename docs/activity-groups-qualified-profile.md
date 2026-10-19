@@ -4,8 +4,11 @@ The current unpublished candidate pair is Fuwen preview.18 and exact Zhinu
 preview.9. The [native pin](qualification/activity-groups/zhinu-candidate.json)
 identifies the original Windows archives and source. Earlier static, repeat and
 fan-out qualification records retain their original source and archive pins.
-Cross-platform qualification and the separate second correctness pass are in
-progress; candidate preparation is not package publication.
+[Cross-platform qualification](qualification/activity-groups/zg7.md) and the
+[second correctness pass](qualification/activity-groups/second-pass-review.md) are
+complete for this bounded profile. Full Q33 generic branch replacement/retirement
+remains unqualified; the full original milestone stays open. Candidate preparation
+is not package publication.
 
 ## Supported authoring and execution
 

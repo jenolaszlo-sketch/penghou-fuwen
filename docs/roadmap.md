@@ -30,9 +30,12 @@ Last reviewed: **2026-09-27**
 
 Roadmap addition reviewed **2026-10-15**: user-defined reusable macro activities
 and the paired Zhinu activity-group contract below remain unreleased. The
-2026-10-19 ZG-6.1 checkpoint implements a bounded static profile; see the
-[profile and remaining limits](activity-groups-static-profile.md). Full FM/ZG
-qualification and current release gates remain open.
+2026-10-20 consolidation implements the
+[current supported profile](activity-groups-qualified-profile.md): static groups,
+single-level grouped repeats and independently durable keyed fan-out. Local
+qualification and the second correctness pass are complete. Windows/Linux Q47
+gates pass; full Q33 remains open. The broader FM language scope and publication
+remain open.
 
 The authoritative shipped-surface summary is the
 [capability matrix](capability-matrix.md). The current coordinated-inference
@@ -338,8 +341,11 @@ Historical Fuwen fan-out retains an entire item body inside one durable step,
 with many-to-one mapper coverage. [ZG-6.2b](qualification/activity-groups/zg6-fanout.md)
 now qualifies a separate grouped lowering with independently durable provider
 operations for one fixed scope with an explicit item root. Broader dynamic
-composition, selection closure and complete adapter progress coverage remain
-open. Native Zhinu child/loop capabilities do not imply DSL support.
+composition and evolving-selection DSL lowering remain rejected. The current
+[ZG-7 consolidation](qualification/activity-groups/zg7.md) adds mechanical progress,
+substantive vocabulary/recovery and changed-pin qualification. Windows/Linux CI
+gates pass; full Q33 remains open. Native Zhinu child/loop capabilities do not
+imply DSL support.
 
 Macros provide a methodology-neutral vocabulary. `SupervisedCoding`,
 `ProbeAndVerify`, `TDD`, `BDDImplementation`, and domain-specific approval or
@@ -411,6 +417,12 @@ and control-flow relationships: membership alone never orders or authorizes work
   do not require imports or a library registry.
 
 #### FM-2 — durable hierarchy handoff and qualification
+
+The [selected executable profile](qualification/activity-groups/zg7.md) is qualified
+through preview.18 on Windows/Linux .NET 8/10; full Q33 remains open. The broader
+historical
+boxes below retain their full declared FM scope; rejected dynamic combinations
+and richer macro interfaces are not claimed implemented by this checkpoint.
 
 - [ ] Map explicit logical groups and every macro invocation through
   `Penghou.Fuwen.Zhinu` to ZG's generic group/membership contract. Fuwen core stays
@@ -1525,3 +1537,18 @@ composition, evolving selection, item waits/checkpoints, conditional value merge
 coordinated inference and item-local fallback remain outside this bounded phase.
 Next are broader dynamic composition and adapter closure/progress qualification;
 full FM-2/ZG-6, Q45 and ZG-7 stay open.
+
+
+### Unreleased ZG-7 selected profile -- 2026-10-20
+
+Native preview.9 and Fuwen preview.18 add independently sealed item progress,
+substantive SupervisedCoding/TDD/BDD/domain-approval/AlienProcess42 fixtures,
+nested macro/repeat hard-loss recovery and execution/manifest pin rejection.
+Local qualification passes 1,712 Fuwen tests and 26 package-only consumer tests;
+the native suite passes 1,935. The [second pass](qualification/activity-groups/second-pass-review.md)
+also fixes potentially empty item-path admission, portable TEMP/formatter settings
+and Windows test file sharing. Windows/Linux Q47 gates pass; full Q33 remains
+partial, so the complete original milestone is still open.
+See [exact-source evidence](qualification/activity-groups/zg7.md). Packages remain
+unpublished; broader rejected DSL combinations and downstream integration are
+separate work.

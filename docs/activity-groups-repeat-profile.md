@@ -69,6 +69,7 @@ The later [fan-out profile](activity-groups-fanout-profile.md) has its own
 candidate pin and qualification; repeat/fan-out composition remains unsupported.
 The earlier static checkpoint retains
 [its original preview.5 pin](qualification/activity-groups/zhinu-static-candidate.json).
-Packages remain unpublished. Broader dynamic composition,
-Linux CI, public dependency adoption and full cross-repository qualification
-remain open.
+Packages remain unpublished. Broader dynamic composition and public dependency
+adoption remain future work. The [current consolidation](qualification/activity-groups/zg7.md)
+records cross-platform qualification; this original repeat checkpoint retains its
+own Windows evidence and preview.7 pin.

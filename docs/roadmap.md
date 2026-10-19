@@ -1495,11 +1495,14 @@ Integrate Hufu's exact grant/receipt and operation-start checks rather than
 introducing a second Fuwen-only grant evaluator.
 
 
-### Unreleased ZG-6.2a — grouped single-level repetition
+### Unreleased ZG-6.2a -- grouped single-level repetition
 
 The [repeat integration profile](activity-groups-repeat-profile.md) extends the
 static checkpoint with native iteration lineage, collision-resistant expanded
 repeat/body keys, per-child durable steps, loop Control memberships and native
 iteration signal waits. Historical macro-free keys are preserved. Nested repeats,
 fan-out per-child lowering, grouped coordinated inference and repeat-local
-fallback remain rejected. Full FM-2/ZG-6, Q45 and ZG-7 stay open.
+fallback remain rejected. [Qualification](qualification/activity-groups/zg6-repeat.md)
+passes 1,666 regression tests plus 10 package-only consumer executions on Windows
+.NET 8/10, using unpublished Fuwen preview.15 and Zhinu preview.7. Next is fan-out
+per-operation lowering. Full FM-2/ZG-6, Q45 and ZG-7 stay open.

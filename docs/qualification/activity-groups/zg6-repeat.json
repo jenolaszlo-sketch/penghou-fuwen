@@ -1,0 +1,297 @@
+{
+  "SchemaVersion": 1,
+  "Stage": "ZG-6.2a single-level grouped repeat integration",
+  "Status": "passed for bounded repeat profile; full FM/ZG/Q45 open",
+  "Date": "2026-10-19",
+  "Platform": "Windows",
+  "TargetFrameworks": [
+    "net8.0",
+    "net10.0"
+  ],
+  "RuntimeImplementationCommit": "cde940fa21cb4e0a117814502afb4898b9303819",
+  "ZhinuSourceCommit": "45e831a82593048dc1ea7266cbc1e9b306d8c92c",
+  "PackageVersion": "0.1.0-preview.15",
+  "ZhinuPackageVersion": "0.2.0-preview.7",
+  "Publication": "Unpublished local candidates",
+  "PersistedSchemaVersion": 9,
+  "FullRegressionTests": 1666,
+  "Tests": [
+    {
+      "File": "artifacts/zg6-repeat-final-tests/repeat-full_net10.0_20261019150204.trx",
+      "Sha256": "91705b438d6133abb550de07a435962a2e411ccf9d0ed8977b58d1287a76be18",
+      "Assembly": "penghou.fuwen.compiler.tests.dll",
+      "total": 251,
+      "passed": 251,
+      "failed": 0,
+      "notExecuted": 0
+    },
+    {
+      "File": "artifacts/zg6-repeat-final-tests/repeat-full_net10.0_20261019150215.trx",
+      "Sha256": "5639c56b79134abb3cb3e27c63f42b889e1a0418585b4e8b253d650e0391a35d",
+      "Assembly": "penghou.fuwen.baize.tests.dll",
+      "total": 94,
+      "passed": 94,
+      "failed": 0,
+      "notExecuted": 0
+    },
+    {
+      "File": "artifacts/zg6-repeat-final-tests/repeat-full_net10.0_20261019150217.trx",
+      "Sha256": "3dcb91af85a23c4bcb04a622e98eef7cebe18094f0c612e178d16361ae2035ba",
+      "Assembly": "penghou.fuwen.tests.dll",
+      "total": 314,
+      "passed": 314,
+      "failed": 0,
+      "notExecuted": 0
+    },
+    {
+      "File": "artifacts/zg6-repeat-final-tests/repeat-full_net8.0_20261019150203.trx",
+      "Sha256": "b5f394d08fc226934bdd0f0e00087038cfe142f2cbb775251731506d935bb090",
+      "Assembly": "penghou.fuwen.compiler.tests.dll",
+      "total": 251,
+      "passed": 251,
+      "failed": 0,
+      "notExecuted": 0
+    },
+    {
+      "File": "artifacts/zg6-repeat-final-tests/repeat-full_net8.0_20261019150215.trx",
+      "Sha256": "2ad696bdcf3b8194afd6bdd8fd1aa017ce58a0426dd71204f312769458dd54e1",
+      "Assembly": "penghou.fuwen.baize.tests.dll",
+      "total": 94,
+      "passed": 94,
+      "failed": 0,
+      "notExecuted": 0
+    },
+    {
+      "File": "artifacts/zg6-repeat-final-tests/repeat-full_net8.0_20261019150217.trx",
+      "Sha256": "7d72da15f1cfb52981dadd85c86cb4e4033d505f2c80fd0549c6a9ba672162a3",
+      "Assembly": "penghou.fuwen.tests.dll",
+      "total": 314,
+      "passed": 314,
+      "failed": 0,
+      "notExecuted": 0
+    },
+    {
+      "File": "artifacts/zg6-repeat-adapter-final/adapter-final_net10.0_20261019150435.trx",
+      "Sha256": "eba2ed80faecd08d93d4c5ad626b9debc3500f4aac542b29b1ac5edc7f2018a1",
+      "Assembly": "penghou.fuwen.zhinu.tests.dll",
+      "total": 174,
+      "passed": 174,
+      "failed": 0,
+      "notExecuted": 0
+    },
+    {
+      "File": "artifacts/zg6-repeat-adapter-final/adapter-final_net8.0_20261019150434.trx",
+      "Sha256": "51afeb20857492ab63bdc826325cde20bf00e33187cab0f4b48a9215e10f2403",
+      "Assembly": "penghou.fuwen.zhinu.tests.dll",
+      "total": 174,
+      "passed": 174,
+      "failed": 0,
+      "notExecuted": 0
+    }
+  ],
+  "Packages": [
+    {
+      "File": "artifacts/zg6-repeat-packages/Penghou.Fuwen.0.1.0-preview.15.nupkg",
+      "Sha256": "eff42c84a36686608e14008ce9476db6d05992c8339b2bc3fe40daad4f7cfa93",
+      "Id": "Penghou.Fuwen",
+      "Version": "0.1.0-preview.15",
+      "RepositoryCommit": "cde940fa21cb4e0a117814502afb4898b9303819",
+      "Binaries": [
+        {
+          "File": "lib/net10.0/Penghou.Fuwen.dll",
+          "Sha256": "4b6bb6d968f9c35ee7436fc010951252b02d785761cd311ef6f7e247d94c475a",
+          "MatchesBuild": true
+        },
+        {
+          "File": "lib/net8.0/Penghou.Fuwen.dll",
+          "Sha256": "38780173fd5a2d6cdaef4e88faff9c5b401258100ee400730c8f137bfff6bf9e",
+          "MatchesBuild": true
+        }
+      ]
+    },
+    {
+      "File": "artifacts/zg6-repeat-packages/Penghou.Fuwen.Baize.0.1.0-preview.15.nupkg",
+      "Sha256": "48063fedb99a34c342ba2b8d99d8ab91391fdcf4a81db8d9337945e9297e2d41",
+      "Id": "Penghou.Fuwen.Baize",
+      "Version": "0.1.0-preview.15",
+      "RepositoryCommit": "cde940fa21cb4e0a117814502afb4898b9303819",
+      "Binaries": [
+        {
+          "File": "lib/net10.0/Penghou.Fuwen.Baize.dll",
+          "Sha256": "44b6171dd576320810a126ef3387545d139727884a6015c060898cfec8902cb5",
+          "MatchesBuild": true
+        },
+        {
+          "File": "lib/net8.0/Penghou.Fuwen.Baize.dll",
+          "Sha256": "57211ef7dc8a7fc223dfee5a7b9e48bd4e30f3a19aab0014eda2f33281c0be54",
+          "MatchesBuild": true
+        }
+      ]
+    },
+    {
+      "File": "artifacts/zg6-repeat-packages/Penghou.Fuwen.Compiler.0.1.0-preview.15.nupkg",
+      "Sha256": "e3b2431a0b62582dfd97328a0c3bf4daec2aa84d032ba7c6c7e36a6f45ab634f",
+      "Id": "Penghou.Fuwen.Compiler",
+      "Version": "0.1.0-preview.15",
+      "RepositoryCommit": "cde940fa21cb4e0a117814502afb4898b9303819",
+      "Binaries": [
+        {
+          "File": "lib/net10.0/Penghou.Fuwen.Compiler.dll",
+          "Sha256": "6abb3b75778090f66d2de3f096d0172d622cd4a9245222c99f5431af630a80ac",
+          "MatchesBuild": true
+        },
+        {
+          "File": "lib/net8.0/Penghou.Fuwen.Compiler.dll",
+          "Sha256": "9a86fa9c3ec9e1849bc4c16508e9912d583ac190cb4393f291d1c3c2c59d58e2",
+          "MatchesBuild": true
+        }
+      ]
+    },
+    {
+      "File": "artifacts/zg6-repeat-packages/Penghou.Fuwen.Zhinu.0.1.0-preview.15.nupkg",
+      "Sha256": "42d81f5428e7b9b595e41415d9a03727ba35c7765b4c5159344cd2f2d4e6fcf2",
+      "Id": "Penghou.Fuwen.Zhinu",
+      "Version": "0.1.0-preview.15",
+      "RepositoryCommit": "cde940fa21cb4e0a117814502afb4898b9303819",
+      "Binaries": [
+        {
+          "File": "lib/net10.0/Penghou.Fuwen.Zhinu.dll",
+          "Sha256": "373f0962799a9219c07bfe9b53b29e2e36d4f780dec52c27053f7f6c861699f1",
+          "MatchesBuild": true
+        },
+        {
+          "File": "lib/net8.0/Penghou.Fuwen.Zhinu.dll",
+          "Sha256": "e9ca9f84db39cf7a434d4f913fd44475fa6fe3aa3b465bb3ef5cb2d67f8f540f",
+          "MatchesBuild": true
+        }
+      ]
+    }
+  ],
+  "FormatExitCode": 0,
+  "IndependentCanonicalJsonExitCode": 0,
+  "PackageConsumer": {
+    "Tests": [
+      {
+        "File": "artifacts/zg6-repeat-consumer/consumer_net10.0_20261019151213.trx",
+        "Sha256": "1de5acb0ff6294da98c0fad3bc52797db6d38e603586e9a4ac81718b31b5ffc2",
+        "Assembly": "penghou.fuwen.reviewconsumer.tests.dll",
+        "total": 5,
+        "passed": 5,
+        "failed": 0,
+        "notExecuted": 0
+      },
+      {
+        "File": "artifacts/zg6-repeat-consumer/consumer_net8.0_20261019151212.trx",
+        "Sha256": "2154f94c9c1f3f930c1852b9635eb496c2aa332776b85d75872ebdb5204d8ee1",
+        "Assembly": "penghou.fuwen.reviewconsumer.tests.dll",
+        "total": 5,
+        "passed": 5,
+        "failed": 0,
+        "notExecuted": 0
+      }
+    ],
+    "Total": 10,
+    "ProjectReferences": false,
+    "AssetsFile": "tests/Penghou.Fuwen.ReviewConsumer.Tests/obj/project.assets.json",
+    "AssetsSha256": "351ffa398629a4e0dd76fc64b0704fc20955ebe5da81a37f3f76b85b598f472b",
+    "ResolvedCandidates": [
+      {
+        "Id": "Penghou.Fuwen",
+        "Version": "0.1.0-preview.15",
+        "Sha256": "eff42c84a36686608e14008ce9476db6d05992c8339b2bc3fe40daad4f7cfa93",
+        "CacheArchiveMatchesCandidate": true
+      },
+      {
+        "Id": "Penghou.Fuwen.Baize",
+        "Version": "0.1.0-preview.15",
+        "Sha256": "48063fedb99a34c342ba2b8d99d8ab91391fdcf4a81db8d9337945e9297e2d41",
+        "CacheArchiveMatchesCandidate": true
+      },
+      {
+        "Id": "Penghou.Fuwen.Compiler",
+        "Version": "0.1.0-preview.15",
+        "Sha256": "e3b2431a0b62582dfd97328a0c3bf4daec2aa84d032ba7c6c7e36a6f45ab634f",
+        "CacheArchiveMatchesCandidate": true
+      },
+      {
+        "Id": "Penghou.Fuwen.Zhinu",
+        "Version": "0.1.0-preview.15",
+        "Sha256": "42d81f5428e7b9b595e41415d9a03727ba35c7765b4c5159344cd2f2d4e6fcf2",
+        "CacheArchiveMatchesCandidate": true
+      },
+      {
+        "Id": "Penghou.Zhinu",
+        "Version": "0.2.0-preview.7",
+        "Sha256": "20f935d732f86cf128f4a394edaa0c7613126a9538b71cfac76b936d0d2d3fff",
+        "CacheArchiveMatchesCandidate": true
+      },
+      {
+        "Id": "Penghou.Zhinu.Sqlite",
+        "Version": "0.2.0-preview.7",
+        "Sha256": "ac35c28f8fdfc3bf1af7978526376f6a5692311c2b67a120063e05a04e6c0b43",
+        "CacheArchiveMatchesCandidate": true
+      }
+    ],
+    "NuGetConfig": "artifacts/zg6-repeat-consumer.NuGet.config",
+    "NuGetConfigSha256": "2ae6a01271aaf7dd99a81ad3117eaba8fc460a8fdcc6b6f40e68d48bee5ee5ff"
+  },
+  "ProcessLossProof": "Static and repeated cases pass on both TFMs: worker hard kill after committed provider effect and durable wait; independent hierarchy read; immutable-byte-only readmission; same memberships, no repeated effect.",
+  "LegacyWaitProof": "Historical macro-free repeat keys stay unchanged. Native legacy in-flight wrapped claim recovery preserves step ID, revision, InputJson, InputHash and null membership. Root signal-wait serialization is unchanged.",
+  "InitialRedRuns": [
+    "Full adapter run contained one malformed negative fan-out source fixture per TFM. Corrected the bounded-list fixture; two clean full adapter receipts replace only these failed receipts in the total.",
+    "Staging preview.6 exposed body key length and old signal-wait input incompatibility; final preview.7/source45 and final Fuwen source cde are independently qualified.",
+    "Package-only test initially failed to compile because assertion expression trees used null propagation; changed assertions to explicit null guards before the final passing run."
+  ],
+  "Deferred": [
+    "Fan-out per-operation lowering",
+    "Nested repeats, broader dynamic composition and grouped coordinated inference",
+    "Repeat-local inference fallback",
+    "Selection closure and full Q45/FM-2/ZG-6/ZG-7",
+    "Linux CI, Fuwen precompiled legacy binaries and public-package adoption"
+  ],
+  "Commands": [
+    "eng/Prepare-ZhinuCandidate.ps1 -ArtifactsDirectory ../zhinu-activity-groups/artifacts/zg6-repeat-final-packages",
+    "dotnet test Penghou.Fuwen.slnx -c Release --no-restore --results-directory artifacts/zg6-repeat-final-tests --logger trx;LogFilePrefix=full",
+    "dotnet test tests/Penghou.Fuwen.Zhinu.Tests/Penghou.Fuwen.Zhinu.Tests.csproj -c Release --no-restore --results-directory artifacts/zg6-repeat-adapter-final --logger trx;LogFilePrefix=adapter-final",
+    "dotnet format Penghou.Fuwen.slnx --no-restore --verify-no-changes",
+    "python tests/golden/canonical_json_v1.py",
+    "dotnet pack Penghou.Fuwen.slnx -c Release --no-restore -o artifacts/zg6-repeat-packages",
+    "dotnet restore tests/Penghou.Fuwen.ReviewConsumer.Tests/Penghou.Fuwen.ReviewConsumer.Tests.csproj -p:FuwenPackageVersion=0.1.0-preview.15 --configfile artifacts/zg6-repeat-consumer.NuGet.config",
+    "dotnet test tests/Penghou.Fuwen.ReviewConsumer.Tests/Penghou.Fuwen.ReviewConsumer.Tests.csproj -c Release --no-restore -p:FuwenPackageVersion=0.1.0-preview.15 --results-directory artifacts/zg6-repeat-consumer --logger trx;LogFilePrefix=consumer",
+    "dotnet format whitespace tests/Penghou.Fuwen.ReviewConsumer.Tests/Penghou.Fuwen.ReviewConsumer.Tests.csproj --no-restore --verify-no-changes --include tests/Penghou.Fuwen.ReviewConsumer.Tests/ActivityGroupCandidateTests.cs"
+  ],
+  "Logs": [
+    {
+      "File": "artifacts/zg6-repeat-full-tests.log",
+      "Sha256": "5bf651c3d49fea4f5c0edad6cb0312d0243fbf5c8c1409b20aaae41fdebb8810"
+    },
+    {
+      "File": "artifacts/zg6-repeat-adapter-final.log",
+      "Sha256": "511114ce2f05a25a7b469ae4207b45a01b5a78a40b8c4eb33b0c3a410be6a083"
+    },
+    {
+      "File": "artifacts/zg6-repeat-format-verify.log",
+      "Sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "File": "artifacts/zg6-repeat-canonical.log",
+      "Sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "File": "artifacts/zg6-repeat-pack.log",
+      "Sha256": "842360b13b6c7bda4948d7b567be7ae46952ee1e64c2fb68448f4eee5630bc4e"
+    },
+    {
+      "File": "artifacts/zg6-repeat-consumer-restore.log",
+      "Sha256": "928051d0adbbb68cb0bc83704e854ab05b806bbd6d57ad5e2eda757065dcfd4d"
+    },
+    {
+      "File": "artifacts/zg6-repeat-consumer.log",
+      "Sha256": "b38f6428fbd9ad8dd1919bf1d714f8fae2a7c22592a70eed96e2629bd8d71ad9"
+    },
+    {
+      "File": "artifacts/zg6-repeat-consumer-format.log",
+      "Sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

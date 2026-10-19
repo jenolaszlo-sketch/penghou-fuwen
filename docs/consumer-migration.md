@@ -141,7 +141,7 @@ baselines move to `Shipped` and additive-only applies within the line; see
 [graduation requirements](graduation-requirements.md).
 
 
-## Unpublished grouped-repeat candidate — preview.15
+## Unpublished grouped-repeat candidate -- preview.15
 
 The ZG-6.2a [repeat profile](activity-groups-repeat-profile.md) requires the exact
 Zhinu 0.2.0-preview.7 closure in the current candidate pin. Expanded repeat/body

@@ -45,7 +45,9 @@ ZG-6.1 adds bounded local macro/logical-group expansion, pinned immutable group
 companions, grouped admission/registration, static native step membership and
 signal-wait recovery. See the [static profile](activity-groups-static-profile.md)
 and [qualification](qualification/activity-groups/zg6-static.md).
-Grouped repeat, fan-out and coordinated inference are rejected before execution;
-historical ungrouped behavior remains available. Full FM-2/ZG-6 and ZG-7,
-including per-child dynamic durability and cross-platform qualification, remain
-open. These candidate packages are not published.
+ZG-6.2a adds [single-level grouped repeat](activity-groups-repeat-profile.md),
+with separate [qualification](qualification/activity-groups/zg6-repeat.md).
+Grouped fan-out, nested repeats, coordinated inference and repeat-local fallback
+remain rejected. Historical macro-free keys remain unchanged. Full FM-2/ZG-6,
+Q45 and ZG-7, including broader dynamic durability and cross-platform
+qualification, remain open. These candidate packages are not published.

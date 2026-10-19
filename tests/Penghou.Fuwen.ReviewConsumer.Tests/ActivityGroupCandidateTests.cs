@@ -168,6 +168,141 @@ public sealed class ActivityGroupCandidateTests
         }
     }
 
+    [Fact]
+    public async Task Published_packages_preserve_grouped_repeat_occurrences_and_map_every_step()
+    {
+        const string repeatSource = """
+            macro Echo(value: string) {
+              activity inner = activity "sample.echo@1#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" (value: value;) -> string;
+              checkpoint saved value inner -> string;
+              yield saved;
+            }
+            workflow demo(input: string) -> string {
+              group root {
+                repeat loop max 2 state current: string = input {
+                  group iteration {
+                    use call = Echo(value: current);
+                    yield call;
+                  }
+                } continue iteration break iter == 2 -> string;
+                yield loop;
+              }
+              return root;
+            }
+            """;
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        var cancellationToken = timeout.Token;
+        var text = new PrimitiveType(FuwenPrimitiveKind.String);
+        var descriptor = new DescriptorReference(DescriptorKind.Activity, "sample.echo", "1",
+            new ContentDigest("sha256", "descriptor/v1", new string('a', 64)));
+        var catalogue = new InMemoryTrustedCatalogue([
+            new TrustedCatalogueDescriptor(descriptor,
+                callableContract: new CallableContract(new CallableSignature([new CallableParameter("value", text)], text),
+                    CallableEffect.Read, CallableIdempotency.Idempotent, CallableRetrySafety.Safe))]);
+        var compiler = new FuwenSourceCompiler(catalogue);
+        var compiled = await compiler.CompileAsync(repeatSource, cancellationToken: cancellationToken);
+        compiled.Succeeded.Should().BeTrue(string.Join("; ", compiled.Diagnostics.Select(item => item.Message)));
+        compiled.GroupedDefinition.Should().NotBeNull();
+
+        var admissionService = new WorkflowAdmissionService(new WorkflowCompiler(catalogue,
+            capabilityPolicy: new CapabilityGrantPolicy("policy/1", [])));
+        var admission = await admissionService.AdmitGroupedAsync(compiled.GroupedDefinition!, cancellationToken: cancellationToken);
+        admission.Succeeded.Should().BeTrue(string.Join("; ", admission.Admission.Diagnostics.Select(item => item.Message)));
+
+        var root = Path.Combine(Path.GetTempPath(), "fuwen-group-repeat-package-consumer", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var definitionsPath = Path.Combine(root, "definitions");
+            var definitions = new DirectoryWorkflowDefinitionStore(definitionsPath);
+            (await definitions.StoreGroupedAsync(admission.Definition, cancellationToken))
+                .Should().Be(WorkflowDefinitionWriteDisposition.Created);
+            var reopened = new DirectoryWorkflowDefinitionStore(definitionsPath);
+            var persisted = await reopened.ReadGroupedAsync(admission.Definition.Fingerprint, cancellationToken);
+            persisted.Should().NotBeNull();
+            persisted!.Fingerprint.Should().Be(admission.Definition.Fingerprint);
+            var readmitted = await admissionService.AdmitGroupedAsync(persisted, cancellationToken: cancellationToken);
+            readmitted.Succeeded.Should().BeTrue();
+
+            var activity = new EchoActivity();
+            var identity = new FuwenZhinuProviderRuntimeIdentity(
+                readmitted.Admission.Receipt!.CatalogueSnapshotRevision,
+                readmitted.Admission.Receipt.ResolvedDescriptorSetFingerprint);
+            var registration = await new FuwenZhinuWorkflowFactory(reopened, identity,
+                    new FuwenZhinuExecutionPorts(activity, new UnusedContext(), new UnusedInference()))
+                .CreateGroupedAsync("grouped-repeat", "1", readmitted, cancellationToken);
+            var store = new SqliteWorkflowStore(new ZhinuSqliteOptions
+            {
+                DatabasePath = Path.Combine(root, "run.db"),
+                Pooling = false,
+            });
+            await using var engine = new WorkflowEngine(store, registration.Register(new WorkflowRegistry()));
+            var runId = await engine.StartAsync("grouped-repeat", "1", JsonSerializer.SerializeToElement("hello"),
+                cancellationToken: cancellationToken);
+            await engine.ExecuteAsync(runId, cancellationToken);
+            (await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: cancellationToken))
+                .GetString().Should().Be("hello");
+            activity.Requests.Should().HaveCount(2);
+
+            var steps = await store.GetStepsAsync(runId, cancellationToken);
+            var map = FuwenZhinuStepMapper.Map(registration.Definition.ReadPlan());
+            steps.Should().NotBeEmpty();
+            foreach (var step in steps)
+                FuwenZhinuStepMapper.TryMatchStepKey(map, step.StepKey, out _).Should().BeTrue(step.StepKey);
+
+            using var reader = new WorkflowGroupReader(store);
+            var header = await reader.GetRunGroupSnapshotAsync(runId, cancellationToken);
+            header.Status.Should().Be(WorkflowGroupReadStatus.Success);
+            header.Value!.OccurrenceCount.Should().Be(5);
+            var roots = await reader.QueryGroupChildrenAsync(runId, header.Value.SnapshotToken,
+                cancellationToken: cancellationToken);
+            var rootOccurrence = roots.Value!.Items.Should().ContainSingle(item =>
+                item.Kind == WorkflowGroupNodeKind.Occurrence && item.Occurrence != null && item.Occurrence.GroupKey == "demo/$group/root")
+                .Which.Occurrence!;
+
+            var rootChildren = await reader.QueryGroupChildrenAsync(runId, header.Value.SnapshotToken,
+                rootOccurrence.OccurrenceId, cancellationToken: cancellationToken);
+            var iterations = rootChildren.Value!.Items
+                .Where(item => item.Kind == WorkflowGroupNodeKind.Occurrence &&
+                    item.Occurrence?.GroupKey.EndsWith("/$group/iteration", StringComparison.Ordinal) == true)
+                .Select(item => item.Occurrence!).ToArray();
+            iterations.Should().HaveCount(2);
+            iterations.Select(item => item.OccurrenceId).Should().OnlyHaveUniqueItems();
+            iterations.Should().OnlyContain(item => item.ParentOccurrenceId == rootOccurrence.OccurrenceId);
+
+            var observedIterations = new HashSet<int>();
+            foreach (var iterationOccurrence in iterations)
+            {
+                var iterationChildren = await reader.QueryGroupChildrenAsync(runId, header.Value.SnapshotToken,
+                    iterationOccurrence.OccurrenceId, cancellationToken: cancellationToken);
+                var callOccurrence = iterationChildren.Value!.Items.Should().ContainSingle(item =>
+                    item.Kind == WorkflowGroupNodeKind.Occurrence && item.Occurrence != null && item.Occurrence.GroupKey.EndsWith("/$group/call", StringComparison.Ordinal))
+                    .Which.Occurrence!;
+                callOccurrence.ParentOccurrenceId.Should().Be(iterationOccurrence.OccurrenceId);
+                var callMembers = await reader.QueryGroupMembersAsync(runId, header.Value.SnapshotToken,
+                    callOccurrence.OccurrenceId, cancellationToken: cancellationToken);
+                callMembers.Value!.Items.Should().HaveCount(2);
+                foreach (var member in callMembers.Value.Items)
+                {
+                    member.Step.GroupOccurrenceId.Should().Be(callOccurrence.OccurrenceId);
+                    FuwenZhinuStepMapper.TryMatchStepKey(map, member.Step.StepKey, out var match).Should().BeTrue(member.Step.StepKey);
+                    var loopScope = match.Scope.Should().ContainSingle(scope => scope.Kind == FuwenZhinuStepScopeKind.Loop).Which;
+                    loopScope.Iteration.Should().NotBeNull();
+                    loopScope.Iteration!.Value.Should().BeInRange(1, 2);
+                    observedIterations.Add(loopScope.Iteration!.Value);
+                }
+            }
+            observedIterations.Should().BeEquivalentTo([1, 2]);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+
     private sealed class EchoActivity : IActivityExecutor
     {
         public List<ActivityExecutionRequest> Requests { get; } = [];

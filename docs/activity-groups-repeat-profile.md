@@ -61,6 +61,8 @@ membership changes no authority, retry policy or provider outcome interpretation
 Current repeated members do not prove expansion closure or an exact future total;
 existing Unknown/Partial coverage remains conservative.
 
+The [qualification record](qualification/activity-groups/zg6-repeat.md) defines
+the exact source, package and process-loss evidence.
 The current candidate closure is recorded in
 [the package pin](qualification/activity-groups/zhinu-candidate.json).
 The earlier static checkpoint retains

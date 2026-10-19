@@ -11,15 +11,18 @@ exact Fuwen preview it was built against.
 
 ## Unreleased source after preview.11
 
-The activity-groups `0.1.0-preview.14` candidate additionally requires the pinned
-unpublished Zhinu `0.2.0-preview.5` closure. Prepare the local feed using
+The current activity-groups `0.1.0-preview.15` candidate requires the pinned
+unpublished Zhinu `0.2.0-preview.7` closure. Prepare the local feed using
 `eng/Prepare-ZhinuCandidate.ps1`; see the
 [static profile](activity-groups-static-profile.md). Existing ungrouped APIs
 remain available. Grouped source returns a `GroupedDefinition`; admit it with
 `AdmitGroupedAsync`, persist/reload that exact bundle, and use `CreateGroupedAsync`.
 Do not register expanded v4 IR through plain `CreateAsync` or recompute macros
 during recovery. Source references stay in the Fuwen bundle; native group queries
-provide generic identity/provenance. Dynamic grouped lowering is still deferred.
+provide generic identity/provenance. The [repeat extension](activity-groups-repeat-profile.md)
+qualifies one repeat level. Grouped fan-out and broader dynamic lowering remain
+deferred. The earlier preview.14/preview.5 static pairing retains its own
+[qualification](qualification/activity-groups/zg6-static.md).
 
 These changes are in the source tree and are **not yet a published NuGet
 version**. Rebuild and test adapters and hosts before selecting a future

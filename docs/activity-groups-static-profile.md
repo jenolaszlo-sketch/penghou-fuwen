@@ -98,10 +98,15 @@ or permission to publish packages.
 
 ## Candidate package reproduction
 
-Restore uses the exact seven unpublished Zhinu packages recorded in
+The current branch, including the repeat extension, restores the exact seven
+unpublished Zhinu preview.7 packages recorded in
 [`qualification/activity-groups/zhinu-candidate.json`](qualification/activity-groups/zhinu-candidate.json).
 Run `eng/Prepare-ZhinuCandidate.ps1 -ArtifactsDirectory <qualified-package-directory>`
-first. It checks all package hashes, versions and source commits before copying
+first with the current qualified preview.7 directory. The earlier static-only
+preview.5 closure remains recorded in
+[the original static pin](qualification/activity-groups/zhinu-static-candidate.json)
+and requires the original static source checkout to reproduce. The preparation
+script checks all package hashes, versions and source commits before copying
 the closure to the local feed. `NuGet.config` maps those seven package IDs to
 that feed and uses a repository-local cache, preventing accidental adoption of
 different bytes with the same version from a global cache. Candidate packages

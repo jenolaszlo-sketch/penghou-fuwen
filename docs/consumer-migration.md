@@ -160,7 +160,7 @@ fallback remain unsupported. All packages are local unpublished candidates.
 ## Unpublished grouped fan-out candidate -- preview.16
 
 The [bounded fan-out profile](activity-groups-fanout-profile.md) consumes exact
-Zhinu 0.2.0-preview.8 from the [current pin](qualification/activity-groups/zhinu-candidate.json).
+Zhinu 0.2.0-preview.8 from the [preserved fan-out pin](qualification/activity-groups/zhinu-fanout-candidate.json).
 A grouped plan supports one keyed fan-out whose entire body belongs to one
 explicit item-local root group, with optional nested groups/macros. Each activity,
 context read and one-call inference is independently durable. The adapter rejects
@@ -173,3 +173,21 @@ preserves unaffected predecessor/sibling work. `StepOnly` restart of body steps
 or item completions is explicitly unsupported. Selection and aggregate outcome
 vectors are each bounded to 1 MiB. Recovery uses the immutable stored bundle.
 Candidates remain unpublished; full FM-2/ZG-6, Q45 and ZG-7 remain open.
+
+
+## Unpublished activity-group qualification candidate -- preview.17
+
+The [supported profile](activity-groups-qualified-profile.md) uses exact native
+preview.9 from the current candidate pin. Per-item progress now uses a durable
+body-completion seal, so a finished item and nested groups remain Completed while
+siblings run or are cancelled. Parent totals remain unknown until closure is
+proved. The optional payload-free native snapshot hash fields preserve constructor
+ABI and are not required from older providers; missing evidence remains open.
+
+A precompiled preview.11 Fuwen consumer is qualified separately from persisted
+schema upgrades. That published adapter creates schema 4 through native preview.14.
+Schema 4 is rejected without mutation; it is outside the supported schema 5–9
+upgrade chain. New deployment must include the neutral workflow abstractions
+package required by the current native runtime, as ordinary NuGet restore does.
+No new DSL primitive, scheduling/authorization rule, public group control API or
+package publication is implied.

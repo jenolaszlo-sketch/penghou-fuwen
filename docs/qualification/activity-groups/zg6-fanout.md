@@ -7,7 +7,7 @@ Production/package source is Fuwen `86188500f12799bdb1d4675cdf73b513f2bcfbca`
 (`0.1.0-preview.16`) and Zhinu `fa0297b9dc21b235f27ac92b979dcf9faeb6b7b6`
 (`0.2.0-preview.8`). The [ledger](zg6-fanout.json) pins archive/binary hashes,
 source commits, final test receipts and package-only consumer resolution. The
-[current native pin](zhinu-candidate.json) fixes all seven packages. The
+[original fan-out native pin](zhinu-fanout-candidate.json) fixes all seven packages. The
 [repeat checkpoint](zg6-repeat.md) retains its [preview.7 pin](zhinu-repeat-candidate.json),
 and the [static checkpoint](zg6-static.md) retains its original evidence.
 

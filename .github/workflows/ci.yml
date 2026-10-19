@@ -2,21 +2,41 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, codex/fuwen-activity-groups]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   build-test-pack:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: write
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: pwsh
     steps:
-      - name: Checkout
+      - name: Checkout Fuwen
         uses: actions/checkout@v6
+
+      - name: Read exact native source pin
+        id: native-pin
+        run: |
+          $pin = Get-Content docs/qualification/activity-groups/zhinu-candidate.json -Raw | ConvertFrom-Json
+          if ($pin.SourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Invalid native source pin.' }
+          "commit=$($pin.SourceCommit)" >> $env:GITHUB_OUTPUT
+          "version=$($pin.Version)" >> $env:GITHUB_OUTPUT
+
+      - name: Checkout pinned native source
+        uses: actions/checkout@v6
+        with:
+          repository: jenolaszlo-sketch/penghou-zhinu
+          ref: ${{ steps.native-pin.outputs.commit }}
+          path: native-candidate-source
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -24,6 +44,25 @@ jobs:
           dotnet-version: |
             8.0.x
             10.0.x
+
+      # A source rebuild is a new per-run archive set, not a claim to reproduce
+      # the original Windows archive hashes. Both pins and exact source are retained.
+      - name: Prepare exact-source native candidates
+        run: |
+          ./eng/Prepare-ZhinuSourceCandidate.ps1 -SourceDirectory native-candidate-source
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $manifest = @(Get-ChildItem artifacts/zhinu-source-candidate/zhinu-source-candidate-*.json)
+          if ($manifest.Count -ne 1) { throw 'Expected one native rebuild manifest.' }
+          Copy-Item -LiteralPath $manifest[0].FullName -Destination artifacts/zhinu-source-candidate.json
+          Copy-Item artifacts/zhinu-candidate/*.nupkg artifacts/
+
+      - name: Verify candidate preparation rejection boundaries
+        run: ./eng/Test-ZhinuCandidatePreparation.ps1 -ArtifactsDirectory artifacts/zhinu-candidate -CandidatePinPath artifacts/zhinu-source-candidate.json -OutputDirectory artifacts/candidate-preparation
+
+      - name: Verify native package closure and precompiled legacy consumer
+        run: |
+          ./native-candidate-source/eng/Verify-WorkflowPackageClosure.ps1 -ArtifactsDirectory artifacts/zhinu-candidate -PackageVersion '${{ steps.native-pin.outputs.version }}' -OutputDirectory artifacts/native-qualification/package-closure
+          ./native-candidate-source/eng/Verify-LegacyWorkflowConsumer.ps1 -ArtifactsDirectory artifacts/zhinu-candidate -PackageVersion '${{ steps.native-pin.outputs.version }}' -OutputDirectory artifacts/native-qualification/legacy-consumer
 
       - name: Build
         run: dotnet build Penghou.Fuwen.slnx --configuration Release
@@ -32,29 +71,50 @@ jobs:
         run: dotnet format Penghou.Fuwen.slnx --verify-no-changes --no-restore
 
       - name: Test
-        run: dotnet test Penghou.Fuwen.slnx --configuration Release --no-build
+        run: dotnet test Penghou.Fuwen.slnx --configuration Release --no-build --no-restore --logger 'trx;LogFilePrefix=full' --results-directory artifacts/test-results
 
       - name: Verify independent canonical JSON vector
-        run: python3 tests/golden/canonical_json_v1.py
+        run: python tests/golden/canonical_json_v1.py
 
       - name: Pack
-        run: dotnet pack Penghou.Fuwen.slnx --configuration Release --no-build --output artifacts --property:PackageVersion=0.0.0-ci.${{ github.run_id }}
+        run: dotnet pack Penghou.Fuwen.slnx --configuration Release --no-build --no-restore --output artifacts --property:PackageVersion=0.0.0-ci.${{ github.run_id }}
 
-      - name: Upload packages
+      - name: Upload exact candidate closure
         uses: actions/upload-artifact@v6
         with:
-          name: nuget-packages
+          name: nuget-packages-${{ matrix.os }}
           path: |
             artifacts/*.nupkg
             artifacts/*.snupkg
+            artifacts/zhinu-source-candidate.json
           if-no-files-found: error
 
+      - name: Retain build and native qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: build-qualification-${{ matrix.os }}
+          path: |
+            artifacts/test-results/*.trx
+            artifacts/candidate-preparation/**/qualification.json
+            artifacts/native-qualification/**/qualification.json
+            artifacts/native-qualification/**/logs/*.log
+            artifacts/zhinu-source-candidate.json
+          if-no-files-found: ignore
+
   consumer-proof:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     needs: build-test-pack
     permissions:
       contents: read
       actions: read
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -66,30 +126,55 @@ jobs:
             8.0.x
             10.0.x
 
-      - name: Download packages
+      # Both OS consumers use the same producer archives, including native DLLs.
+      # This proves package portability rather than merely rebuilding on each OS.
+      - name: Download canonical producer packages
         uses: actions/download-artifact@v6
         with:
-          name: nuget-packages
+          name: nuget-packages-ubuntu-latest
           path: artifacts
 
-      # Isolated package consumers: each consumer project references the packed
-      # commit only through NuGet package surfaces (never sibling projects)
-      # and restores them from a local feed of this run's packages.
+      - name: Validate and prepare downloaded native candidates
+        run: ./eng/Prepare-ZhinuCandidate.ps1 -ArtifactsDirectory artifacts -PinPath artifacts/zhinu-source-candidate.json
+
       - name: Marang consumer proof
         run: >
           dotnet test tests/Penghou.Fuwen.MarangConsumer.Tests/Penghou.Fuwen.MarangConsumer.Tests.csproj
           --configuration Release
           -p:FuwenPackageVersion=0.0.0-ci.${{ github.run_id }}
+          --logger 'trx;LogFilePrefix=consumer'
+          --results-directory artifacts/consumer-results/marang
 
       - name: Review consumer proof
         run: >
           dotnet test tests/Penghou.Fuwen.ReviewConsumer.Tests/Penghou.Fuwen.ReviewConsumer.Tests.csproj
           --configuration Release
           -p:FuwenPackageVersion=0.0.0-ci.${{ github.run_id }}
+          --logger 'trx;LogFilePrefix=consumer'
+          --results-directory artifacts/consumer-results/review
 
-      # Runs last: --no-restore needs the restore that the test steps above
-      # already performed on this runner.
+      - name: Verify isolated resolved candidate archives
+        run: ./eng/Verify-CandidateConsumers.ps1 -ArtifactsDirectory artifacts -PackageVersion '0.0.0-ci.${{ github.run_id }}' -ZhinuPinPath artifacts/zhinu-source-candidate.json -ResultsDirectory artifacts/consumer-results -OutputPath artifacts/consumer-qualification.json
+
+      - name: Verify precompiled public Fuwen consumer and schema boundaries
+        run: |
+          $pin = Get-Content artifacts/zhinu-source-candidate.json -Raw | ConvertFrom-Json
+          ./eng/Verify-LegacyFuwenConsumer.ps1 -ArtifactsDirectory artifacts -PackageVersion '0.0.0-ci.${{ github.run_id }}' -ZhinuArtifactsDirectory artifacts -ZhinuPackageVersion $pin.Version -OutputDirectory artifacts/legacy-fuwen
+
       - name: Verify consumer formatting
         run: |
           dotnet format tests/Penghou.Fuwen.MarangConsumer.Tests/Penghou.Fuwen.MarangConsumer.Tests.csproj --verify-no-changes --no-restore
           dotnet format tests/Penghou.Fuwen.ReviewConsumer.Tests/Penghou.Fuwen.ReviewConsumer.Tests.csproj --verify-no-changes --no-restore
+
+      - name: Retain consumer qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: consumer-qualification-${{ matrix.os }}
+          path: |
+            artifacts/consumer-results/**/*.trx
+            artifacts/consumer-qualification.json
+            artifacts/legacy-fuwen/**/qualification.json
+            artifacts/legacy-fuwen/**/logs/*.log
+            artifacts/zhinu-source-candidate.json
+          if-no-files-found: ignore

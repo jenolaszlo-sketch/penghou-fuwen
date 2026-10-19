@@ -11,6 +11,7 @@ if (args.Length != 3) return 2;
 var directory = Path.GetFullPath(args[0]);
 var mode = args[2];
 var fanOutMode = mode.StartsWith("fanout-", StringComparison.Ordinal);
+var nestedRepeatMode = mode.StartsWith("nested-", StringComparison.Ordinal);
 var definitions = new DirectoryWorkflowDefinitionStore(directory);
 var pinned = await definitions.ReadGroupedAsync(args[1]) ?? throw new InvalidOperationException("Missing pinned expansion.");
 var text = new PrimitiveType(FuwenPrimitiveKind.String);
@@ -38,7 +39,7 @@ await using var engine = new WorkflowEngine(store, registration.Register(new Wor
     PollInterval = TimeSpan.FromMilliseconds(10)
 });
 Guid runId;
-if (mode is "start" or "fanout-start")
+if (mode is "start" or "fanout-start" or "nested-start")
 {
     var input = fanOutMode ? JsonSerializer.SerializeToElement(new[] { "a" }) : JsonSerializer.SerializeToElement("hello");
     runId = await engine.StartAsync("group-process", "1", input, cancellationToken: ct);
@@ -61,6 +62,16 @@ if (mode is "start" or "fanout-start")
 runId = Guid.Parse(await File.ReadAllTextAsync(Path.Combine(directory, "run-id"), ct));
 if (!fanOutMode) await engine.SendSignalAsync(runId, "approve", "accepted", ct);
 await engine.ExecuteAsync(runId, ct);
+if (nestedRepeatMode)
+{
+    // Each iteration parks at the same named wait. Replayed completed steps
+    // remain native durable results; only the next wait gets a new signal.
+    while ((await store.GetStepsAsync(runId, ct)).Any(step => step.Status == StepStatus.Waiting))
+    {
+        await engine.SendSignalAsync(runId, "approve", "accepted", ct);
+        await engine.ExecuteAsync(runId, ct);
+    }
+}
 var output = await engine.WaitForCompletionAsync<JsonElement>(runId, cancellationToken: ct);
 var result = output.ValueKind == JsonValueKind.String ? output.GetString()! : output.GetRawText();
 await File.WriteAllTextAsync(Path.Combine(directory, "result"), result, ct);

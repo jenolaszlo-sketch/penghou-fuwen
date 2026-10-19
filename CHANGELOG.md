@@ -43,6 +43,16 @@ contract versions. Consumer-visible breaking changes are called out under
   recovery, privacy, provider, and operator gates. No new NuGet package is
   published by these source changes.
 
+## 0.1.0-preview.17
+
+Unpublished cross-repository qualification candidate. Uses exact native preview.9
+for independent fan-out item progress: completed items and their nested groups
+remain Completed while a sibling runs or is cancelled. Adds substantive workflow,
+pinned-definition drift, repeat recovery and aggregate/cancellation probes. CI
+rebuilds the exact pinned native source, records distinct per-run archive hashes,
+and tests identical producer packages on Windows and Linux. No new DSL primitives,
+schema migration, identity contract or provider authority is introduced.
+
 ## 0.1.0-preview.16
 
 Unpublished grouped fan-out candidate, qualified on Windows .NET 8/10 against

@@ -10,8 +10,11 @@ One fan-out scope is supported per grouped plan, optionally within static groups
 Every body operation must belong to one explicit item-local root group or one of
 its nested logical/macro groups. Independent activities, context reads and
 one-call inference use native durable operations. Control-only conditionals
-remain pure decisions over persisted inputs. The required direct node-output
-group yield and supported provider-only subset ensure durable body work.
+remain pure decisions over persisted inputs. Preview.18 additionally rejects a possibly empty item path before definition
+writes. A logical group need not export a yield, so syntax alone cannot prove
+that every selected item will execute durable work. Admission requires an
+unconditional provider operation or guaranteed provider work in both conditional
+branches, recursively; it does not infer relationships between separate conditions.
 Nested fan-out, repeat composition,
 item waits/checkpoints, conditional value merges, coordinated inference and
 item-local inference fallback remain rejected before definition writes.

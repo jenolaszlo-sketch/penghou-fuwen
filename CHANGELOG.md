@@ -43,6 +43,14 @@ contract versions. Consumer-visible breaking changes are called out under
   recovery, privacy, provider, and operator gates. No new NuGet package is
   published by these source changes.
 
+## 0.1.0-preview.18
+
+- Reject grouped fan-out bodies without guaranteed durable work on every structural
+  path before storing definitions. Conditionals with work in both branches remain
+  supported; admission does not infer relationships between separate conditions.
+- Make legacy consumer probes and formatting portable across Windows and Linux;
+  bound the new parked-wait qualification tests.
+
 ## 0.1.0-preview.17
 
 Unpublished cross-repository qualification candidate. Uses exact native preview.9

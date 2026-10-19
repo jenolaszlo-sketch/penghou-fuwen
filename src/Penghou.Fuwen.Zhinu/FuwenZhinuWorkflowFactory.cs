@@ -363,6 +363,8 @@ public sealed class FuwenZhinuWorkflowFactory
                     throw new FuwenZhinuAdmissionException("Grouped fan-out supports one root scope without repeat composition under the v4 key contract.");
                 var fanOut = fanOuts[0];
                 _ = FuwenGroupExecution.FanOutItemRoot(groupedDefinition.Groups, fanOut);
+                if (!HasGuaranteedFanOutOperation(fanOut.Body))
+                    throw new FuwenZhinuAdmissionException("Grouped fan-out requires a durable operation on every structural body path.");
                 var body = EnumerateNodes(fanOut.Body).ToArray();
                 var itemGroupCount = groupedDefinition.Groups.Groups.Count(group =>
                     group.GroupKey.StartsWith(fanOut.StructuralPath + "/$body/", StringComparison.Ordinal));
@@ -450,6 +452,10 @@ public sealed class FuwenZhinuWorkflowFactory
         return new FuwenZhinuWorkflowRegistration(name, version, stored, executionPorts,
             admission.TrustedToolSignatures, groupedDefinition);
     }
+
+    private static bool HasGuaranteedFanOutOperation(IEnumerable<WorkflowNode> nodes) => nodes.Any(node =>
+        node is ActivityNode or ContextNode or InferenceNode || node is ConditionalNode conditional &&
+        HasGuaranteedFanOutOperation(conditional.Then) && HasGuaranteedFanOutOperation(conditional.Else));
 
     private static void ValidateExecutableSubset(IEnumerable<WorkflowNode> nodes, bool insideFanOut, bool insideRepeat, bool coordinated)
     {

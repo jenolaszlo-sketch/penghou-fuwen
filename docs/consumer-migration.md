@@ -11,8 +11,8 @@ exact Fuwen preview it was built against.
 
 ## Unreleased source after preview.11
 
-The current activity-groups `0.1.0-preview.15` candidate requires the pinned
-unpublished Zhinu `0.2.0-preview.7` closure. Prepare the local feed using
+The current activity-groups `0.1.0-preview.18` candidate requires the pinned
+unpublished Zhinu `0.2.0-preview.9` closure. Prepare the local feed using
 `eng/Prepare-ZhinuCandidate.ps1`; see the
 [static profile](activity-groups-static-profile.md). Existing ungrouped APIs
 remain available. Grouped source returns a `GroupedDefinition`; admit it with
@@ -20,8 +20,9 @@ remain available. Grouped source returns a `GroupedDefinition`; admit it with
 Do not register expanded v4 IR through plain `CreateAsync` or recompute macros
 during recovery. Source references stay in the Fuwen bundle; native group queries
 provide generic identity/provenance. The [repeat extension](activity-groups-repeat-profile.md)
-qualifies one repeat level. Grouped fan-out and broader dynamic lowering remain
-deferred. The earlier preview.14/preview.5 static pairing retains its own
+qualifies one repeat level. The [fan-out profile](activity-groups-fanout-profile.md)
+adds independently durable item operations. The [current supported profile](activity-groups-qualified-profile.md)
+lists the remaining rejected combinations. The earlier preview.14/preview.5 static pairing retains its own
 [qualification](qualification/activity-groups/zg6-static.md).
 
 These changes are in the source tree and are **not yet a published NuGet
@@ -191,3 +192,15 @@ upgrade chain. New deployment must include the neutral workflow abstractions
 package required by the current native runtime, as ordinary NuGet restore does.
 No new DSL primitive, scheduling/authorization rule, public group control API or
 package publication is implied.
+
+
+## Unpublished admission correction -- preview.18
+
+A grouped fan-out must guarantee at least one provider operation on every
+structural item path. An unconditional provider or a conditional with work in both
+branches satisfies this, recursively. Previously an empty selected branch could
+pass registration and fail later at the native body seal. Registration now rejects
+that shape before definition writes or provider calls. Logical-group yield is
+optional and does not itself prove durable work. Separate condition expressions
+are not analyzed for mutual exclusivity or exhaustiveness. Existing ungrouped
+fan-out, keys, schema 9 and occurrence identity are unchanged.

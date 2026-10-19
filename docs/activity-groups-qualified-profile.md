@@ -1,6 +1,6 @@
 # Activity groups: supported cross-repository profile
 
-The current unpublished candidate pair is Fuwen preview.17 and exact Zhinu
+The current unpublished candidate pair is Fuwen preview.18 and exact Zhinu
 preview.9. The [native pin](qualification/activity-groups/zhinu-candidate.json)
 identifies the original Windows archives and source. Earlier static, repeat and
 fan-out qualification records retain their original source and archive pins.
@@ -15,7 +15,10 @@ static conditions, checkpoints and signal waits use native durable boundaries.
 A grouped plan can contain single-level bounded repeats, or one fixed keyed
 fan-out with an explicit item-local root and nested static groups/macros.
 Fan-out activity, context and one-call inference operations are independently
-durable; control-only item conditionals are supported. Groups change neither
+durable; control-only item conditionals are supported. Admission requires a
+provider operation outside conditionals or a conditional with guaranteed work in
+both branches, recursively. A possibly empty item path is rejected before writes;
+relationships between separate conditions are not inferred. Groups change neither
 authority nor provider policy. The DSL has no child-workflow syntax.
 
 Nested/mixed dynamic scopes, evolving selection, fan-out item waits/checkpoints

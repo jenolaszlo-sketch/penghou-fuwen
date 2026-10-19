@@ -7,7 +7,7 @@ using Penghou.Zhinu;
 
 namespace Penghou.Fuwen.Zhinu;
 
-internal static class FuwenZhinuSequentialInterpreter
+internal static partial class FuwenZhinuSequentialInterpreter
 {
     private const string RequestFingerprintContract = "fuwen-request/v1";
 
@@ -107,7 +107,7 @@ internal static class FuwenZhinuSequentialInterpreter
                                     requestJson,
                                     (_, _, _) => Task.FromResult(FuwenRuntimeValueWire.ToJson(mergedValue)),
                                     stepOptions: GroupOptions(state, context, conditionalNode.StructuralPath,
-                                        state.Groups?.HasRepeats == true
+                                        state.Groups is { } groupedScopes && (groupedScopes.HasRepeats || groupedScopes.HasFanOuts)
                                             ? StepOptionsForBindings(inheritedDependencies.Append(conditionalNode.StructuralPath).ToArray(), [selectedBinding])
                                             : StepOptionsFor(inheritedDependencies, []), ActivityGroupMemberRole.Control),
                                     cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -172,12 +172,12 @@ internal static class FuwenZhinuSequentialInterpreter
         var arguments = FuwenBindingEvaluator.EvaluateArguments(node.Arguments, plan, state);
         var identity = new NodeRequestIdentity("context", node.StructuralPath, node.Provider, null, arguments, null);
         var requestJson = FuwenRuntimeValueWire.Serialize(identity);
-        var envelopeJson = await context.StepAsync<JsonElement, JsonElement>(
-            node.StructuralPath,
+        var envelopeJson = await ExecuteNodeStepAsync(
+            state, context, node.StructuralPath,
             requestJson,
             async (_, step, token) =>
             {
-                var invocation = CreateInvocation(executionFingerprint, node.StructuralPath, requestJson, step);
+                var invocation = CreateNodeInvocation(state, executionFingerprint, node.StructuralPath, requestJson, step);
                 return FuwenRuntimeValueWire.Serialize(await ExecuteProviderAsync(
                     ports,
                     invocation,
@@ -206,7 +206,7 @@ internal static class FuwenZhinuSequentialInterpreter
             stepOptions: GroupOptions(state, context, node.StructuralPath, StepOptionsFor(inheritedDependencies, node.Arguments), ActivityGroupMemberRole.Work),
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        var envelope = FuwenEnvelopeValidator.Read(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId, ports.PriorExecutionFingerprints);
+        var envelope = FuwenEnvelopeValidator.Read(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId, ports.PriorExecutionFingerprints, NodeRuntimePath(state, node.StructuralPath));
         FuwenEnvelopeValidator.ThrowIfFailed(envelope, node.StructuralPath);
         EnsureType(envelope.Output!, node.OutputType, plan.Schemas, $"context node '{node.StructuralPath}' output");
         if (envelope.ContextSnapshot is null || !Equals(envelope.ContextSnapshot.Provider, node.Provider))
@@ -368,12 +368,12 @@ internal static class FuwenZhinuSequentialInterpreter
         }
 
         var (requestJson, createRequest) = BuildInferenceRequest(node, plan, state, arguments, contextInputs);
-        var envelopeJson = await context.StepAsync<JsonElement, JsonElement>(
-            node.StructuralPath,
+        var envelopeJson = await ExecuteNodeStepAsync(
+            state, context, node.StructuralPath,
             requestJson,
             async (_, step, token) =>
             {
-                var invocation = CreateInvocation(executionFingerprint, node.StructuralPath, requestJson, step);
+                var invocation = CreateNodeInvocation(state, executionFingerprint, node.StructuralPath, requestJson, step);
                 return FuwenRuntimeValueWire.Serialize(await ExecuteProviderAsync(
                     ports,
                     invocation,
@@ -405,7 +405,7 @@ internal static class FuwenZhinuSequentialInterpreter
                 node.ContextRequirements!.Select(static requirement => requirement.Source)), ActivityGroupMemberRole.Work),
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        var envelope = FuwenEnvelopeValidator.Read(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId, ports.PriorExecutionFingerprints);
+        var envelope = FuwenEnvelopeValidator.Read(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId, ports.PriorExecutionFingerprints, NodeRuntimePath(state, node.StructuralPath));
         if (envelope.Failure is { } failure && node.FailureFallback?.CanHandle(failure) == true)
             return await ExecuteInferenceFallbackAsync(
                 node, plan, context, state, inheritedDependencies, failure, cancellationToken).ConfigureAwait(false);
@@ -460,12 +460,12 @@ internal static class FuwenZhinuSequentialInterpreter
         var identity = new NodeRequestIdentity("activity", node.StructuralPath, node.Activity, null, arguments, null,
             ExecutionIntent: node.ExecutionIntent);
         var requestJson = FuwenRuntimeValueWire.Serialize(identity);
-        var envelopeJson = await context.StepAsync<JsonElement, JsonElement>(
-            node.StructuralPath,
+        var envelopeJson = await ExecuteNodeStepAsync(
+            state, context, node.StructuralPath,
             requestJson,
             async (_, step, token) =>
             {
-                var invocation = CreateInvocation(executionFingerprint, node.StructuralPath, requestJson, step);
+                var invocation = CreateNodeInvocation(state, executionFingerprint, node.StructuralPath, requestJson, step);
                 return FuwenRuntimeValueWire.Serialize(await ExecuteProviderAsync(
                     ports,
                     invocation,
@@ -494,7 +494,7 @@ internal static class FuwenZhinuSequentialInterpreter
             stepOptions: GroupOptions(state, context, node.StructuralPath, StepOptionsFor(inheritedDependencies, node.Arguments), ActivityGroupMemberRole.Work),
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        var envelope = FuwenEnvelopeValidator.Read(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId, ports.PriorExecutionFingerprints);
+        var envelope = FuwenEnvelopeValidator.Read(envelopeJson, node.StructuralPath, plan, executionFingerprint, RequestFingerprint(requestJson), context.WorkflowRunId, ports.PriorExecutionFingerprints, NodeRuntimePath(state, node.StructuralPath));
         FuwenEnvelopeValidator.ThrowIfFailed(envelope, node.StructuralPath);
         EnsureType(envelope.Output!, node.OutputType, plan.Schemas, $"activity node '{node.StructuralPath}' output");
         return envelope.Output!;
@@ -533,6 +533,9 @@ internal static class FuwenZhinuSequentialInterpreter
         IReadOnlyCollection<string> inheritedDependencies,
         CancellationToken cancellationToken)
     {
+        if (state.Groups is not null)
+            return await ExecuteGroupedFanOutAsync(node, plan, executionFingerprint, ports, context,
+                schedule, state, inheritedDependencies, cancellationToken).ConfigureAwait(false);
         var source = FuwenBindingEvaluator.Evaluate(node.Source, plan, state);
         // Provider adapters are allowed to return any representation that
         // validates against the admitted type. In particular, Baize returns

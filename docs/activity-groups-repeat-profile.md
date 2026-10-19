@@ -63,10 +63,12 @@ existing Unknown/Partial coverage remains conservative.
 
 The [qualification record](qualification/activity-groups/zg6-repeat.md) defines
 the exact source, package and process-loss evidence.
-The current candidate closure is recorded in
-[the package pin](qualification/activity-groups/zhinu-candidate.json).
+The original repeat candidate closure is retained in
+[the preview.7 pin](qualification/activity-groups/zhinu-repeat-candidate.json).
+The later [fan-out profile](activity-groups-fanout-profile.md) has its own
+candidate pin and qualification; repeat/fan-out composition remains unsupported.
 The earlier static checkpoint retains
 [its original preview.5 pin](qualification/activity-groups/zhinu-static-candidate.json).
-Packages remain unpublished. Fan-out per-operation lowering, broader composition,
+Packages remain unpublished. Broader dynamic composition,
 Linux CI, public dependency adoption and full cross-repository qualification
 remain open.

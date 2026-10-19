@@ -267,7 +267,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
     }
 
     [Fact]
-    public async Task Grouped_fanout_rejects_before_persistence_or_provider_calls()
+    public async Task Grouped_fanout_without_an_item_root_rejects_before_persistence_or_provider_calls()
     {
         const string source = """
             workflow demo(input: list<string>[2]) -> list<string>[2] {
@@ -288,7 +288,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             var factory = new FuwenZhinuWorkflowFactory(new DirectoryWorkflowDefinitionStore(root), IdentityFor(admission.Admission),
                 new FuwenZhinuExecutionPorts(activity, new UnusedContext(), new UnusedInference()));
             var action = async () => await factory.CreateGroupedAsync("grouped", "1", admission, TestContext.Current.CancellationToken);
-            await action.Should().ThrowAsync<FuwenZhinuAdmissionException>().WithMessage("*group profile*");
+            await action.Should().ThrowAsync<FuwenZhinuAdmissionException>().WithMessage("*item-local root group*");
             Directory.EnumerateFiles(root).Should().BeEmpty();
             activity.Requests.Should().BeEmpty();
         }

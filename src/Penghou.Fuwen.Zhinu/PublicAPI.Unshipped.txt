@@ -129,3 +129,6 @@ const Penghou.Fuwen.Zhinu.FuwenZhinuStepMapper.CurrentSchemaVersion = "fuwen-zhi
 static Penghou.Fuwen.Zhinu.FuwenZhinuStepMapper.Map(Penghou.Fuwen.WorkflowPlan! plan) -> Penghou.Fuwen.Zhinu.FuwenZhinuStepMap!
 static Penghou.Fuwen.Zhinu.FuwenZhinuStepMapper.TryMatchStepKey(Penghou.Fuwen.Zhinu.FuwenZhinuStepMap! map, string! stepKey, out Penghou.Fuwen.Zhinu.FuwenZhinuStepMatch! match) -> bool
 static Penghou.Fuwen.Zhinu.FuwenZhinuStepMapper.ResolveStepKey(Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor! descriptor, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.Zhinu.FuwenZhinuStepScope!>! scope) -> string!
+
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.FanOutSelection = 13 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.FanOutItemCompletion = 14 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind

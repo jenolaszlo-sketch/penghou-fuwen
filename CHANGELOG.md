@@ -43,6 +43,18 @@ contract versions. Consumer-visible breaking changes are called out under
   recovery, privacy, provider, and operator gates. No new NuGet package is
   published by these source changes.
 
+## 0.1.0-preview.16
+
+Unpublished grouped fan-out candidate; qualification is in progress. Adds one
+bounded keyed fan-out with an explicit item-local group, independently durable
+provider operations, an immutable selected vector/body contract, exact child
+closure evidence and per-operation mapping. Keeps the legacy ungrouped fan-out
+keys and provider envelope behavior. Selection and outcome vectors are bounded
+to 1 MiB each. Dependent restart is supported; StepOnly restart of body steps
+and item completions is rejected. Nested/mixed dynamic scopes, item waits and
+broader fan-out bodies remain gated. See the
+[bounded profile](docs/activity-groups-fanout-profile.md).
+
 ## 0.1.0-preview.15
 
 Unpublished local candidate. Grouped single-level repeats now use native typed

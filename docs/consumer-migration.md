@@ -147,10 +147,29 @@ baselines move to `Shipped` and additive-only applies within the line; see
 ## Unpublished grouped-repeat candidate -- preview.15
 
 The ZG-6.2a [repeat profile](activity-groups-repeat-profile.md) requires the exact
-Zhinu 0.2.0-preview.7 closure in the current candidate pin. Expanded repeat/body
+Zhinu 0.2.0-preview.7 closure in the preserved
+[repeat candidate pin](qualification/activity-groups/zhinu-repeat-candidate.json). Expanded repeat/body
 keys use the v4 structural-path hash contract; macro-free keys retain their prior
 format. The native iteration wait API also resumes an old wrapped wait's JSON
 string input/hash without changing its step identity or adding group membership.
 Use the grouped admission/bundle recovery path from the static profile for macro
 plans. Nested repeats, grouped fan-out/coordinated inference and repeat-local
 fallback remain unsupported. All packages are local unpublished candidates.
+
+
+## Unpublished grouped fan-out candidate -- preview.16
+
+The [bounded fan-out profile](activity-groups-fanout-profile.md) consumes exact
+Zhinu 0.2.0-preview.8 from the [current pin](qualification/activity-groups/zhinu-candidate.json).
+A grouped plan supports one keyed fan-out whose entire body belongs to one
+explicit item-local root group, with optional nested groups/macros. Each activity,
+context read and one-call inference is independently durable. The adapter rejects
+repeat composition, nested fan-out, item waits/checkpoints, conditional value
+merges, coordinated inference and item-local inference fallback before storage.
+
+Use `FuwenZhinuStepMapper` for selection, item completion and provider-step keys;
+the new body keys preserve historical ungrouped fan-out keys. Dependent restart
+preserves unaffected predecessor/sibling work. `StepOnly` restart of body steps
+or item completions is explicitly unsupported. Selection and aggregate outcome
+vectors are each bounded to 1 MiB. Recovery uses the immutable stored bundle.
+Candidates remain unpublished; full FM-2/ZG-6, Q45 and ZG-7 remain open.

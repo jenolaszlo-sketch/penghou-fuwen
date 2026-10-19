@@ -6,7 +6,12 @@ namespace Penghou.Fuwen.Zhinu;
 /// <summary>Attaches admitted static scopes to native run-local occurrences.</summary>
 internal sealed class FuwenGroupExecution
 {
+    internal WorkflowGroupManifest Manifest { get; }
     private readonly WorkflowContext workflowContext;
+    private readonly Dictionary<string, FanOutNode?> enclosingFanOuts = new(StringComparer.Ordinal);
+    private readonly ActivityGroupFanOutItemScope? fanOutScope;
+    private readonly string? fanOutPath;
+    private readonly Dictionary<string, ActivityGroupOccurrence> itemOccurrences = new(StringComparer.Ordinal);
     private readonly Dictionary<string, WorkflowNode> nodes;
     private readonly Dictionary<string, RepeatNode> repeatsByKey;
     private readonly Dictionary<string, WorkflowGroupDefinition> definitions;
@@ -18,6 +23,7 @@ internal sealed class FuwenGroupExecution
     internal FuwenGroupExecution(WorkflowGroupManifest manifest, WorkflowPlan plan, WorkflowContext context)
     {
         workflowContext = context;
+        Manifest = manifest;
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(plan);
         definitions = manifest.Groups.ToDictionary(group => group.GroupKey, StringComparer.Ordinal);
@@ -26,12 +32,59 @@ internal sealed class FuwenGroupExecution
         nodes = EnumerateNodes(plan.Nodes).ToDictionary(node => node.StructuralPath, StringComparer.Ordinal);
         var repeats = nodes.Values.OfType<RepeatNode>().ToArray();
         repeatsByKey = repeats.ToDictionary(repeat => FuwenZhinuStepKeys.RepeatLoopName(repeat, true), StringComparer.Ordinal);
+        var fanOuts = nodes.Values.OfType<FanOutNode>().ToArray();
         foreach (var group in manifest.Groups)
         {
+            enclosingFanOuts.Add(group.GroupKey, fanOuts.SingleOrDefault(fanOut =>
+                group.GroupKey.StartsWith(fanOut.StructuralPath + "/$body/", StringComparison.Ordinal)));
             enclosingRepeats.Add(group.GroupKey, repeats
                 .Where(repeat => group.GroupKey.StartsWith(repeat.StructuralPath + "/$body/", StringComparison.Ordinal))
                 .MaxBy(repeat => repeat.StructuralPath.Length));
         }
+    }
+
+    private FuwenGroupExecution(FuwenGroupExecution source, FanOutNode node,
+        ActivityGroupFanOutItemScope scope)
+    {
+        workflowContext = source.workflowContext;
+        Manifest = source.Manifest;
+        nodes = source.nodes;
+        repeatsByKey = source.repeatsByKey;
+        definitions = source.definitions;
+        ownership = source.ownership;
+        enclosingRepeats = source.enclosingRepeats;
+        enclosingFanOuts = source.enclosingFanOuts;
+        rootOccurrences = new(source.rootOccurrences, StringComparer.Ordinal);
+        fanOutScope = scope;
+        fanOutPath = node.StructuralPath;
+    }
+
+    internal FuwenGroupExecution ForFanOut(FanOutNode node, ActivityGroupFanOutItemScope scope) =>
+        new(this, node, scope);
+
+    internal static WorkflowGroupDefinition FanOutItemRoot(WorkflowGroupManifest manifest, FanOutNode node)
+    {
+        var prefix = node.StructuralPath + "/$body/";
+        var groups = manifest.Groups.Where(group => group.GroupKey.StartsWith(prefix, StringComparison.Ordinal)).ToArray();
+        var roots = groups.Where(group => group.ParentGroupKey is null ||
+            !group.ParentGroupKey.StartsWith(prefix, StringComparison.Ordinal)).ToArray();
+        if (roots.Length != 1)
+            throw new FuwenZhinuAdmissionException("Grouped fan-out requires one explicit item-local root group enclosing every body operation.");
+        var root = roots[0];
+        var owned = manifest.Members.ToDictionary(member => member.NodePath, member => member.GroupKey, StringComparer.Ordinal);
+        foreach (var child in EnumerateNodes(node.Body))
+            if (!owned.TryGetValue(child.StructuralPath, out var owner) ||
+                owner != root.GroupKey && !owner.StartsWith(root.GroupKey + "/", StringComparison.Ordinal))
+                throw new FuwenZhinuAdmissionException("Every grouped fan-out body operation must belong to its item-local root group or a nested group.");
+        return root;
+    }
+
+    internal ActivityGroupFanOutBinding FanOutBinding(WorkflowGroupManifest manifest, FanOutNode node)
+    {
+        var root = FanOutItemRoot(manifest, node);
+        var parent = root.ParentGroupKey is { } parentKey ? GetRootOccurrence(workflowContext, parentKey) : null;
+        return new(new ActivityGroupMembership(root.GroupKey, ActivityGroupMemberRole.Control),
+            FuwenZhinuStepKeys.GroupedFanOutSelection(node.StructuralPath), parent);
     }
 
     internal static ActivityGroupManifest Translate(WorkflowGroupManifest manifest) => ActivityGroupManifest.Create(
@@ -43,12 +96,18 @@ internal sealed class FuwenGroupExecution
 
     internal StepOptions? Options(WorkflowContext context, string nodePath, StepOptions? options, ActivityGroupMemberRole role)
     {
-        if (options?.DependsOn is { } dependencies && repeatsByKey.Count != 0)
-            options = options with { DependsOn = RootDependencies(dependencies, nodePath) };
+        if (options?.DependsOn is { } dependencies && (repeatsByKey.Count != 0 || fanOutScope is not null || HasFanOuts))
+            options = options with
+            {
+                DependsOn = dependencies.Select(path => fanOutScope is not null &&
+                path.StartsWith(fanOutPath + "/$body/", StringComparison.Ordinal)
+                    ? fanOutScope.GetStepKey(FuwenZhinuStepKeys.RepeatBodyStepName(path, fanOutPath!, true))
+                    : ResolveRootDependency(path, nodePath)).ToArray()
+            };
         if (!ownership.TryGetValue(nodePath, out var groupKey)) return options;
         if (enclosingRepeats.TryGetValue(groupKey, out var repeat) && repeat is not null)
             throw new InvalidOperationException($"Group '{groupKey}' requires repeat '{repeat.Name}' occurrence scope.");
-        var occurrence = GetRootOccurrence(context, groupKey);
+        var occurrence = fanOutScope is null ? GetRootOccurrence(context, groupKey) : GetFanOutOccurrence(groupKey);
         return (options ?? new StepOptions()) with { Group = new ActivityGroupStepBinding(new ActivityGroupMembership(groupKey, role), occurrence) };
     }
 
@@ -80,6 +139,7 @@ internal sealed class FuwenGroupExecution
         StepOptions? options, ActivityGroupMemberRole role) => Options(workflowContext, iteration, nodePath, options, role);
 
     internal bool HasRepeats => repeatsByKey.Count != 0;
+    internal bool HasFanOuts => enclosingFanOuts.Values.Any(node => node is not null);
 
     internal IReadOnlyCollection<string>? RootDependencies(IReadOnlyCollection<string>? paths, string consumerPath) =>
         paths?.Select(path => ResolveRootDependency(path, consumerPath)).ToArray();
@@ -118,8 +178,25 @@ internal sealed class FuwenGroupExecution
         return occurrence;
     }
 
+    private ActivityGroupOccurrence GetFanOutOccurrence(string key)
+    {
+        if (key == fanOutScope!.Group.Occurrence.GroupKey) return fanOutScope.Group.Occurrence;
+        if (!enclosingFanOuts.TryGetValue(key, out var owner) || owner is null)
+            return GetRootOccurrence(workflowContext, key);
+        if (owner.StructuralPath != fanOutPath)
+            throw new InvalidOperationException("A group belongs to another fan-out scope.");
+        if (itemOccurrences.TryGetValue(key, out var occurrence)) return occurrence;
+        var definition = definitions[key];
+        var parent = definition.ParentGroupKey is { } parentKey ? GetFanOutOccurrence(parentKey) : null;
+        occurrence = fanOutScope!.GetActivityGroup(key, parent);
+        itemOccurrences.Add(key, occurrence);
+        return occurrence;
+    }
+
     private ActivityGroupOccurrence GetRootOccurrence(WorkflowContext context, string key)
     {
+        if (enclosingFanOuts.TryGetValue(key, out var fanOut) && fanOut is not null)
+            throw new InvalidOperationException($"Group '{key}' requires a typed fan-out item scope.");
         if (enclosingRepeats.TryGetValue(key, out var repeat) && repeat is not null)
             throw new InvalidOperationException($"Group '{key}' requires repeat '{repeat.Name}' occurrence scope.");
         if (rootOccurrences.TryGetValue(key, out var occurrence)) return occurrence;

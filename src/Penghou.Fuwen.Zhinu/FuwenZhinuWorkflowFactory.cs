@@ -353,11 +353,37 @@ public sealed class FuwenZhinuWorkflowFactory
                 throw new FuwenZhinuAdmissionException("Grouped registration requires an immutable grouped-definition store.");
             if (groupedDefinition.Definition.ExecutionFingerprint != definition.ExecutionFingerprint)
                 throw new FuwenZhinuAdmissionException("Grouped definition differs from the admitted execution plan.");
-            // Dynamic profiles are admitted construct by construct; fan-out still
-            // needs independent per-operation lowering.
-            if (EnumerateNodes(admittedPlan.Nodes).Any(node => node is FanOutNode ||
-                node is InferenceNode { Protocol: not null }))
-                throw new FuwenZhinuAdmissionException("The group profile does not support fan-out or coordinated inference; per-operation scoped lowering remains required.");
+            if (EnumerateNodes(admittedPlan.Nodes).Any(node => node is InferenceNode { Protocol: not null }))
+                throw new FuwenZhinuAdmissionException("The group profile does not support coordinated inference.");
+            var fanOuts = EnumerateNodes(admittedPlan.Nodes).OfType<FanOutNode>().ToArray();
+            if (fanOuts.Length != 0)
+            {
+                if (admittedPlan.IrVersion != FuwenContracts.GroupExpansionIrVersion || fanOuts.Length != 1 ||
+                    EnumerateNodes(admittedPlan.Nodes).Any(node => node is RepeatNode))
+                    throw new FuwenZhinuAdmissionException("Grouped fan-out supports one root scope without repeat composition under the v4 key contract.");
+                var fanOut = fanOuts[0];
+                _ = FuwenGroupExecution.FanOutItemRoot(groupedDefinition.Groups, fanOut);
+                var body = EnumerateNodes(fanOut.Body).ToArray();
+                var itemGroupCount = groupedDefinition.Groups.Groups.Count(group =>
+                    group.GroupKey.StartsWith(fanOut.StructuralPath + "/$body/", StringComparison.Ordinal));
+                if ((long)fanOut.MaximumItems * itemGroupCount + groupedDefinition.Groups.Groups.Count - itemGroupCount >
+                    ActivityGroupOccurrence.MaximumAllowedOccurrencesPerRun)
+                    throw new FuwenZhinuAdmissionException("Grouped fan-out exceeds the occurrence budget.");
+                if ((long)fanOut.MaximumItems * (body.Length + 1) > 4096)
+                    throw new FuwenZhinuAdmissionException("Grouped fan-out exceeds the bounded item-operation budget.");
+                if (body.OfType<InferenceNode>().Any(node => node.FailureFallback is not null))
+                    throw new FuwenZhinuAdmissionException("Grouped fan-out inference fallback has no qualified lowering.");
+                foreach (var child in body.Where(node => node is ActivityNode or ContextNode or InferenceNode))
+                    try
+                    {
+                        _ = RuntimeNodeIdentity.CreateFanOutItem(fanOut.StructuralPath, new IntegerRuntimeKey(0),
+                            FuwenZhinuStepKeys.RepeatBodyStepName(child.StructuralPath, fanOut.StructuralPath, true));
+                    }
+                    catch (ArgumentException)
+                    {
+                        throw new FuwenZhinuAdmissionException("Grouped fan-out runtime paths exceed the identity budget.");
+                    }
+            }
             if (admittedPlan.IrVersion != FuwenContracts.GroupExpansionIrVersion && EnumerateNodes(admittedPlan.Nodes).Any(node => node is RepeatNode))
                 throw new FuwenZhinuAdmissionException("Grouped repeats require the v4 expansion/key contract.");
             ValidateExecutableSubset(admittedPlan.Nodes, insideFanOut: false, insideRepeat: false, coordinated: false);

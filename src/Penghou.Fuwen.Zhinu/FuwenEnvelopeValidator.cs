@@ -21,7 +21,7 @@ internal static class FuwenEnvelopeValidator
         string executionFingerprint,
         string effectiveRequestFingerprint,
         Guid workflowRunId,
-        IReadOnlySet<string> priorExecutionFingerprints)
+        IReadOnlySet<string> priorExecutionFingerprints, string? runtimeNodePath = null)
     {
         try
         {
@@ -38,8 +38,8 @@ internal static class FuwenEnvelopeValidator
             // Reused fork evidence names its source run. Cross-plan reuse must
             // name an accepted prior fingerprint; same-plan reuse is allowed
             // only when the host explicitly lists the current fingerprint.
-            var runtimeMatches = string.Equals(invocation?.RuntimePath, $"{workflowRunId:D}/{nodePath}", StringComparison.Ordinal) ||
-                (isDeclaredReusable && invocation!.RuntimePath.EndsWith("/" + nodePath, StringComparison.Ordinal));
+            var runtimeMatches = string.Equals(invocation?.RuntimePath, $"{workflowRunId:D}/{runtimeNodePath ?? nodePath}", StringComparison.Ordinal) ||
+                (isDeclaredReusable && invocation!.RuntimePath.EndsWith("/" + (runtimeNodePath ?? nodePath), StringComparison.Ordinal));
             if (invocation is null ||
                 (!isCurrentPlan && !isPriorPlan) ||
                 !string.Equals(invocation.StructuralPath, nodePath, StringComparison.Ordinal) ||

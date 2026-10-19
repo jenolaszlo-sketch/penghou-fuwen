@@ -56,6 +56,9 @@ internal sealed class FuwenInterpreterState(RuntimeValue input)
 {
     internal RuntimeValue Input { get; } = input;
     internal FuwenGroupExecution? Groups { get; init; }
+    internal Penghou.Zhinu.ActivityGroupFanOutItemScope? FanOutScope { get; init; }
+    internal string? FanOutPath { get; init; }
+    internal RuntimeIdentityKey? FanOutKey { get; init; }
     internal IReadOnlyDictionary<DescriptorReference, Penghou.Fuwen.Compiler.CallableSignature> TrustedToolSignatures { get; init; } =
         new Dictionary<DescriptorReference, Penghou.Fuwen.Compiler.CallableSignature>();
     internal Dictionary<string, RuntimeValue> Outputs { get; } = new(StringComparer.Ordinal);

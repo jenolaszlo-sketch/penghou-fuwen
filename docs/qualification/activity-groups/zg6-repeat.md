@@ -6,7 +6,7 @@ Date: 2026-10-19. Status: **passed for the bounded repeat profile** on Windows,
 Production/package source is Fuwen `cde940fa21cb4e0a117814502afb4898b9303819`
 (`0.1.0-preview.15`) and Zhinu `45e831a82593048dc1ea7266cbc1e9b306d8c92c`
 (`0.2.0-preview.7`). The [ledger](zg6-repeat.json) records archive/binary hashes,
-source commits and test receipts. The [native pin](zhinu-candidate.json) fixes the
+source commits and test receipts. The [native pin](zhinu-repeat-candidate.json) fixes the
 seven-package closure. The [static checkpoint](zg6-static.md) retains its own
 original source and package evidence.
 

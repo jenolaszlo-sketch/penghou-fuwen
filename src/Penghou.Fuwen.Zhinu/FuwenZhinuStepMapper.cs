@@ -41,6 +41,10 @@ public enum FuwenZhinuStepKind
     LoopControl = 11,
     /// <summary>A coordinated-inference protocol loop step (model turn or read tool).</summary>
     InferenceProtocol = 12,
+    /// <summary>The immutable selection vector of a grouped fan-out.</summary>
+    FanOutSelection = 13,
+    /// <summary>The Control completion of a grouped fan-out item body.</summary>
+    FanOutItemCompletion = 14,
 }
 
 /// <summary>A raw step-key scope: an enclosing durable loop or a fan-out item.</summary>
@@ -78,7 +82,7 @@ public sealed class FuwenZhinuStepScope
 /// The plan-scoped identity of one durable step the port can emit. Exactly one
 /// of <see cref="ExactStepKey"/>, the loop-body pair
 /// (<see cref="LoopNames"/> + <see cref="BodyStepName"/>), or
-/// <see cref="FanOutNodePath"/> describes how the step key is formed.
+/// <see cref="FanOutNodePath"/> (with an optional body operation name) describes how the step key is formed.
 /// </summary>
 public sealed class FuwenZhinuStepDescriptor
 {
@@ -232,6 +236,38 @@ public static class FuwenZhinuStepMapper
         {
             if (descriptor.FanOutNodePath is { } fanOutPath)
             {
+                if (descriptor.Kind != FuwenZhinuStepKind.FanOutItem)
+                {
+                    var body = descriptor.BodyStepName is not null;
+                    var itemPrefix = FuwenZhinuStepKeys.GroupedFanOutPrefix(fanOutPath) + (body ? ":body:" : ".");
+                    var suffix = body ? ":" + FuwenZhinuStepKeys.EncodeFanOutSegment(descriptor.BodyStepName!) : string.Empty;
+                    var tokenLength = body ? 95 : 71;
+                    if (stepKey.Length == itemPrefix.Length + tokenLength + suffix.Length &&
+                        stepKey.StartsWith(itemPrefix, StringComparison.Ordinal) &&
+                        stepKey.EndsWith(suffix, StringComparison.Ordinal))
+                    {
+                        var token = stepKey.Substring(itemPrefix.Length, tokenLength);
+                        if (body)
+                        {
+                            try
+                            {
+                                var encoded = token;
+                                token = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(
+                                    encoded.Replace('-', '+').Replace('_', '/') + "="));
+                                if (FuwenZhinuStepKeys.EncodeFanOutSegment(token) != encoded) continue;
+                            }
+                            catch (FormatException) { continue; }
+                        }
+                        if (token.Length == 71 && token.StartsWith("sha256-", StringComparison.Ordinal) &&
+                            token[7..].All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f'))
+                        {
+                            match = new FuwenZhinuStepMatch(descriptor,
+                                [new FuwenZhinuStepScope(FuwenZhinuStepScopeKind.FanOutItem, fanOutPath, itemToken: token)]);
+                            return true;
+                        }
+                    }
+                    continue;
+                }
                 var prefix = fanOutPath + "/$item/sha256-";
                 if (stepKey.Length == prefix.Length + 64 && stepKey.StartsWith(prefix, StringComparison.Ordinal))
                 {
@@ -264,7 +300,15 @@ public static class FuwenZhinuStepMapper
         {
             var item = scope.FirstOrDefault(segment => segment.Kind == FuwenZhinuStepScopeKind.FanOutItem)
                 ?? throw new ArgumentException("A fan-out item token is required to resolve this step key.", nameof(scope));
-            return $"{fanOutPath}/$item/{item.ItemToken}";
+            if (descriptor.Kind == FuwenZhinuStepKind.FanOutItem)
+                return $"{fanOutPath}/$item/{item.ItemToken}";
+            if (item.Name != fanOutPath || item.ItemToken is null || item.ItemToken.Length != 71 ||
+                !item.ItemToken.StartsWith("sha256-", StringComparison.Ordinal) ||
+                item.ItemToken[7..].Any(character => character is not (>= '0' and <= '9' or >= 'a' and <= 'f')))
+                throw new ArgumentException("A matching canonical typed item token is required.", nameof(scope));
+            return descriptor.BodyStepName is { } operationName
+                ? FuwenZhinuStepKeys.GroupedFanOutOperation(fanOutPath, item.ItemToken, operationName)
+                : FuwenZhinuStepKeys.GroupedFanOutItem(fanOutPath, item.ItemToken);
         }
 
         if (descriptor.BodyStepName is { } bodyStep)
@@ -496,6 +540,32 @@ public static class FuwenZhinuStepMapper
                         }
                     }
 
+                    break;
+
+                case FanOutNode fanOut when expandedGroups:
+                    sink.Add(SyntheticStep(fanOut.StructuralPath, FuwenZhinuStepKind.FanOutSelection,
+                        FuwenZhinuStepKeys.GroupedFanOutSelection(fanOut.StructuralPath)));
+                    sink.Add(Simple(fanOut.StructuralPath, FuwenZhinuStepKind.FanOutAggregate,
+                        FuwenZhinuStepKeys.FanOutAggregate(fanOut.StructuralPath)));
+                    sink.Add(new FuwenZhinuStepDescriptor(fanOut.StructuralPath,
+                        Flatten(fanOut.Body).OfType<ConditionalNode>().Select(node => node.StructuralPath).ToArray(),
+                        FuwenZhinuStepOrigin.Synthetic, FuwenZhinuStepKind.FanOutItemCompletion,
+                        null, [], null, fanOut.StructuralPath));
+                    foreach (var child in Flatten(fanOut.Body))
+                    {
+                        var kind = child switch
+                        {
+                            ActivityNode => FuwenZhinuStepKind.Activity,
+                            ContextNode => FuwenZhinuStepKind.Context,
+                            InferenceNode => FuwenZhinuStepKind.Inference,
+                            _ => (FuwenZhinuStepKind?)null
+                        };
+                        if (kind is { } operationKind)
+                            sink.Add(new FuwenZhinuStepDescriptor(child.StructuralPath, [child.StructuralPath],
+                                FuwenZhinuStepOrigin.Declared, operationKind, null, [],
+                                FuwenZhinuStepKeys.RepeatBodyStepName(child.StructuralPath, fanOut.StructuralPath, true),
+                                fanOut.StructuralPath));
+                    }
                     break;
 
                 case FanOutNode fanOut:

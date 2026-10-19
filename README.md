@@ -225,7 +225,8 @@ machine-assisted repair.
 On the activity-groups branch, prepare the exact unpublished Zhinu candidate
 feed before restoring. Package hashes and source are pinned; see the
 [static integration profile](docs/activity-groups-static-profile.md) and
-[single-level repeat extension](docs/activity-groups-repeat-profile.md).
+[single-level repeat extension](docs/activity-groups-repeat-profile.md) and
+[bounded fan-out profile](docs/activity-groups-fanout-profile.md).
 These candidate dependencies leave normal public-package release and CI gates open.
 
 ```powershell

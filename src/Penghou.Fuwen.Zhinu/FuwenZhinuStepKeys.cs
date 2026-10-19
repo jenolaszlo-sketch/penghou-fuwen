@@ -70,6 +70,14 @@ internal static class FuwenZhinuStepKeys
     internal static string RepeatMergeStepName(string conditionalPath, string repeatPath, bool expandedGroups = false) =>
         RepeatBodyStepName(conditionalPath, repeatPath, expandedGroups) + "-merge";
 
+    internal static string GroupedFanOutPrefix(string path) => "fuwen-fanout-v1-" + FullHash(path);
+    internal static string GroupedFanOutSelection(string path) => path + "/$selection";
+    internal static string GroupedFanOutItem(string path, string token) => GroupedFanOutPrefix(path) + "." + token;
+    internal static string GroupedFanOutOperation(string path, string token, string operationName) =>
+        GroupedFanOutPrefix(path) + ":body:" + EncodeFanOutSegment(token) + ":" + EncodeFanOutSegment(operationName);
+    internal static string EncodeFanOutSegment(string value) => Convert.ToBase64String(Encoding.UTF8.GetBytes(value))
+        .TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
     // Loop envelope (Zhinu-owned format, encoded here so the port can match it).
 
     internal static string RootLoopPath(string loopName) => $"$loop/{loopName}";

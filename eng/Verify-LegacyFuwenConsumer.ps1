@@ -53,7 +53,7 @@ foreach ($id in @($nativeCoreId, $nativeSqliteId)) {
     $candidateArtifacts[$id] = $path
 }
 
-$tempRoot = [System.IO.Path]::GetFullPath($env:TEMP)
+$tempRoot = [System.IO.Path]::GetTempPath()
 $runId = [Guid]::NewGuid().ToString('N')
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     $OutputDirectory = Join-Path $tempRoot "penghou-legacy-fuwen-consumer-$runId"

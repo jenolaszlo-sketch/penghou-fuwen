@@ -144,6 +144,9 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
     [Fact]
     public async Task Domain_approval_is_a_real_wait_boundary_inside_a_macro_group()
     {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        var ct = timeout.Token;
         const string source = $$"""
             macro DomainApproval(value: string) {
               activity prepare = activity "{{EchoDescriptor}}" (value: value;) -> string;
@@ -166,29 +169,29 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             var activity = new RecordingActivity();
             var registration = await new FuwenZhinuWorkflowFactory(new DirectoryWorkflowDefinitionStore(root), IdentityFor(admission.Admission),
                 new FuwenZhinuExecutionPorts(activity, new UnusedContext(), new UnusedInference()))
-                .CreateGroupedAsync("domain-approval", "1", admission, TestContext.Current.CancellationToken);
+                .CreateGroupedAsync("domain-approval", "1", admission, ct);
             var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(root, "run.db"), Pooling = false });
             await using var engine = new WorkflowEngine(store, registration.Register(new WorkflowRegistry()));
             var run = await engine.StartAsync("domain-approval", "1", JsonSerializer.SerializeToElement("proposal"),
-                cancellationToken: TestContext.Current.CancellationToken);
-            using var interruption = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+                cancellationToken: ct);
+            using var interruption = CancellationTokenSource.CreateLinkedTokenSource(ct);
             var execution = engine.ExecuteAsync(run, interruption.Token);
             WorkflowStepRun waiting;
             while (true)
             {
-                var candidate = (await store.GetStepsAsync(run, TestContext.Current.CancellationToken)).SingleOrDefault(step => step.Status == StepStatus.Waiting);
+                var candidate = (await store.GetStepsAsync(run, ct)).SingleOrDefault(step => step.Status == StepStatus.Waiting);
                 if (candidate is not null) { waiting = candidate; break; }
-                await Task.Delay(20, TestContext.Current.CancellationToken);
+                await Task.Delay(20, ct);
             }
-            var originalMembership = await store.GetStepGroupMembershipAsync(waiting.Id, TestContext.Current.CancellationToken);
+            var originalMembership = await store.GetStepGroupMembershipAsync(waiting.Id, ct);
             originalMembership.Should().NotBeNull();
             activity.Requests.Should().ContainSingle();
-            await engine.SendSignalAsync(run, "approve", "approved", TestContext.Current.CancellationToken);
+            await engine.SendSignalAsync(run, "approve", "approved", ct);
             await execution;
-            var output = await engine.WaitForCompletionAsync<JsonElement>(run, cancellationToken: TestContext.Current.CancellationToken);
+            var output = await engine.WaitForCompletionAsync<JsonElement>(run, cancellationToken: ct);
             output.GetString().Should().Be("approved");
-            (await store.GetStepGroupMembershipAsync(waiting.Id, TestContext.Current.CancellationToken)).Should().BeEquivalentTo(originalMembership);
-            var occurrences = await ReadGroupOccurrences(new WorkflowGroupReader(store), run, TestContext.Current.CancellationToken);
+            (await store.GetStepGroupMembershipAsync(waiting.Id, ct)).Should().BeEquivalentTo(originalMembership);
+            var occurrences = await ReadGroupOccurrences(new WorkflowGroupReader(store), run, ct);
             occurrences.Should().HaveCount(2);
             occurrences.Should().Contain(group => group.GroupKey == "demo/$group/approvalCase");
             occurrences.Should().Contain(group => group.GroupKey == "demo/$group/approvalCase/$group/review");
@@ -201,6 +204,9 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
     [InlineData(true)]
     public async Task Re_registration_rejects_changed_execution_or_manifest_pins_without_mutating_parked_hierarchy(bool changeManifestOnly)
     {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        var ct = timeout.Token;
         const string source = $$"""
             macro Review(value: string) {
               activity prepare = activity "{{EchoDescriptor}}" (value: value;) -> string;
@@ -222,7 +228,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             var ports = new FuwenZhinuExecutionPorts(activity, new UnusedContext(), new UnusedInference());
             var definitions = new DirectoryWorkflowDefinitionStore(root);
             var originalRegistration = await new FuwenZhinuWorkflowFactory(definitions, IdentityFor(original.Admission), ports)
-                .CreateGroupedAsync("group-pin", "1", original, TestContext.Current.CancellationToken);
+                .CreateGroupedAsync("group-pin", "1", original, ct);
             var database = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(root, "run.db"), Pooling = false });
             Guid run;
             WorkflowGroupOccurrenceFact[] originalOccurrences;
@@ -231,22 +237,22 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             await using (var engine = new WorkflowEngine(database, originalRegistration.Register(new WorkflowRegistry())))
             {
                 run = await engine.StartAsync("group-pin", "1", JsonSerializer.SerializeToElement("proposal"),
-                    cancellationToken: TestContext.Current.CancellationToken);
-                using var interruption = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+                    cancellationToken: ct);
+                using var interruption = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 var execution = engine.ExecuteAsync(run, interruption.Token);
-                while (!(await database.GetStepsAsync(run, TestContext.Current.CancellationToken)).Any(step => step.Status == StepStatus.Waiting))
-                    await Task.Delay(20, TestContext.Current.CancellationToken);
+                while (!(await database.GetStepsAsync(run, ct)).Any(step => step.Status == StepStatus.Waiting))
+                    await Task.Delay(20, ct);
                 await interruption.CancelAsync();
                 try { await execution; }
                 catch (OperationCanceledException) { }
-                parkedStatus = (await engine.GetRunAsync(run, TestContext.Current.CancellationToken))!.Status;
+                parkedStatus = (await engine.GetRunAsync(run, ct))!.Status;
                 using var reader = new WorkflowGroupReader(database);
-                originalOccurrences = (await ReadGroupOccurrences(reader, run, TestContext.Current.CancellationToken)).ToArray();
-                var persisted = await database.GetStepsAsync(run, TestContext.Current.CancellationToken);
+                originalOccurrences = (await ReadGroupOccurrences(reader, run, ct)).ToArray();
+                var persisted = await database.GetStepsAsync(run, ct);
                 originalMemberships = [];
                 foreach (var step in persisted)
                 {
-                    var membership = await database.GetStepGroupMembershipAsync(step.Id, TestContext.Current.CancellationToken);
+                    var membership = await database.GetStepGroupMembershipAsync(step.Id, ct);
                     membership.Should().NotBeNull(step.StepKey);
                     originalMemberships = [.. originalMemberships, membership!];
                 }
@@ -261,7 +267,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 var changedBundle = GroupedWorkflowDefinitionDocument.Create(original.Definition.Definition, changedGroups);
                 changedBundle.Definition.ExecutionFingerprint.Should().Be(original.Definition.Definition.ExecutionFingerprint);
                 changedBundle.Groups.Fingerprint.Should().NotBe(original.Definition.Groups.Fingerprint);
-                changed = await GroupAdmissionService().AdmitGroupedAsync(changedBundle, cancellationToken: TestContext.Current.CancellationToken);
+                changed = await GroupAdmissionService().AdmitGroupedAsync(changedBundle, cancellationToken: ct);
                 changed.Succeeded.Should().BeTrue();
             }
             else
@@ -272,25 +278,25 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             }
 
             var changedRegistration = await new FuwenZhinuWorkflowFactory(definitions, IdentityFor(changed.Admission), ports)
-                .CreateGroupedAsync("group-pin", "1", changed, TestContext.Current.CancellationToken);
+                .CreateGroupedAsync("group-pin", "1", changed, ct);
             await using (var reconfiguredEngine = new WorkflowEngine(database, changedRegistration.Register(new WorkflowRegistry())))
             {
-                var resume = async () => await reconfiguredEngine.ExecuteAsync(run, TestContext.Current.CancellationToken);
+                var resume = async () => await reconfiguredEngine.ExecuteAsync(run, ct);
                 var rejection = await resume.Should().ThrowAsync<Exception>();
                 var rejectionText = rejection.Which.Message.ToLowerInvariant();
                 (rejectionText.Contains("group", StringComparison.Ordinal) || rejectionText.Contains("definition", StringComparison.Ordinal) ||
                     rejectionText.Contains("fingerprint", StringComparison.Ordinal) || rejectionText.Contains("manifest", StringComparison.Ordinal))
                     .Should().BeTrue(rejection.Which.Message);
-                (await reconfiguredEngine.GetRunAsync(run, TestContext.Current.CancellationToken))!.Status.Should().Be(parkedStatus);
+                (await reconfiguredEngine.GetRunAsync(run, ct))!.Status.Should().Be(parkedStatus);
             }
 
             using var finalReader = new WorkflowGroupReader(database);
-            var finalOccurrences = await ReadGroupOccurrences(finalReader, run, TestContext.Current.CancellationToken);
+            var finalOccurrences = await ReadGroupOccurrences(finalReader, run, ct);
             finalOccurrences.Select(group => (group.OccurrenceId, group.ParentOccurrenceId, group.GroupKey))
                 .Should().BeEquivalentTo(originalOccurrences.Select(group => (group.OccurrenceId, group.ParentOccurrenceId, group.GroupKey)));
             foreach (var membership in originalMemberships)
-                (await database.GetStepGroupMembershipAsync(membership.StepId, TestContext.Current.CancellationToken)).Should().BeEquivalentTo(membership);
-            var pinnedOriginal = await definitions.ReadGroupedAsync(original.Definition.Fingerprint, TestContext.Current.CancellationToken);
+                (await database.GetStepGroupMembershipAsync(membership.StepId, ct)).Should().BeEquivalentTo(membership);
+            var pinnedOriginal = await definitions.ReadGroupedAsync(original.Definition.Fingerprint, ct);
             pinnedOriginal.Should().NotBeNull();
             pinnedOriginal!.CanonicalBytes.ToArray().Should().Equal(originalBundleBytes,
                 "registering a changed execution or hierarchy companion must not rewrite the old immutable pin");

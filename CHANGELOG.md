@@ -43,6 +43,15 @@ contract versions. Consumer-visible breaking changes are called out under
   recovery, privacy, provider, and operator gates. No new NuGet package is
   published by these source changes.
 
+## 0.1.0-preview.15
+
+Unpublished local candidate. Grouped single-level repeats now use native typed
+iteration occurrences and independent durable children, including signal waits.
+Expanded repeats and body steps have collision-resistant v4 keys derived from
+structural paths; historical macro-free keys remain unchanged. Loop controls
+retain Control membership in the enclosing group. Fan-out, nested repeats and
+grouped coordinated inference remain gated. Consumes exact Zhinu preview.7.
+
 ## 0.1.0-preview.14
 
 Unpublished local candidate; full FM/ZG, Linux CI and release gates remain open.

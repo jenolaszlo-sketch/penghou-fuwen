@@ -353,11 +353,25 @@ public sealed class FuwenZhinuWorkflowFactory
                 throw new FuwenZhinuAdmissionException("Grouped registration requires an immutable grouped-definition store.");
             if (groupedDefinition.Definition.ExecutionFingerprint != definition.ExecutionFingerprint)
                 throw new FuwenZhinuAdmissionException("Grouped definition differs from the admitted execution plan.");
-            // This first integration profile has one static execution coordinate.
-            // Reject dynamic scopes before storage or provider execution rather than aliasing them.
-            if (EnumerateNodes(admittedPlan.Nodes).Any(node => node is RepeatNode or FanOutNode ||
+            // Dynamic profiles are admitted construct by construct; fan-out still
+            // needs independent per-operation lowering.
+            if (EnumerateNodes(admittedPlan.Nodes).Any(node => node is FanOutNode ||
                 node is InferenceNode { Protocol: not null }))
-                throw new FuwenZhinuAdmissionException("The static group profile does not support repeat, fan-out or coordinated inference; per-operation scoped lowering remains required.");
+                throw new FuwenZhinuAdmissionException("The group profile does not support fan-out or coordinated inference; per-operation scoped lowering remains required.");
+            if (admittedPlan.IrVersion != FuwenContracts.GroupExpansionIrVersion && EnumerateNodes(admittedPlan.Nodes).Any(node => node is RepeatNode))
+                throw new FuwenZhinuAdmissionException("Grouped repeats require the v4 expansion/key contract.");
+            ValidateExecutableSubset(admittedPlan.Nodes, insideFanOut: false, insideRepeat: false, coordinated: false);
+            if (EnumerateNodes(admittedPlan.Nodes).OfType<RepeatNode>().SelectMany(repeat => EnumerateNodes(repeat.Body))
+                .OfType<InferenceNode>().Any(inference => inference.FailureFallback is not null))
+                throw new FuwenZhinuAdmissionException("Inference fallback inside a grouped repeat has no qualified lowering.");
+            foreach (var repeat in EnumerateNodes(admittedPlan.Nodes).OfType<RepeatNode>())
+                foreach (var child in EnumerateNodes(repeat.Body).Where(child => child is ActivityNode or ContextNode or InferenceNode))
+                    try
+                    {
+                        _ = RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, repeat.MaxIterations,
+                        FuwenZhinuStepKeys.RepeatBodyStepName(child.StructuralPath, repeat.StructuralPath, true));
+                    }
+                    catch (ArgumentException) { throw new FuwenZhinuAdmissionException("Grouped repeat runtime paths exceed the identity budget."); }
             _ = FuwenGroupExecution.Translate(groupedDefinition.Groups);
         }
         if (executionPorts?.TurnExecutor is not null)

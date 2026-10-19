@@ -40,7 +40,7 @@ if (args[2] == "start")
     runId = await engine.StartAsync("group-process", "1", JsonSerializer.SerializeToElement("hello"), cancellationToken: ct);
     await File.WriteAllTextAsync(Path.Combine(directory, "run-id"), runId.ToString("D"), ct);
     var execution = engine.ExecuteAsync(runId, ct);
-    while (!(await store.GetStepsAsync(runId, ct)).Any(s => s.StepKey.EndsWith("/approval", StringComparison.Ordinal) && s.Status == StepStatus.Waiting))
+    while (!(await store.GetStepsAsync(runId, ct)).Any(s => s.Status == StepStatus.Waiting))
         await Task.Delay(20, ct);
     await File.WriteAllTextAsync(Path.Combine(directory, "barrier"), "waiting", ct);
     await execution;

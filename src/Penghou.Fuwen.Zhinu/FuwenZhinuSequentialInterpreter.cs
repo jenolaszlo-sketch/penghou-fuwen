@@ -31,7 +31,7 @@ internal static class FuwenZhinuSequentialInterpreter
         var inputValue = FuwenRuntimeValueWire.FromJson(input, plan.InputType, plan.Schemas);
         EnsureType(inputValue, plan.InputType, plan.Schemas, "workflow input");
 
-        var state = new FuwenInterpreterState(inputValue) { TrustedToolSignatures = trustedToolSignatures, Groups = groups is null ? null : new FuwenGroupExecution(groups) };
+        var state = new FuwenInterpreterState(inputValue) { TrustedToolSignatures = trustedToolSignatures, Groups = groups is null ? null : new FuwenGroupExecution(groups, plan, context) };
         var schedule = new FuwenExecutionSchedule(plan);
         var result = await ExecuteRegionAsync(
             plan.Name,
@@ -106,7 +106,10 @@ internal static class FuwenZhinuSequentialInterpreter
                                     mergePath,
                                     requestJson,
                                     (_, _, _) => Task.FromResult(FuwenRuntimeValueWire.ToJson(mergedValue)),
-                                    stepOptions: GroupOptions(state, context, conditionalNode.StructuralPath, StepOptionsFor(inheritedDependencies, []), ActivityGroupMemberRole.Control),
+                                    stepOptions: GroupOptions(state, context, conditionalNode.StructuralPath,
+                                        state.Groups?.HasRepeats == true
+                                            ? StepOptionsForBindings(inheritedDependencies.Append(conditionalNode.StructuralPath).ToArray(), [selectedBinding])
+                                            : StepOptionsFor(inheritedDependencies, []), ActivityGroupMemberRole.Control),
                                     cancellationToken: cancellationToken).ConfigureAwait(false);
                                 var output = FuwenRuntimeValueWire.FromJson(outputJson, conditionalNode.Merge.ResultType, plan.Schemas);
                                 EnsureType(output, conditionalNode.Merge.ResultType, plan.Schemas, $"conditional merge '{conditionalNode.StructuralPath}' output");
@@ -637,6 +640,8 @@ internal static class FuwenZhinuSequentialInterpreter
         // GetLoopProgressAsync exposes the persisted count for resume-testing:
         // restarting an iteration step reuses earlier committed iterations and
         // re-runs only the selected iteration and its dependents.
+        using var groupDependencies = state.Groups is null ? null : context.DependsOn(
+            state.Groups.RootDependencies(StepOptionsForBindings(inheritedDependencies, [node.InitialState])?.DependsOn, node.StructuralPath)?.ToArray() ?? []);
         var resultJson = await FuwenRepeatCoordinator.ExecuteAsync(
             context,
             node,
@@ -665,9 +670,11 @@ internal static class FuwenZhinuSequentialInterpreter
                 {
                     state.CurrentLoopState = null;
                     state.CurrentLoopIteration = null;
+                    state.Groups?.EndIteration(iteration);
                 }
             },
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken, state.Groups is not null,
+            GroupOptions(state, context, node.StructuralPath, null, ActivityGroupMemberRole.Control)?.Group).ConfigureAwait(false);
 
         var resultValue = FuwenRuntimeValueWire.FromJson(resultJson, node.ResultType, plan.Schemas);
         EnsureType(resultValue, node.ResultType, plan.Schemas, $"repeat '{node.StructuralPath}' result");
@@ -728,11 +735,12 @@ internal static class FuwenZhinuSequentialInterpreter
         var value = FuwenBindingEvaluator.Evaluate(node.Value, plan, state);
         EnsureType(value, node.OutputType, plan.Schemas, $"repeat checkpoint '{node.StructuralPath}' value");
         var valueJson = FuwenRuntimeValueWire.ToJson(value);
-        var stepSuffix = FuwenRepeatCoordinator.StepSuffix(node.StructuralPath, repeat.StructuralPath);
+        var stepSuffix = FuwenRepeatCoordinator.StepSuffix(node.StructuralPath, repeat.StructuralPath, state.Groups is not null);
         var result = await iteration.StepAsync(
             stepSuffix,
             valueJson,
             (_, _, _) => Task.FromResult(valueJson),
+            options: state.Groups?.Options(iteration, node.StructuralPath, StepOptionsForBindings([], [node.Value]), ActivityGroupMemberRole.Control),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         var output = FuwenRuntimeValueWire.FromJson(result, node.OutputType, plan.Schemas);
         EnsureType(output, node.OutputType, plan.Schemas, $"repeat checkpoint '{node.StructuralPath}' output");
@@ -750,20 +758,11 @@ internal static class FuwenZhinuSequentialInterpreter
         CancellationToken cancellationToken)
     {
         var timeout = node.TimeoutSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : (TimeSpan?)null;
-        var stepSuffix = FuwenRepeatCoordinator.StepSuffix(node.StructuralPath, repeat.StructuralPath);
-        var outputJson = await iteration.StepAsync(
-            stepSuffix,
-            node.SignalName,
-            async (signalName, step, token) =>
-            {
-                var result = await context.WaitForSignalAsync<JsonElement>(
-                    step.StepKey,
-                    signalName,
-                    timeout,
-                    token).ConfigureAwait(false);
-                return result;
-            },
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var stepSuffix = FuwenRepeatCoordinator.StepSuffix(node.StructuralPath, repeat.StructuralPath, state.Groups is not null);
+        var binding = state.Groups?.Options(iteration, node.StructuralPath, null, ActivityGroupMemberRole.Work)?.Group;
+        var outputJson = binding is null
+            ? await iteration.WaitForSignalAsync<JsonElement>(stepSuffix, node.SignalName, timeout, cancellationToken).ConfigureAwait(false)
+            : await iteration.WaitForGroupedSignalAsync<JsonElement>(stepSuffix, node.SignalName, binding, timeout, cancellationToken).ConfigureAwait(false);
         var output = FuwenRuntimeValueWire.FromJson(outputJson, node.OutputType, plan.Schemas);
         EnsureType(output, node.OutputType, plan.Schemas, $"repeat wait '{node.StructuralPath}' signal output");
         return output;
@@ -848,13 +847,14 @@ internal static class FuwenZhinuSequentialInterpreter
             : conditional.Merge.ElseValue;
         var mergedValue = FuwenBindingEvaluator.Evaluate(selectedBinding, plan, state);
         EnsureType(mergedValue, conditional.Merge.ResultType, plan.Schemas, $"repeat conditional merge '{conditional.StructuralPath}'");
-        var stepSuffix = FuwenZhinuStepKeys.RepeatMergeStepName(conditional.StructuralPath, repeat.StructuralPath);
+        var stepSuffix = FuwenZhinuStepKeys.RepeatMergeStepName(conditional.StructuralPath, repeat.StructuralPath, state.Groups is not null);
         var mergePath = FuwenZhinuStepKeys.ConditionalMerge(conditional.StructuralPath);
         var requestJson = FuwenRuntimeValueWire.Serialize(new ConditionalMergeRequestIdentity(mergePath, mergedValue));
         var outputJson = await iteration.StepAsync(
             stepSuffix,
             requestJson,
             (_, _, _) => Task.FromResult(FuwenRuntimeValueWire.ToJson(mergedValue)),
+            options: state.Groups?.Options(iteration, conditional.StructuralPath, StepOptionsForBindings([], [selectedBinding]), ActivityGroupMemberRole.Control),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         var output = FuwenRuntimeValueWire.FromJson(outputJson, conditional.Merge.ResultType, plan.Schemas);
         EnsureType(output, conditional.Merge.ResultType, plan.Schemas, $"repeat conditional merge '{conditional.StructuralPath}' output");
@@ -872,7 +872,7 @@ internal static class FuwenZhinuSequentialInterpreter
         CancellationToken cancellationToken)
     {
         var arguments = FuwenBindingEvaluator.EvaluateArguments(node.Arguments, plan, state);
-        var stepSuffix = FuwenRepeatCoordinator.StepSuffix(node.StructuralPath, repeat.StructuralPath);
+        var stepSuffix = FuwenRepeatCoordinator.StepSuffix(node.StructuralPath, repeat.StructuralPath, state.Groups is not null);
         var identity = new NodeRequestIdentity("activity", node.StructuralPath, node.Activity, null, arguments, null);
         var requestJson = FuwenRuntimeValueWire.Serialize(identity);
         var runtimePath = RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, iteration.Iteration, stepSuffix);
@@ -894,6 +894,7 @@ internal static class FuwenZhinuSequentialInterpreter
                 FuwenEnvelopeValidator.ThrowIfFailed(envelope, node.StructuralPath);
                 return FuwenRuntimeValueWire.ToJson(envelope.Output!);
             },
+            options: state.Groups?.Options(iteration, node.StructuralPath, StepOptionsFor([], node.Arguments), ActivityGroupMemberRole.Work),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         var output = FuwenRuntimeValueWire.FromJson(result, node.OutputType, plan.Schemas);
         EnsureType(output, node.OutputType, plan.Schemas, $"repeat activity '{node.StructuralPath}' output");
@@ -911,7 +912,7 @@ internal static class FuwenZhinuSequentialInterpreter
         CancellationToken cancellationToken)
     {
         var arguments = FuwenBindingEvaluator.EvaluateArguments(node.Arguments, plan, state);
-        var stepSuffix = FuwenRepeatCoordinator.StepSuffix(node.StructuralPath, repeat.StructuralPath);
+        var stepSuffix = FuwenRepeatCoordinator.StepSuffix(node.StructuralPath, repeat.StructuralPath, state.Groups is not null);
         var identity = new NodeRequestIdentity("context", node.StructuralPath, node.Provider, null, arguments, null);
         var requestJson = FuwenRuntimeValueWire.Serialize(identity);
         var runtimePath = RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, iteration.Iteration, stepSuffix);
@@ -943,6 +944,7 @@ internal static class FuwenZhinuSequentialInterpreter
                 FuwenEnvelopeValidator.ThrowIfFailed(envelope, node.StructuralPath);
                 return FuwenRuntimeValueWire.Serialize(envelope);
             },
+            options: state.Groups?.Options(iteration, node.StructuralPath, StepOptionsFor([], node.Arguments), ActivityGroupMemberRole.Work),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         NodeExecutionEnvelope envelope;
         try
@@ -995,7 +997,7 @@ internal static class FuwenZhinuSequentialInterpreter
                 snapshot));
         }
 
-        var stepSuffix = FuwenRepeatCoordinator.StepSuffix(node.StructuralPath, repeat.StructuralPath);
+        var stepSuffix = FuwenRepeatCoordinator.StepSuffix(node.StructuralPath, repeat.StructuralPath, state.Groups is not null);
 
         // The durable protocol coordinator nests its loop under the repeat
         // iteration when the host supplies a turn executor.
@@ -1026,6 +1028,7 @@ internal static class FuwenZhinuSequentialInterpreter
                 FuwenEnvelopeValidator.ThrowIfFailed(envelope, node.StructuralPath);
                 return FuwenRuntimeValueWire.ToJson(envelope.Output!);
             },
+            options: state.Groups?.Options(iteration, node.StructuralPath, StepOptionsFor([], node.Arguments, node.ContextRequirements!.Select(requirement => requirement.Source)), ActivityGroupMemberRole.Work),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         var output = FuwenRuntimeValueWire.FromJson(result, node.OutputType, plan.Schemas);
         EnsureType(output, node.OutputType, plan.Schemas, $"repeat inference '{node.StructuralPath}' output");

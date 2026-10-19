@@ -160,8 +160,10 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         finally { DeleteDirectory(root); }
     }
 
-    [Fact]
-    public async Task Process_loss_at_a_grouped_wait_preserves_history_without_repeating_committed_effects()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Process_loss_at_a_grouped_wait_preserves_history_without_repeating_committed_effects(bool repeat)
     {
         const string source = """
             macro Review(value: string) {
@@ -171,7 +173,11 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             }
             workflow demo(input: string) -> string { group stage { use review = Review(value: input); yield review; } return stage; }
             """;
-        var admission = await AdmitGroupSource(source);
+        var processSource = repeat ? source.Replace(
+            "use review = Review(value: input); yield review;",
+            "repeat loop max 1 state current: string = input { use review = Review(value: current); } continue review break iter == 1 -> string; yield loop;",
+            StringComparison.Ordinal) : source;
+        var admission = await AdmitGroupSource(processSource);
         var root = Path.Combine(Path.GetTempPath(), "fuwen-group-process", Guid.NewGuid().ToString("N"));
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(55));
@@ -198,10 +204,15 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             var before = await ReadGroupOccurrences(reader, runId, ct);
             before.Should().HaveCount(2);
             var steps = await store.GetStepsAsync(runId, ct);
-            steps.Should().Contain(s => s.StepKey.EndsWith("/done", StringComparison.Ordinal) && s.Status == StepStatus.Completed);
-            steps.Should().Contain(s => s.StepKey.EndsWith("/approval", StringComparison.Ordinal) && s.Status == StepStatus.Waiting);
+            steps.Should().Contain(s => s.Status == StepStatus.Completed);
+            steps.Should().Contain(s => s.Status == StepStatus.Waiting);
             var memberships = new List<ActivityGroupStepMembership>();
-            foreach (var step in steps) memberships.Add((await store.GetStepGroupMembershipAsync(step.Id, ct))!);
+            foreach (var step in steps)
+            {
+                var membership = await store.GetStepGroupMembershipAsync(step.Id, ct);
+                membership.Should().NotBeNull(step.StepKey);
+                memberships.Add(membership!);
+            }
             worker = StartGroupWorker(root, admission.Definition.Fingerprint, "resume");
             error = worker.StandardError.ReadToEndAsync(ct);
             await worker.WaitForExitAsync(ct);
@@ -256,15 +267,15 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
     }
 
     [Fact]
-    public async Task Grouped_repeat_rejects_before_persistence_or_provider_calls()
+    public async Task Grouped_fanout_rejects_before_persistence_or_provider_calls()
     {
         const string source = """
-            workflow demo(input: string) -> string {
+            workflow demo(input: list<string>[2]) -> list<string>[2] {
               group stage {
-                repeat loop max 2 state current: string = input {
-                  activity echo = activity "sample.echo@1#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" (value: current;) -> string;
-                } continue echo break iter == 1 -> string;
-                yield loop;
+                fanout items over input as item: string key item max 2 {
+                  activity echo = activity "sample.echo@1#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" (value: item;) -> string;
+                } yield echo -> list<string>[2];
+                yield items;
               }
               return stage;
             }
@@ -277,7 +288,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             var factory = new FuwenZhinuWorkflowFactory(new DirectoryWorkflowDefinitionStore(root), IdentityFor(admission.Admission),
                 new FuwenZhinuExecutionPorts(activity, new UnusedContext(), new UnusedInference()));
             var action = async () => await factory.CreateGroupedAsync("grouped", "1", admission, TestContext.Current.CancellationToken);
-            await action.Should().ThrowAsync<FuwenZhinuAdmissionException>().WithMessage("*static group profile*");
+            await action.Should().ThrowAsync<FuwenZhinuAdmissionException>().WithMessage("*group profile*");
             Directory.EnumerateFiles(root).Should().BeEmpty();
             activity.Requests.Should().BeEmpty();
         }

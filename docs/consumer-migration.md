@@ -139,3 +139,15 @@ public API lives in `PublicAPI.Unshipped.txt` and `PublicAPI.Shipped.txt` is
 empty, so preview renames are intentional and must be recorded here. Before RC,
 baselines move to `Shipped` and additive-only applies within the line; see
 [graduation requirements](graduation-requirements.md).
+
+
+## Unpublished grouped-repeat candidate — preview.15
+
+The ZG-6.2a [repeat profile](activity-groups-repeat-profile.md) requires the exact
+Zhinu 0.2.0-preview.7 closure in the current candidate pin. Expanded repeat/body
+keys use the v4 structural-path hash contract; macro-free keys retain their prior
+format. The native iteration wait API also resumes an old wrapped wait's JSON
+string input/hash without changing its step identity or adding group membership.
+Use the grouped admission/bundle recovery path from the static profile for macro
+plans. Nested repeats, grouped fan-out/coordinated inference and repeat-local
+fallback remain unsupported. All packages are local unpublished candidates.

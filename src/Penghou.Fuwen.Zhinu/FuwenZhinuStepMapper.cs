@@ -192,7 +192,7 @@ public static class FuwenZhinuStepMapper
     {
         ArgumentNullException.ThrowIfNull(plan);
         var steps = new List<FuwenZhinuStepDescriptor>();
-        Walk(plan.Nodes, [], innermostRepeatPath: null, inFanOut: false, steps);
+        Walk(plan.Nodes, [], innermostRepeatPath: null, inFanOut: false, steps, plan.IrVersion == FuwenContracts.GroupExpansionIrVersion);
         return new FuwenZhinuStepMap(
             CurrentSchemaVersion,
             plan.Revision,
@@ -451,21 +451,21 @@ public static class FuwenZhinuStepMapper
         IReadOnlyList<string> loopNames,
         string? innermostRepeatPath,
         bool inFanOut,
-        List<FuwenZhinuStepDescriptor> sink)
+        List<FuwenZhinuStepDescriptor> sink, bool expandedGroups)
     {
         foreach (var node in nodes)
         {
             switch (node)
             {
                 case RepeatNode repeat:
-                    var childLoops = Append(loopNames, repeat.Name);
+                    var childLoops = Append(loopNames, FuwenZhinuStepKeys.RepeatLoopName(repeat, expandedGroups));
                     sink.Add(LoopControlDescriptor(childLoops, repeat.StructuralPath));
                     if (childLoops.Count == 1)
                     {
-                        sink.Add(LoopFinal(repeat.Name));
+                        sink.Add(LoopFinal(FuwenZhinuStepKeys.RepeatLoopName(repeat, expandedGroups), expandedGroups ? repeat.StructuralPath : null));
                     }
 
-                    Walk(repeat.Body, childLoops, repeat.StructuralPath, inFanOut, sink);
+                    Walk(repeat.Body, childLoops, repeat.StructuralPath, inFanOut, sink, expandedGroups);
                     break;
 
                 case ConditionalNode conditional:
@@ -474,8 +474,8 @@ public static class FuwenZhinuStepMapper
                         sink.Add(Simple(conditional.StructuralPath, FuwenZhinuStepKind.Condition, FuwenZhinuStepKeys.Node(conditional.StructuralPath)));
                     }
 
-                    Walk(conditional.Then, loopNames, innermostRepeatPath, inFanOut, sink);
-                    Walk(conditional.Else, loopNames, innermostRepeatPath, inFanOut, sink);
+                    Walk(conditional.Then, loopNames, innermostRepeatPath, inFanOut, sink, expandedGroups);
+                    Walk(conditional.Else, loopNames, innermostRepeatPath, inFanOut, sink, expandedGroups);
                     if (conditional.Merge is not null)
                     {
                         if (innermostRepeatPath is null)
@@ -492,7 +492,7 @@ public static class FuwenZhinuStepMapper
                                 FuwenZhinuStepOrigin.Synthetic,
                                 FuwenZhinuStepKind.ConditionalMerge,
                                 loopNames,
-                                FuwenZhinuStepKeys.RepeatMergeStepName(conditional.StructuralPath, innermostRepeatPath)));
+                                FuwenZhinuStepKeys.RepeatMergeStepName(conditional.StructuralPath, innermostRepeatPath, expandedGroups)));
                         }
                     }
 
@@ -513,7 +513,7 @@ public static class FuwenZhinuStepMapper
                     break;
 
                 default:
-                    WalkLeaf(node, loopNames, innermostRepeatPath, sink);
+                    WalkLeaf(node, loopNames, innermostRepeatPath, sink, expandedGroups);
                     break;
             }
         }
@@ -523,7 +523,7 @@ public static class FuwenZhinuStepMapper
         WorkflowNode node,
         IReadOnlyList<string> loopNames,
         string? innermostRepeatPath,
-        List<FuwenZhinuStepDescriptor> sink)
+        List<FuwenZhinuStepDescriptor> sink, bool expandedGroups)
     {
         var kind = node switch
         {
@@ -551,7 +551,7 @@ public static class FuwenZhinuStepMapper
                 FuwenZhinuStepOrigin.Declared,
                 kind.Value,
                 loopNames,
-                FuwenZhinuStepKeys.RepeatBodyStepName(node.StructuralPath, innermostRepeatPath)));
+                FuwenZhinuStepKeys.RepeatBodyStepName(node.StructuralPath, innermostRepeatPath, expandedGroups)));
         }
 
         // Inference extras. Fallback is only stepped at the top level by the port.
@@ -601,8 +601,8 @@ public static class FuwenZhinuStepMapper
     private static FuwenZhinuStepDescriptor LoopControlDescriptor(IReadOnlyList<string> loopNames, string? declaredNodePath = null) =>
         new(declaredNodePath, [], FuwenZhinuStepOrigin.Synthetic, FuwenZhinuStepKind.LoopControl, null, loopNames, null, null);
 
-    private static FuwenZhinuStepDescriptor LoopFinal(string loopName) =>
-        new(null, [], FuwenZhinuStepOrigin.Synthetic, FuwenZhinuStepKind.LoopControl, loopName, [], null, null);
+    private static FuwenZhinuStepDescriptor LoopFinal(string loopName, string? declaredNodePath = null) =>
+        new(declaredNodePath, [], FuwenZhinuStepOrigin.Synthetic, FuwenZhinuStepKind.LoopControl, loopName, [], null, null);
 
     private static IReadOnlyList<string> Append(IReadOnlyList<string> names, string value)
     {

@@ -11,16 +11,18 @@ internal static class FuwenRepeatCoordinator
         RepeatNode node,
         JsonElement initialState,
         Func<WorkflowLoopIteration<JsonElement>, CancellationToken, Task<LoopBodyOutcome<JsonElement>>> executeIteration,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool expandedGroups = false,
+        ActivityGroupStepBinding? controlGroup = null)
     {
         try
         {
             return await context.LoopAsync(
-                node.Name,
+                FuwenZhinuStepKeys.RepeatLoopName(node, expandedGroups),
                 initialState,
                 _ => true,
                 executeIteration,
-                new LoopOptions(node.MaxIterations),
+                new LoopOptions(node.MaxIterations) { ControlGroup = controlGroup },
                 cancellationToken).ConfigureAwait(false);
         }
         catch (LoopLimitExceededException)
@@ -33,6 +35,6 @@ internal static class FuwenRepeatCoordinator
         }
     }
 
-    internal static string StepSuffix(string nodePath, string repeatPath) =>
-        FuwenZhinuStepKeys.RepeatBodyStepName(nodePath, repeatPath);
+    internal static string StepSuffix(string nodePath, string repeatPath, bool expandedGroups = false) =>
+        FuwenZhinuStepKeys.RepeatBodyStepName(nodePath, repeatPath, expandedGroups);
 }

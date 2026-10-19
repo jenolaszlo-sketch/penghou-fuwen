@@ -1,0 +1,42 @@
+{
+  "Version": "0.2.0-preview.5",
+  "SourceCommit": "fd1875886e67e3aacd9c03c5689238788575d1e5",
+  "Publication": "Unpublished local candidate",
+  "Packages": [
+    {
+      "Id": "Penghou.Zhinu",
+      "File": "Penghou.Zhinu.0.2.0-preview.5.nupkg",
+      "Sha256": "3d7ca0061f94c71e4610fdcc78b696dfcd8516faecdddf905e336c89ab0eacfb"
+    },
+    {
+      "Id": "Penghou.Zhinu.Agents",
+      "File": "Penghou.Zhinu.Agents.0.2.0-preview.5.nupkg",
+      "Sha256": "a2c5a116e4ff1d20993a9a24050b257ab34dc94a6b8a1bb6c3077cd0ea66d1e9"
+    },
+    {
+      "Id": "Penghou.Zhinu.Hosting",
+      "File": "Penghou.Zhinu.Hosting.0.2.0-preview.5.nupkg",
+      "Sha256": "8aa3a839056abec2bf2d93b06bc686b69b09b7e7f40f803b98be4c1b38812c31"
+    },
+    {
+      "Id": "Penghou.Zhinu.Hosting.AspNetCore",
+      "File": "Penghou.Zhinu.Hosting.AspNetCore.0.2.0-preview.5.nupkg",
+      "Sha256": "fbebadac50c3b2a142ddcd076eea4a7ab084f3550ccb1c68d72cd53b0dbbaa45"
+    },
+    {
+      "Id": "Penghou.Zhinu.OpenTelemetry",
+      "File": "Penghou.Zhinu.OpenTelemetry.0.2.0-preview.5.nupkg",
+      "Sha256": "de389732e794e636e2e62b7e3cef94b1a1e349016428102b1d260e6f2afb10c4"
+    },
+    {
+      "Id": "Penghou.Zhinu.Sqlite",
+      "File": "Penghou.Zhinu.Sqlite.0.2.0-preview.5.nupkg",
+      "Sha256": "f833631a54ca5d2bd2887f64dfdc821e4e64b90d221eac19cd3328427136a152"
+    },
+    {
+      "Id": "Penghou.Zhinu.Testing",
+      "File": "Penghou.Zhinu.Testing.0.2.0-preview.5.nupkg",
+      "Sha256": "a04c16eab1f9471a84976e15091d3cbce60a040c78513c8e66c2b3f161949b1f"
+    }
+  ]
+}

@@ -49,8 +49,13 @@ internal static class FuwenZhinuStepKeys
         RuntimeNodeIdentity.CreateFanOutItem(structuralPath, key);
 
     /// <summary>The repeat-body step name passed to the loop iteration (port-owned suffix).</summary>
-    internal static string RepeatBodyStepName(string nodePath, string repeatPath)
+    internal static string RepeatLoopName(RepeatNode node, bool expandedGroups) => expandedGroups
+        ? "fuwen-repeat-v1-" + FullHash(node.StructuralPath) : node.Name;
+
+    internal static string RepeatBodyStepName(string nodePath, string repeatPath, bool expandedGroups = false)
     {
+        if (expandedGroups) return "fuwen-node-v1-" + Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(nodePath)))
+            .TrimEnd('=').Replace('+', '-').Replace('/', '_');
         var marker = nodePath.IndexOf(BodyMarker, StringComparison.Ordinal);
         var suffix = marker >= 0 ? nodePath[(marker + BodyMarker.Length)..] : nodePath;
         if (suffix.StartsWith(repeatPath + "/", StringComparison.Ordinal))
@@ -62,8 +67,8 @@ internal static class FuwenZhinuStepKeys
     }
 
     /// <summary>The repeat-nested conditional-merge body step name.</summary>
-    internal static string RepeatMergeStepName(string conditionalPath, string repeatPath) =>
-        RepeatBodyStepName(conditionalPath, repeatPath) + "-merge";
+    internal static string RepeatMergeStepName(string conditionalPath, string repeatPath, bool expandedGroups = false) =>
+        RepeatBodyStepName(conditionalPath, repeatPath, expandedGroups) + "-merge";
 
     // Loop envelope (Zhinu-owned format, encoded here so the port can match it).
 
@@ -108,6 +113,8 @@ internal static class FuwenZhinuStepKeys
         var sanitized = builder.ToString().Trim('-');
         return sanitized.Length == 0 ? "call" : (sanitized.Length > 64 ? sanitized[..64] : sanitized);
     }
+
+    private static string FullHash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 
     private static string ShortHash(string value) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant()[..12];

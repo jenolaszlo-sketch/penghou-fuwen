@@ -7,7 +7,7 @@ Production/package source: Fuwen `cab1d71cbce67f75b9cf5711403061fa8daeea67`;
 Zhinu `fd1875886e67e3aacd9c03c5689238788575d1e5`. Candidate versions are Fuwen
 `0.1.0-preview.14` and Zhinu `0.2.0-preview.5`. The companion qualification
 commit adds evidence and a package-only consumer test; it changes no packaged
-production implementation. [Package pins](zhinu-candidate.json) and the
+production implementation. [Original package pins](zhinu-static-candidate.json) and the
 [evidence ledger](zg6-static.json) record exact hashes and test receipts.
 
 ## Qualified behavior

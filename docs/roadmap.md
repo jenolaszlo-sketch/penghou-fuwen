@@ -1493,3 +1493,13 @@ current release gates. Smaller or less grounded proposals are recorded in
 Resource authorization follows the [FI-04 grant contract](fi04-resource-grant-contract.md).
 Integrate Hufu's exact grant/receipt and operation-start checks rather than
 introducing a second Fuwen-only grant evaluator.
+
+
+### Unreleased ZG-6.2a — grouped single-level repetition
+
+The [repeat integration profile](activity-groups-repeat-profile.md) extends the
+static checkpoint with native iteration lineage, collision-resistant expanded
+repeat/body keys, per-child durable steps, loop Control memberships and native
+iteration signal waits. Historical macro-free keys are preserved. Nested repeats,
+fan-out per-child lowering, grouped coordinated inference and repeat-local
+fallback remain rejected. Full FM-2/ZG-6, Q45 and ZG-7 stay open.

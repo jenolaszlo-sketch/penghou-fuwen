@@ -1,7 +1,8 @@
 # Activity groups: first Fuwen integration profile
 
-This is the bounded ZG-6.1 implementation of FM-0/1/2, not completion of the
-full FM/ZG milestone. Packages are unpublished candidates. Historical macro-free
+This records the bounded ZG-6.1 implementation of FM-0/1/2, not completion of the
+full FM/ZG milestone. The subsequent [repeat profile](activity-groups-repeat-profile.md)
+adds single-level grouped repetition. Packages are unpublished candidates. Historical macro-free
 plans keep their existing canonical bytes, fingerprints, step keys and adapter
 behavior. Expanded scopes require `fuwen-ir/v4-group-expansion`.
 

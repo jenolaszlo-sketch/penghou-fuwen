@@ -286,22 +286,20 @@ public sealed partial class FuwenInferenceCoordinatorTests
             turns.ObservedRequests.Should().HaveCount(2);
             turns.ObservedRequests[1].Conversation.Should().Contain(message =>
                 message.Role == InferenceTurnRole.Tool && message.ToolCallId == "call-private" && message.Text.Contains(marker, StringComparison.Ordinal));
-            // SQLite can release its final Windows file handle just after engine disposal.
+            // SQLite may still hold a shared Windows handle. Read with matching
+            // sharing, and inspect WAL bytes as well as the main database.
             var journalPath = Path.Combine(root, "workflow.db");
-            byte[] journalBytes = [];
-            for (var attempt = 0; attempt < 10; attempt++)
+            async Task AssertNoPayloadAsync(string path)
             {
-                try
-                {
-                    journalBytes = await File.ReadAllBytesAsync(journalPath, ct);
-                    break;
-                }
-                catch (IOException) when (attempt < 9)
-                {
-                    await Task.Delay(50, ct);
-                }
+                await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete, 4096, useAsync: true);
+                using var bytes = new MemoryStream();
+                await stream.CopyToAsync(bytes, ct);
+                System.Text.Encoding.UTF8.GetString(bytes.ToArray()).Should().NotContain(marker, path);
             }
-            System.Text.Encoding.UTF8.GetString(journalBytes).Should().NotContain(marker);
+            await AssertNoPayloadAsync(journalPath);
+            try { await AssertNoPayloadAsync(journalPath + "-wal"); }
+            catch (FileNotFoundException) { } // SQLite removes an empty WAL when its last connection closes.
             payloads.ReadCount.Should().BeGreaterThan(0);
         }
         finally { DeleteDirectory(root); }

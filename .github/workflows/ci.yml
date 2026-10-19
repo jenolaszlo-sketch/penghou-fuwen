@@ -23,6 +23,12 @@ jobs:
       - name: Checkout Fuwen
         uses: actions/checkout@v6
 
+      - name: Use runner work volume for temporary databases
+        run: |
+          $temporary = Join-Path $env:RUNNER_TEMP 'activity-groups'
+          New-Item -ItemType Directory -Path $temporary -Force | Out-Null
+          foreach ($name in @('TEMP', 'TMP', 'TMPDIR')) { "$name=$temporary" >> $env:GITHUB_ENV }
+
       - name: Read exact native source pin
         id: native-pin
         run: |
@@ -71,7 +77,7 @@ jobs:
         run: dotnet format Penghou.Fuwen.slnx --verify-no-changes --no-restore
 
       - name: Test
-        run: dotnet test Penghou.Fuwen.slnx --configuration Release --no-build --no-restore --logger 'trx;LogFilePrefix=full' --results-directory artifacts/test-results
+        run: dotnet test Penghou.Fuwen.slnx --configuration Release --no-build --no-restore --logger 'trx;LogFilePrefix=full' --blame-hang-timeout 5m --blame-hang-dump-type none --results-directory artifacts/test-results
 
       - name: Verify independent canonical JSON vector
         run: python tests/golden/canonical_json_v1.py
@@ -96,6 +102,7 @@ jobs:
           name: build-qualification-${{ matrix.os }}
           path: |
             artifacts/test-results/*.trx
+            artifacts/test-results/**/Sequence*.xml
             artifacts/candidate-preparation/**/qualification.json
             artifacts/native-qualification/**/qualification.json
             artifacts/native-qualification/**/logs/*.log
@@ -118,6 +125,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Use runner work volume for temporary databases
+        run: |
+          $temporary = Join-Path $env:RUNNER_TEMP 'activity-groups'
+          New-Item -ItemType Directory -Path $temporary -Force | Out-Null
+          foreach ($name in @('TEMP', 'TMP', 'TMPDIR')) { "$name=$temporary" >> $env:GITHUB_ENV }
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5

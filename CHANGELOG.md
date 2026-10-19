@@ -45,7 +45,8 @@ contract versions. Consumer-visible breaking changes are called out under
 
 ## 0.1.0-preview.16
 
-Unpublished grouped fan-out candidate; qualification is in progress. Adds one
+Unpublished grouped fan-out candidate, qualified on Windows .NET 8/10 against
+exact Zhinu preview.8. Adds one
 bounded keyed fan-out with an explicit item-local group, independently durable
 provider operations, an immutable selected vector/body contract, exact child
 closure evidence and per-operation mapping. Keeps the legacy ungrouped fan-out

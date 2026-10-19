@@ -334,13 +334,12 @@ package closure with pinned hashes/source. It maps static expanded macros and
 logical groups, including durable signal waits. See the
 [implementation profile](activity-groups-static-profile.md) and
 [qualification record](qualification/activity-groups/zg6-static.md).
-The remaining major integration gap is that historical Fuwen fan-out executes
-an entire item body inside one durable step. The existing `FuwenZhinuStepMapper` exposes this
-many-to-one coverage. Preserve historical plans. Macro-bearing fan-out requiring
-independent durable children needs a separately versioned adapter lowering, or
-must fail preflight until available. Merely adding group metadata cannot provide
-per-child recovery, and an interim rejection does not complete full FM/ZG
-qualification. Native Zhinu child/loop capabilities do not imply DSL support.
+Historical Fuwen fan-out retains an entire item body inside one durable step,
+with many-to-one mapper coverage. [ZG-6.2b](qualification/activity-groups/zg6-fanout.md)
+now qualifies a separate grouped lowering with independently durable provider
+operations for one fixed scope with an explicit item root. Broader dynamic
+composition, selection closure and complete adapter progress coverage remain
+open. Native Zhinu child/loop capabilities do not imply DSL support.
 
 Macros provide a methodology-neutral vocabulary. `SupervisedCoding`,
 `ProbeAndVerify`, `TDD`, `BDDImplementation`, and domain-specific approval or
@@ -1504,5 +1503,25 @@ iteration signal waits. Historical macro-free keys are preserved. Nested repeats
 fan-out per-child lowering, grouped coordinated inference and repeat-local
 fallback remain rejected. [Qualification](qualification/activity-groups/zg6-repeat.md)
 passes 1,666 regression tests plus 10 package-only consumer executions on Windows
-.NET 8/10, using unpublished Fuwen preview.15 and Zhinu preview.7. Next is fan-out
-per-operation lowering. Full FM-2/ZG-6, Q45 and ZG-7 stay open.
+.NET 8/10, using unpublished Fuwen preview.15 and Zhinu preview.7. The later
+ZG-6.2b checkpoint adds bounded fan-out lowering. Full FM-2/ZG-6, Q45 and ZG-7 stay open.
+
+
+### Unreleased ZG-6.2b -- independently durable grouped fan-out
+
+The [fan-out profile](activity-groups-fanout-profile.md) adds one fixed keyed
+scope whose provider operations persist independently under explicit item-local
+root groups and nested static groups/macros. Selection/completion/aggregate use
+Control membership; providers retain Work membership and their ordinary envelope
+pipeline. Exact typed claims and child closure preserve native lineage and
+fencing. Dependent restart and immutable-byte-only hard process-loss recovery
+preserve committed predecessors/siblings. Schema remains 9; no identity redesign.
+
+[Qualification](qualification/activity-groups/zg6-fanout.md) passes 1,690 Fuwen
+regression executions plus 12 package-only consumer executions on Windows .NET 8/10,
+using unpublished Fuwen preview.16 and exact Zhinu preview.8. Native qualification
+passes 1,925 executions plus package closure and legacy migration probes. Broader
+composition, evolving selection, item waits/checkpoints, conditional value merges,
+coordinated inference and item-local fallback remain outside this bounded phase.
+Next are broader dynamic composition and adapter closure/progress qualification;
+full FM-2/ZG-6, Q45 and ZG-7 stay open.

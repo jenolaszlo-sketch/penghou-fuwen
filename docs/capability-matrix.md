@@ -47,7 +47,10 @@ signal-wait recovery. See the [static profile](activity-groups-static-profile.md
 and [qualification](qualification/activity-groups/zg6-static.md).
 ZG-6.2a adds [single-level grouped repeat](activity-groups-repeat-profile.md),
 with separate [qualification](qualification/activity-groups/zg6-repeat.md).
-Grouped fan-out, nested repeats, coordinated inference and repeat-local fallback
-remain rejected. Historical macro-free keys remain unchanged. Full FM-2/ZG-6,
+ZG-6.2b adds [one fixed keyed fan-out with independent body operations](activity-groups-fanout-profile.md),
+with separate [qualification](qualification/activity-groups/zg6-fanout.md).
+Nested/mixed dynamic composition, item waits/checkpoints, conditional value
+merges, coordinated inference and item-local fallback remain rejected.
+Historical macro-free keys remain unchanged. Full FM-2/ZG-6,
 Q45 and ZG-7, including broader dynamic durability and cross-platform
 qualification, remain open. These candidate packages are not published.

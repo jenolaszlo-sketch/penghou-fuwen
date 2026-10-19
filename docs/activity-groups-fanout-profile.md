@@ -1,7 +1,9 @@
 # Activity groups: keyed fan-out bodies
 
 ZG-6.2b extends the static and single-level repeat profiles with a separate,
-bounded keyed fan-out profile. Qualification is in progress. This does not close
+bounded keyed fan-out profile. [Qualification](qualification/activity-groups/zg6-fanout.md)
+passes on Windows .NET 8/10 against exact unpublished Fuwen preview.16 and Zhinu
+preview.8 candidates. This does not close
 Q45, full FM-2/ZG-6 or ZG-7. Candidate packages remain unpublished.
 
 One fan-out scope is supported per grouped plan, optionally within static groups.

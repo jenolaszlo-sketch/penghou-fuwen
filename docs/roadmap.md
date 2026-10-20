@@ -26,7 +26,8 @@ review rather than infer implementation from the long-range architecture.
 
 **Versioned compiler and core durable adapters are available; coordinated inference remains limited while corrective gates are open**
 
-Last reviewed: **2026-09-27**
+Core/inference roadmap last reviewed: **2026-09-27**.
+Activity-group profile last reviewed: **2026-10-20**.
 
 Roadmap addition reviewed **2026-10-15**: user-defined reusable macro activities
 and the paired Zhinu activity-group contract below remain unreleased. The
@@ -36,6 +37,9 @@ single-level grouped repeats and independently durable keyed fan-out. Local
 qualification and the second correctness pass are complete. Windows/Linux Q47
 gates pass. The later [v5 selection profile](activity-groups-selection.md) adds bounded
 terminal replacement over native Q33 with a new exact package pin.
+The [complete integration review](qualification/activity-groups/integration-second-pass.md)
+then corrects four defects in preview.20; newly compiled dynamic plans use v6
+while existing definitions retain their pinned replay contracts.
 The broader FM language scope and publication
 remain open.
 

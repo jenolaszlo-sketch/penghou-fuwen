@@ -14,6 +14,14 @@ Compile/admit v6 definitions for independent runs sharing an idempotent provider
 the correction does not silently rewrite an existing run. Static/grouped fan-out identities already
 included run identity. Native occurrence coordinates and schema 10 are unchanged.
 
+Registration also rejects duplicate ungrouped repeat names across structured
+regions, because their native loop state is keyed by that name. Rename ambiguous
+regions before admitting a new definition; grouped repeats retain structural
+namespaces and may reuse local names. Full provider runtime identities must fit
+1,024 UTF-8 bytes, including the run prefix and maximum iteration/epoch suffixes.
+Oversized plans now fail before definition storage or provider calls. These
+preflight corrections apply to registration of older plans as well.
+
 
 ## Unpublished preview.19 selection candidate
 
@@ -37,13 +45,14 @@ exact Fuwen preview it was built against.
 
 ## Unreleased source after preview.11
 
-The current activity-groups `0.1.0-preview.18` candidate requires the pinned
-unpublished Zhinu `0.2.0-preview.9` closure. Prepare the local feed using
+The earlier activity-groups `0.1.0-preview.18` candidate requires its preserved
+unpublished Zhinu `0.2.0-preview.9` closure. The current preview.20 candidate uses
+the original preview.10/schema 10 archives described above. Prepare the local feed using
 `eng/Prepare-ZhinuCandidate.ps1`; see the
 [static profile](activity-groups-static-profile.md). Existing ungrouped APIs
 remain available. Grouped source returns a `GroupedDefinition`; admit it with
 `AdmitGroupedAsync`, persist/reload that exact bundle, and use `CreateGroupedAsync`.
-Do not register expanded v4 IR through plain `CreateAsync` or recompute macros
+Do not register expanded v4/v5 IR or expanded-group v6 IR through plain `CreateAsync` or recompute macros
 during recovery. Source references stay in the Fuwen bundle; native group queries
 provide generic identity/provenance. The [repeat extension](activity-groups-repeat-profile.md)
 qualifies one repeat level. The [fan-out profile](activity-groups-fanout-profile.md)

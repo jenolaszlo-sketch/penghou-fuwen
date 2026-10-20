@@ -12,7 +12,8 @@ package publication.
 
 New dynamic plans use the [v6 run-scoped invocation contract](run-scoped-dynamic-invocations.md).
 The [integration second pass](qualification/activity-groups/integration-second-pass.md)
-corrects provider key collisions, mapper round trips and invocation-path admission.
+corrects provider key collisions, mapper round trips, invocation-path admission
+and ungrouped repeat-name aliasing.
 Older v1–v5 plans keep their original replay contracts.
 
 ## Supported authoring and execution

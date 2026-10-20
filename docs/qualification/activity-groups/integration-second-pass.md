@@ -69,8 +69,58 @@ remains unchanged; its independently qualified Q33 baseline is retained.
 
 ## Qualification
 
-The exact runtime source, full tests, package-only consumers, archive hashes,
-precompiled compatibility and Windows/Linux results are recorded in the paired
-`integration-second-pass.json` ledger. Earlier failing/staging receipts are kept
-separate from passing totals. Packages remain unpublished; broader DSL features
-and downstream adoption remain independent work.
+Frozen runtime/package source is
+`eca1213796d9fa4ad08423e2691cb409c892f63b`, unpublished Fuwen preview.20.
+The exact seven original native preview.10 archives remain pinned to
+`bf33c05cf2390af6924bbe3761e09f9e377c7a97`, schema 10. Native source, tests and
+CI are unchanged from that independently qualified Q33 runtime.
+
+Local Windows qualification passes **1,770 regression executions** across
+.NET 8/10 (314 core, 251 compiler, 94 Baize and 226 adapter cases per framework),
+plus **32 package-only consumer executions** (7 Marang and 9 review cases per
+framework). All eight packaged Fuwen DLLs match their Release binaries. Archive
+and restore-cache checks verify the eleven-package closure. The earlier 151
+Fuwen selection and 74 referenced native Q33 evidence files retain their hashes,
+as do all four original Fuwen preview.19 package archives.
+
+The package consumer initially overclaimed reverse resolution for synthetic
+loop-control descriptors, which classify multiple terminals without selecting
+one in their public scope. Qualification source
+`3d8ee2b9573bce350f4c05584da26eaa167dbca4` corrects only that assertion: every
+persisted step must classify, and descriptors with resolvable forms round-trip.
+Its runtime, build, eng and CI trees are identical to the frozen package source.
+The original failed receipts are retained; the passing totals use the corrected
+harness. Local preview.20 packages were not repacked after this test correction.
+
+[CI run 39408318656](https://github.com/jenolaszlo-sketch/penghou-fuwen/actions/runs/39408318656)
+uses the corrected qualification source. Each Windows/Linux producer runs the
+1,770 regression executions, formatting/canonical checks, native closure/legacy
+probes and exact-source candidate preparation. Both OS consumers use the same
+eleven Ubuntu producer archives for their 32 executions, archive/cache checks
+and precompiled legacy probe. CI package version is `0.0.0-ci.39408318656`;
+its archive hashes are recorded separately from local preview.20. Native source
+rebuilds retain the original native pin and identify their separate archives.
+
+The first Windows attempt failed one .NET 10 process-loss case during
+`lease.recover` with SQLite error 10, immediately after worker termination.
+The cause was not established. Both loss barriers pass a separate local recheck
+on both frameworks (four additional executions, excluded from the 1,770 total).
+The failed/dependent CI jobs were rerun with identical source; neither runtime
+nor tests received an I/O retry. The ledger retains the earlier failure status,
+log and receipts separately from the final passing evidence.
+The successful Windows producer artifact is ID `12258452559` (attempt 2),
+distinct from failed-attempt artifact `12259015486`; GitHub retained both under
+the same display name. The ledger selects the successful archive by ID.
+
+The unchanged published preview.11 consumer binary executes with the candidate
+assemblies. Its schema-4 database is rejected without changing bytes; the fresh
+candidate database reaches schema 10. This is a binary-compatibility proof, not
+a schema-4 migration claim. Native Q33 retains its independent supported
+migration and older-worker rejection evidence.
+
+The paired [ledger](integration-second-pass.json) records exact source trees,
+receipts, package hashes and all four final platform jobs. Confirmed failures are
+selected by test name; ruled-out group-budget probes, the initial incorrectly
+sized dynamic-path fixture and the consumer assertion mistake do not count as
+runtime defects or passing evidence. Packages remain unpublished; broader DSL
+features and downstream adoption remain independent work.

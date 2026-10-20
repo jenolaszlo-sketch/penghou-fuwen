@@ -1,0 +1,1823 @@
+{
+  "SchemaVersion": 1,
+  "Status": "prepared; publication gates open",
+  "Date": "2026-10-20",
+  "ObservedAtUtc": "2026-10-20T14:12:29.380175+00:00",
+  "PublicationAuthorized": false,
+  "QualificationRecord": "../qualification/activity-groups/integration-second-pass.json",
+  "QualificationRecordSha256": "96654409c401c97dfe963a2544e4114a0228f7c87f9e0c99e63d4b65b3687714",
+  "FuwenRuntimeSource": "eca1213796d9fa4ad08423e2691cb409c892f63b",
+  "NativeRuntimeSource": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+  "ReleaseOrder": [
+    "Penghou.Zhinu 0.2.0-preview.10 (seven packages)",
+    "Penghou.Fuwen 0.1.0-preview.20 (four packages)",
+    "Guihua adoption",
+    "Application adoption"
+  ],
+  "Archives": [
+    {
+      "Repository": "Fuwen",
+      "Id": "Penghou.Fuwen",
+      "Version": "0.1.0-preview.20",
+      "Kind": "package",
+      "File": "artifacts/integration-review-fuwen-packages/Penghou.Fuwen.0.1.0-preview.20.nupkg",
+      "Sha256": "0446ed0aa6ed6043c9b190d8b69f8aa50858a15daa03b71493edbf4076d3b136",
+      "SourceCommit": "eca1213796d9fa4ad08423e2691cb409c892f63b",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Fuwen.dll",
+          "Sha256": "b4837f63df2037ecda6ce9c47fd85a3bff7e1262439ee727283c9f92250e8d18"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Fuwen.dll",
+          "Sha256": "83fa09daf0ca7055bae6dcbc11f398c4ef20350a8c07f85121fd44f9469c35f0"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": []
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": []
+        }
+      ]
+    },
+    {
+      "Repository": "Fuwen",
+      "Id": "Penghou.Fuwen",
+      "Version": "0.1.0-preview.20",
+      "Kind": "symbols",
+      "File": "artifacts/integration-review-fuwen-packages/Penghou.Fuwen.0.1.0-preview.20.snupkg",
+      "Sha256": "26a2c9a66113b4c85d5716ffd90823655430297f0f159bb64a2a9f7ed2aef4be",
+      "SourceCommit": "eca1213796d9fa4ad08423e2691cb409c892f63b",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Fuwen.pdb",
+          "Sha256": "9709a6c4f0a23768fdaddd56a1a718dfc2aa887bb77fe8465b5cfae97de54aad"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Fuwen.pdb",
+          "Sha256": "4e932586d8c9fcf7f3f413647cea780a2bad652c5526204e915be8eed2dbffc1"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": []
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": []
+        }
+      ]
+    },
+    {
+      "Repository": "Fuwen",
+      "Id": "Penghou.Fuwen.Baize",
+      "Version": "0.1.0-preview.20",
+      "Kind": "package",
+      "File": "artifacts/integration-review-fuwen-packages/Penghou.Fuwen.Baize.0.1.0-preview.20.nupkg",
+      "Sha256": "ea9922f95d6cba58327acfbaeafcdeb85441b6706a87ea1bc73dab3c465942f0",
+      "SourceCommit": "eca1213796d9fa4ad08423e2691cb409c892f63b",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Fuwen.Baize.dll",
+          "Sha256": "3840a6d5e1ea055fe7399f1895abaa7d645cf540bec93bfc9e7d444175468191"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Fuwen.Baize.dll",
+          "Sha256": "d102181ed9274f4dcf2c6f0cf41b2d92f8366644a1cf4449a69b01c88f89154d"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Fuwen.Compiler",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Fuwen",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Baize",
+              "version": "0.3.0-preview.5",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Baize.Tools",
+              "version": "0.3.0-preview.5",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Nuwa",
+              "version": "1.0.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Fuwen.Compiler",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Fuwen",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Baize",
+              "version": "0.3.0-preview.5",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Baize.Tools",
+              "version": "0.3.0-preview.5",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Nuwa",
+              "version": "1.0.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Fuwen",
+      "Id": "Penghou.Fuwen.Baize",
+      "Version": "0.1.0-preview.20",
+      "Kind": "symbols",
+      "File": "artifacts/integration-review-fuwen-packages/Penghou.Fuwen.Baize.0.1.0-preview.20.snupkg",
+      "Sha256": "f643a993c513ee3f6efba6ea5fb3b906d8126f943aca73a147050dde91229f08",
+      "SourceCommit": "eca1213796d9fa4ad08423e2691cb409c892f63b",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Fuwen.Baize.pdb",
+          "Sha256": "1f3619e63b1993413bf4eda1de5c88d137212e879b47a509fb5e292b63534470"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Fuwen.Baize.pdb",
+          "Sha256": "dfe57337b5978717d3f2bf510adaf0efd9b5466de1b4f650d4759f3670ad3913"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Fuwen.Compiler",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Fuwen",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Baize",
+              "version": "0.3.0-preview.5",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Baize.Tools",
+              "version": "0.3.0-preview.5",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Nuwa",
+              "version": "1.0.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Fuwen.Compiler",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Fuwen",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Baize",
+              "version": "0.3.0-preview.5",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Baize.Tools",
+              "version": "0.3.0-preview.5",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Nuwa",
+              "version": "1.0.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Fuwen",
+      "Id": "Penghou.Fuwen.Compiler",
+      "Version": "0.1.0-preview.20",
+      "Kind": "package",
+      "File": "artifacts/integration-review-fuwen-packages/Penghou.Fuwen.Compiler.0.1.0-preview.20.nupkg",
+      "Sha256": "a409c36dccda5082b89bd4c62623d36dfe85a2e3aabbb58310955308933091b6",
+      "SourceCommit": "eca1213796d9fa4ad08423e2691cb409c892f63b",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Fuwen.Compiler.dll",
+          "Sha256": "aa9494f56290ada58fdfcb1e173c1723212f242b2ca4c0ff60c9bb6e95df790c"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Fuwen.Compiler.dll",
+          "Sha256": "47f09099a0a67e064cc51c6273554cfa438882aee416756b3796a4b905c55f14"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Fuwen",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Fuwen",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Fuwen",
+      "Id": "Penghou.Fuwen.Compiler",
+      "Version": "0.1.0-preview.20",
+      "Kind": "symbols",
+      "File": "artifacts/integration-review-fuwen-packages/Penghou.Fuwen.Compiler.0.1.0-preview.20.snupkg",
+      "Sha256": "f1df7c985347f7ff0a2444bed30413c24c005a8b5cec35504a464778af09e4e3",
+      "SourceCommit": "eca1213796d9fa4ad08423e2691cb409c892f63b",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Fuwen.Compiler.pdb",
+          "Sha256": "9c3b93a358b0fdd904e3d6acfcf6743624f3fb743505992757c426ddc1e3c82e"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Fuwen.Compiler.pdb",
+          "Sha256": "9c85acc75adc06466d82b46e7a7822228e32367e10e2b2de5688f35f7fed2acd"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Fuwen",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Fuwen",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Fuwen",
+      "Id": "Penghou.Fuwen.Zhinu",
+      "Version": "0.1.0-preview.20",
+      "Kind": "package",
+      "File": "artifacts/integration-review-fuwen-packages/Penghou.Fuwen.Zhinu.0.1.0-preview.20.nupkg",
+      "Sha256": "9df508cb6caa461defe7a353f5d550ec0d98a1dc75c214dbc101fb3db14807cc",
+      "SourceCommit": "eca1213796d9fa4ad08423e2691cb409c892f63b",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Fuwen.Zhinu.dll",
+          "Sha256": "605130c862f554161d03f6939ca3d3056a6bd684a3c8eef65a2eb5efa171c7a8"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Fuwen.Zhinu.dll",
+          "Sha256": "2eeb0b6f08165e253675d2273712af4fe2713300826d2a3e93509408be5924d7"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Fuwen.Compiler",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Fuwen",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "[0.2.0-preview.10]",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.13",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Fuwen.Compiler",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Fuwen",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "[0.2.0-preview.10]",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.13",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Fuwen",
+      "Id": "Penghou.Fuwen.Zhinu",
+      "Version": "0.1.0-preview.20",
+      "Kind": "symbols",
+      "File": "artifacts/integration-review-fuwen-packages/Penghou.Fuwen.Zhinu.0.1.0-preview.20.snupkg",
+      "Sha256": "b5bb642effbed6f202d700ee7ec2e3d1c80274e8d8c6bcd8429a9b988f67e1d4",
+      "SourceCommit": "eca1213796d9fa4ad08423e2691cb409c892f63b",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Fuwen.Zhinu.pdb",
+          "Sha256": "a1b977f96cc5ce38d3efd1e8d7a744dcca88c63261729faf90fb0ee5d6ceee2e"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Fuwen.Zhinu.pdb",
+          "Sha256": "4ed0319da640164a4d84df0893377d014e0dd22a3a44110c5c7c3409c1ccf0d1"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Fuwen.Compiler",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Fuwen",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "[0.2.0-preview.10]",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.13",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Fuwen.Compiler",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Fuwen",
+              "version": "0.1.0-preview.20",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "[0.2.0-preview.10]",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.13",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Zhinu",
+      "Id": "Penghou.Zhinu",
+      "Version": "0.2.0-preview.10",
+      "Kind": "package",
+      "File": "../zhinu-activity-groups/artifacts/q33-native-packages/Penghou.Zhinu.0.2.0-preview.10.nupkg",
+      "Sha256": "a6499e7ee5dfd858b413620b3200d73db7835b43591c8105b5d64fc3b6021a9c",
+      "SourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Zhinu.dll",
+          "Sha256": "e08b6ca1ec36105cd82a949d18686c188eccd22feb36b70100c51e0073e7822d"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Zhinu.dll",
+          "Sha256": "28ed72975d59bfccb8dd6e83fdc9a06048803575f7d98f67f46bc02f221ee826"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Microsoft.Extensions.Logging.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Workflow.Abstractions",
+              "version": "[0.1.0-preview.2]",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Microsoft.Extensions.Logging.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Workflow.Abstractions",
+              "version": "[0.1.0-preview.2]",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Zhinu",
+      "Id": "Penghou.Zhinu",
+      "Version": "0.2.0-preview.10",
+      "Kind": "symbols",
+      "File": "../zhinu-activity-groups/artifacts/q33-native-packages/Penghou.Zhinu.0.2.0-preview.10.snupkg",
+      "Sha256": "b9dfdf27c0257b89f2d0dcec4b065642dba1727523966936f06e85445824a907",
+      "SourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Zhinu.pdb",
+          "Sha256": "5b57122222f6de5bf2ba276c935a0d56e43b22d565aa1078bc07d9de588caf65"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Zhinu.pdb",
+          "Sha256": "2adad2af811d2ab8179b79fa7c89603f5840277892d145ea235ea2f33768c549"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Microsoft.Extensions.Logging.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Workflow.Abstractions",
+              "version": "[0.1.0-preview.2]",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Microsoft.Extensions.Logging.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Workflow.Abstractions",
+              "version": "[0.1.0-preview.2]",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Zhinu",
+      "Id": "Penghou.Zhinu.Agents",
+      "Version": "0.2.0-preview.10",
+      "Kind": "package",
+      "File": "../zhinu-activity-groups/artifacts/q33-native-packages/Penghou.Zhinu.Agents.0.2.0-preview.10.nupkg",
+      "Sha256": "1a286bf73e8ab071769883a766f3f536fb8b60b95bd93a28ff41b95d04d0409e",
+      "SourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Zhinu.Agents.dll",
+          "Sha256": "25e80b2fcf02d0e02c459aca0187bcdafd003221692009e122d352a20aac8bc3"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Zhinu.Agents.dll",
+          "Sha256": "74d8e519deb47684150694d124a7443722554e3437473096dc2e67f7d221dcef"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Agents.AI.Workflows",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Agents.AI.Workflows",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Zhinu",
+      "Id": "Penghou.Zhinu.Agents",
+      "Version": "0.2.0-preview.10",
+      "Kind": "symbols",
+      "File": "../zhinu-activity-groups/artifacts/q33-native-packages/Penghou.Zhinu.Agents.0.2.0-preview.10.snupkg",
+      "Sha256": "7e99eb5d3e3ad4983e386fa687da0ddeb02841345f72f670923716110749ef72",
+      "SourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Zhinu.Agents.pdb",
+          "Sha256": "e8015c0f485d0212bbd89f7ab354a3494d93d2717af39de299e3ab7465fd16ff"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Zhinu.Agents.pdb",
+          "Sha256": "de45e0238d6d2fac10317ccee221c4b294fb987bec8c86388752e6738de5225e"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Agents.AI.Workflows",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Agents.AI.Workflows",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Zhinu",
+      "Id": "Penghou.Zhinu.Hosting",
+      "Version": "0.2.0-preview.10",
+      "Kind": "package",
+      "File": "../zhinu-activity-groups/artifacts/q33-native-packages/Penghou.Zhinu.Hosting.0.2.0-preview.10.nupkg",
+      "Sha256": "930932a8645199b0b09052f209d8b1e3a6c8f7bb6ae7b042c1de7cef3a153784",
+      "SourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Zhinu.Hosting.dll",
+          "Sha256": "14b1223b14644318adbe13ce8171670d17ba19edf897c4f6a508ce7654ddc603"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Zhinu.Hosting.dll",
+          "Sha256": "a56a62890a49fa1a9fe2e5aeaa1f53d6c498173af35ac29e2bfd0a231316ff04"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Hosting.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Options",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Hosting.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Options",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Zhinu",
+      "Id": "Penghou.Zhinu.Hosting",
+      "Version": "0.2.0-preview.10",
+      "Kind": "symbols",
+      "File": "../zhinu-activity-groups/artifacts/q33-native-packages/Penghou.Zhinu.Hosting.0.2.0-preview.10.snupkg",
+      "Sha256": "c24c810c934a2bf510f70af4b72ef93adbce46a5cdbe70b41f2d5ef7c98ed1e6",
+      "SourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Zhinu.Hosting.pdb",
+          "Sha256": "260576043d4298829cf714d2080618cb81ed35209ccaaae8e774429bc7d3af9a"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Zhinu.Hosting.pdb",
+          "Sha256": "239d39de7c33b6db93416af369303c0b1f5c8e2e33d6af4b1b875ff143e98133"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Hosting.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Options",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Hosting.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Options",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Zhinu",
+      "Id": "Penghou.Zhinu.Hosting.AspNetCore",
+      "Version": "0.2.0-preview.10",
+      "Kind": "package",
+      "File": "../zhinu-activity-groups/artifacts/q33-native-packages/Penghou.Zhinu.Hosting.AspNetCore.0.2.0-preview.10.nupkg",
+      "Sha256": "ba04e30b2acf77e07b26f009267f360864dfa01e05982ed4c7583addd245c2ed",
+      "SourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Zhinu.Hosting.AspNetCore.dll",
+          "Sha256": "6fae0522de746b7f99985382a12d00db03c6feee639f305cbf68693850b44e77"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Zhinu.Hosting.AspNetCore.dll",
+          "Sha256": "1c807fab549321b92c9c4273ee196b767600bc3197dd87ed22d2b1dcc66134a0"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Zhinu",
+      "Id": "Penghou.Zhinu.Hosting.AspNetCore",
+      "Version": "0.2.0-preview.10",
+      "Kind": "symbols",
+      "File": "../zhinu-activity-groups/artifacts/q33-native-packages/Penghou.Zhinu.Hosting.AspNetCore.0.2.0-preview.10.snupkg",
+      "Sha256": "a431ed40930e6e8749b49f2ce8d848c571f24f0bd39596df9651022a19bc0686",
+      "SourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Zhinu.Hosting.AspNetCore.pdb",
+          "Sha256": "77676d01225789fee04a38e8bb54ab05a0ee335ceeff89427a5c0172258a975d"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Zhinu.Hosting.AspNetCore.pdb",
+          "Sha256": "940531a53fc3d8bcafb3c4b19ad8b69079cd55e27daf94b1495d8772ad899d7a"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Zhinu",
+      "Id": "Penghou.Zhinu.OpenTelemetry",
+      "Version": "0.2.0-preview.10",
+      "Kind": "package",
+      "File": "../zhinu-activity-groups/artifacts/q33-native-packages/Penghou.Zhinu.OpenTelemetry.0.2.0-preview.10.nupkg",
+      "Sha256": "3522d0aa231d035b1603c82e0c6ab150b82c05042e625e305f5bb91585ee7e11",
+      "SourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Zhinu.OpenTelemetry.dll",
+          "Sha256": "a9689d398afb9543144b753defc6fe76ea99e462bcc8156912ea1f7885dc4d0e"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Zhinu.OpenTelemetry.dll",
+          "Sha256": "bbea6fd96914d5d2019877ad966628071e45019a2e04b96ba3343a42b5300d5b"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "OpenTelemetry.Extensions.Hosting",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "OpenTelemetry.Extensions.Hosting",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Zhinu",
+      "Id": "Penghou.Zhinu.OpenTelemetry",
+      "Version": "0.2.0-preview.10",
+      "Kind": "symbols",
+      "File": "../zhinu-activity-groups/artifacts/q33-native-packages/Penghou.Zhinu.OpenTelemetry.0.2.0-preview.10.snupkg",
+      "Sha256": "92e27addbbc50b87b1b1f616d85b27bf233245c28881bbc5afa66adee6436a2f",
+      "SourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Zhinu.OpenTelemetry.pdb",
+          "Sha256": "f9d06574242914ae367a0e5adfc8750dccf566aa09dd248581e20b5aa4ba90c8"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Zhinu.OpenTelemetry.pdb",
+          "Sha256": "5e381e3c39ea40406ca02b1770476377a34a8bced1257bf84f123e0399e08137"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "OpenTelemetry.Extensions.Hosting",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "OpenTelemetry.Extensions.Hosting",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Zhinu",
+      "Id": "Penghou.Zhinu.Sqlite",
+      "Version": "0.2.0-preview.10",
+      "Kind": "package",
+      "File": "../zhinu-activity-groups/artifacts/q33-native-packages/Penghou.Zhinu.Sqlite.0.2.0-preview.10.nupkg",
+      "Sha256": "1ca6927c4b1bb993e1264457a40f1ed5bfb8bd4b067127b8abe2ab10d1fe3840",
+      "SourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Zhinu.Sqlite.dll",
+          "Sha256": "d9c338d2e5dbce4cfad4f08b82535286e3f25264ebdceafa4b9546dc676408e9"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Zhinu.Sqlite.dll",
+          "Sha256": "67604fb773860db147d66f711c63dcd3333062ece585168fdeba69d5e94b93a3"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.12",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.12",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Zhinu",
+      "Id": "Penghou.Zhinu.Sqlite",
+      "Version": "0.2.0-preview.10",
+      "Kind": "symbols",
+      "File": "../zhinu-activity-groups/artifacts/q33-native-packages/Penghou.Zhinu.Sqlite.0.2.0-preview.10.snupkg",
+      "Sha256": "29b71e0c0fe23e3ea5b4f7abc9c2cfa930e726cbc873e8b77576b86d7f37504b",
+      "SourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Zhinu.Sqlite.pdb",
+          "Sha256": "f62009b901bbc205d0b64cfd19dfa3e80eebec066e75eadf8006769e281fe1cd"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Zhinu.Sqlite.pdb",
+          "Sha256": "a21478ee1a8f8c592789d14b142fa2a16339dae080e7eba5ecd725977b260e96"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.12",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.12",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Zhinu",
+      "Id": "Penghou.Zhinu.Testing",
+      "Version": "0.2.0-preview.10",
+      "Kind": "package",
+      "File": "../zhinu-activity-groups/artifacts/q33-native-packages/Penghou.Zhinu.Testing.0.2.0-preview.10.nupkg",
+      "Sha256": "52b8ee4b416c21af435da18a688e29934a912c2146b4a8da1027541a6836fd1e",
+      "SourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Zhinu.Testing.dll",
+          "Sha256": "3b9b8f2d99284b8fabcba1898f7a5d6753c00abb1e89fa6280f26d60dbb66219"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Zhinu.Testing.dll",
+          "Sha256": "b66f9a2cd000826ee2b2b40845b582f14291b087b74cc5ceadca5a7f0a6650e9"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Repository": "Zhinu",
+      "Id": "Penghou.Zhinu.Testing",
+      "Version": "0.2.0-preview.10",
+      "Kind": "symbols",
+      "File": "../zhinu-activity-groups/artifacts/q33-native-packages/Penghou.Zhinu.Testing.0.2.0-preview.10.snupkg",
+      "Sha256": "64d847dc1d6589789c24c78778a63d92279afdbeebfc54d29a5b23f4969b6732",
+      "SourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+      "ManagedPayloads": [
+        {
+          "Path": "lib/net10.0/Penghou.Zhinu.Testing.pdb",
+          "Sha256": "3acf5d37369e8fb69e0d3e233c980cd8f6e66b4a4364d747f80bae8777ec835f"
+        },
+        {
+          "Path": "lib/net8.0/Penghou.Zhinu.Testing.pdb",
+          "Sha256": "2092ba215dfb74a5708e9e310ca165ea0c7757ada638e061266b602172016ec4"
+        }
+      ],
+      "DependencyGroups": [
+        {
+          "TargetFramework": "net10.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "TargetFramework": "net8.0",
+          "Dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "PublicCandidateAvailability": {
+    "ObservedAtUtc": "2026-10-20T14:06:49.846428+00:00",
+    "Feed": "https://api.nuget.org/v3/index.json",
+    "Packages": [
+      {
+        "Id": "Penghou.Fuwen",
+        "Version": "0.1.0-preview.20",
+        "Url": "https://api.nuget.org/v3-flatcontainer/penghou.fuwen/0.1.0-preview.20/penghou.fuwen.0.1.0-preview.20.nupkg",
+        "HttpStatus": 404,
+        "Available": false
+      },
+      {
+        "Id": "Penghou.Fuwen.Compiler",
+        "Version": "0.1.0-preview.20",
+        "Url": "https://api.nuget.org/v3-flatcontainer/penghou.fuwen.compiler/0.1.0-preview.20/penghou.fuwen.compiler.0.1.0-preview.20.nupkg",
+        "HttpStatus": 404,
+        "Available": false
+      },
+      {
+        "Id": "Penghou.Fuwen.Baize",
+        "Version": "0.1.0-preview.20",
+        "Url": "https://api.nuget.org/v3-flatcontainer/penghou.fuwen.baize/0.1.0-preview.20/penghou.fuwen.baize.0.1.0-preview.20.nupkg",
+        "HttpStatus": 404,
+        "Available": false
+      },
+      {
+        "Id": "Penghou.Fuwen.Zhinu",
+        "Version": "0.1.0-preview.20",
+        "Url": "https://api.nuget.org/v3-flatcontainer/penghou.fuwen.zhinu/0.1.0-preview.20/penghou.fuwen.zhinu.0.1.0-preview.20.nupkg",
+        "HttpStatus": 404,
+        "Available": false
+      },
+      {
+        "Id": "Penghou.Zhinu",
+        "Version": "0.2.0-preview.10",
+        "Url": "https://api.nuget.org/v3-flatcontainer/penghou.zhinu/0.2.0-preview.10/penghou.zhinu.0.2.0-preview.10.nupkg",
+        "HttpStatus": 404,
+        "Available": false
+      },
+      {
+        "Id": "Penghou.Zhinu.Agents",
+        "Version": "0.2.0-preview.10",
+        "Url": "https://api.nuget.org/v3-flatcontainer/penghou.zhinu.agents/0.2.0-preview.10/penghou.zhinu.agents.0.2.0-preview.10.nupkg",
+        "HttpStatus": 404,
+        "Available": false
+      },
+      {
+        "Id": "Penghou.Zhinu.Hosting",
+        "Version": "0.2.0-preview.10",
+        "Url": "https://api.nuget.org/v3-flatcontainer/penghou.zhinu.hosting/0.2.0-preview.10/penghou.zhinu.hosting.0.2.0-preview.10.nupkg",
+        "HttpStatus": 404,
+        "Available": false
+      },
+      {
+        "Id": "Penghou.Zhinu.Hosting.AspNetCore",
+        "Version": "0.2.0-preview.10",
+        "Url": "https://api.nuget.org/v3-flatcontainer/penghou.zhinu.hosting.aspnetcore/0.2.0-preview.10/penghou.zhinu.hosting.aspnetcore.0.2.0-preview.10.nupkg",
+        "HttpStatus": 404,
+        "Available": false
+      },
+      {
+        "Id": "Penghou.Zhinu.OpenTelemetry",
+        "Version": "0.2.0-preview.10",
+        "Url": "https://api.nuget.org/v3-flatcontainer/penghou.zhinu.opentelemetry/0.2.0-preview.10/penghou.zhinu.opentelemetry.0.2.0-preview.10.nupkg",
+        "HttpStatus": 404,
+        "Available": false
+      },
+      {
+        "Id": "Penghou.Zhinu.Sqlite",
+        "Version": "0.2.0-preview.10",
+        "Url": "https://api.nuget.org/v3-flatcontainer/penghou.zhinu.sqlite/0.2.0-preview.10/penghou.zhinu.sqlite.0.2.0-preview.10.nupkg",
+        "HttpStatus": 404,
+        "Available": false
+      },
+      {
+        "Id": "Penghou.Zhinu.Testing",
+        "Version": "0.2.0-preview.10",
+        "Url": "https://api.nuget.org/v3-flatcontainer/penghou.zhinu.testing/0.2.0-preview.10/penghou.zhinu.testing.0.2.0-preview.10.nupkg",
+        "HttpStatus": 404,
+        "Available": false
+      },
+      {
+        "Id": "Penghou.Workflow.Abstractions",
+        "Version": "0.1.0-preview.2",
+        "Url": "https://api.nuget.org/v3-flatcontainer/penghou.workflow.abstractions/0.1.0-preview.2/penghou.workflow.abstractions.0.1.0-preview.2.nupkg",
+        "HttpStatus": 200,
+        "Available": true
+      }
+    ]
+  },
+  "ResolvedConsumerAssets": [
+    {
+      "File": "tests/Penghou.Fuwen.MarangConsumer.Tests/obj/project.assets.json",
+      "Sha256": "ccfc65cc373fc6f73e218f96c0469e2aea9d5404557612afac6ca4dc106933ba",
+      "CandidateVersions": {
+        "Penghou.Fuwen": "0.1.0-preview.20",
+        "Penghou.Fuwen.Compiler": "0.1.0-preview.20",
+        "Penghou.Fuwen.Zhinu": "0.1.0-preview.20",
+        "Penghou.Zhinu": "0.2.0-preview.10",
+        "Penghou.Zhinu.Sqlite": "0.2.0-preview.10"
+      }
+    },
+    {
+      "File": "tests/Penghou.Fuwen.ReviewConsumer.Tests/obj/project.assets.json",
+      "Sha256": "cc263190b591074b0b35eed2b3d4bb9051a5271291fe803588f583594e659cd9",
+      "CandidateVersions": {
+        "Penghou.Fuwen": "0.1.0-preview.20",
+        "Penghou.Fuwen.Baize": "0.1.0-preview.20",
+        "Penghou.Fuwen.Compiler": "0.1.0-preview.20",
+        "Penghou.Fuwen.Zhinu": "0.1.0-preview.20",
+        "Penghou.Zhinu": "0.2.0-preview.10",
+        "Penghou.Zhinu.Sqlite": "0.2.0-preview.10"
+      }
+    }
+  ],
+  "OtherResolvedPublicDependencies": [
+    {
+      "Id": "FluentAssertions",
+      "Version": "7.2.2",
+      "Url": "https://api.nuget.org/v3-flatcontainer/fluentassertions/7.2.2/fluentassertions.7.2.2.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Bcl.AsyncInterfaces",
+      "Version": "6.0.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.bcl.asyncinterfaces/6.0.0/microsoft.bcl.asyncinterfaces.6.0.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.CodeCoverage",
+      "Version": "17.14.1",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.codecoverage/17.14.1/microsoft.codecoverage.17.14.1.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Data.Sqlite",
+      "Version": "10.0.10",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.data.sqlite/10.0.10/microsoft.data.sqlite.10.0.10.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Data.Sqlite.Core",
+      "Version": "10.0.10",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.data.sqlite.core/10.0.10/microsoft.data.sqlite.core.10.0.10.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Extensions.Configuration",
+      "Version": "10.0.9",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.configuration/10.0.9/microsoft.extensions.configuration.10.0.9.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Extensions.Configuration.Abstractions",
+      "Version": "10.0.9",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.configuration.abstractions/10.0.9/microsoft.extensions.configuration.abstractions.10.0.9.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Extensions.Configuration.Binder",
+      "Version": "10.0.9",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.configuration.binder/10.0.9/microsoft.extensions.configuration.binder.10.0.9.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Extensions.DependencyInjection",
+      "Version": "10.0.9",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.dependencyinjection/10.0.9/microsoft.extensions.dependencyinjection.10.0.9.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+      "Version": "10.0.9",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.dependencyinjection.abstractions/10.0.9/microsoft.extensions.dependencyinjection.abstractions.10.0.9.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Extensions.Diagnostics",
+      "Version": "10.0.9",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.diagnostics/10.0.9/microsoft.extensions.diagnostics.10.0.9.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Extensions.Diagnostics.Abstractions",
+      "Version": "10.0.9",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.diagnostics.abstractions/10.0.9/microsoft.extensions.diagnostics.abstractions.10.0.9.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Extensions.Http",
+      "Version": "10.0.9",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.http/10.0.9/microsoft.extensions.http.10.0.9.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Extensions.Logging",
+      "Version": "10.0.9",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.logging/10.0.9/microsoft.extensions.logging.10.0.9.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Extensions.Logging.Abstractions",
+      "Version": "10.0.9",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.logging.abstractions/10.0.9/microsoft.extensions.logging.abstractions.10.0.9.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Extensions.Options",
+      "Version": "10.0.9",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.options/10.0.9/microsoft.extensions.options.10.0.9.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Extensions.Options.ConfigurationExtensions",
+      "Version": "10.0.9",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.options.configurationextensions/10.0.9/microsoft.extensions.options.configurationextensions.10.0.9.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Extensions.Primitives",
+      "Version": "10.0.9",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.primitives/10.0.9/microsoft.extensions.primitives.10.0.9.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.NET.Test.Sdk",
+      "Version": "17.14.1",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.net.test.sdk/17.14.1/microsoft.net.test.sdk.17.14.1.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.TestPlatform.ObjectModel",
+      "Version": "17.14.1",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.testplatform.objectmodel/17.14.1/microsoft.testplatform.objectmodel.17.14.1.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.TestPlatform.TestHost",
+      "Version": "17.14.1",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.testplatform.testhost/17.14.1/microsoft.testplatform.testhost.17.14.1.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Testing.Extensions.TrxReport.Abstractions",
+      "Version": "1.5.3",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.testing.extensions.trxreport.abstractions/1.5.3/microsoft.testing.extensions.trxreport.abstractions.1.5.3.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Testing.Platform",
+      "Version": "1.5.3",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.testing.platform/1.5.3/microsoft.testing.platform.1.5.3.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Testing.Platform.MSBuild",
+      "Version": "1.5.3",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.testing.platform.msbuild/1.5.3/microsoft.testing.platform.msbuild.1.5.3.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Microsoft.Win32.SystemEvents",
+      "Version": "6.0.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/microsoft.win32.systemevents/6.0.0/microsoft.win32.systemevents.6.0.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Newtonsoft.Json",
+      "Version": "13.0.3",
+      "Url": "https://api.nuget.org/v3-flatcontainer/newtonsoft.json/13.0.3/newtonsoft.json.13.0.3.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Penghou.Baize",
+      "Version": "0.3.0-preview.5",
+      "Url": "https://api.nuget.org/v3-flatcontainer/penghou.baize/0.3.0-preview.5/penghou.baize.0.3.0-preview.5.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Penghou.Baize.Tools",
+      "Version": "0.3.0-preview.5",
+      "Url": "https://api.nuget.org/v3-flatcontainer/penghou.baize.tools/0.3.0-preview.5/penghou.baize.tools.0.3.0-preview.5.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Penghou.Nuwa",
+      "Version": "1.0.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/penghou.nuwa/1.0.0/penghou.nuwa.1.0.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "Penghou.Workflow.Abstractions",
+      "Version": "0.1.0-preview.2",
+      "Url": "https://api.nuget.org/v3-flatcontainer/penghou.workflow.abstractions/0.1.0-preview.2/penghou.workflow.abstractions.0.1.0-preview.2.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "SQLitePCLRaw.bundle_e_sqlite3",
+      "Version": "2.1.13",
+      "Url": "https://api.nuget.org/v3-flatcontainer/sqlitepclraw.bundle_e_sqlite3/2.1.13/sqlitepclraw.bundle_e_sqlite3.2.1.13.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "SQLitePCLRaw.core",
+      "Version": "2.1.13",
+      "Url": "https://api.nuget.org/v3-flatcontainer/sqlitepclraw.core/2.1.13/sqlitepclraw.core.2.1.13.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "SQLitePCLRaw.lib.e_sqlite3",
+      "Version": "2.1.13",
+      "Url": "https://api.nuget.org/v3-flatcontainer/sqlitepclraw.lib.e_sqlite3/2.1.13/sqlitepclraw.lib.e_sqlite3.2.1.13.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "SQLitePCLRaw.provider.e_sqlite3",
+      "Version": "2.1.13",
+      "Url": "https://api.nuget.org/v3-flatcontainer/sqlitepclraw.provider.e_sqlite3/2.1.13/sqlitepclraw.provider.e_sqlite3.2.1.13.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "System.Configuration.ConfigurationManager",
+      "Version": "6.0.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/system.configuration.configurationmanager/6.0.0/system.configuration.configurationmanager.6.0.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "System.Diagnostics.DiagnosticSource",
+      "Version": "10.0.9",
+      "Url": "https://api.nuget.org/v3-flatcontainer/system.diagnostics.diagnosticsource/10.0.9/system.diagnostics.diagnosticsource.10.0.9.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "System.Drawing.Common",
+      "Version": "6.0.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/system.drawing.common/6.0.0/system.drawing.common.6.0.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "System.Security.Cryptography.ProtectedData",
+      "Version": "6.0.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/system.security.cryptography.protecteddata/6.0.0/system.security.cryptography.protecteddata.6.0.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "System.Security.Permissions",
+      "Version": "6.0.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/system.security.permissions/6.0.0/system.security.permissions.6.0.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "System.Windows.Extensions",
+      "Version": "6.0.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/system.windows.extensions/6.0.0/system.windows.extensions.6.0.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "xunit.analyzers",
+      "Version": "1.20.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/xunit.analyzers/1.20.0/xunit.analyzers.1.20.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "xunit.runner.visualstudio",
+      "Version": "4.0.0-pre.4",
+      "Url": "https://api.nuget.org/v3-flatcontainer/xunit.runner.visualstudio/4.0.0-pre.4/xunit.runner.visualstudio.4.0.0-pre.4.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "xunit.v3",
+      "Version": "1.1.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/xunit.v3/1.1.0/xunit.v3.1.1.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "xunit.v3.assert",
+      "Version": "1.1.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/xunit.v3.assert/1.1.0/xunit.v3.assert.1.1.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "xunit.v3.common",
+      "Version": "1.1.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/xunit.v3.common/1.1.0/xunit.v3.common.1.1.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "xunit.v3.core",
+      "Version": "1.1.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/xunit.v3.core/1.1.0/xunit.v3.core.1.1.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "xunit.v3.extensibility.core",
+      "Version": "1.1.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/xunit.v3.extensibility.core/1.1.0/xunit.v3.extensibility.core.1.1.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "xunit.v3.runner.common",
+      "Version": "1.1.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/xunit.v3.runner.common/1.1.0/xunit.v3.runner.common.1.1.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    },
+    {
+      "Id": "xunit.v3.runner.inproc.console",
+      "Version": "1.1.0",
+      "Url": "https://api.nuget.org/v3-flatcontainer/xunit.v3.runner.inproc.console/1.1.0/xunit.v3.runner.inproc.console.1.1.0.nupkg",
+      "HttpStatus": 200,
+      "Available": true
+    }
+  ],
+  "ProposedTags": [
+    {
+      "Repository": "Fuwen",
+      "Tag": "v0.1.0-preview.20",
+      "Exists": false
+    },
+    {
+      "Repository": "Zhinu",
+      "Tag": "v0.2.0-preview.10",
+      "Exists": false
+    }
+  ],
+  "InspectedWorkflowAndFeedSnapshots": [
+    {
+      "File": ".github/workflows/publish.yml",
+      "Sha256": "80b9adee37b703c32fe82db190ab95081069ba3a4d8c5fb27b1e45010a58bdb4"
+    },
+    {
+      "File": "NuGet.config",
+      "Sha256": "48fb4648a0f142ad3b9542966bbc5aa13d9f97ba5d325ca8bb6a61acb56d69f9"
+    },
+    {
+      "File": "tests/Penghou.Fuwen.MarangConsumer.Tests/nuget.config",
+      "Sha256": "c6bd3ae9b9121fde0356586f781a3e539877f86286c47b1933c838abaf8d9340"
+    },
+    {
+      "File": "tests/Penghou.Fuwen.ReviewConsumer.Tests/nuget.config",
+      "Sha256": "c6bd3ae9b9121fde0356586f781a3e539877f86286c47b1933c838abaf8d9340"
+    },
+    {
+      "File": "../zhinu-activity-groups/.github/workflows/publish.yml",
+      "Sha256": "3dfff0129c532d5e388c744e832628043fb0e95530bbf3435b7654de38d6a472"
+    }
+  ],
+  "OpenGates": [
+    "Native preview.10 indexing and public archive qualification",
+    "Fuwen release workflow native-feed preparation/public source mapping",
+    "Selection and qualification of actual upload archives",
+    "Separate authorization for native and Fuwen publication",
+    "Signed indexed archive hashes, public-only consumer restore and downstream adoption"
+  ],
+  "PublicSigningBoundary": "NuGet.org repository-signs uploads. Candidate upload archive hashes and signed public archive hashes are distinct records; compare managed payloads and nuspec identity/source/dependencies and verify signatures. Preserve original candidate pins.",
+  "ReliabilityFollowUp": "../reliability/windows-sqlite-process-loss.md",
+  "FormalRcGraduationClaimed": false,
+  "ArchivePathConvention": "Archive, asset and snapshot File fields are relative to the Fuwen repository; ../zhinu-activity-groups names the sibling checkout. QualificationRecord and ReliabilityFollowUp links are relative to this release document.",
+  "CandidateArchivesAreUnsigned": true
+}

@@ -72,6 +72,8 @@ The source tree contains unreleased corrective changes after
 `0.1.0-preview.11`; NuGet badges and the install commands below refer to
 published packages. See the [changelog](CHANGELOG.md) and
 [migration notes](docs/consumer-migration.md) before upgrading.
+The activity-group preview.20 [release packet](docs/releases/preview20-readiness.md)
+records the qualified candidate and remaining publication/public-feed gates.
 
 | Package | Responsibility |
 | --- | --- |

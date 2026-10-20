@@ -45,6 +45,12 @@ contract versions. Consumer-visible breaking changes are called out under
 
 ## 0.1.0-preview.20
 
+**Breaking changes (new compilation/admission):** newly compiled dynamic plans
+use the versioned v6 identity contract. Registration now rejects ambiguous
+ungrouped repeat names and oversized provider runtime identities, including
+registration of older plans. Existing definitions retain their original keys;
+no public member is removed. See the [migration recipe](docs/consumer-migration.md).
+
 - Reject duplicate ungrouped repeat names before storage; separate regions must
   not reuse the same native loop state. Validate full provider runtime-path byte
   budgets before writing executable definitions.

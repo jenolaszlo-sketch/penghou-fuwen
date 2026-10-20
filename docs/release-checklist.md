@@ -3,6 +3,12 @@
 Use this checklist for every preview package set. A green test count alone does
 not satisfy a semantic release gate.
 
+The [preview.20 release packet](releases/preview20-readiness.md) records the
+qualified candidate, exact archive set, native publication prerequisite and
+remaining workflow/public-feed gates. It is not a publication approval or a
+formal RC graduation claim. [REL-SQLITE-01](reliability/windows-sqlite-process-loss.md)
+tracks the separate unexplained Windows I/O incident.
+
 ## Contracts
 
 - [ ] The roadmap identifies the exact completed delivery milestone and all

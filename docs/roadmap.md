@@ -1600,3 +1600,17 @@ aliasing. Preview.20 compiles new dynamic plans to the
 remain pinned for replay. Native preview.10/schema 10 is unchanged. The separate
 qualification ledger retains the exact candidate source, compatibility and
 Windows/Linux evidence; the original v5 checkpoint remains immutable.
+
+### Preview.20 release preparation -- 2026-10-20
+
+Prioritize the [release packet](releases/preview20-readiness.md) and dependency
+adoption before adding activity-group features. Native preview.10 must be
+published/indexed and its public archives qualified before Fuwen preview.20.
+The current Fuwen tag workflow does not prepare its mapped local native feed;
+resolve that gate and qualify the actual upload/indexed bytes before tagging.
+NuGet repository signing gives public archives their own hashes; preserve the
+candidate pins. Adoption then proceeds through Guihua to applications.
+[REL-SQLITE-01](reliability/windows-sqlite-process-loss.md) remains open, with
+focused stress/diagnostic work triggered by recurrence. This is release
+preparation for a qualified preview, not a claim that the formal RC graduation
+policy has been satisfied. Publication remains a separate decision.

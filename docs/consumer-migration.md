@@ -38,10 +38,14 @@ Consumer-visible breaking changes are listed here per preview, with the exact
 edits a downstream package needs. The matching [CHANGELOG](../CHANGELOG.md)
 entry names the change; this document gives the recipe.
 
-Publish order matters: **Fuwen → Guihua (or any adapter) → applications**
+Publish order matters: **Zhinu → Fuwen → Guihua (or any adapter) → applications**
 (Guyabano, Marang). A consumer can only move once every package in its
 dependency chain is indexed on NuGet.org, because a preview adapter pins the
 exact Fuwen preview it was built against.
+For preview.20, native preview.10 is itself unpublished at the release-preparation
+checkpoint. Use the [release packet](releases/preview20-readiness.md) for the
+required public-feed and actual indexed-archive qualification; the candidate
+feed and original unsigned archive pin are separate records.
 
 ## Unreleased source after preview.11
 

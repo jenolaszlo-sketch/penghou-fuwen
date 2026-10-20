@@ -100,11 +100,13 @@ original static record remains Windows-only and does not authorize publication.
 
 ## Candidate package reproduction
 
-The current branch restores the exact seven unpublished Zhinu preview.9
-packages recorded in
-[`qualification/activity-groups/zhinu-candidate.json`](qualification/activity-groups/zhinu-candidate.json).
+The current branch restores the exact seven unpublished Zhinu preview.10
+packages in [the current pin](qualification/activity-groups/zhinu-candidate.json).
 Run `eng/Prepare-ZhinuCandidate.ps1 -ArtifactsDirectory <qualified-package-directory>`
-first with the exact preview.9 directory. The original repeat preview.7 pin is
+with the exact Q33 directory. The original ZG-7 preview.9 archives are preserved in
+[their historical pin](qualification/activity-groups/zhinu-zg7-candidate.json);
+reproduce that checkpoint from its recorded source checkout.
+The original repeat preview.7 pin is
 preserved in [its own record](qualification/activity-groups/zhinu-repeat-candidate.json).
 The earlier static-only
 preview.5 closure remains recorded in

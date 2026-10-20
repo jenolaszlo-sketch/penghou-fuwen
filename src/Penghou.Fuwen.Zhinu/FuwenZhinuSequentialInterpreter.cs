@@ -510,6 +510,8 @@ internal static partial class FuwenZhinuSequentialInterpreter
         IReadOnlyCollection<string> inheritedDependencies,
         CancellationToken cancellationToken)
     {
+        // v5 terminal projections derive solely from durable selected item outcomes.
+        if (plan.IrVersion == FuwenContracts.SelectionIrVersion) return value;
         var requestJson = FuwenRuntimeValueWire.Serialize(new ReturnRequestIdentity(node.StructuralPath, value));
         var outputJson = await context.StepAsync<JsonElement, JsonElement>(
             node.StructuralPath,

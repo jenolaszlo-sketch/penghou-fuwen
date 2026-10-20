@@ -71,6 +71,12 @@ internal static class FuwenZhinuStepKeys
         RepeatBodyStepName(conditionalPath, repeatPath, expandedGroups) + "-merge";
 
     internal static string GroupedFanOutPrefix(string path) => "fuwen-fanout-v1-" + FullHash(path);
+    internal static string SelectionRuntimePath(string path, int epoch) =>
+        path + "/$epoch/" + epoch.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    internal static string SelectionPrefix(string path, int epoch) =>
+        GroupedFanOutPrefix(path) + "-epoch-" + epoch.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
     internal static string GroupedFanOutSelection(string path) => path + "/$selection";
     internal static string GroupedFanOutItem(string path, string token) => GroupedFanOutPrefix(path) + "." + token;
     internal static string GroupedFanOutOperation(string path, string token, string operationName) =>

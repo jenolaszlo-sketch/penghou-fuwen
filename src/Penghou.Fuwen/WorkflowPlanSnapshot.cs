@@ -273,7 +273,11 @@ internal static class WorkflowPlanSnapshot
                     CloneBinding(value.Yield, state),
                     CloneType(value.ResultType, state),
                     value.MaximumItems,
-                    value.MaximumConcurrency),
+                    value.MaximumConcurrency)
+                {
+                    Selection = value.Selection is { } selection ? new FanOutSelection(
+                        CloneBinding(selection.Epoch, state), CloneBinding(selection.ReplacesEpoch, state), selection.MaximumEpochs) : null,
+                },
                 RepeatNode value => new RepeatNode(
                     value.Name,
                     value.StructuralPath,

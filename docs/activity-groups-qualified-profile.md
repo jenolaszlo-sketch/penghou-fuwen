@@ -1,18 +1,12 @@
 # Activity groups: supported cross-repository profile
 
-The current unpublished candidate pair is Fuwen preview.18 and exact Zhinu
-preview.9. The [native pin](qualification/activity-groups/zhinu-candidate.json)
-identifies the original Windows archives and source. Earlier static, repeat and
-fan-out qualification records retain their original source and archive pins.
-[Cross-platform qualification](qualification/activity-groups/zg7.md) and the
-[second correctness pass](qualification/activity-groups/second-pass-review.md) are
-complete for this bounded profile. The later
-[native Q33 checkpoint](https://github.com/jenolaszlo-sketch/penghou-zhinu/blob/4b927d23d2b3aef0e3de4057b06d4e7372561f7f/docs/qualification/activity-groups/q33.md) adds explicit
-branch replacement and retirement in Zhinu preview.10/schema 10. Fuwen has not
-adopted that capability: evolving-selection lowering, a new exact package pin and
-adapter recovery/progress qualification remain a separate integration activity.
-The native checkpoint does not extend the DSL profile described here. Candidate
-preparation is not package publication.
+The current unpublished candidate pair is Fuwen preview.19 and exact Zhinu
+preview.10/schema 10. The [native pin](qualification/activity-groups/zhinu-candidate.json)
+identifies the original Q33 archives and source. The prior preview.18/preview.9
+[ZG-7 qualification](qualification/activity-groups/zg7.md) retains its original
+[archive pin](qualification/activity-groups/zhinu-zg7-candidate.json) and evidence.
+The new [explicit selection profile](activity-groups-selection.md) extends that
+bounded baseline. Candidate preparation is not package publication.
 
 ## Supported authoring and execution
 
@@ -28,12 +22,12 @@ both branches, recursively. A possibly empty item path is rejected before writes
 relationships between separate conditions are not inferred. Groups change neither
 authority nor provider policy. The DSL has no child-workflow syntax.
 
-Nested/mixed dynamic scopes, evolving selection, fan-out item waits/checkpoints
+Unbounded or nonterminal selection, nested/mixed dynamic scopes, fan-out item waits/checkpoints
 or value merges, grouped coordinated inference and item-local fallback remain
 preflight rejections. These are explicitly allowed exclusions in the Q43–Q45
 qualification contract, not implicitly supported native combinations. Broader
-language support is separate work. No public group cancellation/retry API or
-first-class selection epoch API is introduced.
+language support is separate work. Explicit epochs are available only through the new v5 terminal selection
+contract. No public group cancellation/retry API is introduced.
 
 ## Inspection and recovery
 

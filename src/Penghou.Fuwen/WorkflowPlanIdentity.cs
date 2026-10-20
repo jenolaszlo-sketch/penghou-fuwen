@@ -174,6 +174,11 @@ public static class WorkflowPlanIdentity
         FanOutNode fanOut => fanOut with
         {
             Body = NormalizeNodes(fanOut.Body),
+            Selection = fanOut.Selection is { } selection ? selection with
+            {
+                Epoch = NormalizeBinding(selection.Epoch),
+                ReplacesEpoch = NormalizeBinding(selection.ReplacesEpoch),
+            } : null,
         },
         RepeatNode repeat => repeat with
         {

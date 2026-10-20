@@ -7,7 +7,7 @@ internal static partial class FuwenZhinuSequentialInterpreter
 {
     private const int MaximumGroupedFanOutVectorBytes = 1_048_576;
     private static string? NodeRuntimePath(FuwenInterpreterState state, string path) =>
-        state.FanOutScope is null ? null : RuntimeNodeIdentity.CreateFanOutItem(state.FanOutPath!,
+        state.FanOutScope is null ? null : RuntimeNodeIdentity.CreateFanOutItem(state.FanOutRuntimePath ?? state.FanOutPath!,
             state.FanOutKey!, FuwenZhinuStepKeys.RepeatBodyStepName(path, state.FanOutPath!, true));
 
     private static ExecutionInvocation CreateNodeInvocation(FuwenInterpreterState state, string fingerprint,
@@ -27,53 +27,73 @@ internal static partial class FuwenZhinuSequentialInterpreter
         FuwenExecutionSchedule schedule, FuwenInterpreterState state,
         IReadOnlyCollection<string> inheritedDependencies, CancellationToken cancellationToken)
     {
-        var source = FuwenBindingEvaluator.Evaluate(node.Source, plan, state);
-        var list = FuwenRuntimeValueWire.NormalizeList(source, node.Item.Type, node.MaximumItems, plan.Schemas);
-        if (list.Items.Count > node.MaximumItems)
-            throw new FuwenZhinuExecutionException("Grouped fan-out source exceeded its declared bound.");
-        var inputBuilder = new List<GroupedFanOutInput>();
-        long selectionBytes = 2;
-        foreach (var item in list.Items)
+        var explicitSelection = node.Selection;
+        GroupedFanOutInput[] selected;
+        int? epoch = null;
+        int replacesEpoch = 0;
+        var runtimePath = node.StructuralPath;
+        if (explicitSelection is not null)
         {
-            var itemState = CopyItemState(state, item);
-            var key = FuwenFanOutCoordinator.ToRuntimeKey(FuwenBindingEvaluator.Evaluate(node.Key, plan, itemState));
-            var selectedItem = new GroupedFanOutInput(key, RuntimeNodeIdentity.GetKeyPathSegment(key),
-                FuwenRuntimeValueWire.ToJson(item), FuwenZhinuStepKeys.FanOutItem(node.StructuralPath, key));
-            selectionBytes += CanonicalJson.Serialize(selectedItem).Length + 1L;
-            if (selectionBytes > MaximumGroupedFanOutVectorBytes)
-                throw new FuwenZhinuExecutionException("Grouped fan-out selection exceeds its 1 MiB vector budget.");
-            inputBuilder.Add(selectedItem);
+            // Evaluated values are output of this boundary, not its input identity.
+            // Restart is explicit; replay never consults today's selector values.
+            var selection = await context.StepAsync(
+                FuwenZhinuStepKeys.GroupedFanOutSelection(node.StructuralPath),
+                FuwenRuntimeValueWire.Serialize(new { Contract = "fuwen-selection/v1", Node = node.StructuralPath, Fingerprint = fingerprint }),
+                (_, _, _) =>
+                {
+                    var next = ReadEpoch(explicitSelection.Epoch, plan, state);
+                    var previous = ReadEpoch(explicitSelection.ReplacesEpoch, plan, state);
+                    ValidateEpochs(next, previous, explicitSelection.MaximumEpochs);
+                    var vector = FuwenRuntimeValueWire.Serialize(new GroupedSelectionVector(next, previous,
+                        BuildSelectedInputs(node, plan, state, FuwenZhinuStepKeys.SelectionRuntimePath(node.StructuralPath, next))));
+                    if (CanonicalJson.Canonicalize(vector).Length > MaximumGroupedFanOutVectorBytes)
+                        throw new FuwenZhinuExecutionException("Selection exceeds its 1 MiB vector budget.");
+                    return Task.FromResult(vector);
+                },
+                GroupOptions(state, context, node.StructuralPath,
+                    StepOptionsForBindings(inheritedDependencies, [node.Source, explicitSelection.Epoch, explicitSelection.ReplacesEpoch]),
+                    ActivityGroupMemberRole.Control), cancellationToken).ConfigureAwait(false);
+            var bytes = CanonicalJson.Canonicalize(selection);
+            if (bytes.Length > MaximumGroupedFanOutVectorBytes)
+                throw new FuwenZhinuExecutionException("Persisted selection exceeds its vector budget.");
+            var vector = CanonicalJson.Deserialize<GroupedSelectionVector>(bytes)
+                ?? throw new FuwenZhinuExecutionException("Persisted selection is missing.");
+            ValidateEpochs(vector.Epoch, vector.ReplacesEpoch, explicitSelection.MaximumEpochs);
+            epoch = vector.Epoch;
+            replacesEpoch = vector.ReplacesEpoch;
+            runtimePath = FuwenZhinuStepKeys.SelectionRuntimePath(node.StructuralPath, vector.Epoch);
+            selected = vector.Items;
         }
-        var inputs = inputBuilder.ToArray();
-        RuntimeNodeIdentity.ValidateUniqueKeys(inputs.Select(item => item.Key));
-
-        // The selected vector is durable before native item admission or any body operation.
-        // Recovery consumes the persisted vector; it never derives identities from positions.
-        var selection = await context.StepAsync(FuwenZhinuStepKeys.GroupedFanOutSelection(node.StructuralPath),
-            FuwenRuntimeValueWire.Serialize(inputs), (value, _, _) => Task.FromResult(value),
-            GroupOptions(state, context, node.StructuralPath,
-                StepOptionsForBindings(inheritedDependencies, [node.Source]), ActivityGroupMemberRole.Control),
-            cancellationToken).ConfigureAwait(false);
-        var selectionBytesPersisted = CanonicalJson.Canonicalize(selection);
-        if (selectionBytesPersisted.Length > MaximumGroupedFanOutVectorBytes)
-            throw new FuwenZhinuExecutionException("Persisted grouped selection exceeds its vector budget.");
-        if (!selectionBytesPersisted.AsSpan().SequenceEqual(CanonicalJson.Serialize(inputs)))
-            throw new FuwenZhinuExecutionException("Persisted grouped selection differs from its admitted input.");
-        var selected = CanonicalJson.Deserialize<GroupedFanOutInput[]>(selectionBytesPersisted)
-            ?? throw new FuwenZhinuExecutionException("Persisted grouped selection is missing.");
+        else
+        {
+            var inputs = BuildSelectedInputs(node, plan, state, runtimePath);
+            var selection = await context.StepAsync(FuwenZhinuStepKeys.GroupedFanOutSelection(node.StructuralPath),
+                FuwenRuntimeValueWire.Serialize(inputs), (value, _, _) => Task.FromResult(value),
+                GroupOptions(state, context, node.StructuralPath,
+                    StepOptionsForBindings(inheritedDependencies, [node.Source]), ActivityGroupMemberRole.Control),
+                cancellationToken).ConfigureAwait(false);
+            var bytes = CanonicalJson.Canonicalize(selection);
+            if (bytes.Length > MaximumGroupedFanOutVectorBytes || !bytes.AsSpan().SequenceEqual(CanonicalJson.Serialize(inputs)))
+                throw new FuwenZhinuExecutionException("Persisted grouped selection differs from its admitted input or exceeds its budget.");
+            selected = CanonicalJson.Deserialize<GroupedFanOutInput[]>(bytes)
+                ?? throw new FuwenZhinuExecutionException("Persisted grouped selection is missing.");
+        }
         RuntimeNodeIdentity.ValidateUniqueKeys(selected.Select(item => item.Key));
         if (selected.Length > node.MaximumItems)
             throw new FuwenZhinuExecutionException("Persisted grouped selection exceeds its bound.");
         foreach (var item in selected)
         {
             if (item.Token != RuntimeNodeIdentity.GetKeyPathSegment(item.Key) ||
-                item.RuntimePath != FuwenZhinuStepKeys.FanOutItem(node.StructuralPath, item.Key))
+                item.RuntimePath != FuwenZhinuStepKeys.FanOutItem(runtimePath, item.Key))
                 throw new FuwenZhinuExecutionException("Persisted grouped selection has inconsistent identity.");
             _ = FuwenRuntimeValueWire.FromJson(item.Value, node.Item.Type, plan.Schemas);
         }
+        var prefix = epoch is { } currentEpoch ? FuwenZhinuStepKeys.SelectionPrefix(node.StructuralPath, currentEpoch)
+            : FuwenZhinuStepKeys.GroupedFanOutPrefix(node.StructuralPath);
 
         var manifest = state.Groups!.Manifest;
-        var binding = state.Groups.FanOutBinding(manifest, node);
+        var binding = state.Groups.FanOutBinding(manifest, node,
+            replacesEpoch == 0 ? null : FuwenZhinuStepKeys.SelectionPrefix(node.StructuralPath, replacesEpoch));
         long outcomeBytes = 2;
         FanOutItemOutcome BudgetOutcome(FanOutItemOutcome outcome)
         {
@@ -82,12 +102,12 @@ internal static partial class FuwenZhinuSequentialInterpreter
                 throw new FuwenZhinuExecutionException("Grouped fan-out outcomes exceed their 1 MiB vector budget.");
             return outcome;
         }
-        var outcomes = await context.FanOutBodyAsync(FuwenZhinuStepKeys.GroupedFanOutPrefix(node.StructuralPath),
+        var outcomes = await context.FanOutBodyAsync(prefix,
             selected, item => item.Token,
             async (item, scope, token) =>
             {
                 var local = CopyItemState(state, FuwenRuntimeValueWire.FromJson(item.Value, node.Item.Type, plan.Schemas),
-                    state.Groups.ForFanOut(node, scope), scope, node.StructuralPath, item.Key);
+                    state.Groups.ForFanOut(node, scope), scope, node.StructuralPath, item.Key, runtimePath);
                 try
                 {
                     await ExecuteGroupedFanOutRegionAsync(node.StructuralPath + "/$body", plan, fingerprint,
@@ -107,7 +127,7 @@ internal static partial class FuwenZhinuSequentialInterpreter
             new StepOptions { FanOutGroup = binding, DependsOn = [binding.SelectionStepKey] }, cancellationToken).ConfigureAwait(false);
 
         var aggregateInput = FuwenRuntimeValueWire.Serialize(outcomes);
-        var aggregate = await context.StepAsync(FuwenZhinuStepKeys.FanOutAggregate(node.StructuralPath), aggregateInput,
+        var aggregate = explicitSelection is not null ? aggregateInput : await context.StepAsync(FuwenZhinuStepKeys.FanOutAggregate(node.StructuralPath), aggregateInput,
             (value, _, _) => Task.FromResult(value),
             GroupOptions(state, context, node.StructuralPath, new StepOptions
             {
@@ -124,7 +144,7 @@ internal static partial class FuwenZhinuSequentialInterpreter
 
     private static FuwenInterpreterState CopyItemState(FuwenInterpreterState source, RuntimeValue item,
         FuwenGroupExecution? groups = null, ActivityGroupFanOutItemScope? scope = null,
-        string? path = null, RuntimeIdentityKey? key = null)
+        string? path = null, RuntimeIdentityKey? key = null, string? runtimePath = null)
     {
         var state = new FuwenInterpreterState(source.Input)
         {
@@ -132,6 +152,7 @@ internal static partial class FuwenZhinuSequentialInterpreter
             Groups = groups,
             FanOutScope = scope,
             FanOutPath = path,
+            FanOutRuntimePath = runtimePath,
             FanOutKey = key,
             TrustedToolSignatures = source.TrustedToolSignatures
         };
@@ -178,5 +199,46 @@ internal static partial class FuwenZhinuSequentialInterpreter
             }
     }
 
+    private static int ReadEpoch(Binding binding, WorkflowPlan plan, FuwenInterpreterState state)
+    {
+        var value = FuwenRuntimeValueWire.ToJson(FuwenBindingEvaluator.Evaluate(binding, plan, state));
+        if (value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out var epoch))
+            throw new FuwenZhinuExecutionException("Selection epoch must be a bounded integer.");
+        return epoch;
+    }
+
+    private static void ValidateEpochs(int epoch, int previous, int maximum)
+    {
+        if (epoch < 1 || epoch > maximum || previous < 0 || previous >= epoch || (epoch == 1) != (previous == 0))
+            throw new FuwenZhinuExecutionException("Selection epochs require initial 1/0, then a fresh bounded epoch naming an earlier epoch.");
+    }
+
+    private static GroupedFanOutInput[] BuildSelectedInputs(FanOutNode node, WorkflowPlan plan,
+        FuwenInterpreterState state, string runtimePath)
+    {
+        var source = FuwenBindingEvaluator.Evaluate(node.Source, plan, state);
+        var list = FuwenRuntimeValueWire.NormalizeList(source, node.Item.Type, node.MaximumItems, plan.Schemas);
+        if (list.Items.Count > node.MaximumItems)
+            throw new FuwenZhinuExecutionException("Grouped fan-out source exceeded its declared bound.");
+        var inputBuilder = new List<GroupedFanOutInput>();
+        long selectionBytes = 2;
+        foreach (var item in list.Items)
+        {
+            var itemState = CopyItemState(state, item);
+            var key = FuwenFanOutCoordinator.ToRuntimeKey(FuwenBindingEvaluator.Evaluate(node.Key, plan, itemState));
+            var selectedItem = new GroupedFanOutInput(key, RuntimeNodeIdentity.GetKeyPathSegment(key),
+                FuwenRuntimeValueWire.ToJson(item), FuwenZhinuStepKeys.FanOutItem(runtimePath, key));
+            selectionBytes += CanonicalJson.Serialize(selectedItem).Length + 1L;
+            if (selectionBytes > MaximumGroupedFanOutVectorBytes)
+                throw new FuwenZhinuExecutionException("Grouped fan-out selection exceeds its 1 MiB vector budget.");
+            inputBuilder.Add(selectedItem);
+        }
+        var inputs = inputBuilder.ToArray();
+        RuntimeNodeIdentity.ValidateUniqueKeys(inputs.Select(item => item.Key));
+        return inputs;
+
+    }
+
+    private sealed record GroupedSelectionVector(int Epoch, int ReplacesEpoch, GroupedFanOutInput[] Items);
     private sealed record GroupedFanOutInput(RuntimeIdentityKey Key, string Token, JsonElement Value, string RuntimePath);
 }

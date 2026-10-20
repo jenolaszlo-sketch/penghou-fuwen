@@ -636,6 +636,12 @@ internal static class WorkflowBindingValidator
                     ValidateBinding(@return.Value, plan.OutputType, location, plan, locations, diagnostics);
                     break;
                 case FanOutNode fanOut:
+                    if (fanOut.Selection is { } selection)
+                    {
+                        var integer = new PrimitiveType(FuwenPrimitiveKind.Integer);
+                        ValidateBinding(selection.Epoch, integer, location, plan, locations, diagnostics, exact: true);
+                        ValidateBinding(selection.ReplacesEpoch, integer, location, plan, locations, diagnostics, exact: true);
+                    }
                     var sourceType = ValidateBinding(fanOut.Source, null, location, plan, locations, diagnostics);
                     if (sourceType is not ListType sourceList || !EquivalentExact(sourceList.ItemType, fanOut.Item.Type) || sourceList.MaxItems > fanOut.MaximumItems)
                         diagnostics.Add(new CompilerDiagnostic(
@@ -1364,6 +1370,11 @@ internal static class PlanUsage
                     break;
                 case FanOutNode fanOut:
                     CountBinding(fanOut.Source, currentDepth, ref expressions, ref depth);
+                    if (fanOut.Selection is { } selection)
+                    {
+                        CountBinding(selection.Epoch, currentDepth, ref expressions, ref depth);
+                        CountBinding(selection.ReplacesEpoch, currentDepth, ref expressions, ref depth);
+                    }
                     CountBinding(fanOut.Key, currentDepth + 1, ref expressions, ref depth);
                     CountBinding(fanOut.Yield, currentDepth + 1, ref expressions, ref depth);
                     CountNodes(fanOut.Body, currentDepth + 1, ref nodes, ref expressions, ref depth);
@@ -1555,6 +1566,11 @@ internal static class PlanUsage
                     break;
                 case FanOutNode fanOut:
                     AddBindingText(fanOut.Source, ref bytes);
+                    if (fanOut.Selection is { } selection)
+                    {
+                        AddBindingText(selection.Epoch, ref bytes);
+                        AddBindingText(selection.ReplacesEpoch, ref bytes);
+                    }
                     AddText(fanOut.Item.Name, ref bytes);
                     AddTypeText(fanOut.Item.Type, ref bytes);
                     AddBindingText(fanOut.Key, ref bytes);

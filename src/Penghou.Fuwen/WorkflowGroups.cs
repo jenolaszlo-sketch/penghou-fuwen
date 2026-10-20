@@ -155,7 +155,7 @@ public sealed class GroupedWorkflowDefinitionDocument
             foreach (var child in children) pending.Push(child);
         }
         if (groups.Members.Any(member => !paths.Contains(member.NodePath))) throw new ArgumentException("Group companion references an unknown expanded node.");
-        if (plan.IrVersion == FuwenContracts.GroupExpansionIrVersion)
+        if (plan.IrVersion is FuwenContracts.GroupExpansionIrVersion or FuwenContracts.SelectionIrVersion)
         {
             var ownership = groups.Members.ToDictionary(member => member.NodePath, StringComparer.Ordinal);
             foreach (var group in groups.Groups)

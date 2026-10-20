@@ -95,7 +95,9 @@ public sealed class WorkflowPlanBuilder
     public WorkflowPlan Build()
     {
         var plan = new WorkflowPlan(
-            HasExecutionIntent(nodes)
+            nodes.OfType<FanOutNode>().Any(node => node.Selection is not null)
+                ? FuwenContracts.SelectionIrVersion
+                : HasExecutionIntent(nodes)
                 ? FuwenContracts.ExecutionIntentIrVersion
                 : HasInferenceFallback(nodes)
                     ? FuwenContracts.InferenceFallbackIrVersion
@@ -225,6 +227,11 @@ public sealed class WorkflowPlanBuilder
                     break;
                 case FanOutNode fanOut:
                     CollectBindingDescriptors(fanOut.Source, bindings);
+                    if (fanOut.Selection is { } selection)
+                    {
+                        CollectBindingDescriptors(selection.Epoch, bindings);
+                        CollectBindingDescriptors(selection.ReplacesEpoch, bindings);
+                    }
                     CollectBindingDescriptors(fanOut.Key, bindings);
                     CollectBindingDescriptors(fanOut.Yield, bindings);
                     CollectType(fanOut.Item.Type, bindings);

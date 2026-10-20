@@ -1,42 +1,42 @@
 {
-  "Version": "0.2.0-preview.9",
-  "SourceCommit": "246d535679cca2ca5130ecfad62437dbb1fdd81d",
+  "Version": "0.2.0-preview.10",
+  "SourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
   "Publication": "Unpublished local candidate",
   "Packages": [
     {
       "Id": "Penghou.Zhinu",
-      "File": "Penghou.Zhinu.0.2.0-preview.9.nupkg",
-      "Sha256": "222fb33f92f88d3560dd5a616cc929eb8145b355d96c09f514b6917116e4eb98"
+      "File": "Penghou.Zhinu.0.2.0-preview.10.nupkg",
+      "Sha256": "a6499e7ee5dfd858b413620b3200d73db7835b43591c8105b5d64fc3b6021a9c"
     },
     {
       "Id": "Penghou.Zhinu.Agents",
-      "File": "Penghou.Zhinu.Agents.0.2.0-preview.9.nupkg",
-      "Sha256": "cf8a7224924e042ba03818aac4117a33e1541590c7a65401d44b64b6a6760c98"
+      "File": "Penghou.Zhinu.Agents.0.2.0-preview.10.nupkg",
+      "Sha256": "1a286bf73e8ab071769883a766f3f536fb8b60b95bd93a28ff41b95d04d0409e"
     },
     {
       "Id": "Penghou.Zhinu.Hosting",
-      "File": "Penghou.Zhinu.Hosting.0.2.0-preview.9.nupkg",
-      "Sha256": "c43aa005d4ae50fb5a3b073f94250588aeedb0fe2c90f3f731ceabd37f7f87ea"
+      "File": "Penghou.Zhinu.Hosting.0.2.0-preview.10.nupkg",
+      "Sha256": "930932a8645199b0b09052f209d8b1e3a6c8f7bb6ae7b042c1de7cef3a153784"
     },
     {
       "Id": "Penghou.Zhinu.Hosting.AspNetCore",
-      "File": "Penghou.Zhinu.Hosting.AspNetCore.0.2.0-preview.9.nupkg",
-      "Sha256": "5fa98d7bb66b81214c1dafa17fbbddd0ef56395a7a121e018c5716005e70e931"
+      "File": "Penghou.Zhinu.Hosting.AspNetCore.0.2.0-preview.10.nupkg",
+      "Sha256": "ba04e30b2acf77e07b26f009267f360864dfa01e05982ed4c7583addd245c2ed"
     },
     {
       "Id": "Penghou.Zhinu.OpenTelemetry",
-      "File": "Penghou.Zhinu.OpenTelemetry.0.2.0-preview.9.nupkg",
-      "Sha256": "d694e829a72f602c3601019084d955569edab95c274983754284ceb68dca1fa4"
+      "File": "Penghou.Zhinu.OpenTelemetry.0.2.0-preview.10.nupkg",
+      "Sha256": "3522d0aa231d035b1603c82e0c6ab150b82c05042e625e305f5bb91585ee7e11"
     },
     {
       "Id": "Penghou.Zhinu.Sqlite",
-      "File": "Penghou.Zhinu.Sqlite.0.2.0-preview.9.nupkg",
-      "Sha256": "ee90123051e235506a817e58acd11f2a14865f96280e8a942dfa075c912ed66b"
+      "File": "Penghou.Zhinu.Sqlite.0.2.0-preview.10.nupkg",
+      "Sha256": "1ca6927c4b1bb993e1264457a40f1ed5bfb8bd4b067127b8abe2ab10d1fe3840"
     },
     {
       "Id": "Penghou.Zhinu.Testing",
-      "File": "Penghou.Zhinu.Testing.0.2.0-preview.9.nupkg",
-      "Sha256": "c9f6f89f9a881190cf3407d5551e6ab11da4270e633b1577d3c5e70c285f5c13"
+      "File": "Penghou.Zhinu.Testing.0.2.0-preview.10.nupkg",
+      "Sha256": "52b8ee4b416c21af435da18a688e29934a912c2146b4a8da1027541a6836fd1e"
     }
   ]
 }

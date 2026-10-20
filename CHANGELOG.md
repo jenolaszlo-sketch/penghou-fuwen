@@ -43,6 +43,17 @@ contract versions. Consumer-visible breaking changes are called out under
   recovery, privacy, provider, and operator gates. No new NuGet package is
   published by these source changes.
 
+## 0.1.0-preview.19
+
+- Add opt-in bounded grouped selection under `fuwen-ir/v5-selection`: durable
+  epoch membership and explicit native replacement preserve historical work.
+- Qualify a terminal fan-out with at most one selector, independently durable
+  item providers and epoch-aware public mapping. Aggregate/return projections
+  derive from durable item results. Existing v1–v4 plan contracts stay unchanged.
+- Adopt exact unpublished Zhinu preview.10/schema 10; preserve the prior archive
+  pin separately. See the [selection contract](docs/activity-groups-selection.md)
+  and [migration notes](docs/consumer-migration.md).
+
 ## 0.1.0-preview.18
 
 - Reject grouped fan-out bodies without guaranteed durable work on every structural

@@ -637,7 +637,7 @@ internal sealed partial class SourceParser
                 builder.SetExecutionOrder(new WorkflowExecutionOrder(BuildRegions(workflowName, nodes)));
                 plan = builder.Build();
                 if (groupDefinitions.Count != 0)
-                    plan = plan with { IrVersion = FuwenContracts.GroupExpansionIrVersion };
+                    plan = plan with { IrVersion = nodes.OfType<FanOutNode>().Any(node => node.Selection is not null) ? FuwenContracts.SelectionIrVersion : FuwenContracts.GroupExpansionIrVersion };
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
             {
@@ -1222,6 +1222,14 @@ internal sealed partial class SourceParser
         var name = ReadIdentifier("fan-out name");
         if (!Match("over")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'over' before the fan-out source.", Current);
         var source = ParseBinding();
+        FanOutSelection? selection = null;
+        if (Match("selection"))
+        {
+            Expect("epoch"); var epoch = ParseBinding();
+            Expect("replaces"); var replaces = ParseBinding();
+            Expect("max"); var maximumEpochs = ReadBound("selection epoch bound");
+            selection = new FanOutSelection(epoch, replaces, maximumEpochs);
+        }
         if (!Match("as")) Error(CompilerDiagnosticCodes.ParseExpectedToken, "Expected 'as' before the fan-out item binding.", Current);
         var itemName = ReadIdentifier("fan-out item name");
         if (itemName == "input")
@@ -1263,7 +1271,7 @@ internal sealed partial class SourceParser
         nodeTypes.Clear(); foreach (var pair in savedTypes) nodeTypes[pair.Key] = pair.Value;
         nodePaths.Clear(); foreach (var pair in savedPaths) nodePaths[pair.Key] = pair.Value;
         fanOutItemName = savedItem;
-        var node = new FanOutNode(name, path, source, new FanOutItemBinding(itemName, itemType), key, body, yield, resultType, maxItems, maxConcurrency);
+        var node = new FanOutNode(name, path, source, new FanOutItemBinding(itemName, itemType), key, body, yield, resultType, maxItems, maxConcurrency) { Selection = selection };
         nodeTypes[name] = resultType; nodePaths[name] = path;
         AddSpan(path, start, Previous); Ast(); return node;
     }

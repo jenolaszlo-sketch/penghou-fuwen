@@ -12,6 +12,7 @@ credentials, or accepted operational risk.
 
 | Surface | Status | Current boundary |
 | --- | --- | --- |
+| Explicit grouped selection | Bounded unpublished v5 profile | At most one root selector followed by one terminal grouped fan-out and its direct return. Explicit durable epochs and native replacement retain historical membership. Item providers remain independently durable; the public mapper exposes epoch/item scopes. Nested/mixed dynamics and downstream work remain rejected. See the [selection contract](activity-groups-selection.md). |
 | Schemas, enums, capabilities, typed bindings and returns | Supported | Exact catalogue metadata remains authoritative. |
 | Context, activity and inference nodes | Supported | Callables require exact descriptors and host admission. |
 | Conditionals and value-producing merges | Supported | Branches have closed scope; only explicit merges escape values. |

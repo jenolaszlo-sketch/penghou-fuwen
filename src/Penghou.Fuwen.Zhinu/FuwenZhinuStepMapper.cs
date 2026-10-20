@@ -54,6 +54,8 @@ public enum FuwenZhinuStepScopeKind
     Loop = 0,
     /// <summary>A fan-out item scope segment.</summary>
     FanOutItem = 1,
+    /// <summary>A durable explicitly admitted selection epoch.</summary>
+    SelectionEpoch = 2,
 }
 
 /// <summary>One scope segment extracted from a persisted step key.</summary>
@@ -72,7 +74,7 @@ public sealed class FuwenZhinuStepScope
     public FuwenZhinuStepScopeKind Kind { get; }
     /// <summary>Gets the loop or fan-out name.</summary>
     public string Name { get; }
-    /// <summary>Gets the loop iteration, or null for a fan-out item.</summary>
+    /// <summary>Gets the loop iteration or selection epoch, or null for a fan-out item.</summary>
     public int? Iteration { get; }
     /// <summary>Gets the fan-out item token, or null for a loop segment.</summary>
     public string? ItemToken { get; }
@@ -123,6 +125,8 @@ public sealed class FuwenZhinuStepDescriptor
     public string? BodyStepName { get; }
     /// <summary>Gets the fan-out node path for a fan-out item descriptor, else null.</summary>
     public string? FanOutNodePath { get; }
+    /// <summary>Gets the explicit epoch bound, or null for fixed membership.</summary>
+    public int? MaximumSelectionEpochs { get; init; }
 }
 
 /// <summary>A declared/synthetic execution identity matched from a persisted step key.</summary>
@@ -190,15 +194,19 @@ public static class FuwenZhinuStepMapper
 {
     /// <summary>Schema version of the emitted map. Additive onward.</summary>
     public const string CurrentSchemaVersion = "fuwen-zhinu-step-map-v1";
+    /// <summary>Map version for explicit selection epoch scopes and derived terminal projections.</summary>
+    public const string SelectionSchemaVersion = "fuwen-zhinu-step-map-v2-selection";
 
     /// <summary>Builds the plan-scoped step map.</summary>
     public static FuwenZhinuStepMap Map(WorkflowPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
         var steps = new List<FuwenZhinuStepDescriptor>();
-        Walk(plan.Nodes, [], innermostRepeatPath: null, inFanOut: false, steps, plan.IrVersion == FuwenContracts.GroupExpansionIrVersion);
+        Walk(plan.Nodes, [], innermostRepeatPath: null, inFanOut: false, steps, plan.IrVersion is FuwenContracts.GroupExpansionIrVersion or FuwenContracts.SelectionIrVersion);
+        if (plan.IrVersion == FuwenContracts.SelectionIrVersion)
+            steps.RemoveAll(step => step.Kind == FuwenZhinuStepKind.Return);
         return new FuwenZhinuStepMap(
-            CurrentSchemaVersion,
+            plan.IrVersion == FuwenContracts.SelectionIrVersion ? SelectionSchemaVersion : CurrentSchemaVersion,
             plan.Revision,
             WorkflowPlanIdentity.ComputeExecutionFingerprint(plan),
             steps.AsReadOnly());
@@ -239,7 +247,21 @@ public static class FuwenZhinuStepMapper
                 if (descriptor.Kind != FuwenZhinuStepKind.FanOutItem)
                 {
                     var body = descriptor.BodyStepName is not null;
-                    var itemPrefix = FuwenZhinuStepKeys.GroupedFanOutPrefix(fanOutPath) + (body ? ":body:" : ".");
+                    var basePrefix = FuwenZhinuStepKeys.GroupedFanOutPrefix(fanOutPath);
+                    int? epoch = null;
+                    if (descriptor.MaximumSelectionEpochs is { } maximum)
+                    {
+                        var epochPrefix = basePrefix + "-epoch-";
+                        if (!stepKey.StartsWith(epochPrefix, StringComparison.Ordinal)) continue;
+                        var delimiter = stepKey.IndexOf(body ? ':' : '.', epochPrefix.Length);
+                        if (delimiter < 0) continue;
+                        var rawEpoch = stepKey[epochPrefix.Length..delimiter];
+                        if (!int.TryParse(rawEpoch, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var number) ||
+                            number < 1 || number > maximum || rawEpoch != number.ToString(System.Globalization.CultureInfo.InvariantCulture)) continue;
+                        epoch = number;
+                        basePrefix = FuwenZhinuStepKeys.SelectionPrefix(fanOutPath, number);
+                    }
+                    var itemPrefix = basePrefix + (body ? ":body:" : ".");
                     var suffix = body ? ":" + FuwenZhinuStepKeys.EncodeFanOutSegment(descriptor.BodyStepName!) : string.Empty;
                     var tokenLength = body ? 95 : 71;
                     if (stepKey.Length == itemPrefix.Length + tokenLength + suffix.Length &&
@@ -261,8 +283,10 @@ public static class FuwenZhinuStepMapper
                         if (token.Length == 71 && token.StartsWith("sha256-", StringComparison.Ordinal) &&
                             token[7..].All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f'))
                         {
-                            match = new FuwenZhinuStepMatch(descriptor,
-                                [new FuwenZhinuStepScope(FuwenZhinuStepScopeKind.FanOutItem, fanOutPath, itemToken: token)]);
+                            var scope = new List<FuwenZhinuStepScope>();
+                            if (epoch is { } number) scope.Add(new(FuwenZhinuStepScopeKind.SelectionEpoch, fanOutPath, number));
+                            scope.Add(new(FuwenZhinuStepScopeKind.FanOutItem, fanOutPath, itemToken: token));
+                            match = new FuwenZhinuStepMatch(descriptor, scope);
                             return true;
                         }
                     }
@@ -306,6 +330,16 @@ public static class FuwenZhinuStepMapper
                 !item.ItemToken.StartsWith("sha256-", StringComparison.Ordinal) ||
                 item.ItemToken[7..].Any(character => character is not (>= '0' and <= '9' or >= 'a' and <= 'f')))
                 throw new ArgumentException("A matching canonical typed item token is required.", nameof(scope));
+            if (descriptor.MaximumSelectionEpochs is { } maximum)
+            {
+                var epochs = scope.Where(segment => segment.Kind == FuwenZhinuStepScopeKind.SelectionEpoch).ToArray();
+                if (scope.Count != 2 || epochs.Length != 1 || epochs[0].Name != fanOutPath || epochs[0].Iteration is not { } epoch || epoch < 1 || epoch > maximum)
+                    throw new ArgumentException("A matching bounded selection epoch is required.", nameof(scope));
+                var prefix = FuwenZhinuStepKeys.SelectionPrefix(fanOutPath, epoch);
+                return descriptor.BodyStepName is { } operation
+                    ? prefix + ":body:" + FuwenZhinuStepKeys.EncodeFanOutSegment(item.ItemToken) + ":" + FuwenZhinuStepKeys.EncodeFanOutSegment(operation)
+                    : prefix + "." + item.ItemToken;
+            }
             return descriptor.BodyStepName is { } operationName
                 ? FuwenZhinuStepKeys.GroupedFanOutOperation(fanOutPath, item.ItemToken, operationName)
                 : FuwenZhinuStepKeys.GroupedFanOutItem(fanOutPath, item.ItemToken);
@@ -545,12 +579,14 @@ public static class FuwenZhinuStepMapper
                 case FanOutNode fanOut when expandedGroups:
                     sink.Add(SyntheticStep(fanOut.StructuralPath, FuwenZhinuStepKind.FanOutSelection,
                         FuwenZhinuStepKeys.GroupedFanOutSelection(fanOut.StructuralPath)));
-                    sink.Add(Simple(fanOut.StructuralPath, FuwenZhinuStepKind.FanOutAggregate,
-                        FuwenZhinuStepKeys.FanOutAggregate(fanOut.StructuralPath)));
+                    if (fanOut.Selection is null)
+                        sink.Add(Simple(fanOut.StructuralPath, FuwenZhinuStepKind.FanOutAggregate,
+                            FuwenZhinuStepKeys.FanOutAggregate(fanOut.StructuralPath)));
                     sink.Add(new FuwenZhinuStepDescriptor(fanOut.StructuralPath,
                         Flatten(fanOut.Body).OfType<ConditionalNode>().Select(node => node.StructuralPath).ToArray(),
                         FuwenZhinuStepOrigin.Synthetic, FuwenZhinuStepKind.FanOutItemCompletion,
-                        null, [], null, fanOut.StructuralPath));
+                        null, [], null, fanOut.StructuralPath)
+                    { MaximumSelectionEpochs = fanOut.Selection?.MaximumEpochs });
                     foreach (var child in Flatten(fanOut.Body))
                     {
                         var kind = child switch
@@ -564,7 +600,8 @@ public static class FuwenZhinuStepMapper
                             sink.Add(new FuwenZhinuStepDescriptor(child.StructuralPath, [child.StructuralPath],
                                 FuwenZhinuStepOrigin.Declared, operationKind, null, [],
                                 FuwenZhinuStepKeys.RepeatBodyStepName(child.StructuralPath, fanOut.StructuralPath, true),
-                                fanOut.StructuralPath));
+                                fanOut.StructuralPath)
+                            { MaximumSelectionEpochs = fanOut.Selection?.MaximumEpochs });
                     }
                     break;
 

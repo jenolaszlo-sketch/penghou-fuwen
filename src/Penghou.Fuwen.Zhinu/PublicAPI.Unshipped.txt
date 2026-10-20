@@ -132,3 +132,7 @@ static Penghou.Fuwen.Zhinu.FuwenZhinuStepMapper.ResolveStepKey(Penghou.Fuwen.Zhi
 
 Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.FanOutSelection = 13 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
 Penghou.Fuwen.Zhinu.FuwenZhinuStepKind.FanOutItemCompletion = 14 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepKind
+const Penghou.Fuwen.Zhinu.FuwenZhinuStepMapper.SelectionSchemaVersion = "fuwen-zhinu-step-map-v2-selection" -> string!
+Penghou.Fuwen.Zhinu.FuwenZhinuStepScopeKind.SelectionEpoch = 2 -> Penghou.Fuwen.Zhinu.FuwenZhinuStepScopeKind
+Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor.MaximumSelectionEpochs.get -> int?
+Penghou.Fuwen.Zhinu.FuwenZhinuStepDescriptor.MaximumSelectionEpochs.init -> void

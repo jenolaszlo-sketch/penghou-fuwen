@@ -13,6 +13,9 @@ public static class FuwenContracts
     public const string ExecutionIntentIrVersion = "fuwen-ir/v3-execution-intent";
     /// <summary>The executable IR required for bounded macro expansion and structural group scopes.</summary>
     public const string GroupExpansionIrVersion = "fuwen-ir/v4-group-expansion";
+
+    /// <summary>Explicit bounded selection replacement with durable epoch membership.</summary>
+    public const string SelectionIrVersion = "fuwen-ir/v5-selection";
     /// <summary>The current compiler-semantics contract.</summary>
     public const string CompilerSemanticVersion = "compiler-semantics/1";
     /// <summary>The canonical JSON contract used by all currently supported IR versions.</summary>
@@ -366,7 +369,19 @@ public sealed record FanOutNode(
     Binding Yield,
     FuwenType ResultType,
     int MaximumItems,
-    int MaximumConcurrency) : WorkflowNode(Name, StructuralPath);
+    int MaximumConcurrency) : WorkflowNode(Name, StructuralPath)
+{
+    /// <summary>Gets the explicit selection epoch contract, or null for fixed membership.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public FanOutSelection? Selection { get; init; }
+}
+
+/// <summary>
+/// Explicit bounded replacement. Epochs are integers in [1, MaximumEpochs];
+/// ReplacesEpoch is zero only for initial admission, otherwise a smaller epoch.
+/// A new epoch requires an explicit restart of the durable selection boundary.
+/// </summary>
+public sealed record FanOutSelection(Binding Epoch, Binding ReplacesEpoch, int MaximumEpochs);
 
 /// <summary>A bounded repeat region with explicit carried state.</summary>
 public sealed record RepeatNode(

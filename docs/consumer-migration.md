@@ -1,5 +1,16 @@
 # Consumer migration notes
 
+## Unpublished preview.19 selection candidate
+
+Fixed-membership v1–v4 plans require no rewriting. Explicit replacement is a new
+v5 contract; older Fuwen binaries must reject it. Hosts opting in must follow the
+[bounded selection contract](activity-groups-selection.md), including explicit
+selector/boundary StepOnly restart and fresh epochs. Native preview.10 migrates
+supported schemas 5–9 to 10; older workers reject schema 10. Preserve database
+backups and exact binary pins when qualifying an upgrade. Schema 4 remains
+unsupported. These are unpublished candidates, not a publication instruction.
+
+
 Consumer-visible breaking changes are listed here per preview, with the exact
 edits a downstream package needs. The matching [CHANGELOG](../CHANGELOG.md)
 entry names the change; this document gives the recipe.

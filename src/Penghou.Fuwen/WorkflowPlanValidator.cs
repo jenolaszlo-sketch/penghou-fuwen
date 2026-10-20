@@ -32,7 +32,7 @@ public static class WorkflowPlanValidator
             plan.Name,
             new HashSet<string>(StringComparer.Ordinal),
             nodes,
-            string.Equals(plan.IrVersion, FuwenContracts.GroupExpansionIrVersion, StringComparison.Ordinal));
+            plan.IrVersion is FuwenContracts.GroupExpansionIrVersion or FuwenContracts.SelectionIrVersion);
         foreach (var conditional in FlattenNodes(plan.Nodes).OfType<ConditionalNode>())
         {
             if (conditional.Merge is not null)
@@ -54,11 +54,18 @@ public static class WorkflowPlanValidator
         ArgumentNullException.ThrowIfNull(plan);
         var intentVersion = string.Equals(plan.IrVersion, FuwenContracts.ExecutionIntentIrVersion, StringComparison.Ordinal);
         var fallbackVersion = string.Equals(plan.IrVersion, FuwenContracts.InferenceFallbackIrVersion, StringComparison.Ordinal);
-        var groupVersion = string.Equals(plan.IrVersion, FuwenContracts.GroupExpansionIrVersion, StringComparison.Ordinal);
+        var selectionVersion = plan.IrVersion == FuwenContracts.SelectionIrVersion;
+        var groupVersion = selectionVersion || string.Equals(plan.IrVersion, FuwenContracts.GroupExpansionIrVersion, StringComparison.Ordinal);
         if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersion, StringComparison.Ordinal) &&
             !fallbackVersion && !intentVersion && !groupVersion)
             throw new NotSupportedException(
                 $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'.");
+        ArgumentNullException.ThrowIfNull(plan.Nodes);
+        var selections = FlattenNodes(plan.Nodes).OfType<FanOutNode>().Where(node => node.Selection is not null).ToArray();
+        if (selections.Length != 0 && !selectionVersion)
+            throw new NotSupportedException("Explicit selection requires the selection IR version.");
+        if (selectionVersion && selections.Length != 1)
+            throw new ArgumentException("Selection IR requires exactly one explicit selection fan-out.");
         if (!intentVersion && !groupVersion &&
             FlattenNodes(plan.Nodes).OfType<ActivityNode>().Any(static activity => activity.ExecutionIntent is not null))
             throw new NotSupportedException("Activity execution intent requires the execution-intent IR version.");
@@ -473,6 +480,17 @@ public static class WorkflowPlanValidator
                     break;
                 case FanOutNode fanOut:
                     ValidateBindingForExecution(fanOut.Source, location, locations, phasesByRegion);
+                    if (fanOut.Selection is { } selection)
+                    {
+                        if (selection.MaximumEpochs is < 1 or > 1024)
+                            throw new ArgumentOutOfRangeException(nameof(selection.MaximumEpochs));
+                        foreach (var binding in new[] { selection.Epoch, selection.ReplacesEpoch })
+                        {
+                            ValidateBindingForExecution(binding, location, locations, phasesByRegion);
+                            if (ResolveBindingType(binding, plan, locations, location.RegionPath) is not PrimitiveType { Primitive: FuwenPrimitiveKind.Integer })
+                                throw new ArgumentException("Selection epochs must have integer type.");
+                        }
+                    }
                     ValidateFanOutKeyBinding(fanOut.Key);
                     ValidateFanOutBinding(fanOut.Yield, new NodeLocation(fanOut, $"{fanOut.StructuralPath}/$body"), locations, phasesByRegion);
                     ValidateFanOutTypes(plan, fanOut, locations);

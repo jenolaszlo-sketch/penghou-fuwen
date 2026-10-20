@@ -1357,3 +1357,14 @@ Penghou.Fuwen.InferenceTurnFailureException.Failure.get -> Penghou.Fuwen.Executi
 Penghou.Fuwen.InferenceTurnFailureException.InferenceTurnFailureException(Penghou.Fuwen.ExecutionFailure! failure) -> void
 Penghou.Fuwen.InferenceTurnRequest.BudgetEnforcement.get -> Penghou.Fuwen.InferenceBudgetEnforcement
 Penghou.Fuwen.InferenceTurnRequest.InferenceTurnRequest(Penghou.Fuwen.InferenceBudgetEnforcement budgetEnforcement, string! interactionId, int turnOrdinal, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceConversationMessage!>! conversation, System.Collections.Generic.IReadOnlyList<Penghou.Fuwen.InferenceToolRequirement!>! visibleTools, Penghou.Fuwen.InferenceLimitSet? remainingLimits = null, int? maximumNewToolCalls = null, int? maxCompletionTokens = null, int? timeoutSeconds = null) -> void
+const Penghou.Fuwen.FuwenContracts.SelectionIrVersion = "fuwen-ir/v5-selection" -> string!
+Penghou.Fuwen.FanOutNode.Selection.get -> Penghou.Fuwen.FanOutSelection?
+Penghou.Fuwen.FanOutNode.Selection.init -> void
+Penghou.Fuwen.FanOutSelection
+Penghou.Fuwen.FanOutSelection.Epoch.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.FanOutSelection.Epoch.init -> void
+Penghou.Fuwen.FanOutSelection.ReplacesEpoch.get -> Penghou.Fuwen.Binding!
+Penghou.Fuwen.FanOutSelection.ReplacesEpoch.init -> void
+Penghou.Fuwen.FanOutSelection.MaximumEpochs.get -> int
+Penghou.Fuwen.FanOutSelection.MaximumEpochs.init -> void
+Penghou.Fuwen.FanOutSelection.FanOutSelection(Penghou.Fuwen.Binding! Epoch, Penghou.Fuwen.Binding! ReplacesEpoch, int MaximumEpochs) -> void

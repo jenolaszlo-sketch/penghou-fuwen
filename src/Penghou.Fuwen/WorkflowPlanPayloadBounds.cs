@@ -216,6 +216,11 @@ internal sealed class WorkflowPlanPayloadBounds
                     break;
                 case FanOutNode value:
                     Binding(value.Source);
+                    if (value.Selection is { } selection)
+                    {
+                        Binding(selection.Epoch);
+                        Binding(selection.ReplacesEpoch);
+                    }
                     if (value.Item is not null)
                     {
                         Text(value.Item.Name, "fan-out item name");

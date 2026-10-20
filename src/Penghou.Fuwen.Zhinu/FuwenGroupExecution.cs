@@ -79,12 +79,13 @@ internal sealed class FuwenGroupExecution
         return root;
     }
 
-    internal ActivityGroupFanOutBinding FanOutBinding(WorkflowGroupManifest manifest, FanOutNode node)
+    internal ActivityGroupFanOutBinding FanOutBinding(WorkflowGroupManifest manifest, FanOutNode node, string? replacesFanOutKey = null)
     {
         var root = FanOutItemRoot(manifest, node);
         var parent = root.ParentGroupKey is { } parentKey ? GetRootOccurrence(workflowContext, parentKey) : null;
         return new(new ActivityGroupMembership(root.GroupKey, ActivityGroupMemberRole.Control),
-            FuwenZhinuStepKeys.GroupedFanOutSelection(node.StructuralPath), parent);
+            FuwenZhinuStepKeys.GroupedFanOutSelection(node.StructuralPath), parent)
+        { ReplacesFanOutKey = replacesFanOutKey };
     }
 
     internal static ActivityGroupManifest Translate(WorkflowGroupManifest manifest) => ActivityGroupManifest.Create(

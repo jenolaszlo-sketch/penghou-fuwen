@@ -345,7 +345,7 @@ public sealed class FuwenZhinuWorkflowFactory
         VerifyProviderRuntimeIdentity(receipt, providerRuntimeIdentity);
 
         var admittedPlan = definition.ReadPlan();
-        if (groupedDefinition is null && admittedPlan.IrVersion == FuwenContracts.GroupExpansionIrVersion)
+        if (groupedDefinition is null && admittedPlan.IrVersion is FuwenContracts.GroupExpansionIrVersion or FuwenContracts.SelectionIrVersion)
             throw new FuwenZhinuAdmissionException("Expanded group scopes require their admitted hierarchy companion.");
         if (groupedDefinition is not null)
         {
@@ -358,27 +358,38 @@ public sealed class FuwenZhinuWorkflowFactory
             var fanOuts = EnumerateNodes(admittedPlan.Nodes).OfType<FanOutNode>().ToArray();
             if (fanOuts.Length != 0)
             {
-                if (admittedPlan.IrVersion != FuwenContracts.GroupExpansionIrVersion || fanOuts.Length != 1 ||
+                if (admittedPlan.IrVersion is not (FuwenContracts.GroupExpansionIrVersion or FuwenContracts.SelectionIrVersion) || fanOuts.Length != 1 ||
                     EnumerateNodes(admittedPlan.Nodes).Any(node => node is RepeatNode))
                     throw new FuwenZhinuAdmissionException("Grouped fan-out supports one root scope without repeat composition under the v4 key contract.");
                 var fanOut = fanOuts[0];
+                if (fanOut.Selection is not null)
+                {
+                    // Only a terminal root selection is qualified. No fixed-key downstream
+                    // operations or conditional/loop ancestors may observe changing values.
+                    var roots = admittedPlan.Nodes;
+                    if (roots.Count is < 2 or > 3 || roots[^2] != fanOut || roots[^1] is not ReturnNode
+                        { Value: NodeOutputBinding { Projection.Count: 0 } output } || output.NodePath != fanOut.StructuralPath ||
+                        roots.Take(roots.Count - 2).Any(node => node is not (ActivityNode or ContextNode or InferenceNode)))
+                        throw new FuwenZhinuAdmissionException("Explicit selection requires at most one root selector followed by one terminal fan-out and its direct return.");
+                }
+                var epochCount = fanOut.Selection?.MaximumEpochs ?? 1;
                 _ = FuwenGroupExecution.FanOutItemRoot(groupedDefinition.Groups, fanOut);
                 if (!HasGuaranteedFanOutOperation(fanOut.Body))
                     throw new FuwenZhinuAdmissionException("Grouped fan-out requires a durable operation on every structural body path.");
                 var body = EnumerateNodes(fanOut.Body).ToArray();
                 var itemGroupCount = groupedDefinition.Groups.Groups.Count(group =>
                     group.GroupKey.StartsWith(fanOut.StructuralPath + "/$body/", StringComparison.Ordinal));
-                if ((long)fanOut.MaximumItems * itemGroupCount + groupedDefinition.Groups.Groups.Count - itemGroupCount >
+                if ((long)epochCount * fanOut.MaximumItems * itemGroupCount + groupedDefinition.Groups.Groups.Count - itemGroupCount >
                     ActivityGroupOccurrence.MaximumAllowedOccurrencesPerRun)
                     throw new FuwenZhinuAdmissionException("Grouped fan-out exceeds the occurrence budget.");
-                if ((long)fanOut.MaximumItems * (body.Length + 1) > 4096)
+                if ((long)epochCount * fanOut.MaximumItems * (body.Length + 1) > 4096)
                     throw new FuwenZhinuAdmissionException("Grouped fan-out exceeds the bounded item-operation budget.");
                 if (body.OfType<InferenceNode>().Any(node => node.FailureFallback is not null))
                     throw new FuwenZhinuAdmissionException("Grouped fan-out inference fallback has no qualified lowering.");
                 foreach (var child in body.Where(node => node is ActivityNode or ContextNode or InferenceNode))
                     try
                     {
-                        _ = RuntimeNodeIdentity.CreateFanOutItem(fanOut.StructuralPath, new IntegerRuntimeKey(0),
+                        _ = RuntimeNodeIdentity.CreateFanOutItem(fanOut.Selection is null ? fanOut.StructuralPath : FuwenZhinuStepKeys.SelectionRuntimePath(fanOut.StructuralPath, epochCount), new IntegerRuntimeKey(0),
                             FuwenZhinuStepKeys.RepeatBodyStepName(child.StructuralPath, fanOut.StructuralPath, true));
                     }
                     catch (ArgumentException)

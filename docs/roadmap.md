@@ -34,7 +34,9 @@ and the paired Zhinu activity-group contract below remain unreleased. The
 [current supported profile](activity-groups-qualified-profile.md): static groups,
 single-level grouped repeats and independently durable keyed fan-out. Local
 qualification and the second correctness pass are complete. Windows/Linux Q47
-gates pass; full Q33 remains open. The broader FM language scope and publication
+gates pass. Later native Q33 explicit replacement/retirement is separate from
+Fuwen: evolving-selection lowering and its new exact package pin remain open.
+The broader FM language scope and publication
 remain open.
 
 The authoritative shipped-surface summary is the
@@ -344,7 +346,8 @@ operations for one fixed scope with an explicit item root. Broader dynamic
 composition and evolving-selection DSL lowering remain rejected. The current
 [ZG-7 consolidation](qualification/activity-groups/zg7.md) adds mechanical progress,
 substantive vocabulary/recovery and changed-pin qualification. Windows/Linux CI
-gates pass; full Q33 remains open. Native Zhinu child/loop capabilities do not
+gates pass. Native Q33 explicit replacement is a later, separate checkpoint;
+Fuwen selection lowering remains unadopted. Native Zhinu child/loop capabilities do not
 imply DSL support.
 
 Macros provide a methodology-neutral vocabulary. `SupervisedCoding`,
@@ -419,7 +422,9 @@ and control-flow relationships: membership alone never orders or authorizes work
 #### FM-2 — durable hierarchy handoff and qualification
 
 The [selected executable profile](qualification/activity-groups/zg7.md) is qualified
-through preview.18 on Windows/Linux .NET 8/10; full Q33 remains open. The broader
+through preview.18 on Windows/Linux .NET 8/10. Native Q33 subsequently adds
+explicit replacement/retirement; Fuwen evolving-selection lowering and package
+adoption still require their own qualification. The broader
 historical
 boxes below retain their full declared FM scope; rejected dynamic combinations
 and richer macro interfaces are not claimed implemented by this checkpoint.
@@ -1552,3 +1557,17 @@ partial, so the complete original milestone is still open.
 See [exact-source evidence](qualification/activity-groups/zg7.md). Packages remain
 unpublished; broader rejected DSL combinations and downstream integration are
 separate work.
+
+### Native Q33 follow-up -- 2026-10-20
+
+Zhinu preview.10/schema 10 adds explicit replacement through a fresh durable
+selection scope and a newer controlling revision, append-only retirement evidence,
+retired claim/restart fences and current-selection progress. Occurrence identity
+and keyed coordinates remain unchanged. Its
+[independent native qualification](https://github.com/jenolaszlo-sketch/penghou-zhinu/blob/4b927d23d2b3aef0e3de4057b06d4e7372561f7f/docs/qualification/activity-groups/q33.md)
+does not update Fuwen preview.18 or the exact preview.9 archive pin above.
+
+Next for Fuwen is a bounded selection-lowering contract and preflight proof,
+followed by adapter process-loss/progress tests and a new explicit candidate pin.
+Keep evolving-selection syntax rejected until that integration is qualified;
+arbitrary condition changes must never imply silent retirement of old work.

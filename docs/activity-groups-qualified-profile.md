@@ -6,9 +6,13 @@ identifies the original Windows archives and source. Earlier static, repeat and
 fan-out qualification records retain their original source and archive pins.
 [Cross-platform qualification](qualification/activity-groups/zg7.md) and the
 [second correctness pass](qualification/activity-groups/second-pass-review.md) are
-complete for this bounded profile. Full Q33 generic branch replacement/retirement
-remains unqualified; the full original milestone stays open. Candidate preparation
-is not package publication.
+complete for this bounded profile. The later
+[native Q33 checkpoint](https://github.com/jenolaszlo-sketch/penghou-zhinu/blob/4b927d23d2b3aef0e3de4057b06d4e7372561f7f/docs/qualification/activity-groups/q33.md) adds explicit
+branch replacement and retirement in Zhinu preview.10/schema 10. Fuwen has not
+adopted that capability: evolving-selection lowering, a new exact package pin and
+adapter recovery/progress qualification remain a separate integration activity.
+The native checkpoint does not extend the DSL profile described here. Candidate
+preparation is not package publication.
 
 ## Supported authoring and execution
 

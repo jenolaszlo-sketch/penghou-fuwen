@@ -24,7 +24,7 @@ review rather than infer implementation from the long-range architecture.
 
 ## Status
 
-**IR v8 compiler and core durable adapters are available; coordinated inference remains limited while corrective gates are open**
+**Versioned compiler and core durable adapters are available; coordinated inference remains limited while corrective gates are open**
 
 Last reviewed: **2026-09-27**
 
@@ -1585,3 +1585,14 @@ precompiled legacy compatibility. The reviewed v5 contract retains historical
 memberships and occurrence parents through partial replacement and hard process
 loss. The broader FM scope, nonterminal/nested composition and publication remain
 open; this checkpoint does not imply arbitrary condition-driven retirement.
+
+### Integration correctness pass -- 2026-10-20
+
+The [complete second pass](qualification/activity-groups/integration-second-pass.md)
+finds and fixes cross-run dynamic provider idempotency collisions, ungrouped
+fan-out mapper round trips, provider path admission and ungrouped loop-name
+aliasing. Preview.20 compiles new dynamic plans to the
+[v6 invocation contract](run-scoped-dynamic-invocations.md); older v1–v5 identities
+remain pinned for replay. Native preview.10/schema 10 is unchanged. The separate
+qualification ledger retains the exact candidate source, compatibility and
+Windows/Linux evidence; the original v5 checkpoint remains immutable.

@@ -12,6 +12,7 @@ credentials, or accepted operational risk.
 
 | Surface | Status | Current boundary |
 | --- | --- | --- |
+| Dynamic provider invocation identity | Run-scoped in newly compiled v6 plans | Repeat and fan-out provider identities include the run ID. Older v1–v5 definitions preserve their original replay keys. See the [v6 contract](run-scoped-dynamic-invocations.md) and migration notes before adopting a new definition. |
 | Explicit grouped selection | Bounded unpublished v5 profile | At most one root selector followed by one terminal grouped fan-out and its direct return. Explicit durable epochs and native replacement retain historical membership. Item providers remain independently durable; the public mapper exposes epoch/item scopes. Nested/mixed dynamics and downstream work remain rejected. See the [selection contract](activity-groups-selection.md). |
 | Schemas, enums, capabilities, typed bindings and returns | Supported | Exact catalogue metadata remains authoritative. |
 | Context, activity and inference nodes | Supported | Callables require exact descriptors and host admission. |

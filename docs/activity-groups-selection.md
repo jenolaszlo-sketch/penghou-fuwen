@@ -6,6 +6,12 @@ The [ZG-7 pin](qualification/activity-groups/zhinu-zg7-candidate.json) preserves
 the original preview.9 archives. Existing v1–v4 plans retain their canonical
 bytes, fingerprints, lowering and keys. This is an opt-in authoring contract.
 
+The later preview.20 compiler emits the [v6 contract](run-scoped-dynamic-invocations.md)
+for new dynamic plans, with `expandedGroupScopes: true` for grouped source. It
+retains this bounded selection behavior; stored v5 bundles remain supported with
+their original bytes and keys. The [second pass](qualification/activity-groups/integration-second-pass.md)
+records the separate newer qualification.
+
 ```fuwen
 fanout process over decide.items
   selection epoch decide.epoch replaces decide.previous max 4

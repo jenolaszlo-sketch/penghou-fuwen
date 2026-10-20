@@ -8,7 +8,7 @@ using Penghou.Zhinu.Sqlite;
 namespace Penghou.Fuwen.ReviewConsumer.Tests;
 
 // This project resolves archives only. No Fuwen or Zhinu source project reference.
-public sealed class SelectionCandidateTests
+public sealed partial class SelectionCandidateTests
 {
     private const string ChangingSelectionSource = """
         schema Choice "sample.choice@1#cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" {

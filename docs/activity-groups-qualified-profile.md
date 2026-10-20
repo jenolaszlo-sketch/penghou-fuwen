@@ -1,6 +1,6 @@
 # Activity groups: supported cross-repository profile
 
-The current unpublished candidate pair is Fuwen preview.19 and exact Zhinu
+The current unpublished candidate pair is Fuwen preview.20 and exact Zhinu
 preview.10/schema 10. The [native pin](qualification/activity-groups/zhinu-candidate.json)
 identifies the original Q33 archives and source. The prior preview.18/preview.9
 [ZG-7 qualification](qualification/activity-groups/zg7.md) retains its original
@@ -10,6 +10,11 @@ bounded baseline; its [qualification](qualification/activity-groups/selection.md
 records the separate source and archive evidence. Candidate preparation is not
 package publication.
 
+New dynamic plans use the [v6 run-scoped invocation contract](run-scoped-dynamic-invocations.md).
+The [integration second pass](qualification/activity-groups/integration-second-pass.md)
+corrects provider key collisions, mapper round trips and invocation-path admission.
+Older v1–v5 plans keep their original replay contracts.
+
 ## Supported authoring and execution
 
 Local immutable macros and logical groups expand into ordinary typed Fuwen
@@ -17,7 +22,7 @@ primitives. Nested static groups/macros, multiple independent invocations,
 static conditions, checkpoints and signal waits use native durable boundaries.
 A grouped plan can contain single-level bounded repeats, or one fixed keyed
 fan-out with an explicit item-local root and nested static groups/macros.
-The v5 profile additionally permits one terminal grouped selection with explicit
+The selection profile additionally permits one terminal grouped selection with explicit
 bounded epochs and replacement of its prior expansion.
 Fan-out activity, context and one-call inference operations are independently
 durable; control-only item conditionals are supported. Admission requires a
@@ -30,7 +35,7 @@ Unbounded or nonterminal selection, nested/mixed dynamic scopes, fan-out item wa
 or value merges, grouped coordinated inference and item-local fallback remain
 preflight rejections. These are explicitly allowed exclusions in the Q43–Q45
 qualification contract, not implicitly supported native combinations. Broader
-language support is separate work. Explicit epochs are available only through the new v5 terminal selection
+language support is separate work. Explicit epochs are available only through the terminal selection
 contract. No public group cancellation/retry API is introduced.
 
 ## Inspection and recovery

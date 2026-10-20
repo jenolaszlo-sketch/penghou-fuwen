@@ -95,8 +95,8 @@ public sealed class WorkflowPlanBuilder
     public WorkflowPlan Build()
     {
         var plan = new WorkflowPlan(
-            nodes.OfType<FanOutNode>().Any(node => node.Selection is not null)
-                ? FuwenContracts.SelectionIrVersion
+            HasDynamicNodes(nodes)
+                ? FuwenContracts.RunScopedDynamicsIrVersion
                 : HasExecutionIntent(nodes)
                 ? FuwenContracts.ExecutionIntentIrVersion
                 : HasInferenceFallback(nodes)
@@ -124,6 +124,10 @@ public sealed class WorkflowPlanBuilder
         // identical and prevents caller mutation after Build returns.
         return WorkflowPlanSnapshot.Create(plan);
     }
+
+    private static bool HasDynamicNodes(IEnumerable<WorkflowNode> values) => values.Any(node =>
+        node is FanOutNode or RepeatNode || node is ConditionalNode conditional &&
+        (HasDynamicNodes(conditional.Then) || HasDynamicNodes(conditional.Else)));
 
     private static bool HasInferenceFallback(IEnumerable<WorkflowNode> values)
     {

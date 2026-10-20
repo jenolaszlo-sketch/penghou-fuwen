@@ -32,7 +32,7 @@ public static class WorkflowPlanValidator
             plan.Name,
             new HashSet<string>(StringComparer.Ordinal),
             nodes,
-            plan.IrVersion is FuwenContracts.GroupExpansionIrVersion or FuwenContracts.SelectionIrVersion);
+            plan.UsesExpandedGroupScopes);
         foreach (var conditional in FlattenNodes(plan.Nodes).OfType<ConditionalNode>())
         {
             if (conditional.Merge is not null)
@@ -52,19 +52,22 @@ public static class WorkflowPlanValidator
     internal static void ValidateCompatibility(WorkflowPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        var intentVersion = string.Equals(plan.IrVersion, FuwenContracts.ExecutionIntentIrVersion, StringComparison.Ordinal);
-        var fallbackVersion = string.Equals(plan.IrVersion, FuwenContracts.InferenceFallbackIrVersion, StringComparison.Ordinal);
+        var runScopedVersion = plan.IrVersion == FuwenContracts.RunScopedDynamicsIrVersion;
+        if (plan.ExpandedGroupScopes && !runScopedVersion)
+            throw new NotSupportedException("The expanded-group flag requires the run-scoped dynamics IR version.");
+        var intentVersion = runScopedVersion || string.Equals(plan.IrVersion, FuwenContracts.ExecutionIntentIrVersion, StringComparison.Ordinal);
+        var fallbackVersion = runScopedVersion || string.Equals(plan.IrVersion, FuwenContracts.InferenceFallbackIrVersion, StringComparison.Ordinal);
         var selectionVersion = plan.IrVersion == FuwenContracts.SelectionIrVersion;
-        var groupVersion = selectionVersion || string.Equals(plan.IrVersion, FuwenContracts.GroupExpansionIrVersion, StringComparison.Ordinal);
+        var groupVersion = plan.UsesExpandedGroupScopes;
         if (!string.Equals(plan.IrVersion, FuwenContracts.IrVersion, StringComparison.Ordinal) &&
             !fallbackVersion && !intentVersion && !groupVersion)
             throw new NotSupportedException(
                 $"Unsupported {nameof(plan.IrVersion)} '{plan.IrVersion}'.");
         ArgumentNullException.ThrowIfNull(plan.Nodes);
         var selections = FlattenNodes(plan.Nodes).OfType<FanOutNode>().Where(node => node.Selection is not null).ToArray();
-        if (selections.Length != 0 && !selectionVersion)
+        if (selections.Length != 0 && !selectionVersion && !(runScopedVersion && groupVersion))
             throw new NotSupportedException("Explicit selection requires the selection IR version.");
-        if (selectionVersion && selections.Length != 1)
+        if ((selectionVersion || runScopedVersion && selections.Length != 0) && selections.Length != 1)
             throw new ArgumentException("Selection IR requires exactly one explicit selection fan-out.");
         if (!intentVersion && !groupVersion &&
             FlattenNodes(plan.Nodes).OfType<ActivityNode>().Any(static activity => activity.ExecutionIntent is not null))

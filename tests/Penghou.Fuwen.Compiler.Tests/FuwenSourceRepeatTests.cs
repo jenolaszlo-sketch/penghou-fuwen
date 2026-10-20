@@ -46,7 +46,7 @@ public sealed class FuwenSourceRepeatTests
         var result = await new FuwenSourceCompiler(Catalogue()).CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
         result.Succeeded.Should().BeTrue(string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
         result.Plan.Should().NotBeNull();
-        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersion);
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.RunScopedDynamicsIrVersion);
         result.Plan.CompilerSemanticVersion.Should().Be(FuwenContracts.CompilerSemanticVersion);
         var repeat = result.Plan.Nodes.OfType<RepeatNode>().Should().ContainSingle().Subject;
         repeat.MaxIterations.Should().Be(3);
@@ -141,7 +141,7 @@ public sealed class FuwenSourceRepeatTests
             """;
         var result = await new FuwenSourceCompiler(Catalogue()).CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
         result.Succeeded.Should().BeTrue(string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
-        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersion);
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.RunScopedDynamicsIrVersion);
         var repeat = result.Plan.Nodes.OfType<RepeatNode>().Should().ContainSingle().Subject;
         repeat.Body.OfType<ContextNode>().Should().ContainSingle();
         var inference = repeat.Body.OfType<InferenceNode>().Should().ContainSingle().Subject;

@@ -1,5 +1,20 @@
 # Consumer migration notes
 
+## Unpublished preview.20 dynamic provider identity correction
+
+Newly compiled repeat/fan-out plans use `fuwen-ir/v6-run-scoped-dynamics`.
+Provider runtime paths now include the workflow run ID, preventing independent
+runs with identical inputs from sharing external idempotency keys. The v6
+`expandedGroupScopes` flag is fingerprinted and requires an immutable group
+companion when true. Existing v1–v5 plans preserve their bytes and provider keys;
+retries must not silently change a key that an external provider may have used.
+Adopt the correction through a newly compiled/admitted definition and new runs.
+Legacy repeat/ungrouped-fan-out definitions retain their older key contract.
+Compile/admit v6 definitions for independent runs sharing an idempotent provider;
+the correction does not silently rewrite an existing run. Static/grouped fan-out identities already
+included run identity. Native occurrence coordinates and schema 10 are unchanged.
+
+
 ## Unpublished preview.19 selection candidate
 
 Fixed-membership v1–v4 plans require no rewriting. Explicit replacement is a new

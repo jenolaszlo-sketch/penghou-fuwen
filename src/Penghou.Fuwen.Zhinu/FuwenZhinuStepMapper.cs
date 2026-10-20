@@ -202,11 +202,11 @@ public static class FuwenZhinuStepMapper
     {
         ArgumentNullException.ThrowIfNull(plan);
         var steps = new List<FuwenZhinuStepDescriptor>();
-        Walk(plan.Nodes, [], innermostRepeatPath: null, inFanOut: false, steps, plan.IrVersion is FuwenContracts.GroupExpansionIrVersion or FuwenContracts.SelectionIrVersion);
-        if (plan.IrVersion == FuwenContracts.SelectionIrVersion)
+        Walk(plan.Nodes, [], innermostRepeatPath: null, inFanOut: false, steps, plan.UsesExpandedGroupScopes);
+        if (plan.Nodes.OfType<FanOutNode>().Any(node => node.Selection is not null))
             steps.RemoveAll(step => step.Kind == FuwenZhinuStepKind.Return);
         return new FuwenZhinuStepMap(
-            plan.IrVersion == FuwenContracts.SelectionIrVersion ? SelectionSchemaVersion : CurrentSchemaVersion,
+            plan.Nodes.OfType<FanOutNode>().Any(node => node.Selection is not null) ? SelectionSchemaVersion : CurrentSchemaVersion,
             plan.Revision,
             WorkflowPlanIdentity.ComputeExecutionFingerprint(plan),
             steps.AsReadOnly());
@@ -293,7 +293,8 @@ public static class FuwenZhinuStepMapper
                     continue;
                 }
                 var prefix = fanOutPath + "/$item/sha256-";
-                if (stepKey.Length == prefix.Length + 64 && stepKey.StartsWith(prefix, StringComparison.Ordinal))
+                if (stepKey.Length == prefix.Length + 64 && stepKey.StartsWith(prefix, StringComparison.Ordinal) &&
+                    stepKey[prefix.Length..].All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f'))
                 {
                     match = new FuwenZhinuStepMatch(
                         descriptor,
@@ -325,7 +326,16 @@ public static class FuwenZhinuStepMapper
             var item = scope.FirstOrDefault(segment => segment.Kind == FuwenZhinuStepScopeKind.FanOutItem)
                 ?? throw new ArgumentException("A fan-out item token is required to resolve this step key.", nameof(scope));
             if (descriptor.Kind == FuwenZhinuStepKind.FanOutItem)
-                return $"{fanOutPath}/$item/{item.ItemToken}";
+            {
+                // The legacy matcher exposes the hash only. Keep that public
+                // scope representation and restore the native token prefix here.
+                var token = item.ItemToken;
+                if (token?.StartsWith("sha256-", StringComparison.Ordinal) == true) token = token[7..];
+                if (item.Name != fanOutPath || token is null || token.Length != 64 ||
+                    token.Any(character => character is not (>= '0' and <= '9' or >= 'a' and <= 'f')))
+                    throw new ArgumentException("A matching canonical fan-out item hash is required.", nameof(scope));
+                return $"{fanOutPath}/$item/sha256-{token}";
+            }
             if (item.Name != fanOutPath || item.ItemToken is null || item.ItemToken.Length != 71 ||
                 !item.ItemToken.StartsWith("sha256-", StringComparison.Ordinal) ||
                 item.ItemToken[7..].Any(character => character is not (>= '0' and <= '9' or >= 'a' and <= 'f')))

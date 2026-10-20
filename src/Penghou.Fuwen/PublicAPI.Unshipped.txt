@@ -1368,3 +1368,7 @@ Penghou.Fuwen.FanOutSelection.ReplacesEpoch.init -> void
 Penghou.Fuwen.FanOutSelection.MaximumEpochs.get -> int
 Penghou.Fuwen.FanOutSelection.MaximumEpochs.init -> void
 Penghou.Fuwen.FanOutSelection.FanOutSelection(Penghou.Fuwen.Binding! Epoch, Penghou.Fuwen.Binding! ReplacesEpoch, int MaximumEpochs) -> void
+const Penghou.Fuwen.FuwenContracts.RunScopedDynamicsIrVersion = "fuwen-ir/v6-run-scoped-dynamics" -> string!
+Penghou.Fuwen.WorkflowPlan.ExpandedGroupScopes.get -> bool
+Penghou.Fuwen.WorkflowPlan.ExpandedGroupScopes.init -> void
+Penghou.Fuwen.WorkflowPlan.UsesExpandedGroupScopes.get -> bool

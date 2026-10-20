@@ -56,7 +56,7 @@ public sealed class FuwenSourceFanOutTests
         var result = await new FuwenSourceCompiler(Catalogue()).CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
         result.Succeeded.Should().BeTrue(string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
         result.Plan.Should().NotBeNull();
-        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersion);
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.RunScopedDynamicsIrVersion);
         result.Plan.CompilerSemanticVersion.Should().Be(FuwenContracts.CompilerSemanticVersion);
         result.Plan.Nodes.OfType<FanOutNode>().Should().ContainSingle();
         var fanOut = result.Plan.Nodes.OfType<FanOutNode>().Single();

@@ -41,7 +41,10 @@ internal static class WorkflowPlanSnapshot
                 CloneCapabilities(plan.CapabilityManifest, state),
                 SnapshotList(plan.Nodes, "workflow nodes", CloneNode, state),
                 plan.ExecutionOrder is null ? null : CloneExecutionOrder(plan.ExecutionOrder, state),
-                plan.Prompts is null ? null : SnapshotList(plan.Prompts, "prompts", ClonePrompt, state));
+                plan.Prompts is null ? null : SnapshotList(plan.Prompts, "prompts", ClonePrompt, state))
+            {
+                ExpandedGroupScopes = plan.ExpandedGroupScopes,
+            };
         }
         finally
         {

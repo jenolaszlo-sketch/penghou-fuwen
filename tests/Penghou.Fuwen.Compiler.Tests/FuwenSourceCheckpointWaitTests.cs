@@ -102,7 +102,7 @@ public sealed class FuwenSourceCheckpointWaitTests
             """;
         var result = await new FuwenSourceCompiler(Catalogue()).CompileAsync(source, cancellationToken: TestContext.Current.CancellationToken);
         result.Succeeded.Should().BeTrue(string.Join("; ", result.Diagnostics.Select(d => $"{d.Code}:{d.Message} path:{d.Path}")));
-        result.Plan!.IrVersion.Should().Be(FuwenContracts.IrVersion);
+        result.Plan!.IrVersion.Should().Be(FuwenContracts.RunScopedDynamicsIrVersion);
         var repeat = result.Plan.Nodes.OfType<RepeatNode>().Should().ContainSingle().Subject;
         repeat.Body.Should().Contain(n => n is CheckpointNode);
     }

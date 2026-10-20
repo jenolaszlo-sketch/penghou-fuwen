@@ -29,7 +29,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         var admission = await AdmitGroupSource(SelectionSource);
         admission.Succeeded.Should().BeTrue();
         var plan = admission.Definition!.Definition.ReadPlan();
-        plan.IrVersion.Should().Be(FuwenContracts.SelectionIrVersion);
+        plan.IrVersion.Should().Be(FuwenContracts.RunScopedDynamicsIrVersion);
+        plan.UsesExpandedGroupScopes.Should().BeTrue();
         plan.Nodes.OfType<FanOutNode>().Single().Selection!.MaximumEpochs.Should().Be(3);
         plan = WorkflowDefinitionDocument.Create(plan).ReadPlan();
         plan.Nodes.OfType<FanOutNode>().Single().Selection!.MaximumEpochs.Should().Be(3);
@@ -186,11 +187,21 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         finally { DeleteDirectory(directory); }
     }
 
-    [Fact]
-    public async Task Explicit_selection_replacement_preserves_history_and_same_value_reappears_with_fresh_identity()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Explicit_selection_replacement_preserves_history_and_same_value_reappears_with_fresh_identity(bool legacyV5)
     {
         var ct = TestContext.Current.CancellationToken;
         var admission = await AdmitSelection();
+        if (legacyV5)
+        {
+            var plan = admission.Definition!.Definition.ReadPlan() with { IrVersion = FuwenContracts.SelectionIrVersion, ExpandedGroupScopes = false };
+            var bundle = GroupedWorkflowDefinitionDocument.Create(WorkflowDefinitionDocument.Create(plan), admission.Definition.Groups);
+            admission = await new WorkflowAdmissionService(new WorkflowCompiler(SelectionCatalogue(),
+                capabilityPolicy: new CapabilityGrantPolicy("policy/1", []))).AdmitGroupedAsync(bundle, cancellationToken: ct);
+            admission.Succeeded.Should().BeTrue();
+        }
         var directory = Path.Combine(Path.GetTempPath(), "fuwen-selection", Guid.NewGuid().ToString("N"));
         try
         {

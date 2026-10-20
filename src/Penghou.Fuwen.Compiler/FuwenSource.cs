@@ -637,7 +637,9 @@ internal sealed partial class SourceParser
                 builder.SetExecutionOrder(new WorkflowExecutionOrder(BuildRegions(workflowName, nodes)));
                 plan = builder.Build();
                 if (groupDefinitions.Count != 0)
-                    plan = plan with { IrVersion = nodes.OfType<FanOutNode>().Any(node => node.Selection is not null) ? FuwenContracts.SelectionIrVersion : FuwenContracts.GroupExpansionIrVersion };
+                    plan = plan.IrVersion == FuwenContracts.RunScopedDynamicsIrVersion
+                        ? plan with { ExpandedGroupScopes = true }
+                        : plan with { IrVersion = FuwenContracts.GroupExpansionIrVersion };
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
             {

@@ -345,7 +345,10 @@ public sealed class FuwenZhinuWorkflowFactory
         VerifyProviderRuntimeIdentity(receipt, providerRuntimeIdentity);
 
         var admittedPlan = definition.ReadPlan();
-        if (groupedDefinition is null && admittedPlan.IrVersion is FuwenContracts.GroupExpansionIrVersion or FuwenContracts.SelectionIrVersion)
+        if (!admittedPlan.UsesExpandedGroupScopes && EnumerateNodes(admittedPlan.Nodes).OfType<RepeatNode>()
+            .GroupBy(node => node.Name, StringComparer.Ordinal).Any(group => group.Count() > 1))
+            throw new FuwenZhinuAdmissionException("Ungrouped repeats require unique native loop names across structured regions.");
+        if (groupedDefinition is null && admittedPlan.UsesExpandedGroupScopes)
             throw new FuwenZhinuAdmissionException("Expanded group scopes require their admitted hierarchy companion.");
         if (groupedDefinition is not null)
         {
@@ -358,7 +361,7 @@ public sealed class FuwenZhinuWorkflowFactory
             var fanOuts = EnumerateNodes(admittedPlan.Nodes).OfType<FanOutNode>().ToArray();
             if (fanOuts.Length != 0)
             {
-                if (admittedPlan.IrVersion is not (FuwenContracts.GroupExpansionIrVersion or FuwenContracts.SelectionIrVersion) || fanOuts.Length != 1 ||
+                if (!admittedPlan.UsesExpandedGroupScopes || fanOuts.Length != 1 ||
                     EnumerateNodes(admittedPlan.Nodes).Any(node => node is RepeatNode))
                     throw new FuwenZhinuAdmissionException("Grouped fan-out supports one root scope without repeat composition under the v4 key contract.");
                 var fanOut = fanOuts[0];
@@ -397,7 +400,7 @@ public sealed class FuwenZhinuWorkflowFactory
                         throw new FuwenZhinuAdmissionException("Grouped fan-out runtime paths exceed the identity budget.");
                     }
             }
-            if (admittedPlan.IrVersion != FuwenContracts.GroupExpansionIrVersion && EnumerateNodes(admittedPlan.Nodes).Any(node => node is RepeatNode))
+            if (!admittedPlan.UsesExpandedGroupScopes && EnumerateNodes(admittedPlan.Nodes).Any(node => node is RepeatNode))
                 throw new FuwenZhinuAdmissionException("Grouped repeats require the v4 expansion/key contract.");
             ValidateExecutableSubset(admittedPlan.Nodes, insideFanOut: false, insideRepeat: false, coordinated: false);
             if (EnumerateNodes(admittedPlan.Nodes).OfType<RepeatNode>().SelectMany(repeat => EnumerateNodes(repeat.Body))
@@ -441,6 +444,7 @@ public sealed class FuwenZhinuWorkflowFactory
                 hasProtectedPayloadStore: executionPorts.ProtectedPayloadStore is not null,
                 trustedToolSignatures: admission.TrustedToolSignatures);
 
+        ValidateProviderIdentityBudgets(admittedPlan);
         await definitionStore.StoreAsync(definition, cancellationToken).ConfigureAwait(false);
         var stored = await definitionStore.ReadAsync(receipt.ExecutionFingerprint, cancellationToken).ConfigureAwait(false);
         if (stored is null)
@@ -467,6 +471,56 @@ public sealed class FuwenZhinuWorkflowFactory
     private static bool HasGuaranteedFanOutOperation(IEnumerable<WorkflowNode> nodes) => nodes.Any(node =>
         node is ActivityNode or ContextNode or InferenceNode || node is ConditionalNode conditional &&
         HasGuaranteedFanOutOperation(conditional.Then) && HasGuaranteedFanOutOperation(conditional.Else));
+
+    private static void ValidateProviderIdentityBudgets(WorkflowPlan plan)
+    {
+        // Runtime paths include a run GUID and slash wherever invocation identity
+        // is run-scoped. Check the full identity before writing an executable bundle.
+        const int runPrefixBytes = 37;
+        void Walk(IEnumerable<WorkflowNode> nodes, RepeatNode? repeat = null, FanOutNode? fanOut = null)
+        {
+            foreach (var node in nodes)
+            {
+                if (node is ConditionalNode condition)
+                {
+                    Walk(condition.Then, repeat, fanOut);
+                    Walk(condition.Else, repeat, fanOut);
+                }
+                else if (node is RepeatNode nestedRepeat) Walk(nestedRepeat.Body, nestedRepeat, fanOut);
+                else if (node is FanOutNode nestedFanOut) Walk(nestedFanOut.Body, repeat, nestedFanOut);
+                else if (node is ActivityNode or ContextNode or InferenceNode)
+                {
+                    try
+                    {
+                        var path = node.StructuralPath;
+                        var scoped = repeat is null && fanOut is null || plan.IrVersion == FuwenContracts.RunScopedDynamicsIrVersion;
+                        if (fanOut is not null)
+                        {
+                            var parentPath = fanOut.Selection is { } selection
+                                ? FuwenZhinuStepKeys.SelectionRuntimePath(fanOut.StructuralPath, selection.MaximumEpochs) : fanOut.StructuralPath;
+                            var itemPath = RuntimeNodeIdentity.CreateFanOutItem(parentPath, new IntegerRuntimeKey(0));
+                            if (plan.UsesExpandedGroupScopes)
+                            {
+                                path = itemPath + "/" + FuwenZhinuStepKeys.RepeatBodyStepName(node.StructuralPath, fanOut.StructuralPath, true);
+                                scoped = true;
+                            }
+                            else path = itemPath + "/" + node.StructuralPath[(node.StructuralPath.IndexOf("/$body/", StringComparison.Ordinal) + 7)..];
+                        }
+                        else if (repeat is not null)
+                            path = RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, repeat.MaxIterations,
+                                FuwenZhinuStepKeys.RepeatBodyStepName(node.StructuralPath, repeat.StructuralPath, plan.UsesExpandedGroupScopes));
+                        if (System.Text.Encoding.UTF8.GetByteCount(path) + (scoped ? runPrefixBytes : 0) > ExecutionInvocation.MaximumPathUtf8Bytes)
+                            throw new ArgumentException("Provider invocation path exceeds its UTF-8 budget.");
+                    }
+                    catch (ArgumentException)
+                    {
+                        throw new FuwenZhinuAdmissionException($"Provider invocation identity at '{node.StructuralPath}' exceeds its runtime path budget.");
+                    }
+                }
+            }
+        }
+        Walk(plan.Nodes);
+    }
 
     private static void ValidateExecutableSubset(IEnumerable<WorkflowNode> nodes, bool insideFanOut, bool insideRepeat, bool coordinated)
     {

@@ -16,6 +16,9 @@ public static class FuwenContracts
 
     /// <summary>Explicit bounded selection replacement with durable epoch membership.</summary>
     public const string SelectionIrVersion = "fuwen-ir/v5-selection";
+
+    /// <summary>Run-scoped provider invocation identities for dynamic execution.</summary>
+    public const string RunScopedDynamicsIrVersion = "fuwen-ir/v6-run-scoped-dynamics";
     /// <summary>The current compiler-semantics contract.</summary>
     public const string CompilerSemanticVersion = "compiler-semantics/1";
     /// <summary>The canonical JSON contract used by all currently supported IR versions.</summary>
@@ -452,4 +455,14 @@ public sealed record WorkflowPlan(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     WorkflowExecutionOrder? ExecutionOrder = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    IReadOnlyList<PromptDefinition>? Prompts = null);
+    IReadOnlyList<PromptDefinition>? Prompts = null)
+{
+    /// <summary>Whether a v6 plan requires its immutable expanded-group companion.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ExpandedGroupScopes { get; init; }
+
+    /// <summary>Whether this plan uses expanded group paths and adapter coordinates.</summary>
+    [JsonIgnore]
+    public bool UsesExpandedGroupScopes => IrVersion is FuwenContracts.GroupExpansionIrVersion or FuwenContracts.SelectionIrVersion ||
+        IrVersion == FuwenContracts.RunScopedDynamicsIrVersion && ExpandedGroupScopes;
+}

@@ -43,6 +43,24 @@ contract versions. Consumer-visible breaking changes are called out under
   recovery, privacy, provider, and operator gates. No new NuGet package is
   published by these source changes.
 
+## 0.1.0-preview.20
+
+- Reject duplicate ungrouped repeat names before storage; separate regions must
+  not reuse the same native loop state. Validate full provider runtime-path byte
+  budgets before writing executable definitions.
+- Fix ungrouped fan-out mapper round trips: preserve the public hash-only scope
+  token while restoring the native `sha256-` prefix when resolving a key.
+  Reject noncanonical item hashes.
+
+- Fix cross-run provider idempotency collisions in newly compiled repeat and
+  ungrouped fan-out plans. New dynamic plans use `fuwen-ir/v6-run-scoped-dynamics`;
+  provider runtime identity includes the workflow run ID.
+- Fingerprint whether a v6 plan requires its expanded-group companion. Older
+  v1–v5 definitions retain their canonical bytes, native keys and invocation
+  identities for replay. Recompile/admit a new definition to adopt the fix;
+  do not rekey an in-flight provider operation. See the
+  [migration notes](docs/consumer-migration.md).
+
 ## 0.1.0-preview.19
 
 - Add opt-in bounded grouped selection under `fuwen-ir/v5-selection`: durable

@@ -511,7 +511,7 @@ internal static partial class FuwenZhinuSequentialInterpreter
         CancellationToken cancellationToken)
     {
         // v5 terminal projections derive solely from durable selected item outcomes.
-        if (plan.IrVersion == FuwenContracts.SelectionIrVersion) return value;
+        if (plan.Nodes.OfType<FanOutNode>().Any(node => node.Selection is not null)) return value;
         var requestJson = FuwenRuntimeValueWire.Serialize(new ReturnRequestIdentity(node.StructuralPath, value));
         var outputJson = await context.StepAsync<JsonElement, JsonElement>(
             node.StructuralPath,
@@ -795,11 +795,11 @@ internal static partial class FuwenZhinuSequentialInterpreter
                 {
                     case ActivityNode activity:
                         state.Outputs[bodyNode.StructuralPath] = await ExecuteRepeatActivityAsync(
-                            repeat, activity, plan, executionFingerprint, ports, iteration, state, cancellationToken).ConfigureAwait(false);
+                            repeat, activity, plan, executionFingerprint, ports, context, iteration, state, cancellationToken).ConfigureAwait(false);
                         break;
                     case ContextNode contextNode:
                         state.Outputs[bodyNode.StructuralPath] = await ExecuteRepeatContextAsync(
-                            repeat, contextNode, plan, executionFingerprint, ports, iteration, state, cancellationToken).ConfigureAwait(false);
+                            repeat, contextNode, plan, executionFingerprint, ports, context, iteration, state, cancellationToken).ConfigureAwait(false);
                         break;
                     case InferenceNode inference:
                         state.Outputs[bodyNode.StructuralPath] = await ExecuteRepeatInferenceAsync(
@@ -872,6 +872,7 @@ internal static partial class FuwenZhinuSequentialInterpreter
         WorkflowPlan plan,
         string executionFingerprint,
         FuwenZhinuExecutionPorts ports,
+        WorkflowContext context,
         WorkflowLoopIteration<JsonElement> iteration,
         FuwenInterpreterState state,
         CancellationToken cancellationToken)
@@ -880,7 +881,7 @@ internal static partial class FuwenZhinuSequentialInterpreter
         var stepSuffix = FuwenRepeatCoordinator.StepSuffix(node.StructuralPath, repeat.StructuralPath, state.Groups is not null);
         var identity = new NodeRequestIdentity("activity", node.StructuralPath, node.Activity, null, arguments, null);
         var requestJson = FuwenRuntimeValueWire.Serialize(identity);
-        var runtimePath = RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, iteration.Iteration, stepSuffix);
+        var runtimePath = DynamicInvocationPath(plan, context.WorkflowRunId, RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, iteration.Iteration, stepSuffix));
         var result = await iteration.StepAsync(
             stepSuffix,
             requestJson,
@@ -912,6 +913,7 @@ internal static partial class FuwenZhinuSequentialInterpreter
         WorkflowPlan plan,
         string executionFingerprint,
         FuwenZhinuExecutionPorts ports,
+        WorkflowContext context,
         WorkflowLoopIteration<JsonElement> iteration,
         FuwenInterpreterState state,
         CancellationToken cancellationToken)
@@ -920,7 +922,7 @@ internal static partial class FuwenZhinuSequentialInterpreter
         var stepSuffix = FuwenRepeatCoordinator.StepSuffix(node.StructuralPath, repeat.StructuralPath, state.Groups is not null);
         var identity = new NodeRequestIdentity("context", node.StructuralPath, node.Provider, null, arguments, null);
         var requestJson = FuwenRuntimeValueWire.Serialize(identity);
-        var runtimePath = RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, iteration.Iteration, stepSuffix);
+        var runtimePath = DynamicInvocationPath(plan, context.WorkflowRunId, RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, iteration.Iteration, stepSuffix));
         // The full envelope (output + snapshot) is the persisted step
         // value so replay restores snapshot evidence without reinvoking
         // the provider; the snapshot slot below is populated on both
@@ -1014,7 +1016,7 @@ internal static partial class FuwenZhinuSequentialInterpreter
                 cancellationToken).ConfigureAwait(false);
 
         var (requestJson, createRequest) = BuildInferenceRequest(node, plan, state, arguments, contextInputs);
-        var runtimePath = RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, iteration.Iteration, stepSuffix);
+        var runtimePath = DynamicInvocationPath(plan, context.WorkflowRunId, RuntimeNodeIdentity.CreateIteration(repeat.StructuralPath, iteration.Iteration, stepSuffix));
         var result = await iteration.StepAsync(
             stepSuffix,
             requestJson,
@@ -1133,7 +1135,7 @@ internal static partial class FuwenZhinuSequentialInterpreter
         var arguments = FuwenBindingEvaluator.EvaluateArguments(node.Arguments, plan, state);
         var bodyMarker = node.StructuralPath.IndexOf("/$body/", StringComparison.Ordinal);
         var bodySuffix = bodyMarker >= 0 ? node.StructuralPath[(bodyMarker + "/$body/".Length)..] : node.Name;
-        var runtimeActivityPath = $"{runtimePath}/{bodySuffix}";
+        var runtimeActivityPath = DynamicInvocationPath(plan, itemStep.WorkflowRunId, $"{runtimePath}/{bodySuffix}");
         var identity = new NodeRequestIdentity("activity", runtimeActivityPath, node.Activity, null, arguments, null);
         var requestJson = FuwenRuntimeValueWire.Serialize(identity);
         var invocation = CreateInvocation(
@@ -1174,7 +1176,7 @@ internal static partial class FuwenZhinuSequentialInterpreter
         var arguments = FuwenBindingEvaluator.EvaluateArguments(node.Arguments, plan, state);
         var bodyMarker = node.StructuralPath.IndexOf("/$body/", StringComparison.Ordinal);
         var bodySuffix = bodyMarker >= 0 ? node.StructuralPath[(bodyMarker + "/$body/".Length)..] : node.Name;
-        var runtimeContextPath = $"{runtimePath}/{bodySuffix}";
+        var runtimeContextPath = DynamicInvocationPath(plan, itemStep.WorkflowRunId, $"{runtimePath}/{bodySuffix}");
         var identity = new NodeRequestIdentity("context", runtimeContextPath, node.Provider, null, arguments, null);
         var requestJson = FuwenRuntimeValueWire.Serialize(identity);
         var invocation = CreateInvocation(
@@ -1243,7 +1245,7 @@ internal static partial class FuwenZhinuSequentialInterpreter
 
         var bodyMarker = node.StructuralPath.IndexOf("/$body/", StringComparison.Ordinal);
         var bodySuffix = bodyMarker >= 0 ? node.StructuralPath[(bodyMarker + "/$body/".Length)..] : node.Name;
-        var runtimeInferencePath = $"{runtimePath}/{bodySuffix}";
+        var runtimeInferencePath = DynamicInvocationPath(plan, itemStep.WorkflowRunId, $"{runtimePath}/{bodySuffix}");
         var (requestJson, createRequest) = BuildInferenceRequest(node, plan, state, arguments, contextInputs, runtimeInferencePath);
         var invocation = CreateInvocation(
             executionFingerprint,
@@ -1291,6 +1293,9 @@ internal static partial class FuwenZhinuSequentialInterpreter
                     : [node.Condition.Left, node.Condition.Right]), ActivityGroupMemberRole.Control),
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
+
+    private static string DynamicInvocationPath(WorkflowPlan plan, Guid runId, string path) =>
+        plan.IrVersion == FuwenContracts.RunScopedDynamicsIrVersion ? $"{runId:D}/{path}" : path;
 
     private static ExecutionInvocation CreateInvocation(
         string fingerprint,

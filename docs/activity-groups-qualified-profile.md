@@ -6,7 +6,9 @@ identifies the original Q33 archives and source. The prior preview.18/preview.9
 [ZG-7 qualification](qualification/activity-groups/zg7.md) retains its original
 [archive pin](qualification/activity-groups/zhinu-zg7-candidate.json) and evidence.
 The new [explicit selection profile](activity-groups-selection.md) extends that
-bounded baseline. Candidate preparation is not package publication.
+bounded baseline; its [qualification](qualification/activity-groups/selection.md)
+records the separate source and archive evidence. Candidate preparation is not
+package publication.
 
 ## Supported authoring and execution
 
@@ -15,6 +17,8 @@ primitives. Nested static groups/macros, multiple independent invocations,
 static conditions, checkpoints and signal waits use native durable boundaries.
 A grouped plan can contain single-level bounded repeats, or one fixed keyed
 fan-out with an explicit item-local root and nested static groups/macros.
+The v5 profile additionally permits one terminal grouped selection with explicit
+bounded epochs and replacement of its prior expansion.
 Fan-out activity, context and one-call inference operations are independently
 durable; control-only item conditionals are supported. Admission requires a
 provider operation outside conditionals or a conditional with guaranteed work in

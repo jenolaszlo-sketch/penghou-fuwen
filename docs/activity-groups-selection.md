@@ -63,6 +63,9 @@ reuse the former provider invocation identity.
 
 ## Evidence boundary
 
+[Qualification and exact-source evidence](qualification/activity-groups/selection.md)
+record the local and Windows/Linux gates for this profile.
+
 Qualification covers contraction, reordered/expanded membership, reappearance,
 empty replacement, stable historical rows, mapper round trips and current Work
 counts. Fresh processes re-admit stored immutable bundle bytes without source

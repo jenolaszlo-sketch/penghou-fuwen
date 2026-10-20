@@ -1572,3 +1572,16 @@ terminal selection, adapter process-loss/progress proofs and a new preview.10 pi
 The original preview.9 archive pin is preserved separately. Arbitrary condition
 changes never imply silent retirement of old work. Broader dynamic composition,
 downstream consumers and publication remain separate activities.
+
+### Unreleased ZG-6.3 -- explicit bounded selection
+
+Fuwen preview.19 adopts exact native preview.10/schema 10 for one terminal
+grouped selection with explicit bounded epochs and replacement. The previous
+preview.9 pin and all seven original archives remain unchanged. The
+[qualification record](qualification/activity-groups/selection.md) binds runtime
+source `631fa64`, local archives and Windows/Linux evidence: 1,740 regression tests
+and 28 package-only consumer executions per OS, exact archive/cache checks and
+precompiled legacy compatibility. The reviewed v5 contract retains historical
+memberships and occurrence parents through partial replacement and hard process
+loss. The broader FM scope, nonterminal/nested composition and publication remain
+open; this checkpoint does not imply arbitrary condition-driven retirement.

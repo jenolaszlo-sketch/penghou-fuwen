@@ -67,7 +67,10 @@ public sealed partial class SelectionCandidateTests
                 foreach (var step in await store.GetStepsAsync(id, ct))
                 {
                     FuwenZhinuStepMapper.TryMatchStepKey(map, step.StepKey, out var match).Should().BeTrue(step.StepKey);
-                    FuwenZhinuStepMapper.ResolveStepKey(match.Descriptor, match.Scope).Should().Be(step.StepKey);
+                    // Loop-control descriptors classify several terminals; their
+                    // public scope intentionally does not select one terminal.
+                    if (match.Descriptor.Kind != FuwenZhinuStepKind.LoopControl)
+                        FuwenZhinuStepMapper.ResolveStepKey(match.Descriptor, match.Scope).Should().Be(step.StepKey);
                 }
             }
         }

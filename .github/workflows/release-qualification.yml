@@ -104,6 +104,17 @@ jobs:
             artifacts/zhinu-source-candidate.json
           if-no-files-found: error
 
+      - name: Retain native preparation receipts even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-preparation-receipts
+          path: |
+            artifacts/native-rehearsal/rehearsal-matrix.json
+            artifacts/candidate-preparation/**/qualification.json
+            artifacts/zhinu-source-candidate.json
+          if-no-files-found: warn
+
   validate:
     name: Validate the exact tagged commit against the staged feed
     needs: prepare-native-feed

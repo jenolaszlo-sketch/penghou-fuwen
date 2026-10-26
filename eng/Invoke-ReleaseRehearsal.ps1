@@ -117,14 +117,14 @@ Invoke-Scenario 'R15g-corrupt-bytes' @{ FeedDirectory=$corrupt; PinPath=$PinPath
 # restore of the adapter project must fail closed: the exclusive ID mapping
 # cannot fall back to nuget.org for the native packages.
 $restoreCase = Join-Path $OutputDirectory 'R16'
-New-Item -ItemType Directory -Path "$restoreCase\artifacts\zhinu-candidate" -Force | Out-Null
+New-Item -ItemType Directory -Path "$restoreCase\artifacts/zhinu-candidate" -Force | Out-Null
 $project = Join-Path $restoreCase 'AdapterProbe.csproj'
 Set-Content -LiteralPath $project -Value @"
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <RestorePackagesPath>$(Join-Path $restoreCase 'isolated-cache')\</RestorePackagesPath>
+    <RestorePackagesPath>$(Join-Path $restoreCase 'isolated-cache')</RestorePackagesPath>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Penghou.Zhinu" Version="[$Version]" />
@@ -137,7 +137,7 @@ Set-Content -LiteralPath $restoreConfig -Value @"
 <configuration>
   <packageSources>
     <clear />
-    <add key="zhinu-candidate" value="$(Join-Path $restoreCase 'artifacts\zhinu-candidate')" />
+    <add key="zhinu-candidate" value="$(Join-Path $restoreCase 'artifacts/zhinu-candidate')" />
     <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
   </packageSources>
   <packageSourceMapping>
@@ -173,15 +173,15 @@ $results.Add([pscustomobject]@{
 # R18: the valid staged feed restores the adapter project from the mapped
 # source only, with an isolated cache (RELEASE-ELIGIBLE, NO PUSH).
 $restoreOk = Join-Path $OutputDirectory 'R18'
-New-Item -ItemType Directory -Path "$restoreOk\artifacts\zhinu-candidate" -Force | Out-Null
-Copy-Item -Path (Join-Path $FeedDirectory '*.nupkg') -Destination "$restoreOk\artifacts\zhinu-candidate"
+New-Item -ItemType Directory -Path "$restoreOk\artifacts/zhinu-candidate" -Force | Out-Null
+Copy-Item -Path (Join-Path $FeedDirectory '*.nupkg') -Destination "$restoreOk\artifacts/zhinu-candidate"
 $projectOk = Join-Path $restoreOk 'AdapterProbe.csproj'
 Set-Content -LiteralPath $projectOk -Value @"
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <RestorePackagesPath>$(Join-Path $restoreOk 'isolated-cache')\</RestorePackagesPath>
+    <RestorePackagesPath>$(Join-Path $restoreOk 'isolated-cache')</RestorePackagesPath>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Penghou.Zhinu" Version="[$Version]" />
@@ -195,7 +195,7 @@ Set-Content -LiteralPath $configOk -Value @"
 <configuration>
   <packageSources>
     <clear />
-    <add key="zhinu-candidate" value="artifacts\zhinu-candidate" />
+    <add key="zhinu-candidate" value="artifacts/zhinu-candidate" />
     <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
   </packageSources>
   <packageSourceMapping>
@@ -237,6 +237,7 @@ $summary = [ordered]@{
 }
 $summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $OutputDirectory 'rehearsal-matrix.json')
 $results | Format-Table -AutoSize
+$results | Where-Object status -EQ FAIL | ForEach-Object { Write-Output $_.detail }
 $failed = @($results | Where-Object { $_.status -like 'FAIL*' })
 if ($failed.Count -gt 0) { throw "Rehearsal matrix failures: $($failed.Count)" }
 Write-Output "Native-feed rehearsal matrix complete: $($results.Count) scenarios, all as expected."

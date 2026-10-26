@@ -46,8 +46,8 @@ a mirror note; Fuwen-specific evidence is native to this packet.
 - **RG-01:** mirrored in `rg-01-zhinu.md`; the Fuwen publisher consumes only the
   ubuntu-validated package set and re-verifies every archive before
   `NuGet/login`.
-- **REL-SQLITE-01 — OPEN:** attempted-1 recurrence preserved; attempt 2 passed
-  with no change; 64/64 local batch passed; cause still unestablished.
+- **REL-SQLITE-01 — OPEN:** the attempt-1 recurrence is preserved; attempt 2
+  passed with no change; 64/64 local batch passed; cause still unestablished.
 - No tag was created, no package was published and no branch was merged at any
   point. The workflow-contract, formatting and fixture failures are preserved,
   not hidden (`observations.md`).

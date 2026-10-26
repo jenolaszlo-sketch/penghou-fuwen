@@ -21,8 +21,8 @@ ZG-RQ-01 evidence branch: `codex/zg-rq-01` at
 
 | Repository | Branch | Worktree | HEAD commit | Tree | Parent | Worktree state | Pushed |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Penghou.Zhinu | `codex/zg-rq-02-zhinu` | sibling `zg-rq-02-zhinu` | `908555d15b7091b4846c5f81040f4b15b31b3925` | `439ea4fa829d371069bedf0c4728e17dbf0d68f1` | `ced513363ccd59fbf85c162efd9c0864d2b84e23` | evidence files committed in this packet's commit; otherwise clean | `origin/codex/zg-rq-02-zhinu` |
-| Penghou.Zhinu | `codex/zg-rq-02-rehearsal` (dispatch ref) | same commit | `908555d15b7091b4846c5f81040f4b15b31b3925` | â€” | â€” | â€” | `origin/codex/zg-rq-02-rehearsal` |
+| Penghou.Zhinu | `codex/zg-rq-02-zhinu` | sibling `zg-rq-02-zhinu` | `009c7f5876a2dd6133f2ebc80e0806790e6e9aba` | `202bdf3c3ac4daca3f8e314f4ce9c70a4d44ba02` | `a4bdfa503f88fee8e1416e0ba769a3a5b67ed149` | evidence files committed in this packet's commit(s); otherwise clean | `origin/codex/zg-rq-02-zhinu` |
+| Penghou.Zhinu | `codex/zg-rq-02-rehearsal` (dispatch ref) | same commit | `009c7f5876a2dd6133f2ebc80e0806790e6e9aba` | â€” | â€” | â€” | `origin/codex/zg-rq-02-rehearsal` |
 | Penghou.Fuwen | `codex/zg-rq-02-fuwen` | sibling `zg-rq-02-fuwen` | `65658227151cfbcc69fde752832e4b6b0691d861` | `7ea3abc322dd55dc2007d7ecf2e95ffe09322e9a` | `5ec24791b6107bab2605ecfe6c45436cd3b74aaa` | evidence files committed in this packet's commit; otherwise clean | `origin/codex/zg-rq-02-fuwen` |
 | Penghou.Fuwen | `codex/zg-rq-02-rehearsal` (dispatch ref) | same commit | `65658227151cfbcc69fde752832e4b6b0691d861` | â€” | â€” | â€” | `origin/codex/zg-rq-02-rehearsal` |
 
@@ -31,9 +31,11 @@ Pinned native source worktree (read-only staging input):
 
 ## Branch history
 
-Zhinu (`d272b26..908555d`):
+Zhinu (`d272b26..009c7f5`):
 
 ```text
+009c7f5 Correct rehearsal scenario map: hosted API fixtures are offline; live-API negatives are separate evidence
+a4bdfa5 Describe rehearsal coverage accurately: hosted fixtures are offline; live-API negatives are recorded local evidence
 908555d Exercise the final immutable artifact handoff in the hosted rehearsal
 ced5133 Bind qualified release artifacts and staged native feed; add fail-closed rehearsals
 b21c59b Preserve interrupted ZG-RQ-02 implementation and independently recovered state
@@ -83,4 +85,16 @@ Pushed branches (verified via `git ls-remote --heads origin`):
 `codex/zg-rq-02-zhinu`, `codex/zg-rq-02-rehearsal` (Zhinu);
 `codex/zg-rq-02-fuwen`, `codex/zg-rq-02-rehearsal` (Fuwen). Canonical `main`
 was not modified, merged or force-updated. No tags were created.
+
+## Evidence commits
+
+- Zhinu evidence packet commit: `18af51bab1ad9a0ad9a588b155463479ef32dd33`
+  (docs-only; parent `009c7f5876a2dd6133f2ebc80e0806790e6e9aba`)
+- Fuwen evidence packet commit: `8a18a3f9b18da368dc973c0a6a733c1e34fa30d3`
+  (docs-only; parent `65658227151cfbcc69fde752832e4b6b0691d861`)
+
+These documentation-only commits follow the implementation commits above; the
+follow-up binding commit that fills these values is the branch tip and is
+visible in `git log`. Neither commit touches `src/`, tests, workflows or
+scripts.
 

@@ -1,0 +1,15 @@
+{
+  "executedAtUtc": "2026-10-26T11:00:11.1817993+00:00",
+  "scenario": "R11-native-dependency-pin",
+  "expected": "REFUSED: native core declares a dependency version other than [0.1.0-preview.2]",
+  "observed": "REFUSED",
+  "exitCode": 1,
+  "detail": "Exception: C:\\Users\\Laszlos\\source\\repos\\zg-rq-02-fuwen\\eng\\Verify-NativeFeed.ps1:131\r\nLine |\r\n 131 |      throw \"Native core package declares '$NeutralDependencyId' versio .\r\n     |      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n     | Native core package declares 'Penghou.Workflow.Abstractions' versions '[1.0.0]'; the accepted pin is\r\n     | '[0.1.0-preview.2]' (R11 REFUSE).",
+  "fixture": {
+    "feed": "C:\\Windows\\TEMP\\opencode\\zgrq02\\feed-r11\\R11",
+    "modifiedPackage": "Penghou.Zhinu.0.2.0-preview.10.nupkg",
+    "modifiedDependency": "Penghou.Workflow.Abstractions [0.1.0-preview.2] -> [1.0.0]",
+    "rebuildManifestHashUpdated": true,
+    "originalRebuildManifest": "C:\\Users\\Laszlos\\source\\repos\\zg-rq-02-fuwen\\docs\\evidence\\zg-rq-02\\local\\native-rebuild-02\\zhinu-source-candidate-a0ed614f75a44df4be114a0e7eb0d696.json"
+  }
+}

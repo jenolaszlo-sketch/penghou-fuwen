@@ -1,0 +1,5 @@
+2026-10-26T09:40:58.8428494+00:00 started mode=selection-start pid=29616
+2026-10-26T09:40:59.6928331+00:00 terminated pid=29616 exit=-1 stderr=
+2026-10-26T09:40:59.7254166+00:00 started mode=selection-partial pid=8804
+2026-10-26T09:41:00.4241955+00:00 terminated pid=8804 exit=-1 stderr=
+2026-10-26T09:41:01.7097533+00:00 retained runtime=.NET 10.0.12 os=Microsoft Windows 10.0.26200 pooling=false directory=D:\temp\activity-groups\zg-rq-02\stress-batch-01\net10.0-04\temporary\fuwen-selection-process\04510e72d32d46d293baded117f525ca

@@ -1,0 +1,76 @@
+{
+  "executedAtUtc": "2026-10-26T09:41:15.3275561+00:00",
+  "scenarios": [
+    {
+      "scenario": "R15a-valid-feed",
+      "expected": "PASS",
+      "observed": "PASS",
+      "status": "PASS",
+      "detail": "NATIVE FEED VERIFIED: 7 packages at 0.2.0-preview.10, source bf33c05cf2390af6924bbe3761e09f9e377c7a97, Penghou.Workflow.Abstractions [0.1.0-preview.2]."
+    },
+    {
+      "scenario": "R15b-feed-absent",
+      "expected": "REFUSED",
+      "observed": "REFUSED",
+      "status": "PASS",
+      "detail": "The property 'ResolvedSourceCommit' cannot be found on this object. Verify that the property exists."
+    },
+    {
+      "scenario": "R15c-package-missing",
+      "expected": "REFUSED",
+      "observed": "REFUSED",
+      "status": "PASS",
+      "detail": "The property 'ResolvedSourceCommit' cannot be found on this object. Verify that the property exists."
+    },
+    {
+      "scenario": "R15d-wrong-version",
+      "expected": "REFUSED",
+      "observed": "REFUSED",
+      "status": "PASS",
+      "detail": "The property 'ResolvedSourceCommit' cannot be found on this object. Verify that the property exists."
+    },
+    {
+      "scenario": "R15e-commit-mismatch",
+      "expected": "REFUSED",
+      "observed": "REFUSED",
+      "status": "PASS",
+      "detail": "Resolved native source commit '0123456789abcdef0123456789abcdef01234567' is not the pinned commit 'bf33c05cf2390af6924bbe3761e09f9e377c7a97' (R15 REFUSE)."
+    },
+    {
+      "scenario": "R15f-invalid-pin",
+      "expected": "REFUSED",
+      "observed": "REFUSED",
+      "status": "PASS",
+      "detail": "The property 'ResolvedSourceCommit' cannot be found on this object. Verify that the property exists."
+    },
+    {
+      "scenario": "R09-extra-package",
+      "expected": "REFUSED",
+      "observed": "REFUSED",
+      "status": "PASS",
+      "detail": "The property 'ResolvedSourceCommit' cannot be found on this object. Verify that the property exists."
+    },
+    {
+      "scenario": "R15g-corrupt-bytes",
+      "expected": "REFUSED",
+      "observed": "REFUSED",
+      "status": "PASS",
+      "detail": "The property 'ResolvedSourceCommit' cannot be found on this object. Verify that the property exists."
+    },
+    {
+      "scenario": "R16",
+      "expected": "REFUSED",
+      "observed": "REFUSED",
+      "status": "PASS",
+      "detail": "  Determining projects to restore...\r\nD:\\temp\\activity-groups\\zg-rq-02\\feed-rehearsal-01\\R16\\AdapterProbe.csproj : error NU1101: Unable to find package Penghou.Zhinu. No packages exist with this id in source(s): zhinu-candidate. PackageSourceMapping is enabled, the following source(s) were not considered: nuget.org.\r\n  Failed to restore D:\\temp\\activity-groups\\zg-rq-02\\feed-rehearsal-01\\R16\\AdapterProbe.csproj (in 88 ms).\r\n"
+    },
+    {
+      "scenario": "R18",
+      "expected": "RELEASE-ELIGIBLE (NO PUSH)",
+      "observed": "RELEASE-ELIGIBLE (NO PUSH)",
+      "status": "RELEASE-ELIGIBLE (NO PUSH)",
+      "detail": "  Determining projects to restore...\r\n  Restored D:\\temp\\activity-groups\\zg-rq-02\\feed-rehearsal-01\\R18\\AdapterProbe.csproj (in 8.62 sec).\r\n"
+    }
+  ],
+  "noPushReason": "Publication side effects exist only in publish.yml:publish behind validation and the protected nuget environment; this harness and the rehearsal workflow contain no push steps."
+}

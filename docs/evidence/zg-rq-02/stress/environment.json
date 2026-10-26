@@ -1,0 +1,49 @@
+{
+  "harnessCommit": "101643aacd107042fbc5767bd88e99fd0349442b",
+  "qualifiedFuwenSource": "8c7da4cfbc882804d801fe0e8b073733e4ee563c",
+  "qualifiedNativeSource": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+  "harnessFileSha256": "c3fe966bc405659bcd516db022214ab8366631c323b11e57b8cb231c289f04d9",
+  "os": "Windows-11-10.0.26200-SP0",
+  "runtimes": "Microsoft.AspNetCore.App 8.0.31 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]\nMicrosoft.AspNetCore.App 9.0.20 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]\nMicrosoft.AspNetCore.App 10.0.12 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]\nMicrosoft.NETCore.App 8.0.31 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]\nMicrosoft.NETCore.App 9.0.20 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]\nMicrosoft.NETCore.App 10.0.12 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]\nMicrosoft.WindowsDesktop.App 8.0.31 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]\nMicrosoft.WindowsDesktop.App 9.0.20 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]\nMicrosoft.WindowsDesktop.App 10.0.12 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]",
+  "sdk": "10.0.401",
+  "sqliteVersionUnderTest": "3.53.3",
+  "nativeLibrarySha256": "b7385d722c83fb52142a00477a726723745916d22a555711ee89834c1111fb2e",
+  "diagnosticSqliteVersion": "3.50.4",
+  "journal": "WAL",
+  "pooling": false,
+  "busyTimeoutMs": 5000,
+  "scope": "Serial, both initial and replacement process-loss barriers; no retries",
+  "expectedCases": 64,
+  "startedUtc": "2026-10-26T09:38:22.486733+00:00",
+  "freeBytesAtStart": 594629689344,
+  "packages": [
+    {
+      "file": "Penghou.Zhinu.0.2.0-preview.10.nupkg",
+      "sha256": "dd46e50664e1f803523e7de8b6025c8a6077008634ca2c96c9155456e45f1baf"
+    },
+    {
+      "file": "Penghou.Zhinu.Agents.0.2.0-preview.10.nupkg",
+      "sha256": "d3d6ed7419f50a2f670b2f71aaa188f9a575375c5189ae88cb65924e668249e9"
+    },
+    {
+      "file": "Penghou.Zhinu.Hosting.0.2.0-preview.10.nupkg",
+      "sha256": "6b316e2b3082b2e9aed958c693203614843ddabd23bdb9525bc7972d1fe0f5cd"
+    },
+    {
+      "file": "Penghou.Zhinu.Hosting.AspNetCore.0.2.0-preview.10.nupkg",
+      "sha256": "432782a14aa55d7318f3b46d68ecda14d11f7f938911bb37ef8a92cac383b353"
+    },
+    {
+      "file": "Penghou.Zhinu.OpenTelemetry.0.2.0-preview.10.nupkg",
+      "sha256": "64417c35e7a5a7b306e08a50d03b3db8ec7f4da09ae1c6ec788e35c727116971"
+    },
+    {
+      "file": "Penghou.Zhinu.Sqlite.0.2.0-preview.10.nupkg",
+      "sha256": "cd2fa504a62c4615bd2991ae06a184ab7a01ce17b703ef95b241ee25a0a638b4"
+    },
+    {
+      "file": "Penghou.Zhinu.Testing.0.2.0-preview.10.nupkg",
+      "sha256": "08e1401364166bfdfc98e37ee8a911e48af1d8b96e88d6cdc01fe46fc553ff6b"
+    }
+  ]
+}

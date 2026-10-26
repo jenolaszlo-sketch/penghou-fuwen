@@ -1,0 +1,8 @@
+﻿2026-10-26T10:56:55.6132384Z Passed!  - Failed:     0, Passed:    94, Skipped:     0, Total:    94, Duration: 2 s - Penghou.Fuwen.Baize.Tests.dll (net8.0)
+2026-10-26T10:56:55.6330981Z Passed!  - Failed:     0, Passed:    94, Skipped:     0, Total:    94, Duration: 2 s - Penghou.Fuwen.Baize.Tests.dll (net10.0)
+2026-10-26T10:56:55.6759895Z Passed!  - Failed:     0, Passed:   251, Skipped:     0, Total:   251, Duration: 2 s - Penghou.Fuwen.Compiler.Tests.dll (net10.0)
+2026-10-26T10:57:04.3624612Z Passed!  - Failed:     0, Passed:   314, Skipped:     0, Total:   314, Duration: 1 s - Penghou.Fuwen.Tests.dll (net8.0)
+2026-10-26T10:57:09.8048825Z Passed!  - Failed:     0, Passed:   314, Skipped:     0, Total:   314, Duration: 1 s - Penghou.Fuwen.Tests.dll (net10.0)
+2026-10-26T10:57:11.3626398Z Passed!  - Failed:     0, Passed:   251, Skipped:     0, Total:   251, Duration: 4 s - Penghou.Fuwen.Compiler.Tests.dll (net8.0)
+2026-10-26T11:04:55.5109687Z Passed!  - Failed:     0, Passed:   226, Skipped:     0, Total:   226, Duration: 7 m 53 s - Penghou.Fuwen.Zhinu.Tests.dll (net10.0)
+2026-10-26T11:04:56.2883894Z Passed!  - Failed:     0, Passed:   226, Skipped:     0, Total:   226, Duration: 7 m 54 s - Penghou.Fuwen.Zhinu.Tests.dll (net8.0)

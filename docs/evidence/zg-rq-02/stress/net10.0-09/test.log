@@ -1,0 +1,15 @@
+Test run for C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\tests\Penghou.Fuwen.Zhinu.Tests\bin\Release\net10.0\Penghou.Fuwen.Zhinu.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v4.0.0-pre.4+89176d7f8d (64-bit .NET 10.0.12)
+[xUnit.net 00:00:00.17]   Discovering: Penghou.Fuwen.Zhinu.Tests
+[xUnit.net 00:00:00.42]   Discovered:  Penghou.Fuwen.Zhinu.Tests
+[xUnit.net 00:00:00.58]   Starting:    Penghou.Fuwen.Zhinu.Tests
+  Passed Penghou.Fuwen.Zhinu.Tests.FuwenZhinuSequentialInterpreterTests.Explicit_selection_process_loss_retires_partial_history_and_recovers_durable_replacement(blockedItem: "a") [3 s]
+[xUnit.net 00:00:06.99]   Finished:    Penghou.Fuwen.Zhinu.Tests (ID = 'aa1ae809f10c2b83cd84effa699a0de80b74c8423689f50587fa14ff56a2f5bb')
+  Passed Penghou.Fuwen.Zhinu.Tests.FuwenZhinuSequentialInterpreterTests.Explicit_selection_process_loss_retires_partial_history_and_recovers_durable_replacement(blockedItem: "b") [2 s]
+Results File: D:\temp\activity-groups\zg-rq-02\stress-batch-01\net10.0-09\stress.trx
+
+Test Run Successful.
+Total tests: 2
+     Passed: 2
+ Total time: 7.4180 Seconds

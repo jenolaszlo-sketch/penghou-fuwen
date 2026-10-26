@@ -1,0 +1,70 @@
+  Determining projects to restore...
+  Restored C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu\Penghou.Zhinu.csproj (in 218 ms).
+  Penghou.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu\bin\Release\net10.0\Penghou.Zhinu.dll
+  Penghou.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu\bin\Release\net8.0\Penghou.Zhinu.dll
+  Successfully created package 'D:\temp\activity-groups\zg-rq-02\native-rebuild-02\Penghou.Zhinu.0.2.0-preview.10.nupkg'.
+  Successfully created package 'D:\temp\activity-groups\zg-rq-02\native-rebuild-02\Penghou.Zhinu.0.2.0-preview.10.snupkg'.
+  Determining projects to restore...
+  Restored C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Sqlite\Penghou.Zhinu.Sqlite.csproj (in 510 ms).
+  Restored C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Agents\Penghou.Zhinu.Agents.csproj (in 8.83 sec).
+  1 of 3 projects are up-to-date for restore.
+  Penghou.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu\bin\Release\net8.0\Penghou.Zhinu.dll
+  Penghou.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu\bin\Release\net10.0\Penghou.Zhinu.dll
+  Penghou.Zhinu.Sqlite -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Sqlite\bin\Release\net8.0\Penghou.Zhinu.Sqlite.dll
+  Penghou.Zhinu.Sqlite -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Sqlite\bin\Release\net10.0\Penghou.Zhinu.Sqlite.dll
+  Penghou.Zhinu.Agents -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Agents\bin\Release\net8.0\Penghou.Zhinu.Agents.dll
+  Penghou.Zhinu.Agents -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Agents\bin\Release\net10.0\Penghou.Zhinu.Agents.dll
+  Successfully created package 'D:\temp\activity-groups\zg-rq-02\native-rebuild-02\Penghou.Zhinu.Agents.0.2.0-preview.10.nupkg'.
+  Successfully created package 'D:\temp\activity-groups\zg-rq-02\native-rebuild-02\Penghou.Zhinu.Agents.0.2.0-preview.10.snupkg'.
+  Determining projects to restore...
+  Restored C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Hosting\Penghou.Zhinu.Hosting.csproj (in 1.13 sec).
+  1 of 2 projects are up-to-date for restore.
+  Penghou.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu\bin\Release\net8.0\Penghou.Zhinu.dll
+  Penghou.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu\bin\Release\net10.0\Penghou.Zhinu.dll
+  Penghou.Zhinu.Hosting -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Hosting\bin\Release\net10.0\Penghou.Zhinu.Hosting.dll
+  Penghou.Zhinu.Hosting -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Hosting\bin\Release\net8.0\Penghou.Zhinu.Hosting.dll
+  Successfully created package 'D:\temp\activity-groups\zg-rq-02\native-rebuild-02\Penghou.Zhinu.Hosting.0.2.0-preview.10.nupkg'.
+  Successfully created package 'D:\temp\activity-groups\zg-rq-02\native-rebuild-02\Penghou.Zhinu.Hosting.0.2.0-preview.10.snupkg'.
+  Determining projects to restore...
+  Restored C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Hosting.AspNetCore\Penghou.Zhinu.Hosting.AspNetCore.csproj (in 211 ms).
+  1 of 2 projects are up-to-date for restore.
+  Penghou.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu\bin\Release\net8.0\Penghou.Zhinu.dll
+  Penghou.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu\bin\Release\net10.0\Penghou.Zhinu.dll
+  Penghou.Zhinu.Hosting.AspNetCore -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Hosting.AspNetCore\bin\Release\net10.0\Penghou.Zhinu.Hosting.AspNetCore.dll
+  Penghou.Zhinu.Hosting.AspNetCore -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Hosting.AspNetCore\bin\Release\net8.0\Penghou.Zhinu.Hosting.AspNetCore.dll
+  Successfully created package 'D:\temp\activity-groups\zg-rq-02\native-rebuild-02\Penghou.Zhinu.Hosting.AspNetCore.0.2.0-preview.10.nupkg'.
+  Successfully created package 'D:\temp\activity-groups\zg-rq-02\native-rebuild-02\Penghou.Zhinu.Hosting.AspNetCore.0.2.0-preview.10.snupkg'.
+  Determining projects to restore...
+  Restored C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.OpenTelemetry\Penghou.Zhinu.OpenTelemetry.csproj (in 8.53 sec).
+  2 of 3 projects are up-to-date for restore.
+  Penghou.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu\bin\Release\net8.0\Penghou.Zhinu.dll
+  Penghou.Zhinu.Sqlite -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Sqlite\bin\Release\net8.0\Penghou.Zhinu.Sqlite.dll
+  Penghou.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu\bin\Release\net10.0\Penghou.Zhinu.dll
+  Penghou.Zhinu.OpenTelemetry -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.OpenTelemetry\bin\Release\net8.0\Penghou.Zhinu.OpenTelemetry.dll
+  Penghou.Zhinu.Sqlite -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Sqlite\bin\Release\net10.0\Penghou.Zhinu.Sqlite.dll
+  Penghou.Zhinu.OpenTelemetry -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.OpenTelemetry\bin\Release\net10.0\Penghou.Zhinu.OpenTelemetry.dll
+  Successfully created package 'D:\temp\activity-groups\zg-rq-02\native-rebuild-02\Penghou.Zhinu.OpenTelemetry.0.2.0-preview.10.nupkg'.
+  Successfully created package 'D:\temp\activity-groups\zg-rq-02\native-rebuild-02\Penghou.Zhinu.OpenTelemetry.0.2.0-preview.10.snupkg'.
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Penghou.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu\bin\Release\net8.0\Penghou.Zhinu.dll
+  Penghou.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu\bin\Release\net10.0\Penghou.Zhinu.dll
+  Penghou.Zhinu.Sqlite -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Sqlite\bin\Release\net10.0\Penghou.Zhinu.Sqlite.dll
+  Penghou.Zhinu.Sqlite -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Sqlite\bin\Release\net8.0\Penghou.Zhinu.Sqlite.dll
+  Successfully created package 'D:\temp\activity-groups\zg-rq-02\native-rebuild-02\Penghou.Zhinu.Sqlite.0.2.0-preview.10.nupkg'.
+  Successfully created package 'D:\temp\activity-groups\zg-rq-02\native-rebuild-02\Penghou.Zhinu.Sqlite.0.2.0-preview.10.snupkg'.
+  Determining projects to restore...
+  Restored C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Testing\Penghou.Zhinu.Testing.csproj (in 244 ms).
+  2 of 3 projects are up-to-date for restore.
+  Penghou.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu\bin\Release\net8.0\Penghou.Zhinu.dll
+  Penghou.Zhinu.Sqlite -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Sqlite\bin\Release\net8.0\Penghou.Zhinu.Sqlite.dll
+  Penghou.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu\bin\Release\net10.0\Penghou.Zhinu.dll
+  Penghou.Zhinu.Sqlite -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Sqlite\bin\Release\net10.0\Penghou.Zhinu.Sqlite.dll
+  Penghou.Zhinu.Testing -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Testing\bin\Release\net8.0\Penghou.Zhinu.Testing.dll
+  Penghou.Zhinu.Testing -> C:\Users\Laszlos\source\repos\zg-rq-02-native\src\Penghou.Zhinu.Testing\bin\Release\net10.0\Penghou.Zhinu.Testing.dll
+  Successfully created package 'D:\temp\activity-groups\zg-rq-02\native-rebuild-02\Penghou.Zhinu.Testing.0.2.0-preview.10.nupkg'.
+  Successfully created package 'D:\temp\activity-groups\zg-rq-02\native-rebuild-02\Penghou.Zhinu.Testing.0.2.0-preview.10.snupkg'.
+Prepared exact unpublished Zhinu 0.2.0-preview.10 from bf33c05cf2390af6924bbe3761e09f9e377c7a97 using pin 'D:\temp\activity-groups\zg-rq-02\native-rebuild-02\zhinu-source-candidate-a0ed614f75a44df4be114a0e7eb0d696.json'.
+Prepared source-rebuilt Zhinu 0.2.0-preview.10 from bf33c05cf2390af6924bbe3761e09f9e377c7a97.
+Run packages: D:\temp\activity-groups\zg-rq-02\native-rebuild-02
+Run manifest: D:\temp\activity-groups\zg-rq-02\native-rebuild-02\zhinu-source-candidate-a0ed614f75a44df4be114a0e7eb0d696.json

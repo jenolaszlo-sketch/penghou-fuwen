@@ -1,0 +1,235 @@
+{
+  "framework": "net8.0",
+  "repetition": 11,
+  "startedUtc": "2026-10-26T09:39:41.100791+00:00",
+  "endedUtc": "2026-10-26T09:39:48.943674+00:00",
+  "exitCode": 0,
+  "results": [
+    {
+      "executionId": "d2cfe5b7-6989-4eb7-9df9-56f67d5404e1",
+      "testId": "f0fb1459-ab21-90e3-da9a-95d9d0c7dc72",
+      "testName": "Penghou.Fuwen.Zhinu.Tests.FuwenZhinuSequentialInterpreterTests.Explicit_selection_process_loss_retires_partial_history_and_recovers_durable_replacement(blockedItem: \"a\")",
+      "computerName": "LAPTOP-KBD8D8JG",
+      "duration": "00:00:02.7379723",
+      "startTime": "2026-10-26T17:39:46.0109787+08:00",
+      "endTime": "2026-10-26T17:39:48.7491473+08:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "d2cfe5b7-6989-4eb7-9df9-56f67d5404e1"
+    },
+    {
+      "executionId": "7c5ede24-1e3a-4ea7-b7d0-0d1605cafc06",
+      "testId": "6646af57-6359-35dc-c290-ba12e282213f",
+      "testName": "Penghou.Fuwen.Zhinu.Tests.FuwenZhinuSequentialInterpreterTests.Explicit_selection_process_loss_retires_partial_history_and_recovers_durable_replacement(blockedItem: \"b\")",
+      "computerName": "LAPTOP-KBD8D8JG",
+      "duration": "00:00:03.3418078",
+      "startTime": "2026-10-26T17:39:42.6572575+08:00",
+      "endTime": "2026-10-26T17:39:46.0061867+08:00",
+      "testType": "13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b",
+      "outcome": "Passed",
+      "testListId": "8c84fa94-04c1-424b-9868-57a2d4851a1d",
+      "relativeResultsDirectory": "7c5ede24-1e3a-4ea7-b7d0-0d1605cafc06"
+    }
+  ],
+  "retainedDatabases": [
+    {
+      "directory": "net8.0-11\\temporary\\fuwen-selection-process\\561d59fde9a74645888655a4b5e84838",
+      "files": [
+        {
+          "name": "block-item",
+          "size": 1,
+          "sha256": "2e7d2c03a9507ae265ecf5b5356885a53393a2029d241394997265a1a25aefc6"
+        },
+        {
+          "name": "choice.json",
+          "size": 23,
+          "sha256": "a3385d964f5cfead209837951ed4f4db6a6ae888ae7e31b71bfa3f22aa214d6e"
+        },
+        {
+          "name": "effects",
+          "size": 1035,
+          "sha256": "3cbf476dc0496354855a8f0d9ecce3a23f1870d2e6d1c5ad99544bd4a3c2a1eb"
+        },
+        {
+          "name": "group-d36987e549ae2326c1329750c24646ba072559de48d52e609e3b822c30aac759.json",
+          "size": 5753,
+          "sha256": "d36987e549ae2326c1329750c24646ba072559de48d52e609e3b822c30aac759"
+        },
+        {
+          "name": "plan-052a65b8ab0ab6929ddefac4a39682f6028bba3e1a7b60f210eea51ca529eb94.json",
+          "size": 4587,
+          "sha256": "052a65b8ab0ab6929ddefac4a39682f6028bba3e1a7b60f210eea51ca529eb94"
+        },
+        {
+          "name": "result",
+          "size": 5,
+          "sha256": "fd2079a3096d5abb9bdf54cc5c80262e7b58bac10d524846455474beff760be9"
+        },
+        {
+          "name": "retained-files.json",
+          "size": 1221,
+          "sha256": "d245b390cf306d123e73027b42189779500d66412c7cc05153b25f2fb6018761"
+        },
+        {
+          "name": "run-id",
+          "size": 36,
+          "sha256": "9fa3ca539a30a308267595ae20cafb176a3f6717ed8d752471f711d6ede1ae45"
+        },
+        {
+          "name": "run.db",
+          "size": 487424,
+          "sha256": "71bd093b9c0bb4628b9aa04b49d073f23afd6aec589c4f231ec47e48154277b5"
+        },
+        {
+          "name": "selector-calls",
+          "size": 14,
+          "sha256": "da9de51b03667a2c76a5b8477d0843257eb8437fb3f3d38590c4a6752b9d939f"
+        },
+        {
+          "name": "stress-diagnostics.log",
+          "size": 540,
+          "sha256": "19e6bbf73c72d561c837c8ef1cd0e426f0931acef6cff1687c4805c297c364b8"
+        }
+      ],
+      "copyDiagnostics": {
+        "integrity": [
+          [
+            "ok"
+          ]
+        ],
+        "journal": "wal",
+        "tableRowCounts": {
+          "sqlite_sequence": 1,
+          "workflow_artifact_invalidations": 0,
+          "workflow_artifacts": 0,
+          "workflow_authorization_checkpoints": 0,
+          "workflow_authorization_dispatches": 0,
+          "workflow_authorization_evidence": 0,
+          "workflow_authorization_wake_receipts": 0,
+          "workflow_event_consumers": 0,
+          "workflow_events": 33,
+          "workflow_external_operations": 0,
+          "workflow_generation_dispositions": 0,
+          "workflow_generations": 1,
+          "workflow_group_fanout_closures": 1,
+          "workflow_group_fanout_expansions": 2,
+          "workflow_group_fanout_items": 3,
+          "workflow_group_fanout_retirements": 1,
+          "workflow_group_manifests": 1,
+          "workflow_group_occurrences": 7,
+          "workflow_instances": 1,
+          "workflow_run_operations": 0,
+          "workflow_runs": 1,
+          "workflow_signals": 0,
+          "workflow_step_compensations": 0,
+          "workflow_step_dependencies": 16,
+          "workflow_step_group_memberships": 12,
+          "workflow_steps": 12,
+          "workflow_waits": 0,
+          "zhinu_schema": 1
+        }
+      }
+    },
+    {
+      "directory": "net8.0-11\\temporary\\fuwen-selection-process\\ee4f419f4ba24700ac1a488c2747c511",
+      "files": [
+        {
+          "name": "block-item",
+          "size": 1,
+          "sha256": "2e7d2c03a9507ae265ecf5b5356885a53393a2029d241394997265a1a25aefc6"
+        },
+        {
+          "name": "choice.json",
+          "size": 23,
+          "sha256": "a3385d964f5cfead209837951ed4f4db6a6ae888ae7e31b71bfa3f22aa214d6e"
+        },
+        {
+          "name": "effects",
+          "size": 621,
+          "sha256": "b224de74b3bca51f7a438eb37773c3e99351a962e675cf8ef5a901177510da03"
+        },
+        {
+          "name": "group-d36987e549ae2326c1329750c24646ba072559de48d52e609e3b822c30aac759.json",
+          "size": 5753,
+          "sha256": "d36987e549ae2326c1329750c24646ba072559de48d52e609e3b822c30aac759"
+        },
+        {
+          "name": "plan-052a65b8ab0ab6929ddefac4a39682f6028bba3e1a7b60f210eea51ca529eb94.json",
+          "size": 4587,
+          "sha256": "052a65b8ab0ab6929ddefac4a39682f6028bba3e1a7b60f210eea51ca529eb94"
+        },
+        {
+          "name": "result",
+          "size": 5,
+          "sha256": "fd2079a3096d5abb9bdf54cc5c80262e7b58bac10d524846455474beff760be9"
+        },
+        {
+          "name": "retained-files.json",
+          "size": 1220,
+          "sha256": "901c06306f4509494b0f75db9e7bca28073850aa84e1bfff68e9eb6355139b0f"
+        },
+        {
+          "name": "run-id",
+          "size": 36,
+          "sha256": "dfbfdcdfebf4c42c2c1f33b9dae73324b6ef55505f08820bed747f904a1fcc38"
+        },
+        {
+          "name": "run.db",
+          "size": 462848,
+          "sha256": "ec507e7a9c41cf3c3106085d81f246a6632337708273f56ca7a64a1915d6b1b4"
+        },
+        {
+          "name": "selector-calls",
+          "size": 14,
+          "sha256": "da9de51b03667a2c76a5b8477d0843257eb8437fb3f3d38590c4a6752b9d939f"
+        },
+        {
+          "name": "stress-diagnostics.log",
+          "size": 540,
+          "sha256": "f6aec8b123a02b035ddbd820bf158728f89776364e8464196af3d2af25e5d8db"
+        }
+      ],
+      "copyDiagnostics": {
+        "integrity": [
+          [
+            "ok"
+          ]
+        ],
+        "journal": "wal",
+        "tableRowCounts": {
+          "sqlite_sequence": 1,
+          "workflow_artifact_invalidations": 0,
+          "workflow_artifacts": 0,
+          "workflow_authorization_checkpoints": 0,
+          "workflow_authorization_dispatches": 0,
+          "workflow_authorization_evidence": 0,
+          "workflow_authorization_wake_receipts": 0,
+          "workflow_event_consumers": 0,
+          "workflow_events": 27,
+          "workflow_external_operations": 0,
+          "workflow_generation_dispositions": 0,
+          "workflow_generations": 1,
+          "workflow_group_fanout_closures": 1,
+          "workflow_group_fanout_expansions": 2,
+          "workflow_group_fanout_items": 3,
+          "workflow_group_fanout_retirements": 1,
+          "workflow_group_manifests": 1,
+          "workflow_group_occurrences": 6,
+          "workflow_instances": 1,
+          "workflow_run_operations": 0,
+          "workflow_runs": 1,
+          "workflow_signals": 0,
+          "workflow_step_compensations": 0,
+          "workflow_step_dependencies": 10,
+          "workflow_step_group_memberships": 9,
+          "workflow_steps": 9,
+          "workflow_waits": 0,
+          "zhinu_schema": 1
+        }
+      }
+    }
+  ],
+  "result": "PASS",
+  "classification": "No failure observed"
+}

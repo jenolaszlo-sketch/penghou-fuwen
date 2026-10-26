@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="288525f0-768a-497a-9c87-e1f39fcdfeab" name="Laszlos@LAPTOP-KBD8D8JG 2026-10-26 17:42:38" runUser="LAPTOP-KBD8D8JG\Laszlos" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-26T17:42:38.6570591+08:00" queuing="2026-10-26T17:42:38.6570597+08:00" start="2026-10-26T17:42:34.0836181+08:00" finish="2026-10-26T17:42:41.6214795+08:00" />
+  <TestSettings name="default" id="6f8eea59-19e5-4ded-b7e8-0ae6dc65aac3">
+    <Deployment runDeploymentRoot="Laszlos_LAPTOP-KBD8D8JG_2026-10-26_17_42_38" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="5bf5d934-dc7d-4553-a5b5-cb3d5a332a81" testId="6826facd-857d-fffb-6515-3546bbcdd5c5" testName="Penghou.Fuwen.Zhinu.Tests.FuwenZhinuSequentialInterpreterTests.Explicit_selection_process_loss_retires_partial_history_and_recovers_durable_replacement(blockedItem: &quot;b&quot;)" computerName="LAPTOP-KBD8D8JG" duration="00:00:02.8969525" startTime="2026-10-26T17:42:38.6239762+08:00" endTime="2026-10-26T17:42:41.5211088+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5bf5d934-dc7d-4553-a5b5-cb3d5a332a81" />
+    <UnitTestResult executionId="d08b8d32-b9ff-4672-bf37-56f717d6a497" testId="a2354c6b-ab77-9fda-5133-518dcec10fc0" testName="Penghou.Fuwen.Zhinu.Tests.FuwenZhinuSequentialInterpreterTests.Explicit_selection_process_loss_retires_partial_history_and_recovers_durable_replacement(blockedItem: &quot;a&quot;)" computerName="LAPTOP-KBD8D8JG" duration="00:00:03.4993147" startTime="2026-10-26T17:42:35.1065170+08:00" endTime="2026-10-26T17:42:38.6169894+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d08b8d32-b9ff-4672-bf37-56f717d6a497" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Penghou.Fuwen.Zhinu.Tests.FuwenZhinuSequentialInterpreterTests.Explicit_selection_process_loss_retires_partial_history_and_recovers_durable_replacement(blockedItem: &quot;a&quot;)" storage="c:\users\laszlos\source\repos\zg-rq-02-fuwen\tests\penghou.fuwen.zhinu.tests\bin\release\net10.0\penghou.fuwen.zhinu.tests.dll" id="a2354c6b-ab77-9fda-5133-518dcec10fc0">
+      <Execution id="d08b8d32-b9ff-4672-bf37-56f717d6a497" />
+      <TestMethod codeBase="C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\tests\Penghou.Fuwen.Zhinu.Tests\bin\Release\net10.0\Penghou.Fuwen.Zhinu.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Penghou.Fuwen.Zhinu.Tests.FuwenZhinuSequentialInterpreterTests" name="Explicit_selection_process_loss_retires_partial_history_and_recovers_durable_replacement" />
+    </UnitTest>
+    <UnitTest name="Penghou.Fuwen.Zhinu.Tests.FuwenZhinuSequentialInterpreterTests.Explicit_selection_process_loss_retires_partial_history_and_recovers_durable_replacement(blockedItem: &quot;b&quot;)" storage="c:\users\laszlos\source\repos\zg-rq-02-fuwen\tests\penghou.fuwen.zhinu.tests\bin\release\net10.0\penghou.fuwen.zhinu.tests.dll" id="6826facd-857d-fffb-6515-3546bbcdd5c5">
+      <Execution id="5bf5d934-dc7d-4553-a5b5-cb3d5a332a81" />
+      <TestMethod codeBase="C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\tests\Penghou.Fuwen.Zhinu.Tests\bin\Release\net10.0\Penghou.Fuwen.Zhinu.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Penghou.Fuwen.Zhinu.Tests.FuwenZhinuSequentialInterpreterTests" name="Explicit_selection_process_loss_retires_partial_history_and_recovers_durable_replacement" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="6826facd-857d-fffb-6515-3546bbcdd5c5" executionId="5bf5d934-dc7d-4553-a5b5-cb3d5a332a81" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a2354c6b-ab77-9fda-5133-518dcec10fc0" executionId="d08b8d32-b9ff-4672-bf37-56f717d6a497" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="2" executed="2" passed="2" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v4.0.0-pre.4+89176d7f8d (64-bit .NET 10.0.12)&#xD;
+[xUnit.net 00:00:00.16]   Discovering: Penghou.Fuwen.Zhinu.Tests&#xD;
+[xUnit.net 00:00:00.43]   Discovered:  Penghou.Fuwen.Zhinu.Tests&#xD;
+[xUnit.net 00:00:00.61]   Starting:    Penghou.Fuwen.Zhinu.Tests&#xD;
+[xUnit.net 00:00:07.11]   Finished:    Penghou.Fuwen.Zhinu.Tests (ID = 'aa1ae809f10c2b83cd84effa699a0de80b74c8423689f50587fa14ff56a2f5bb')&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

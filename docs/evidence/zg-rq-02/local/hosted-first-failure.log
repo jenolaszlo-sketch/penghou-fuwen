@@ -1,0 +1,476 @@
+﻿2026-10-26T09:47:57.8323872Z Current runner version: '2.338.0'
+2026-10-26T09:47:57.8354183Z ##[group]Runner Image Provisioner
+2026-10-26T09:47:57.8355236Z Hosted Compute Agent
+2026-10-26T09:47:57.8356342Z Version: 20261021.618
+2026-10-26T09:47:57.8357298Z Commit: 21505ad2541d5be6135ed84fc33697146cf75b8e
+2026-10-26T09:47:57.8358278Z Build Date: 2026-10-21T00:45:21Z
+2026-10-26T09:47:57.8359323Z Worker ID: {3e74c6e9-57fb-4567-bccb-680cd197e3ab}
+2026-10-26T09:47:57.8360322Z Region: eastus
+2026-10-26T09:47:57.8361223Z Cloud: Azure
+2026-10-26T09:47:57.8362039Z ##[endgroup]
+2026-10-26T09:47:57.8363832Z ##[group]Operating System
+2026-10-26T09:47:57.8364812Z Ubuntu
+2026-10-26T09:47:57.8365696Z 24.04.5
+2026-10-26T09:47:57.8366355Z LTS
+2026-10-26T09:47:57.8367698Z ##[endgroup]
+2026-10-26T09:47:57.8368474Z ##[group]Runner Image
+2026-10-26T09:47:57.8369400Z Image: ubuntu-24.04
+2026-10-26T09:47:57.8370204Z Version: 20261012.334.1
+2026-10-26T09:47:57.8372104Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261012.334/images/ubuntu/Ubuntu2404-Readme.md
+2026-10-26T09:47:57.8374447Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261012.334
+2026-10-26T09:47:57.8376114Z ##[endgroup]
+2026-10-26T09:47:57.8377795Z ##[group]GITHUB_TOKEN Permissions
+2026-10-26T09:47:57.8380560Z Contents: read
+2026-10-26T09:47:57.8381475Z Metadata: read
+2026-10-26T09:47:57.8382218Z ##[endgroup]
+2026-10-26T09:47:57.8384711Z Secret source: Actions
+2026-10-26T09:47:57.8386174Z Cache mode: write
+2026-10-26T09:47:57.8387713Z Prepare workflow directory
+2026-10-26T09:47:57.9313646Z Prepare all required actions
+2026-10-26T09:47:57.9375977Z Getting action download info
+2026-10-26T09:47:58.1207302Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-10-26T09:47:58.4442337Z Download action repository 'actions/setup-dotnet@v5' (SHA:26b0ec14cb23fa6904739307f278c14f94c95bf1)
+2026-10-26T09:47:58.8613632Z Download action repository 'actions/upload-artifact@v6' (SHA:b7c566a772e6b6bfb58ed0dc250532a479d7789f)
+2026-10-26T09:47:59.7180499Z Uses: jenolaszlo-sketch/penghou-fuwen/.github/workflows/release-qualification.yml@refs/heads/codex/zg-rq-02-rehearsal (bf993eea47eda8fcc6b0eb8cd71af98a35d2557f)
+2026-10-26T09:47:59.7186281Z ##[group] Inputs
+2026-10-26T09:47:59.7187319Z   require-release-tag: false
+2026-10-26T09:47:59.7188094Z   release_tag: 
+2026-10-26T09:47:59.7188739Z ##[endgroup]
+2026-10-26T09:47:59.7189731Z Complete job name: rehearse / Stage and verify the pinned native candidate feed
+2026-10-26T09:47:59.8151594Z ##[group]Run actions/checkout@v6
+2026-10-26T09:47:59.8152595Z with:
+2026-10-26T09:47:59.8153288Z   repository: jenolaszlo-sketch/penghou-fuwen
+2026-10-26T09:47:59.8159579Z   token: ***
+2026-10-26T09:47:59.8160197Z   ssh-strict: true
+2026-10-26T09:47:59.8160830Z   ssh-user: git
+2026-10-26T09:47:59.8161483Z   persist-credentials: true
+2026-10-26T09:47:59.8162198Z   clean: true
+2026-10-26T09:47:59.8162874Z   sparse-checkout-cone-mode: true
+2026-10-26T09:47:59.8163638Z   fetch-depth: 1
+2026-10-26T09:47:59.8164286Z   fetch-tags: false
+2026-10-26T09:47:59.8164938Z   show-progress: true
+2026-10-26T09:47:59.8165945Z   lfs: false
+2026-10-26T09:47:59.8166572Z   submodules: false
+2026-10-26T09:47:59.8167224Z   set-safe-directory: true
+2026-10-26T09:47:59.8167973Z   allow-unsafe-pr-checkout: false
+2026-10-26T09:47:59.8168948Z ##[endgroup]
+2026-10-26T09:47:59.9136608Z Syncing repository: jenolaszlo-sketch/penghou-fuwen
+2026-10-26T09:47:59.9139912Z ##[group]Getting Git version info
+2026-10-26T09:47:59.9141794Z Working directory is '/home/runner/work/penghou-fuwen/penghou-fuwen'
+2026-10-26T09:47:59.9144271Z [command]/usr/bin/git version
+2026-10-26T09:47:59.9181420Z git version 2.55.0
+2026-10-26T09:47:59.9207715Z ##[endgroup]
+2026-10-26T09:47:59.9227736Z Temporarily overriding HOME='/home/runner/work/_temp/e5d242bf-260e-4f64-86c0-6a6c6c109053' before making global git config changes
+2026-10-26T09:47:59.9230651Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-26T09:47:59.9233503Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/penghou-fuwen/penghou-fuwen
+2026-10-26T09:47:59.9292111Z Deleting the contents of '/home/runner/work/penghou-fuwen/penghou-fuwen'
+2026-10-26T09:47:59.9297620Z ##[group]Determining repository object format
+2026-10-26T09:47:59.9299348Z ##[endgroup]
+2026-10-26T09:47:59.9300741Z ##[group]Initializing the repository
+2026-10-26T09:47:59.9302258Z [command]/usr/bin/git init /home/runner/work/penghou-fuwen/penghou-fuwen
+2026-10-26T09:47:59.9722025Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-26T09:47:59.9724475Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-26T09:47:59.9726982Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-26T09:47:59.9728250Z hint: call:
+2026-10-26T09:47:59.9728904Z hint:
+2026-10-26T09:47:59.9729785Z hint: 	git config --global init.defaultBranch <name>
+2026-10-26T09:47:59.9730883Z hint:
+2026-10-26T09:47:59.9732276Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-26T09:47:59.9734527Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-26T09:47:59.9735975Z hint:
+2026-10-26T09:47:59.9736673Z hint: 	git branch -m <name>
+2026-10-26T09:47:59.9737455Z hint:
+2026-10-26T09:47:59.9738514Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-26T09:47:59.9740411Z Initialized empty Git repository in /home/runner/work/penghou-fuwen/penghou-fuwen/.git/
+2026-10-26T09:47:59.9744328Z [command]/usr/bin/git remote add origin https://github.com/jenolaszlo-sketch/penghou-fuwen
+2026-10-26T09:47:59.9910034Z ##[endgroup]
+2026-10-26T09:47:59.9911282Z ##[group]Disabling automatic garbage collection
+2026-10-26T09:47:59.9913463Z [command]/usr/bin/git config --local gc.auto 0
+2026-10-26T09:48:00.0058629Z ##[endgroup]
+2026-10-26T09:48:00.0060257Z ##[group]Setting up auth
+2026-10-26T09:48:00.0061522Z Removing SSH command configuration
+2026-10-26T09:48:00.0065146Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-26T09:48:00.0104186Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-26T09:48:00.0455464Z Removing HTTP extra header
+2026-10-26T09:48:00.0463142Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-26T09:48:00.0499590Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-26T09:48:00.0734380Z Removing includeIf entries pointing to credentials config files
+2026-10-26T09:48:00.0736699Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-26T09:48:00.0771560Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-26T09:48:00.0998609Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-4926c851-f35c-486e-88c3-7b720912ffce.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-26T09:48:00.1479879Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/.git.path /home/runner/work/_temp/git-credentials-4926c851-f35c-486e-88c3-7b720912ffce.config
+2026-10-26T09:48:00.2557425Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-4926c851-f35c-486e-88c3-7b720912ffce.config
+2026-10-26T09:48:00.3612468Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-4926c851-f35c-486e-88c3-7b720912ffce.config
+2026-10-26T09:48:00.3686988Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-4926c851-f35c-486e-88c3-7b720912ffce.config
+2026-10-26T09:48:00.3721765Z ##[endgroup]
+2026-10-26T09:48:00.3722170Z ##[group]Fetching the repository
+2026-10-26T09:48:00.3728946Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +bf993eea47eda8fcc6b0eb8cd71af98a35d2557f:refs/remotes/origin/codex/zg-rq-02-rehearsal
+2026-10-26T09:48:00.8996532Z From https://github.com/jenolaszlo-sketch/penghou-fuwen
+2026-10-26T09:48:00.8997447Z  * [new ref]         bf993eea47eda8fcc6b0eb8cd71af98a35d2557f -> origin/codex/zg-rq-02-rehearsal
+2026-10-26T09:48:00.9008123Z [command]/usr/bin/git branch --list --remote origin/codex/zg-rq-02-rehearsal
+2026-10-26T09:48:00.9035640Z   origin/codex/zg-rq-02-rehearsal
+2026-10-26T09:48:00.9043103Z [command]/usr/bin/git rev-parse refs/remotes/origin/codex/zg-rq-02-rehearsal
+2026-10-26T09:48:00.9066621Z bf993eea47eda8fcc6b0eb8cd71af98a35d2557f
+2026-10-26T09:48:00.9141099Z ##[endgroup]
+2026-10-26T09:48:00.9141903Z ##[group]Determining the checkout info
+2026-10-26T09:48:00.9142568Z ##[endgroup]
+2026-10-26T09:48:00.9143011Z [command]/usr/bin/git sparse-checkout disable
+2026-10-26T09:48:00.9143978Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-26T09:48:00.9157096Z ##[group]Checking out the ref
+2026-10-26T09:48:00.9157663Z [command]/usr/bin/git checkout --progress --force -B codex/zg-rq-02-rehearsal refs/remotes/origin/codex/zg-rq-02-rehearsal
+2026-10-26T09:48:00.9434854Z Switched to a new branch 'codex/zg-rq-02-rehearsal'
+2026-10-26T09:48:00.9439206Z branch 'codex/zg-rq-02-rehearsal' set up to track 'origin/codex/zg-rq-02-rehearsal'.
+2026-10-26T09:48:00.9444152Z ##[endgroup]
+2026-10-26T09:48:00.9484273Z [command]/usr/bin/git log -1 --format=%H
+2026-10-26T09:48:00.9510160Z bf993eea47eda8fcc6b0eb8cd71af98a35d2557f
+2026-10-26T09:48:00.9738311Z ##[group]Run actions/setup-dotnet@v5
+2026-10-26T09:48:00.9738605Z with:
+2026-10-26T09:48:00.9738811Z   dotnet-version: 8.0.x
+10.0.x
+
+2026-10-26T09:48:00.9739045Z   cache: false
+2026-10-26T09:48:00.9739229Z ##[endgroup]
+2026-10-26T09:48:01.0924676Z [command]/home/runner/work/_actions/actions/setup-dotnet/v5/externals/install-dotnet.sh --skip-non-versioned-files --runtime dotnet --channel LTS
+2026-10-26T09:48:01.3415780Z dotnet-install: Attempting to download using aka.ms link https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.14/dotnet-runtime-10.0.14-linux-x64.tar.gz
+2026-10-26T09:48:01.6097309Z dotnet-install: Remote file https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.14/dotnet-runtime-10.0.14-linux-x64.tar.gz size is 36673986 bytes.
+2026-10-26T09:48:01.6098882Z dotnet-install: Extracting archive from https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.14/dotnet-runtime-10.0.14-linux-x64.tar.gz
+2026-10-26T09:48:02.2026707Z dotnet-install: Downloaded file size is 36673986 bytes.
+2026-10-26T09:48:02.2027367Z dotnet-install: The remote and local file sizes are equal.
+2026-10-26T09:48:02.2283139Z dotnet-install: Installed version is 10.0.14
+2026-10-26T09:48:02.2336220Z dotnet-install: Adding to current process PATH: `/usr/share/dotnet`. Note: This change will be visible only when sourcing script.
+2026-10-26T09:48:02.2337495Z dotnet-install: Note that the script does not resolve dependencies during installation.
+2026-10-26T09:48:02.2338690Z dotnet-install: To check the list of dependencies, go to https://learn.microsoft.com/dotnet/core/install, select your operating system and check the "Dependencies" section.
+2026-10-26T09:48:02.2339567Z dotnet-install: Installation finished successfully.
+2026-10-26T09:48:02.2360778Z [command]/home/runner/work/_actions/actions/setup-dotnet/v5/externals/install-dotnet.sh --skip-non-versioned-files --channel 8.0
+2026-10-26T09:48:02.3913797Z dotnet-install: Attempting to download using aka.ms link https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.427/dotnet-sdk-8.0.427-linux-x64.tar.gz
+2026-10-26T09:48:03.9298251Z dotnet-install: Remote file https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.427/dotnet-sdk-8.0.427-linux-x64.tar.gz size is 217060685 bytes.
+2026-10-26T09:48:03.9302156Z dotnet-install: Extracting archive from https://builds.dotnet.microsoft.com/dotnet/Sdk/8.0.427/dotnet-sdk-8.0.427-linux-x64.tar.gz
+2026-10-26T09:48:07.9594934Z dotnet-install: Downloaded file size is 217060685 bytes.
+2026-10-26T09:48:07.9595664Z dotnet-install: The remote and local file sizes are equal.
+2026-10-26T09:48:08.8496038Z dotnet-install: Installed version is 8.0.427
+2026-10-26T09:48:08.8549440Z dotnet-install: Adding to current process PATH: `/usr/share/dotnet`. Note: This change will be visible only when sourcing script.
+2026-10-26T09:48:08.8550583Z dotnet-install: Note that the script does not resolve dependencies during installation.
+2026-10-26T09:48:08.8551892Z dotnet-install: To check the list of dependencies, go to https://learn.microsoft.com/dotnet/core/install, select your operating system and check the "Dependencies" section.
+2026-10-26T09:48:08.8552919Z dotnet-install: Installation finished successfully.
+2026-10-26T09:48:08.8568332Z [command]/home/runner/work/_actions/actions/setup-dotnet/v5/externals/install-dotnet.sh --skip-non-versioned-files --runtime dotnet --channel LTS
+2026-10-26T09:48:09.0161440Z dotnet-install: .NET Core Runtime with version '10.0.14' is already installed.
+2026-10-26T09:48:09.0172163Z [command]/home/runner/work/_actions/actions/setup-dotnet/v5/externals/install-dotnet.sh --skip-non-versioned-files --channel 10.0
+2026-10-26T09:48:09.1869493Z dotnet-install: Attempting to download using aka.ms link https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.403/dotnet-sdk-10.0.403-linux-x64.tar.gz
+2026-10-26T09:48:11.2403988Z dotnet-install: Remote file https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.403/dotnet-sdk-10.0.403-linux-x64.tar.gz size is 240199984 bytes.
+2026-10-26T09:48:11.2411390Z dotnet-install: Extracting archive from https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.403/dotnet-sdk-10.0.403-linux-x64.tar.gz
+2026-10-26T09:48:15.3743433Z dotnet-install: Downloaded file size is 240199984 bytes.
+2026-10-26T09:48:15.3745748Z dotnet-install: The remote and local file sizes are equal.
+2026-10-26T09:48:15.6429555Z dotnet-install: Installed version is 10.0.403
+2026-10-26T09:48:15.6481804Z dotnet-install: Adding to current process PATH: `/usr/share/dotnet`. Note: This change will be visible only when sourcing script.
+2026-10-26T09:48:15.6482516Z dotnet-install: Note that the script does not resolve dependencies during installation.
+2026-10-26T09:48:15.6512607Z dotnet-install: To check the list of dependencies, go to https://learn.microsoft.com/dotnet/core/install, select your operating system and check the "Dependencies" section.
+2026-10-26T09:48:15.6513432Z dotnet-install: Installation finished successfully.
+2026-10-26T09:48:15.7405007Z ##[group]Run $pin = Get-Content docs/qualification/activity-groups/zhinu-candidate.json -Raw | ConvertFrom-Json
+2026-10-26T09:48:15.7405939Z $pin = Get-Content docs/qualification/activity-groups/zhinu-candidate.json -Raw | ConvertFrom-Json
+2026-10-26T09:48:15.7406501Z if ($pin.SourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Invalid native source pin.' }
+2026-10-26T09:48:15.7406897Z "commit=$($pin.SourceCommit)" >> $env:GITHUB_OUTPUT
+2026-10-26T09:48:15.7407191Z "version=$($pin.Version)" >> $env:GITHUB_OUTPUT
+2026-10-26T09:48:15.7436039Z shell: /usr/bin/pwsh -command ". '{0}'"
+2026-10-26T09:48:15.7436300Z env:
+2026-10-26T09:48:15.7436481Z   DOTNET_ROOT: /usr/share/dotnet
+2026-10-26T09:48:15.7436695Z ##[endgroup]
+2026-10-26T09:48:20.2207724Z ##[group]Run actions/checkout@v6
+2026-10-26T09:48:20.2207953Z with:
+2026-10-26T09:48:20.2208160Z   repository: jenolaszlo-sketch/penghou-zhinu
+2026-10-26T09:48:20.2208438Z   ref: bf33c05cf2390af6924bbe3761e09f9e377c7a97
+2026-10-26T09:48:20.2208694Z   path: native-candidate-source
+2026-10-26T09:48:20.2210565Z   token: ***
+2026-10-26T09:48:20.2210750Z   ssh-strict: true
+2026-10-26T09:48:20.2210936Z   ssh-user: git
+2026-10-26T09:48:20.2211295Z   persist-credentials: true
+2026-10-26T09:48:20.2211496Z   clean: true
+2026-10-26T09:48:20.2211687Z   sparse-checkout-cone-mode: true
+2026-10-26T09:48:20.2211905Z   fetch-depth: 1
+2026-10-26T09:48:20.2212083Z   fetch-tags: false
+2026-10-26T09:48:20.2212264Z   show-progress: true
+2026-10-26T09:48:20.2212455Z   lfs: false
+2026-10-26T09:48:20.2212622Z   submodules: false
+2026-10-26T09:48:20.2212803Z   set-safe-directory: true
+2026-10-26T09:48:20.2213013Z   allow-unsafe-pr-checkout: false
+2026-10-26T09:48:20.2213228Z env:
+2026-10-26T09:48:20.2213430Z   DOTNET_ROOT: /usr/share/dotnet
+2026-10-26T09:48:20.2213643Z ##[endgroup]
+2026-10-26T09:48:20.2941172Z Syncing repository: jenolaszlo-sketch/penghou-zhinu
+2026-10-26T09:48:20.2965630Z ##[group]Getting Git version info
+2026-10-26T09:48:20.2976635Z Working directory is '/home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source'
+2026-10-26T09:48:20.2977594Z [command]/usr/bin/git version
+2026-10-26T09:48:20.2996194Z git version 2.55.0
+2026-10-26T09:48:20.3016351Z ##[endgroup]
+2026-10-26T09:48:20.3028303Z Temporarily overriding HOME='/home/runner/work/_temp/794eece7-3381-413f-8b19-1e4862c2fa12' before making global git config changes
+2026-10-26T09:48:20.3028961Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-26T09:48:20.3033205Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source
+2026-10-26T09:48:20.3062656Z ##[group]Determining repository object format
+2026-10-26T09:48:20.3064849Z ##[endgroup]
+2026-10-26T09:48:20.3065506Z ##[group]Initializing the repository
+2026-10-26T09:48:20.3069646Z [command]/usr/bin/git init /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source
+2026-10-26T09:48:20.3109437Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-26T09:48:20.3110424Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-26T09:48:20.3111315Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-26T09:48:20.3111803Z hint: call:
+2026-10-26T09:48:20.3112037Z hint:
+2026-10-26T09:48:20.3112404Z hint: 	git config --global init.defaultBranch <name>
+2026-10-26T09:48:20.3112781Z hint:
+2026-10-26T09:48:20.3113192Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-26T09:48:20.3113849Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-26T09:48:20.3114308Z hint:
+2026-10-26T09:48:20.3114581Z hint: 	git branch -m <name>
+2026-10-26T09:48:20.3114869Z hint:
+2026-10-26T09:48:20.3116965Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-26T09:48:20.3117947Z Initialized empty Git repository in /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/.git/
+2026-10-26T09:48:20.3119419Z [command]/usr/bin/git remote add origin https://github.com/jenolaszlo-sketch/penghou-zhinu
+2026-10-26T09:48:20.3148642Z ##[endgroup]
+2026-10-26T09:48:20.3149123Z ##[group]Disabling automatic garbage collection
+2026-10-26T09:48:20.3156049Z [command]/usr/bin/git config --local gc.auto 0
+2026-10-26T09:48:20.3180235Z ##[endgroup]
+2026-10-26T09:48:20.3180763Z ##[group]Setting up auth
+2026-10-26T09:48:20.3181543Z Removing SSH command configuration
+2026-10-26T09:48:20.3187633Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-26T09:48:20.3216060Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-26T09:48:20.3441222Z Removing HTTP extra header
+2026-10-26T09:48:20.3442039Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-26T09:48:20.3471858Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-26T09:48:20.3682812Z Removing includeIf entries pointing to credentials config files
+2026-10-26T09:48:20.3690850Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-26T09:48:20.3725225Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-26T09:48:20.3919933Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-b3360c36-15ae-4af8-a596-68811874997b.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-26T09:48:20.3956363Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/.git.path /home/runner/work/_temp/git-credentials-b3360c36-15ae-4af8-a596-68811874997b.config
+2026-10-26T09:48:20.3986734Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-b3360c36-15ae-4af8-a596-68811874997b.config
+2026-10-26T09:48:20.4016590Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/native-candidate-source/.git.path /github/runner_temp/git-credentials-b3360c36-15ae-4af8-a596-68811874997b.config
+2026-10-26T09:48:20.4054080Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/native-candidate-source/.git/worktrees/*.path /github/runner_temp/git-credentials-b3360c36-15ae-4af8-a596-68811874997b.config
+2026-10-26T09:48:20.4081128Z ##[endgroup]
+2026-10-26T09:48:20.4081561Z ##[group]Fetching the repository
+2026-10-26T09:48:20.4088244Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin bf33c05cf2390af6924bbe3761e09f9e377c7a97
+2026-10-26T09:48:21.4136885Z From https://github.com/jenolaszlo-sketch/penghou-zhinu
+2026-10-26T09:48:21.4137541Z  * branch            bf33c05cf2390af6924bbe3761e09f9e377c7a97 -> FETCH_HEAD
+2026-10-26T09:48:21.4147440Z [command]/usr/bin/git rev-parse --verify --quiet bf33c05cf2390af6924bbe3761e09f9e377c7a97^{object}
+2026-10-26T09:48:21.4172273Z bf33c05cf2390af6924bbe3761e09f9e377c7a97
+2026-10-26T09:48:21.4176714Z ##[endgroup]
+2026-10-26T09:48:21.4177160Z ##[group]Determining the checkout info
+2026-10-26T09:48:21.4177665Z ##[endgroup]
+2026-10-26T09:48:21.4181022Z [command]/usr/bin/git sparse-checkout disable
+2026-10-26T09:48:21.4220648Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-26T09:48:21.4248347Z ##[group]Checking out the ref
+2026-10-26T09:48:21.4251687Z [command]/usr/bin/git checkout --progress --force bf33c05cf2390af6924bbe3761e09f9e377c7a97
+2026-10-26T09:48:21.4666554Z Note: switching to 'bf33c05cf2390af6924bbe3761e09f9e377c7a97'.
+2026-10-26T09:48:21.4666827Z 
+2026-10-26T09:48:21.4667039Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-10-26T09:48:21.4667441Z changes and commit them, and you can discard any commits you make in this
+2026-10-26T09:48:21.4667866Z state without impacting any branches by switching back to a branch.
+2026-10-26T09:48:21.4668073Z 
+2026-10-26T09:48:21.4668256Z If you want to create a new branch to retain commits you create, you may
+2026-10-26T09:48:21.4668716Z do so (now or later) by using -c with the switch command. Example:
+2026-10-26T09:48:21.4668922Z 
+2026-10-26T09:48:21.4669031Z   git switch -c <new-branch-name>
+2026-10-26T09:48:21.4669178Z 
+2026-10-26T09:48:21.4669276Z Or undo this operation with:
+2026-10-26T09:48:21.4669410Z 
+2026-10-26T09:48:21.4669724Z   git switch -
+2026-10-26T09:48:21.4669825Z 
+2026-10-26T09:48:21.4670027Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-10-26T09:48:21.4670259Z 
+2026-10-26T09:48:21.4670426Z HEAD is now at bf33c05 perf: index retired occurrence claim checks
+2026-10-26T09:48:21.4674107Z ##[endgroup]
+2026-10-26T09:48:21.4710565Z [command]/usr/bin/git log -1 --format=%H
+2026-10-26T09:48:21.4734104Z bf33c05cf2390af6924bbe3761e09f9e377c7a97
+2026-10-26T09:48:21.4842066Z ##[group]Run ./eng/Prepare-ZhinuSourceCandidate.ps1 -SourceDirectory native-candidate-source
+2026-10-26T09:48:21.4842608Z ./eng/Prepare-ZhinuSourceCandidate.ps1 -SourceDirectory native-candidate-source
+2026-10-26T09:48:21.4842999Z if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+2026-10-26T09:48:21.4843404Z $manifest = @(Get-ChildItem artifacts/zhinu-source-candidate/zhinu-source-candidate-*.json)
+2026-10-26T09:48:21.4843875Z if ($manifest.Count -ne 1) { throw 'Expected one native rebuild manifest.' }
+2026-10-26T09:48:21.4844357Z Copy-Item -LiteralPath $manifest[0].FullName -Destination artifacts/zhinu-source-candidate.json
+2026-10-26T09:48:21.4866290Z shell: /usr/bin/pwsh -command ". '{0}'"
+2026-10-26T09:48:21.4866517Z env:
+2026-10-26T09:48:21.4866686Z   DOTNET_ROOT: /usr/share/dotnet
+2026-10-26T09:48:21.4866890Z ##[endgroup]
+2026-10-26T09:48:23.1686566Z   Determining projects to restore...
+2026-10-26T09:48:24.3155145Z   Restored /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu/Penghou.Zhinu.csproj (in 680 ms).
+2026-10-26T09:48:29.3435214Z   Penghou.Zhinu -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu/bin/Release/net8.0/Penghou.Zhinu.dll
+2026-10-26T09:48:29.3480933Z   Penghou.Zhinu -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu/bin/Release/net10.0/Penghou.Zhinu.dll
+2026-10-26T09:48:29.8074590Z   Successfully created package '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/Penghou.Zhinu.0.2.0-preview.10.nupkg'.
+2026-10-26T09:48:29.8169099Z   Successfully created package '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/Penghou.Zhinu.0.2.0-preview.10.snupkg'.
+2026-10-26T09:48:30.3460970Z   Determining projects to restore...
+2026-10-26T09:48:32.4641108Z   Restored /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Agents/Penghou.Zhinu.Agents.csproj (in 1.39 sec).
+2026-10-26T09:48:32.4658072Z   Restored /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Sqlite/Penghou.Zhinu.Sqlite.csproj (in 1.39 sec).
+2026-10-26T09:48:32.4674168Z   1 of 3 projects are up-to-date for restore.
+2026-10-26T09:48:33.3872860Z   Penghou.Zhinu -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu/bin/Release/net8.0/Penghou.Zhinu.dll
+2026-10-26T09:48:33.5737192Z   Penghou.Zhinu -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu/bin/Release/net10.0/Penghou.Zhinu.dll
+2026-10-26T09:48:37.7737309Z   Penghou.Zhinu.Sqlite -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Sqlite/bin/Release/net10.0/Penghou.Zhinu.Sqlite.dll
+2026-10-26T09:48:38.0217875Z   Penghou.Zhinu.Sqlite -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Sqlite/bin/Release/net8.0/Penghou.Zhinu.Sqlite.dll
+2026-10-26T09:48:38.2636056Z   Penghou.Zhinu.Agents -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Agents/bin/Release/net8.0/Penghou.Zhinu.Agents.dll
+2026-10-26T09:48:38.2853982Z   Penghou.Zhinu.Agents -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Agents/bin/Release/net10.0/Penghou.Zhinu.Agents.dll
+2026-10-26T09:48:38.9511880Z   Successfully created package '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/Penghou.Zhinu.Agents.0.2.0-preview.10.nupkg'.
+2026-10-26T09:48:38.9708957Z   Successfully created package '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/Penghou.Zhinu.Agents.0.2.0-preview.10.snupkg'.
+2026-10-26T09:48:39.9219567Z   Determining projects to restore...
+2026-10-26T09:48:41.9530568Z   Restored /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Hosting/Penghou.Zhinu.Hosting.csproj (in 597 ms).
+2026-10-26T09:48:41.9563583Z   1 of 2 projects are up-to-date for restore.
+2026-10-26T09:48:42.2219172Z   Penghou.Zhinu -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu/bin/Release/net8.0/Penghou.Zhinu.dll
+2026-10-26T09:48:42.2736203Z   Penghou.Zhinu -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu/bin/Release/net10.0/Penghou.Zhinu.dll
+2026-10-26T09:48:42.5928877Z   Penghou.Zhinu.Hosting -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Hosting/bin/Release/net10.0/Penghou.Zhinu.Hosting.dll
+2026-10-26T09:48:42.6847552Z   Penghou.Zhinu.Hosting -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Hosting/bin/Release/net8.0/Penghou.Zhinu.Hosting.dll
+2026-10-26T09:48:43.1121991Z   Successfully created package '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/Penghou.Zhinu.Hosting.0.2.0-preview.10.nupkg'.
+2026-10-26T09:48:43.1186834Z   Successfully created package '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/Penghou.Zhinu.Hosting.0.2.0-preview.10.snupkg'.
+2026-10-26T09:48:43.8254727Z   Determining projects to restore...
+2026-10-26T09:48:44.6513477Z   Restored /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Hosting.AspNetCore/Penghou.Zhinu.Hosting.AspNetCore.csproj (in 213 ms).
+2026-10-26T09:48:44.6529596Z   1 of 2 projects are up-to-date for restore.
+2026-10-26T09:48:44.9637006Z   Penghou.Zhinu -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu/bin/Release/net10.0/Penghou.Zhinu.dll
+2026-10-26T09:48:44.9808463Z   Penghou.Zhinu -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu/bin/Release/net8.0/Penghou.Zhinu.dll
+2026-10-26T09:48:45.2769820Z   Penghou.Zhinu.Hosting.AspNetCore -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Hosting.AspNetCore/bin/Release/net10.0/Penghou.Zhinu.Hosting.AspNetCore.dll
+2026-10-26T09:48:45.4000602Z   Penghou.Zhinu.Hosting.AspNetCore -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Hosting.AspNetCore/bin/Release/net8.0/Penghou.Zhinu.Hosting.AspNetCore.dll
+2026-10-26T09:48:45.8045897Z   Successfully created package '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/Penghou.Zhinu.Hosting.AspNetCore.0.2.0-preview.10.nupkg'.
+2026-10-26T09:48:45.8091775Z   Successfully created package '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/Penghou.Zhinu.Hosting.AspNetCore.0.2.0-preview.10.snupkg'.
+2026-10-26T09:48:46.5911048Z   Determining projects to restore...
+2026-10-26T09:48:48.2103818Z   Restored /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.OpenTelemetry/Penghou.Zhinu.OpenTelemetry.csproj (in 830 ms).
+2026-10-26T09:48:48.2143717Z   2 of 3 projects are up-to-date for restore.
+2026-10-26T09:48:48.4049615Z   Penghou.Zhinu -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu/bin/Release/net8.0/Penghou.Zhinu.dll
+2026-10-26T09:48:48.4500104Z   Penghou.Zhinu.Sqlite -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Sqlite/bin/Release/net8.0/Penghou.Zhinu.Sqlite.dll
+2026-10-26T09:48:48.5939213Z   Penghou.Zhinu.OpenTelemetry -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.OpenTelemetry/bin/Release/net8.0/Penghou.Zhinu.OpenTelemetry.dll
+2026-10-26T09:48:48.6226899Z   Penghou.Zhinu -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu/bin/Release/net10.0/Penghou.Zhinu.dll
+2026-10-26T09:48:48.6703734Z   Penghou.Zhinu.Sqlite -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Sqlite/bin/Release/net10.0/Penghou.Zhinu.Sqlite.dll
+2026-10-26T09:48:49.4226300Z   Penghou.Zhinu.OpenTelemetry -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.OpenTelemetry/bin/Release/net10.0/Penghou.Zhinu.OpenTelemetry.dll
+2026-10-26T09:48:49.8054971Z   Successfully created package '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/Penghou.Zhinu.OpenTelemetry.0.2.0-preview.10.nupkg'.
+2026-10-26T09:48:49.8129118Z   Successfully created package '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/Penghou.Zhinu.OpenTelemetry.0.2.0-preview.10.snupkg'.
+2026-10-26T09:48:50.5336708Z   Determining projects to restore...
+2026-10-26T09:48:51.1472163Z   All projects are up-to-date for restore.
+2026-10-26T09:48:51.4232680Z   Penghou.Zhinu -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu/bin/Release/net8.0/Penghou.Zhinu.dll
+2026-10-26T09:48:51.4234186Z   Penghou.Zhinu -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu/bin/Release/net10.0/Penghou.Zhinu.dll
+2026-10-26T09:48:51.5135537Z   Penghou.Zhinu.Sqlite -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Sqlite/bin/Release/net10.0/Penghou.Zhinu.Sqlite.dll
+2026-10-26T09:48:51.7187105Z   Penghou.Zhinu.Sqlite -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Sqlite/bin/Release/net8.0/Penghou.Zhinu.Sqlite.dll
+2026-10-26T09:48:52.4379896Z   Successfully created package '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/Penghou.Zhinu.Sqlite.0.2.0-preview.10.nupkg'.
+2026-10-26T09:48:52.4463295Z   Successfully created package '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/Penghou.Zhinu.Sqlite.0.2.0-preview.10.snupkg'.
+2026-10-26T09:48:52.9853319Z   Determining projects to restore...
+2026-10-26T09:48:53.8376333Z   Restored /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Testing/Penghou.Zhinu.Testing.csproj (in 225 ms).
+2026-10-26T09:48:53.8401262Z   2 of 3 projects are up-to-date for restore.
+2026-10-26T09:48:54.0675438Z   Penghou.Zhinu -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu/bin/Release/net8.0/Penghou.Zhinu.dll
+2026-10-26T09:48:54.1398056Z   Penghou.Zhinu.Sqlite -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Sqlite/bin/Release/net8.0/Penghou.Zhinu.Sqlite.dll
+2026-10-26T09:48:54.1856065Z   Penghou.Zhinu -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu/bin/Release/net10.0/Penghou.Zhinu.dll
+2026-10-26T09:48:54.3450203Z   Penghou.Zhinu.Testing -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Testing/bin/Release/net8.0/Penghou.Zhinu.Testing.dll
+2026-10-26T09:48:54.3867936Z   Penghou.Zhinu.Sqlite -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Sqlite/bin/Release/net10.0/Penghou.Zhinu.Sqlite.dll
+2026-10-26T09:48:54.7257384Z   Penghou.Zhinu.Testing -> /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/src/Penghou.Zhinu.Testing/bin/Release/net10.0/Penghou.Zhinu.Testing.dll
+2026-10-26T09:48:54.8865795Z   Successfully created package '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/Penghou.Zhinu.Testing.0.2.0-preview.10.nupkg'.
+2026-10-26T09:48:54.8894364Z   Successfully created package '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/Penghou.Zhinu.Testing.0.2.0-preview.10.snupkg'.
+2026-10-26T09:48:55.0917913Z Prepared exact unpublished Zhinu 0.2.0-preview.10 from bf33c05cf2390af6924bbe3761e09f9e377c7a97 using pin '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/zhinu-source-candidate-ebce601f38c741c5ad4834a6df708699.json'.
+2026-10-26T09:48:55.0936344Z Prepared source-rebuilt Zhinu 0.2.0-preview.10 from bf33c05cf2390af6924bbe3761e09f9e377c7a97.
+2026-10-26T09:48:55.0937825Z Run packages: /home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate
+2026-10-26T09:48:55.0976499Z Run manifest: /home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate/zhinu-source-candidate-ebce601f38c741c5ad4834a6df708699.json
+2026-10-26T09:48:55.1901538Z ##[group]Run ./eng/Test-ZhinuCandidatePreparation.ps1 -ArtifactsDirectory artifacts/zhinu-candidate -CandidatePinPath artifacts/zhinu-source-candidate.json -OutputDirectory artifacts/candidate-preparation
+2026-10-26T09:48:55.1903709Z ./eng/Test-ZhinuCandidatePreparation.ps1 -ArtifactsDirectory artifacts/zhinu-candidate -CandidatePinPath artifacts/zhinu-source-candidate.json -OutputDirectory artifacts/candidate-preparation
+2026-10-26T09:48:55.1962392Z shell: /usr/bin/pwsh -command ". '{0}'"
+2026-10-26T09:48:55.1962805Z env:
+2026-10-26T09:48:55.1963107Z   DOTNET_ROOT: /usr/share/dotnet
+2026-10-26T09:48:55.1963472Z ##[endgroup]
+2026-10-26T09:48:55.7612911Z Prepared exact unpublished Zhinu 0.2.0-preview.10 from bf33c05cf2390af6924bbe3761e09f9e377c7a97 using pin '/home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/zhinu-source-candidate.json'.
+2026-10-26T09:48:55.8684527Z Candidate preparation checks passed: /home/runner/work/penghou-fuwen/penghou-fuwen/artifacts/candidate-preparation/c9d9aa3fe865494d90abb31898b643e8/qualification.json
+2026-10-26T09:48:55.9159261Z ##[group]Run $resolved = (& git -C native-candidate-source rev-parse HEAD).Trim()
+2026-10-26T09:48:55.9159788Z $resolved = (& git -C native-candidate-source rev-parse HEAD).Trim()
+2026-10-26T09:48:55.9160139Z ./eng/Verify-NativeFeed.ps1 `
+2026-10-26T09:48:55.9160435Z   -FeedDirectory artifacts/zhinu-candidate `
+2026-10-26T09:48:55.9160813Z   -PinPath docs/qualification/activity-groups/zhinu-candidate.json `
+2026-10-26T09:48:55.9161234Z   -RebuildManifestPath artifacts/zhinu-source-candidate.json `
+2026-10-26T09:48:55.9161572Z   -Version '0.2.0-preview.10' `
+2026-10-26T09:48:55.9161836Z   -ResolvedSourceCommit $resolved
+2026-10-26T09:48:55.9184742Z shell: /usr/bin/pwsh -command ". '{0}'"
+2026-10-26T09:48:55.9184991Z env:
+2026-10-26T09:48:55.9185179Z   DOTNET_ROOT: /usr/share/dotnet
+2026-10-26T09:48:55.9185599Z ##[endgroup]
+2026-10-26T09:48:56.3581084Z NATIVE FEED VERIFIED: 7 packages at 0.2.0-preview.10, source bf33c05cf2390af6924bbe3761e09f9e377c7a97, Penghou.Workflow.Abstractions [0.1.0-preview.2].
+2026-10-26T09:48:56.4280586Z ##[group]Run ./eng/Invoke-ReleaseRehearsal.ps1 -FeedDirectory artifacts/zhinu-candidate -PinPath docs/qualification/activity-groups/zhinu-candidate.json -RebuildManifestPath artifacts/zhinu-source-candidate.json -OutputDirectory artifacts/native-rehearsal
+2026-10-26T09:48:56.4283167Z ./eng/Invoke-ReleaseRehearsal.ps1 -FeedDirectory artifacts/zhinu-candidate -PinPath docs/qualification/activity-groups/zhinu-candidate.json -RebuildManifestPath artifacts/zhinu-source-candidate.json -OutputDirectory artifacts/native-rehearsal
+2026-10-26T09:48:56.4312029Z shell: /usr/bin/pwsh -command ". '{0}'"
+2026-10-26T09:48:56.4312301Z env:
+2026-10-26T09:48:56.4312482Z   DOTNET_ROOT: /usr/share/dotnet
+2026-10-26T09:48:56.4312706Z ##[endgroup]
+2026-10-26T09:48:59.9259164Z 
+2026-10-26T09:48:59.9270656Z scenario             expected                   observed status detail
+2026-10-26T09:48:59.9271861Z --------             --------                   -------- ------ ------
+2026-10-26T09:48:59.9272743Z R15a-valid-feed      PASS                       PASS     PASS   NATIVE FEED VE…
+2026-10-26T09:48:59.9273521Z R15b-feed-absent     REFUSED                    REFUSED  PASS   Native feed di…
+2026-10-26T09:48:59.9274316Z R15c-package-missing REFUSED                    REFUSED  PASS   Feed contains …
+2026-10-26T09:48:59.9275118Z R15d-wrong-version   REFUSED                    REFUSED  PASS   Pin version '0…
+2026-10-26T09:48:59.9276634Z R15e-commit-mismatch REFUSED                    REFUSED  PASS   Resolved nativ…
+2026-10-26T09:48:59.9277887Z R15f-invalid-pin     REFUSED                    REFUSED  PASS   Pin file is in…
+2026-10-26T09:48:59.9278689Z R09-extra-package    REFUSED                    REFUSED  PASS   Feed contains …
+2026-10-26T09:48:59.9279481Z R15g-corrupt-bytes   REFUSED                    REFUSED  PASS   Rebuild hash m…
+2026-10-26T09:48:59.9280216Z R16                  REFUSED                    REFUSED  PASS     Determining …
+2026-10-26T09:48:59.9280933Z R18                  RELEASE-ELIGIBLE (NO PUSH) REFUSED  FAIL   Restore failed…
+2026-10-26T09:48:59.9281341Z 
+2026-10-26T09:49:00.0462937Z Exception: /home/runner/work/penghou-fuwen/penghou-fuwen/eng/Invoke-ReleaseRehearsal.ps1:241
+2026-10-26T09:49:00.0463846Z Line |
+2026-10-26T09:49:00.0464781Z  241 |  … .Count -gt 0) { throw "Rehearsal matrix failures: $($failed.Count)" }
+2026-10-26T09:49:00.0466495Z      |                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-10-26T09:49:00.0467628Z      | Rehearsal matrix failures: 1
+2026-10-26T09:49:00.0924383Z ##[error]Process completed with exit code 1.
+2026-10-26T09:49:00.1033054Z Post job cleanup.
+2026-10-26T09:49:00.1842385Z [command]/usr/bin/git version
+2026-10-26T09:49:00.1892661Z git version 2.55.0
+2026-10-26T09:49:00.1939448Z Temporarily overriding HOME='/home/runner/work/_temp/bf0c3948-1233-4500-b817-5931fe435dd0' before making global git config changes
+2026-10-26T09:49:00.1940848Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-26T09:49:00.1947738Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source
+2026-10-26T09:49:00.1989843Z Removing SSH command configuration
+2026-10-26T09:49:00.1997313Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-26T09:49:00.2061494Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-26T09:49:00.2393068Z Removing HTTP extra header
+2026-10-26T09:49:00.2403041Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-26T09:49:00.2487393Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-26T09:49:00.2822859Z Removing includeIf entries pointing to credentials config files
+2026-10-26T09:49:00.2831485Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-26T09:49:00.2863944Z includeif.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/.git.path
+2026-10-26T09:49:00.2865119Z includeif.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/.git/worktrees/*.path
+2026-10-26T09:49:00.2866710Z includeif.gitdir:/github/workspace/native-candidate-source/.git.path
+2026-10-26T09:49:00.2867402Z includeif.gitdir:/github/workspace/native-candidate-source/.git/worktrees/*.path
+2026-10-26T09:49:00.2874837Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/.git.path
+2026-10-26T09:49:00.2901876Z /home/runner/work/_temp/git-credentials-b3360c36-15ae-4af8-a596-68811874997b.config
+2026-10-26T09:49:00.2914428Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/.git.path /home/runner/work/_temp/git-credentials-b3360c36-15ae-4af8-a596-68811874997b.config
+2026-10-26T09:49:00.2955001Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/.git/worktrees/*.path
+2026-10-26T09:49:00.2981482Z /home/runner/work/_temp/git-credentials-b3360c36-15ae-4af8-a596-68811874997b.config
+2026-10-26T09:49:00.2992768Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/native-candidate-source/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-b3360c36-15ae-4af8-a596-68811874997b.config
+2026-10-26T09:49:00.3030346Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/native-candidate-source/.git.path
+2026-10-26T09:49:00.3055801Z /github/runner_temp/git-credentials-b3360c36-15ae-4af8-a596-68811874997b.config
+2026-10-26T09:49:00.3064879Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/native-candidate-source/.git.path /github/runner_temp/git-credentials-b3360c36-15ae-4af8-a596-68811874997b.config
+2026-10-26T09:49:00.3101652Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/native-candidate-source/.git/worktrees/*.path
+2026-10-26T09:49:00.3126889Z /github/runner_temp/git-credentials-b3360c36-15ae-4af8-a596-68811874997b.config
+2026-10-26T09:49:00.3136573Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/native-candidate-source/.git/worktrees/*.path /github/runner_temp/git-credentials-b3360c36-15ae-4af8-a596-68811874997b.config
+2026-10-26T09:49:00.3174896Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-26T09:49:00.3392958Z Removing credentials config '/home/runner/work/_temp/git-credentials-b3360c36-15ae-4af8-a596-68811874997b.config'
+2026-10-26T09:49:00.3558579Z Post job cleanup.
+2026-10-26T09:49:00.4296661Z [command]/usr/bin/git version
+2026-10-26T09:49:00.4329176Z git version 2.55.0
+2026-10-26T09:49:00.4366576Z Temporarily overriding HOME='/home/runner/work/_temp/9c8b67ec-362b-4be9-a309-0758d83c4803' before making global git config changes
+2026-10-26T09:49:00.4367857Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-26T09:49:00.4369169Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/penghou-fuwen/penghou-fuwen
+2026-10-26T09:49:00.4399421Z Removing SSH command configuration
+2026-10-26T09:49:00.4404821Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-26T09:49:00.4473249Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-26T09:49:00.4774260Z Removing HTTP extra header
+2026-10-26T09:49:00.4775606Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-26T09:49:00.4836762Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-26T09:49:00.5148713Z Removing includeIf entries pointing to credentials config files
+2026-10-26T09:49:00.5155992Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-26T09:49:00.5184096Z includeif.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/.git.path
+2026-10-26T09:49:00.5185105Z includeif.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/.git/worktrees/*.path
+2026-10-26T09:49:00.5186052Z includeif.gitdir:/github/workspace/.git.path
+2026-10-26T09:49:00.5186764Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-26T09:49:00.5193376Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/.git.path
+2026-10-26T09:49:00.5226524Z /home/runner/work/_temp/git-credentials-4926c851-f35c-486e-88c3-7b720912ffce.config
+2026-10-26T09:49:00.5239348Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/.git.path /home/runner/work/_temp/git-credentials-4926c851-f35c-486e-88c3-7b720912ffce.config
+2026-10-26T09:49:00.5282457Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/.git/worktrees/*.path
+2026-10-26T09:49:00.5329821Z /home/runner/work/_temp/git-credentials-4926c851-f35c-486e-88c3-7b720912ffce.config
+2026-10-26T09:49:00.5341390Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/penghou-fuwen/penghou-fuwen/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-4926c851-f35c-486e-88c3-7b720912ffce.config
+2026-10-26T09:49:00.5375585Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-10-26T09:49:00.5400294Z /github/runner_temp/git-credentials-4926c851-f35c-486e-88c3-7b720912ffce.config
+2026-10-26T09:49:00.5410286Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-4926c851-f35c-486e-88c3-7b720912ffce.config
+2026-10-26T09:49:00.5444408Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-26T09:49:00.5467075Z /github/runner_temp/git-credentials-4926c851-f35c-486e-88c3-7b720912ffce.config
+2026-10-26T09:49:00.5477464Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-4926c851-f35c-486e-88c3-7b720912ffce.config
+2026-10-26T09:49:00.5512371Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-26T09:49:00.5717201Z Removing credentials config '/home/runner/work/_temp/git-credentials-4926c851-f35c-486e-88c3-7b720912ffce.config'
+2026-10-26T09:49:00.5902075Z Cleaning up orphan processes
+2026-10-26T09:49:00.6245098Z Terminate orphan process: pid (3052) (dotnet)
+2026-10-26T09:49:00.6265713Z Terminate orphan process: pid (3071) (VBCSCompiler)
+2026-10-26T09:49:00.6283954Z Terminate orphan process: pid (3165) (dotnet)
+2026-10-26T09:49:00.6302262Z Terminate orphan process: pid (3184) (dotnet)
+

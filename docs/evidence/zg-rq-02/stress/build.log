@@ -1,0 +1,25 @@
+  Determining projects to restore...
+  Restored C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\src\Penghou.Fuwen\Penghou.Fuwen.csproj (in 6.31 sec).
+  Restored C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\src\Penghou.Fuwen.Compiler\Penghou.Fuwen.Compiler.csproj (in 6.31 sec).
+  Restored C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\src\Penghou.Fuwen.Baize\Penghou.Fuwen.Baize.csproj (in 9.47 sec).
+  Restored C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\tests\Penghou.Fuwen.GroupProcessProbe\Penghou.Fuwen.GroupProcessProbe.csproj (in 20.46 sec).
+  Restored C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\src\Penghou.Fuwen.Zhinu\Penghou.Fuwen.Zhinu.csproj (in 20.46 sec).
+  Restored C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\tests\Penghou.Fuwen.Zhinu.Tests\Penghou.Fuwen.Zhinu.Tests.csproj (in 25.84 sec).
+  Penghou.Fuwen -> C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\src\Penghou.Fuwen\bin\Release\net8.0\Penghou.Fuwen.dll
+  Penghou.Fuwen -> C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\src\Penghou.Fuwen\bin\Release\net10.0\Penghou.Fuwen.dll
+  Penghou.Fuwen.Compiler -> C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\src\Penghou.Fuwen.Compiler\bin\Release\net10.0\Penghou.Fuwen.Compiler.dll
+  Penghou.Fuwen.Compiler -> C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\src\Penghou.Fuwen.Compiler\bin\Release\net8.0\Penghou.Fuwen.Compiler.dll
+  Penghou.Fuwen.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\src\Penghou.Fuwen.Zhinu\bin\Release\net10.0\Penghou.Fuwen.Zhinu.dll
+  Penghou.Fuwen.Zhinu -> C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\src\Penghou.Fuwen.Zhinu\bin\Release\net8.0\Penghou.Fuwen.Zhinu.dll
+  Penghou.Fuwen.GroupProcessProbe -> C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\tests\Penghou.Fuwen.GroupProcessProbe\bin\Release\net10.0\Penghou.Fuwen.GroupProcessProbe.dll
+  Penghou.Fuwen.GroupProcessProbe -> C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\tests\Penghou.Fuwen.GroupProcessProbe\bin\Release\net8.0\Penghou.Fuwen.GroupProcessProbe.dll
+  Penghou.Fuwen.Baize -> C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\src\Penghou.Fuwen.Baize\bin\Release\net8.0\Penghou.Fuwen.Baize.dll
+  Penghou.Fuwen.Baize -> C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\src\Penghou.Fuwen.Baize\bin\Release\net10.0\Penghou.Fuwen.Baize.dll
+  Penghou.Fuwen.Zhinu.Tests -> C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\tests\Penghou.Fuwen.Zhinu.Tests\bin\Release\net8.0\Penghou.Fuwen.Zhinu.Tests.dll
+  Penghou.Fuwen.Zhinu.Tests -> C:\Users\Laszlos\source\repos\zg-rq-02-fuwen\tests\Penghou.Fuwen.Zhinu.Tests\bin\Release\net10.0\Penghou.Fuwen.Zhinu.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:49.23

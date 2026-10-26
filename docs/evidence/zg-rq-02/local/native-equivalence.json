@@ -1,0 +1,2048 @@
+[
+  {
+    "left": {
+      "filename": "Penghou.Zhinu.0.2.0-preview.10.nupkg",
+      "sha256": "dd46e50664e1f803523e7de8b6025c8a6077008634ca2c96c9155456e45f1baf",
+      "size": 706198,
+      "id": "Penghou.Zhinu",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Microsoft.Extensions.Logging.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Workflow.Abstractions",
+              "version": "[0.1.0-preview.2]",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Microsoft.Extensions.Logging.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Workflow.Abstractions",
+              "version": "[0.1.0-preview.2]",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu</title>\r\n    <authors>Penghou.Zhinu contributors</authors>\r\n    <license type=\"expression\">Apache-2.0</license>\r\n    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>\r\n    <readme>README.md</readme>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Embedded durable workflow execution abstractions and engine for .NET.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable embedded local-first automation ai</tags>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Microsoft.Extensions.Logging.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Workflow.Abstractions\" version=\"[0.1.0-preview.2]\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Microsoft.Extensions.Logging.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Workflow.Abstractions\" version=\"[0.1.0-preview.2]\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.nuspec": "32527f0b3a34822be762bba6c40e7770c549654db7fb977a47e6ccdcb1ecef92",
+        "README.md": "2814c48b92f190738d17ad966dc539035d26d558980e205bd31d26fb1d5b2cf9",
+        "[Content_Types].xml": "53789202a7a62de78987becbf3ade1d56e9cb6e6fd525e8db9d2f1d352cb0425",
+        "_rels/.rels": "ffbcfc14a8d0b2459fbbb49c578854e692a5a09f1fb03dc991592f4809230415",
+        "lib/net10.0/Penghou.Zhinu.dll": "2daab06143e4a3cbb11a8e1d8243534dcfdb9fd9443a47115cb4bc762f60edbc",
+        "lib/net10.0/Penghou.Zhinu.xml": "6cff23e3ed23fd0a16e398f75585ecf11e4c4ba97a59f3e65a4bcc7508ec7c58",
+        "lib/net8.0/Penghou.Zhinu.dll": "93c5c486908c5bfdbf74a21d2a809ca995d72a5933adf5958c3d54ff90ee23b4",
+        "lib/net8.0/Penghou.Zhinu.xml": "6cff23e3ed23fd0a16e398f75585ecf11e4c4ba97a59f3e65a4bcc7508ec7c58",
+        "package/services/metadata/core-properties/nuget.psmdcp": "042a051d182f3e9998a5fde36c611af690268bbeac9174b4b54abab024666d80"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.dll",
+        "lib/net10.0/Penghou.Zhinu.xml",
+        "lib/net8.0/Penghou.Zhinu.dll",
+        "lib/net8.0/Penghou.Zhinu.xml"
+      ]
+    },
+    "right": {
+      "filename": "Penghou.Zhinu.0.2.0-preview.10.nupkg",
+      "sha256": "1799901be542d855505584ae2acc4e2c8d64fc8b63678f4c4724f74fad1bb04a",
+      "size": 706198,
+      "id": "Penghou.Zhinu",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Microsoft.Extensions.Logging.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Workflow.Abstractions",
+              "version": "[0.1.0-preview.2]",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Microsoft.Extensions.Logging.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Workflow.Abstractions",
+              "version": "[0.1.0-preview.2]",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu</title>\r\n    <authors>Penghou.Zhinu contributors</authors>\r\n    <license type=\"expression\">Apache-2.0</license>\r\n    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>\r\n    <readme>README.md</readme>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Embedded durable workflow execution abstractions and engine for .NET.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable embedded local-first automation ai</tags>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Microsoft.Extensions.Logging.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Workflow.Abstractions\" version=\"[0.1.0-preview.2]\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Microsoft.Extensions.Logging.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Workflow.Abstractions\" version=\"[0.1.0-preview.2]\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.nuspec": "32527f0b3a34822be762bba6c40e7770c549654db7fb977a47e6ccdcb1ecef92",
+        "README.md": "2814c48b92f190738d17ad966dc539035d26d558980e205bd31d26fb1d5b2cf9",
+        "[Content_Types].xml": "53789202a7a62de78987becbf3ade1d56e9cb6e6fd525e8db9d2f1d352cb0425",
+        "_rels/.rels": "ffbcfc14a8d0b2459fbbb49c578854e692a5a09f1fb03dc991592f4809230415",
+        "lib/net10.0/Penghou.Zhinu.dll": "2daab06143e4a3cbb11a8e1d8243534dcfdb9fd9443a47115cb4bc762f60edbc",
+        "lib/net10.0/Penghou.Zhinu.xml": "6cff23e3ed23fd0a16e398f75585ecf11e4c4ba97a59f3e65a4bcc7508ec7c58",
+        "lib/net8.0/Penghou.Zhinu.dll": "93c5c486908c5bfdbf74a21d2a809ca995d72a5933adf5958c3d54ff90ee23b4",
+        "lib/net8.0/Penghou.Zhinu.xml": "6cff23e3ed23fd0a16e398f75585ecf11e4c4ba97a59f3e65a4bcc7508ec7c58",
+        "package/services/metadata/core-properties/nuget.psmdcp": "042a051d182f3e9998a5fde36c611af690268bbeac9174b4b54abab024666d80"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.dll",
+        "lib/net10.0/Penghou.Zhinu.xml",
+        "lib/net8.0/Penghou.Zhinu.dll",
+        "lib/net8.0/Penghou.Zhinu.xml"
+      ]
+    },
+    "archiveByteIdentical": false,
+    "identityAndDependenciesEqual": true,
+    "allMembersEqual": true,
+    "changedMembers": [],
+    "changedBinariesOrRidAssets": [],
+    "result": "DIFFERENT ARCHIVE; INSPECT MEMBER DELTA"
+  },
+  {
+    "left": {
+      "filename": "Penghou.Zhinu.Agents.0.2.0-preview.10.nupkg",
+      "sha256": "d3d6ed7419f50a2f670b2f71aaa188f9a575375c5189ae88cb65924e668249e9",
+      "size": 44830,
+      "id": "Penghou.Zhinu.Agents",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Agents.AI.Workflows",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Agents.AI.Workflows",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Agents</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Agents</title>\r\n    <authors>Penghou.Zhinu contributors</authors>\r\n    <license type=\"expression\">Apache-2.0</license>\r\n    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>\r\n    <readme>README.md</readme>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Microsoft Agent Framework (MAF) integration for Penghou.Zhinu: durable SQLite checkpoint storage and MAF graph workflows as durable Zhinu steps.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable agent maf checkpoint sqlite</tags>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Agents.AI.Workflows\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Agents.AI.Workflows\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Agents.nuspec": "28933abefa30f49aaa5b1ee14d99d334df1528afbc93f646268d1e014f0d26c8",
+        "README.md": "2814c48b92f190738d17ad966dc539035d26d558980e205bd31d26fb1d5b2cf9",
+        "[Content_Types].xml": "53789202a7a62de78987becbf3ade1d56e9cb6e6fd525e8db9d2f1d352cb0425",
+        "_rels/.rels": "32ab741277137b2bc93827f6c14c1396c2dca01bc7ecfe62eed15ea7e866c0fb",
+        "lib/net10.0/Penghou.Zhinu.Agents.dll": "fe617cdfcc08b34f982a9d91955146eaf0ea4861343bb49ee1e610f76263ef41",
+        "lib/net10.0/Penghou.Zhinu.Agents.xml": "abe62dd105089e35ea7c319955e23c5cb929f5d5d2b66429f18ebadf376889b8",
+        "lib/net8.0/Penghou.Zhinu.Agents.dll": "93326b20b30fd17a6a74271f19a0ed1398c3701ce725f842595a910b4c3f7432",
+        "lib/net8.0/Penghou.Zhinu.Agents.xml": "abe62dd105089e35ea7c319955e23c5cb929f5d5d2b66429f18ebadf376889b8",
+        "package/services/metadata/core-properties/nuget.psmdcp": "c9cedfdaebb382c6aa57771fc074f516449dd25bf0718d49847f02dbe48d8467"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Agents.dll",
+        "lib/net10.0/Penghou.Zhinu.Agents.xml",
+        "lib/net8.0/Penghou.Zhinu.Agents.dll",
+        "lib/net8.0/Penghou.Zhinu.Agents.xml"
+      ]
+    },
+    "right": {
+      "filename": "Penghou.Zhinu.Agents.0.2.0-preview.10.nupkg",
+      "sha256": "d2d2ced9fbf3730f3ce2e4c70a68dda013e0dfcf375ec6c53ded8b77cd9e242a",
+      "size": 44830,
+      "id": "Penghou.Zhinu.Agents",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Agents.AI.Workflows",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Agents.AI.Workflows",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Agents</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Agents</title>\r\n    <authors>Penghou.Zhinu contributors</authors>\r\n    <license type=\"expression\">Apache-2.0</license>\r\n    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>\r\n    <readme>README.md</readme>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Microsoft Agent Framework (MAF) integration for Penghou.Zhinu: durable SQLite checkpoint storage and MAF graph workflows as durable Zhinu steps.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable agent maf checkpoint sqlite</tags>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Agents.AI.Workflows\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Agents.AI.Workflows\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Agents.nuspec": "28933abefa30f49aaa5b1ee14d99d334df1528afbc93f646268d1e014f0d26c8",
+        "README.md": "2814c48b92f190738d17ad966dc539035d26d558980e205bd31d26fb1d5b2cf9",
+        "[Content_Types].xml": "53789202a7a62de78987becbf3ade1d56e9cb6e6fd525e8db9d2f1d352cb0425",
+        "_rels/.rels": "32ab741277137b2bc93827f6c14c1396c2dca01bc7ecfe62eed15ea7e866c0fb",
+        "lib/net10.0/Penghou.Zhinu.Agents.dll": "fe617cdfcc08b34f982a9d91955146eaf0ea4861343bb49ee1e610f76263ef41",
+        "lib/net10.0/Penghou.Zhinu.Agents.xml": "abe62dd105089e35ea7c319955e23c5cb929f5d5d2b66429f18ebadf376889b8",
+        "lib/net8.0/Penghou.Zhinu.Agents.dll": "93326b20b30fd17a6a74271f19a0ed1398c3701ce725f842595a910b4c3f7432",
+        "lib/net8.0/Penghou.Zhinu.Agents.xml": "abe62dd105089e35ea7c319955e23c5cb929f5d5d2b66429f18ebadf376889b8",
+        "package/services/metadata/core-properties/nuget.psmdcp": "c9cedfdaebb382c6aa57771fc074f516449dd25bf0718d49847f02dbe48d8467"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Agents.dll",
+        "lib/net10.0/Penghou.Zhinu.Agents.xml",
+        "lib/net8.0/Penghou.Zhinu.Agents.dll",
+        "lib/net8.0/Penghou.Zhinu.Agents.xml"
+      ]
+    },
+    "archiveByteIdentical": false,
+    "identityAndDependenciesEqual": true,
+    "allMembersEqual": true,
+    "changedMembers": [],
+    "changedBinariesOrRidAssets": [],
+    "result": "DIFFERENT ARCHIVE; INSPECT MEMBER DELTA"
+  },
+  {
+    "left": {
+      "filename": "Penghou.Zhinu.Hosting.0.2.0-preview.10.nupkg",
+      "sha256": "6b316e2b3082b2e9aed958c693203614843ddabd23bdb9525bc7972d1fe0f5cd",
+      "size": 41050,
+      "id": "Penghou.Zhinu.Hosting",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Hosting.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Options",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Hosting.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Options",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Hosting</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Hosting</title>\r\n    <authors>Penghou.Zhinu contributors</authors>\r\n    <license type=\"expression\">Apache-2.0</license>\r\n    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>\r\n    <readme>README.md</readme>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Optional Microsoft.Extensions.Hosting integration for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable hosting background-service</tags>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Hosting.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Options\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Hosting.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Options\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Hosting.nuspec": "bdc26bb1891832b7979055b43aedc6e8443ecb35135993fa54fb3a7e5c97e160",
+        "README.md": "2814c48b92f190738d17ad966dc539035d26d558980e205bd31d26fb1d5b2cf9",
+        "[Content_Types].xml": "53789202a7a62de78987becbf3ade1d56e9cb6e6fd525e8db9d2f1d352cb0425",
+        "_rels/.rels": "e4be7e43e93da12c16adf43a5acbe0e41487becfafd9d92068e355dc67bf9007",
+        "lib/net10.0/Penghou.Zhinu.Hosting.dll": "788ae3b7f09ab4e24a3860e9776d3c9de7783fa1072e2d3e37a5b3dc561e7c69",
+        "lib/net10.0/Penghou.Zhinu.Hosting.xml": "94f61c5f92dff99dab4dd67438f7da490b002b425c759bf351d2fc394f4a76cf",
+        "lib/net8.0/Penghou.Zhinu.Hosting.dll": "97af2bd51fae717ed8c2a938ba55db6330b7c33a70eb1c059008e9f38ca60dbe",
+        "lib/net8.0/Penghou.Zhinu.Hosting.xml": "94f61c5f92dff99dab4dd67438f7da490b002b425c759bf351d2fc394f4a76cf",
+        "package/services/metadata/core-properties/nuget.psmdcp": "e94f479d189296cb7cea3afda154890e9f58e3f405d54cabb82f00ee117ef128"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Hosting.dll",
+        "lib/net10.0/Penghou.Zhinu.Hosting.xml",
+        "lib/net8.0/Penghou.Zhinu.Hosting.dll",
+        "lib/net8.0/Penghou.Zhinu.Hosting.xml"
+      ]
+    },
+    "right": {
+      "filename": "Penghou.Zhinu.Hosting.0.2.0-preview.10.nupkg",
+      "sha256": "e18fa6e5cb2f7b3437a5f87aae31815e480468dd2d6ffc40b83ae4322e8ce807",
+      "size": 41050,
+      "id": "Penghou.Zhinu.Hosting",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Hosting.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Options",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Hosting.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Options",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Hosting</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Hosting</title>\r\n    <authors>Penghou.Zhinu contributors</authors>\r\n    <license type=\"expression\">Apache-2.0</license>\r\n    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>\r\n    <readme>README.md</readme>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Optional Microsoft.Extensions.Hosting integration for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable hosting background-service</tags>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Hosting.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Options\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Hosting.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Options\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Hosting.nuspec": "bdc26bb1891832b7979055b43aedc6e8443ecb35135993fa54fb3a7e5c97e160",
+        "README.md": "2814c48b92f190738d17ad966dc539035d26d558980e205bd31d26fb1d5b2cf9",
+        "[Content_Types].xml": "53789202a7a62de78987becbf3ade1d56e9cb6e6fd525e8db9d2f1d352cb0425",
+        "_rels/.rels": "e4be7e43e93da12c16adf43a5acbe0e41487becfafd9d92068e355dc67bf9007",
+        "lib/net10.0/Penghou.Zhinu.Hosting.dll": "788ae3b7f09ab4e24a3860e9776d3c9de7783fa1072e2d3e37a5b3dc561e7c69",
+        "lib/net10.0/Penghou.Zhinu.Hosting.xml": "94f61c5f92dff99dab4dd67438f7da490b002b425c759bf351d2fc394f4a76cf",
+        "lib/net8.0/Penghou.Zhinu.Hosting.dll": "97af2bd51fae717ed8c2a938ba55db6330b7c33a70eb1c059008e9f38ca60dbe",
+        "lib/net8.0/Penghou.Zhinu.Hosting.xml": "94f61c5f92dff99dab4dd67438f7da490b002b425c759bf351d2fc394f4a76cf",
+        "package/services/metadata/core-properties/nuget.psmdcp": "e94f479d189296cb7cea3afda154890e9f58e3f405d54cabb82f00ee117ef128"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Hosting.dll",
+        "lib/net10.0/Penghou.Zhinu.Hosting.xml",
+        "lib/net8.0/Penghou.Zhinu.Hosting.dll",
+        "lib/net8.0/Penghou.Zhinu.Hosting.xml"
+      ]
+    },
+    "archiveByteIdentical": false,
+    "identityAndDependenciesEqual": true,
+    "allMembersEqual": true,
+    "changedMembers": [],
+    "changedBinariesOrRidAssets": [],
+    "result": "DIFFERENT ARCHIVE; INSPECT MEMBER DELTA"
+  },
+  {
+    "left": {
+      "filename": "Penghou.Zhinu.Hosting.AspNetCore.0.2.0-preview.10.nupkg",
+      "sha256": "432782a14aa55d7318f3b46d68ecda14d11f7f938911bb37ef8a92cac383b353",
+      "size": 26053,
+      "id": "Penghou.Zhinu.Hosting.AspNetCore",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Hosting.AspNetCore</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Hosting AspNetCore</title>\r\n    <authors>Penghou.Zhinu contributors</authors>\r\n    <license type=\"expression\">Apache-2.0</license>\r\n    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>\r\n    <readme>README.md</readme>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Minimal ASP.NET Core health and diagnostics endpoints for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable health aspnetcore readiness</tags>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n    <frameworkReferences>\r\n      <group targetFramework=\"net10.0\">\r\n        <frameworkReference name=\"Microsoft.AspNetCore.App\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <frameworkReference name=\"Microsoft.AspNetCore.App\" />\r\n      </group>\r\n    </frameworkReferences>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Hosting.AspNetCore.nuspec": "fd7a877759b241069314d68ec39e6a477f4dee84c81557e815b7b5a2eeb69073",
+        "README.md": "2814c48b92f190738d17ad966dc539035d26d558980e205bd31d26fb1d5b2cf9",
+        "[Content_Types].xml": "53789202a7a62de78987becbf3ade1d56e9cb6e6fd525e8db9d2f1d352cb0425",
+        "_rels/.rels": "dc4bc996c40147524947c589b5db60350e72f3ea59fbab98257105df5441d617",
+        "lib/net10.0/Penghou.Zhinu.Hosting.AspNetCore.dll": "3d8dd8a77fd1818df9f38c7b15310f1ecfe113ad8644cb337b14e769af846b0d",
+        "lib/net10.0/Penghou.Zhinu.Hosting.AspNetCore.xml": "55047bcbd64ae4d8eebda6fe6bde12fc3806e9846019a55087be6b8e60f62643",
+        "lib/net8.0/Penghou.Zhinu.Hosting.AspNetCore.dll": "4805b3f611fec1164688cf023475607a24033ad75eda53cb59b35c1174116144",
+        "lib/net8.0/Penghou.Zhinu.Hosting.AspNetCore.xml": "55047bcbd64ae4d8eebda6fe6bde12fc3806e9846019a55087be6b8e60f62643",
+        "package/services/metadata/core-properties/nuget.psmdcp": "91af982889a26de0366b1428176d4829237e78963372ff67dc26bca7caa1811b"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Hosting.AspNetCore.dll",
+        "lib/net10.0/Penghou.Zhinu.Hosting.AspNetCore.xml",
+        "lib/net8.0/Penghou.Zhinu.Hosting.AspNetCore.dll",
+        "lib/net8.0/Penghou.Zhinu.Hosting.AspNetCore.xml"
+      ]
+    },
+    "right": {
+      "filename": "Penghou.Zhinu.Hosting.AspNetCore.0.2.0-preview.10.nupkg",
+      "sha256": "9937086d07b19d5fdcedc55c881258c33e91073efca0f53623e2773fd127d79e",
+      "size": 26053,
+      "id": "Penghou.Zhinu.Hosting.AspNetCore",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Hosting.AspNetCore</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Hosting AspNetCore</title>\r\n    <authors>Penghou.Zhinu contributors</authors>\r\n    <license type=\"expression\">Apache-2.0</license>\r\n    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>\r\n    <readme>README.md</readme>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Minimal ASP.NET Core health and diagnostics endpoints for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable health aspnetcore readiness</tags>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n    <frameworkReferences>\r\n      <group targetFramework=\"net10.0\">\r\n        <frameworkReference name=\"Microsoft.AspNetCore.App\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <frameworkReference name=\"Microsoft.AspNetCore.App\" />\r\n      </group>\r\n    </frameworkReferences>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Hosting.AspNetCore.nuspec": "fd7a877759b241069314d68ec39e6a477f4dee84c81557e815b7b5a2eeb69073",
+        "README.md": "2814c48b92f190738d17ad966dc539035d26d558980e205bd31d26fb1d5b2cf9",
+        "[Content_Types].xml": "53789202a7a62de78987becbf3ade1d56e9cb6e6fd525e8db9d2f1d352cb0425",
+        "_rels/.rels": "dc4bc996c40147524947c589b5db60350e72f3ea59fbab98257105df5441d617",
+        "lib/net10.0/Penghou.Zhinu.Hosting.AspNetCore.dll": "3d8dd8a77fd1818df9f38c7b15310f1ecfe113ad8644cb337b14e769af846b0d",
+        "lib/net10.0/Penghou.Zhinu.Hosting.AspNetCore.xml": "55047bcbd64ae4d8eebda6fe6bde12fc3806e9846019a55087be6b8e60f62643",
+        "lib/net8.0/Penghou.Zhinu.Hosting.AspNetCore.dll": "4805b3f611fec1164688cf023475607a24033ad75eda53cb59b35c1174116144",
+        "lib/net8.0/Penghou.Zhinu.Hosting.AspNetCore.xml": "55047bcbd64ae4d8eebda6fe6bde12fc3806e9846019a55087be6b8e60f62643",
+        "package/services/metadata/core-properties/nuget.psmdcp": "91af982889a26de0366b1428176d4829237e78963372ff67dc26bca7caa1811b"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Hosting.AspNetCore.dll",
+        "lib/net10.0/Penghou.Zhinu.Hosting.AspNetCore.xml",
+        "lib/net8.0/Penghou.Zhinu.Hosting.AspNetCore.dll",
+        "lib/net8.0/Penghou.Zhinu.Hosting.AspNetCore.xml"
+      ]
+    },
+    "archiveByteIdentical": false,
+    "identityAndDependenciesEqual": true,
+    "allMembersEqual": true,
+    "changedMembers": [],
+    "changedBinariesOrRidAssets": [],
+    "result": "DIFFERENT ARCHIVE; INSPECT MEMBER DELTA"
+  },
+  {
+    "left": {
+      "filename": "Penghou.Zhinu.OpenTelemetry.0.2.0-preview.10.nupkg",
+      "sha256": "64417c35e7a5a7b306e08a50d03b3db8ec7f4da09ae1c6ec788e35c727116971",
+      "size": 19018,
+      "id": "Penghou.Zhinu.OpenTelemetry",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "OpenTelemetry.Extensions.Hosting",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "OpenTelemetry.Extensions.Hosting",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.OpenTelemetry</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu OpenTelemetry</title>\r\n    <authors>Penghou.Zhinu contributors</authors>\r\n    <license type=\"expression\">Apache-2.0</license>\r\n    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>\r\n    <readme>README.md</readme>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>OpenTelemetry registration helpers for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable opentelemetry tracing metrics</tags>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"OpenTelemetry.Extensions.Hosting\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"OpenTelemetry.Extensions.Hosting\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.OpenTelemetry.nuspec": "a78d3752d15d6c409fe5574185f429354e95b2be354f78696bb685be22df4e32",
+        "README.md": "2814c48b92f190738d17ad966dc539035d26d558980e205bd31d26fb1d5b2cf9",
+        "[Content_Types].xml": "53789202a7a62de78987becbf3ade1d56e9cb6e6fd525e8db9d2f1d352cb0425",
+        "_rels/.rels": "84d0cdff3b1a13bb3df52790985cffac0857f17f770fd9f1e6bfaffc0b04035f",
+        "lib/net10.0/Penghou.Zhinu.OpenTelemetry.dll": "6cd97eb9994c26de5d091f8404336bd42d755304f53eab142ec979f908b2d3a3",
+        "lib/net10.0/Penghou.Zhinu.OpenTelemetry.xml": "14d6615f5e83965e9f817339cb52ae1fbd285d4018a71324e6ef31822169cd10",
+        "lib/net8.0/Penghou.Zhinu.OpenTelemetry.dll": "ef4ddfcc33884a7698dbfff6470597c3f350964d5b516fab45df7bc827e1fb15",
+        "lib/net8.0/Penghou.Zhinu.OpenTelemetry.xml": "14d6615f5e83965e9f817339cb52ae1fbd285d4018a71324e6ef31822169cd10",
+        "package/services/metadata/core-properties/nuget.psmdcp": "773309597e6b4d7a6dc73f34f2ce90f21180e9b58bbc80f2498277b84d6dfd67"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.OpenTelemetry.dll",
+        "lib/net10.0/Penghou.Zhinu.OpenTelemetry.xml",
+        "lib/net8.0/Penghou.Zhinu.OpenTelemetry.dll",
+        "lib/net8.0/Penghou.Zhinu.OpenTelemetry.xml"
+      ]
+    },
+    "right": {
+      "filename": "Penghou.Zhinu.OpenTelemetry.0.2.0-preview.10.nupkg",
+      "sha256": "573799cf96161dbb5f7040a74ed916ed496de53e5f196725f31c839855e60e78",
+      "size": 19018,
+      "id": "Penghou.Zhinu.OpenTelemetry",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "OpenTelemetry.Extensions.Hosting",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "OpenTelemetry.Extensions.Hosting",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.OpenTelemetry</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu OpenTelemetry</title>\r\n    <authors>Penghou.Zhinu contributors</authors>\r\n    <license type=\"expression\">Apache-2.0</license>\r\n    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>\r\n    <readme>README.md</readme>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>OpenTelemetry registration helpers for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable opentelemetry tracing metrics</tags>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"OpenTelemetry.Extensions.Hosting\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"OpenTelemetry.Extensions.Hosting\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.OpenTelemetry.nuspec": "a78d3752d15d6c409fe5574185f429354e95b2be354f78696bb685be22df4e32",
+        "README.md": "2814c48b92f190738d17ad966dc539035d26d558980e205bd31d26fb1d5b2cf9",
+        "[Content_Types].xml": "53789202a7a62de78987becbf3ade1d56e9cb6e6fd525e8db9d2f1d352cb0425",
+        "_rels/.rels": "84d0cdff3b1a13bb3df52790985cffac0857f17f770fd9f1e6bfaffc0b04035f",
+        "lib/net10.0/Penghou.Zhinu.OpenTelemetry.dll": "6cd97eb9994c26de5d091f8404336bd42d755304f53eab142ec979f908b2d3a3",
+        "lib/net10.0/Penghou.Zhinu.OpenTelemetry.xml": "14d6615f5e83965e9f817339cb52ae1fbd285d4018a71324e6ef31822169cd10",
+        "lib/net8.0/Penghou.Zhinu.OpenTelemetry.dll": "ef4ddfcc33884a7698dbfff6470597c3f350964d5b516fab45df7bc827e1fb15",
+        "lib/net8.0/Penghou.Zhinu.OpenTelemetry.xml": "14d6615f5e83965e9f817339cb52ae1fbd285d4018a71324e6ef31822169cd10",
+        "package/services/metadata/core-properties/nuget.psmdcp": "773309597e6b4d7a6dc73f34f2ce90f21180e9b58bbc80f2498277b84d6dfd67"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.OpenTelemetry.dll",
+        "lib/net10.0/Penghou.Zhinu.OpenTelemetry.xml",
+        "lib/net8.0/Penghou.Zhinu.OpenTelemetry.dll",
+        "lib/net8.0/Penghou.Zhinu.OpenTelemetry.xml"
+      ]
+    },
+    "archiveByteIdentical": false,
+    "identityAndDependenciesEqual": true,
+    "allMembersEqual": true,
+    "changedMembers": [],
+    "changedBinariesOrRidAssets": [],
+    "result": "DIFFERENT ARCHIVE; INSPECT MEMBER DELTA"
+  },
+  {
+    "left": {
+      "filename": "Penghou.Zhinu.Sqlite.0.2.0-preview.10.nupkg",
+      "sha256": "cd2fa504a62c4615bd2991ae06a184ab7a01ce17b703ef95b241ee25a0a638b4",
+      "size": 605972,
+      "id": "Penghou.Zhinu.Sqlite",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.12",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.12",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Sqlite</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu SQLite</title>\r\n    <authors>Penghou.Zhinu contributors</authors>\r\n    <license type=\"expression\">Apache-2.0</license>\r\n    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>\r\n    <readme>README.md</readme>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Transactional SQLite persistence for Penghou.Zhinu durable workflows.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable embedded sqlite local-first</tags>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Data.Sqlite\" version=\"10.0.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"SQLitePCLRaw.bundle_e_sqlite3\" version=\"2.1.12\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Data.Sqlite\" version=\"10.0.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"SQLitePCLRaw.bundle_e_sqlite3\" version=\"2.1.12\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Sqlite.nuspec": "79cb2d2c45617b2885c570e7b40b62281da4a4bc0a7d5dfae231782489d78a78",
+        "README.md": "2814c48b92f190738d17ad966dc539035d26d558980e205bd31d26fb1d5b2cf9",
+        "[Content_Types].xml": "53789202a7a62de78987becbf3ade1d56e9cb6e6fd525e8db9d2f1d352cb0425",
+        "_rels/.rels": "005dd1807c1d773ee8f33ecf59101419a1db843faf9a9ee1e46d9e9d10477064",
+        "lib/net10.0/Penghou.Zhinu.Sqlite.dll": "7c3ca9069e888fc812d9b1d7405aac701b693745594d674dca502d4716ecff38",
+        "lib/net10.0/Penghou.Zhinu.Sqlite.xml": "590e41024691673e8e428bd061b2520714e317d5f5834fe48a22d5c80f4a5cf2",
+        "lib/net8.0/Penghou.Zhinu.Sqlite.dll": "6d94fe65a3685e49c74f8f7e48423f8734bb7fabe2a7053530b35325bbec581f",
+        "lib/net8.0/Penghou.Zhinu.Sqlite.xml": "590e41024691673e8e428bd061b2520714e317d5f5834fe48a22d5c80f4a5cf2",
+        "package/services/metadata/core-properties/nuget.psmdcp": "ef1ae91daf3bb8017604c92cb1a4f988f132a6f711a4081eb7d87060976b7de0"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Sqlite.dll",
+        "lib/net10.0/Penghou.Zhinu.Sqlite.xml",
+        "lib/net8.0/Penghou.Zhinu.Sqlite.dll",
+        "lib/net8.0/Penghou.Zhinu.Sqlite.xml"
+      ]
+    },
+    "right": {
+      "filename": "Penghou.Zhinu.Sqlite.0.2.0-preview.10.nupkg",
+      "sha256": "aa84669b1a99190e88c430a114e25f55b4efd538d2e8b2b7a0e636a919934cf6",
+      "size": 605972,
+      "id": "Penghou.Zhinu.Sqlite",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.12",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.12",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Sqlite</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu SQLite</title>\r\n    <authors>Penghou.Zhinu contributors</authors>\r\n    <license type=\"expression\">Apache-2.0</license>\r\n    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>\r\n    <readme>README.md</readme>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Transactional SQLite persistence for Penghou.Zhinu durable workflows.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable embedded sqlite local-first</tags>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Data.Sqlite\" version=\"10.0.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"SQLitePCLRaw.bundle_e_sqlite3\" version=\"2.1.12\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Data.Sqlite\" version=\"10.0.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"SQLitePCLRaw.bundle_e_sqlite3\" version=\"2.1.12\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Sqlite.nuspec": "79cb2d2c45617b2885c570e7b40b62281da4a4bc0a7d5dfae231782489d78a78",
+        "README.md": "2814c48b92f190738d17ad966dc539035d26d558980e205bd31d26fb1d5b2cf9",
+        "[Content_Types].xml": "53789202a7a62de78987becbf3ade1d56e9cb6e6fd525e8db9d2f1d352cb0425",
+        "_rels/.rels": "005dd1807c1d773ee8f33ecf59101419a1db843faf9a9ee1e46d9e9d10477064",
+        "lib/net10.0/Penghou.Zhinu.Sqlite.dll": "7c3ca9069e888fc812d9b1d7405aac701b693745594d674dca502d4716ecff38",
+        "lib/net10.0/Penghou.Zhinu.Sqlite.xml": "590e41024691673e8e428bd061b2520714e317d5f5834fe48a22d5c80f4a5cf2",
+        "lib/net8.0/Penghou.Zhinu.Sqlite.dll": "6d94fe65a3685e49c74f8f7e48423f8734bb7fabe2a7053530b35325bbec581f",
+        "lib/net8.0/Penghou.Zhinu.Sqlite.xml": "590e41024691673e8e428bd061b2520714e317d5f5834fe48a22d5c80f4a5cf2",
+        "package/services/metadata/core-properties/nuget.psmdcp": "ef1ae91daf3bb8017604c92cb1a4f988f132a6f711a4081eb7d87060976b7de0"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Sqlite.dll",
+        "lib/net10.0/Penghou.Zhinu.Sqlite.xml",
+        "lib/net8.0/Penghou.Zhinu.Sqlite.dll",
+        "lib/net8.0/Penghou.Zhinu.Sqlite.xml"
+      ]
+    },
+    "archiveByteIdentical": false,
+    "identityAndDependenciesEqual": true,
+    "allMembersEqual": true,
+    "changedMembers": [],
+    "changedBinariesOrRidAssets": [],
+    "result": "DIFFERENT ARCHIVE; INSPECT MEMBER DELTA"
+  },
+  {
+    "left": {
+      "filename": "Penghou.Zhinu.Testing.0.2.0-preview.10.nupkg",
+      "sha256": "08e1401364166bfdfc98e37ee8a911e48af1d8b96e88d6cdc01fe46fc553ff6b",
+      "size": 77169,
+      "id": "Penghou.Zhinu.Testing",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Testing</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Testing</title>\r\n    <authors>Penghou.Zhinu contributors</authors>\r\n    <license type=\"expression\">Apache-2.0</license>\r\n    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>\r\n    <readme>README.md</readme>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Test fixtures and store conformance checks for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable testing</tags>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Testing.nuspec": "2e06efce17e1627cc456e5bfd5076ffdcb9fec2f0d954cf2c7e433d8a312338c",
+        "README.md": "2814c48b92f190738d17ad966dc539035d26d558980e205bd31d26fb1d5b2cf9",
+        "[Content_Types].xml": "53789202a7a62de78987becbf3ade1d56e9cb6e6fd525e8db9d2f1d352cb0425",
+        "_rels/.rels": "b2c9b16de340397318ab9f21520ea05ca4f684aeac3ceba9dae9dd0c31b8dc8e",
+        "lib/net10.0/Penghou.Zhinu.Testing.dll": "c93a6eaa824dbd11950e86f67aa410c08ea53ca678832a046a53f7b0e3994dce",
+        "lib/net10.0/Penghou.Zhinu.Testing.xml": "a4492f05c52ff14fa801c5344b40868faf47f0b17d9aedc3cd1677ac7df8cd8a",
+        "lib/net8.0/Penghou.Zhinu.Testing.dll": "82b615f32dc1c7e75600b276c1efbaf23084c65554d2fbddbc21927b3aad264c",
+        "lib/net8.0/Penghou.Zhinu.Testing.xml": "a4492f05c52ff14fa801c5344b40868faf47f0b17d9aedc3cd1677ac7df8cd8a",
+        "package/services/metadata/core-properties/nuget.psmdcp": "2ff77d0d471141e20c51446eba7bed01e87c4577d82559cff0b84abc3e411702"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Testing.dll",
+        "lib/net10.0/Penghou.Zhinu.Testing.xml",
+        "lib/net8.0/Penghou.Zhinu.Testing.dll",
+        "lib/net8.0/Penghou.Zhinu.Testing.xml"
+      ]
+    },
+    "right": {
+      "filename": "Penghou.Zhinu.Testing.0.2.0-preview.10.nupkg",
+      "sha256": "d7b4dc20b03c7e39e3071effa28a1c770f42002437518bef79b61ca997b2b6bd",
+      "size": 77169,
+      "id": "Penghou.Zhinu.Testing",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Testing</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Testing</title>\r\n    <authors>Penghou.Zhinu contributors</authors>\r\n    <license type=\"expression\">Apache-2.0</license>\r\n    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>\r\n    <readme>README.md</readme>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Test fixtures and store conformance checks for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable testing</tags>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Testing.nuspec": "2e06efce17e1627cc456e5bfd5076ffdcb9fec2f0d954cf2c7e433d8a312338c",
+        "README.md": "2814c48b92f190738d17ad966dc539035d26d558980e205bd31d26fb1d5b2cf9",
+        "[Content_Types].xml": "53789202a7a62de78987becbf3ade1d56e9cb6e6fd525e8db9d2f1d352cb0425",
+        "_rels/.rels": "b2c9b16de340397318ab9f21520ea05ca4f684aeac3ceba9dae9dd0c31b8dc8e",
+        "lib/net10.0/Penghou.Zhinu.Testing.dll": "c93a6eaa824dbd11950e86f67aa410c08ea53ca678832a046a53f7b0e3994dce",
+        "lib/net10.0/Penghou.Zhinu.Testing.xml": "a4492f05c52ff14fa801c5344b40868faf47f0b17d9aedc3cd1677ac7df8cd8a",
+        "lib/net8.0/Penghou.Zhinu.Testing.dll": "82b615f32dc1c7e75600b276c1efbaf23084c65554d2fbddbc21927b3aad264c",
+        "lib/net8.0/Penghou.Zhinu.Testing.xml": "a4492f05c52ff14fa801c5344b40868faf47f0b17d9aedc3cd1677ac7df8cd8a",
+        "package/services/metadata/core-properties/nuget.psmdcp": "2ff77d0d471141e20c51446eba7bed01e87c4577d82559cff0b84abc3e411702"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Testing.dll",
+        "lib/net10.0/Penghou.Zhinu.Testing.xml",
+        "lib/net8.0/Penghou.Zhinu.Testing.dll",
+        "lib/net8.0/Penghou.Zhinu.Testing.xml"
+      ]
+    },
+    "archiveByteIdentical": false,
+    "identityAndDependenciesEqual": true,
+    "allMembersEqual": true,
+    "changedMembers": [],
+    "changedBinariesOrRidAssets": [],
+    "result": "DIFFERENT ARCHIVE; INSPECT MEMBER DELTA"
+  },
+  {
+    "left": {
+      "filename": "Penghou.Zhinu.0.2.0-preview.10.snupkg",
+      "sha256": "a3a5fc81c4970880d2759ca8ebb9c265396132d318318b8fc1299407f3825263",
+      "size": 143498,
+      "id": "Penghou.Zhinu",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Microsoft.Extensions.Logging.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Workflow.Abstractions",
+              "version": "[0.1.0-preview.2]",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Microsoft.Extensions.Logging.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Workflow.Abstractions",
+              "version": "[0.1.0-preview.2]",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu</title>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Embedded durable workflow execution abstractions and engine for .NET.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable embedded local-first automation ai</tags>\r\n    <packageTypes>\r\n      <packageType name=\"SymbolsPackage\" />\r\n    </packageTypes>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Microsoft.Extensions.Logging.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Workflow.Abstractions\" version=\"[0.1.0-preview.2]\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Microsoft.Extensions.Logging.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Workflow.Abstractions\" version=\"[0.1.0-preview.2]\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.nuspec": "8fabfe90233a5b19ae7fb2d1a9227c36947184dc92e6aecf8a1c29f92b284cd9",
+        "[Content_Types].xml": "7231b19176af994340683e6c8b355dd0ac468f12b9808a76ec69d1e786964e1a",
+        "_rels/.rels": "ffbcfc14a8d0b2459fbbb49c578854e692a5a09f1fb03dc991592f4809230415",
+        "lib/net10.0/Penghou.Zhinu.pdb": "91d43cbbf50ba1d0cdde13bde9080ab8acaa12d4ce7411ac277e610b2a7dfe59",
+        "lib/net8.0/Penghou.Zhinu.pdb": "70abf7cead0f0be78ec5ada9e87eeaa3d5785bfefcceeaeffb588d862aaa352b",
+        "package/services/metadata/core-properties/nuget.psmdcp": "042a051d182f3e9998a5fde36c611af690268bbeac9174b4b54abab024666d80"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.pdb",
+        "lib/net8.0/Penghou.Zhinu.pdb"
+      ]
+    },
+    "right": {
+      "filename": "Penghou.Zhinu.0.2.0-preview.10.snupkg",
+      "sha256": "848c0857b39ad0dbd93e329cb68c2cd858c62a8ea17fe8ff6b694fc5aa985b30",
+      "size": 143498,
+      "id": "Penghou.Zhinu",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Microsoft.Extensions.Logging.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Workflow.Abstractions",
+              "version": "[0.1.0-preview.2]",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Microsoft.Extensions.Logging.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Workflow.Abstractions",
+              "version": "[0.1.0-preview.2]",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu</title>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Embedded durable workflow execution abstractions and engine for .NET.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable embedded local-first automation ai</tags>\r\n    <packageTypes>\r\n      <packageType name=\"SymbolsPackage\" />\r\n    </packageTypes>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Microsoft.Extensions.Logging.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Workflow.Abstractions\" version=\"[0.1.0-preview.2]\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Microsoft.Extensions.Logging.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Workflow.Abstractions\" version=\"[0.1.0-preview.2]\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.nuspec": "8fabfe90233a5b19ae7fb2d1a9227c36947184dc92e6aecf8a1c29f92b284cd9",
+        "[Content_Types].xml": "7231b19176af994340683e6c8b355dd0ac468f12b9808a76ec69d1e786964e1a",
+        "_rels/.rels": "ffbcfc14a8d0b2459fbbb49c578854e692a5a09f1fb03dc991592f4809230415",
+        "lib/net10.0/Penghou.Zhinu.pdb": "91d43cbbf50ba1d0cdde13bde9080ab8acaa12d4ce7411ac277e610b2a7dfe59",
+        "lib/net8.0/Penghou.Zhinu.pdb": "70abf7cead0f0be78ec5ada9e87eeaa3d5785bfefcceeaeffb588d862aaa352b",
+        "package/services/metadata/core-properties/nuget.psmdcp": "042a051d182f3e9998a5fde36c611af690268bbeac9174b4b54abab024666d80"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.pdb",
+        "lib/net8.0/Penghou.Zhinu.pdb"
+      ]
+    },
+    "archiveByteIdentical": false,
+    "identityAndDependenciesEqual": true,
+    "allMembersEqual": true,
+    "changedMembers": [],
+    "changedBinariesOrRidAssets": [],
+    "result": "DIFFERENT ARCHIVE; INSPECT MEMBER DELTA"
+  },
+  {
+    "left": {
+      "filename": "Penghou.Zhinu.Agents.0.2.0-preview.10.snupkg",
+      "sha256": "ac2be54a1aca7aa04ab4438a38cd5c8712ef545acdbe41fdd054c95a51b8cc8a",
+      "size": 22709,
+      "id": "Penghou.Zhinu.Agents",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Agents.AI.Workflows",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Agents.AI.Workflows",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Agents</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Agents</title>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Microsoft Agent Framework (MAF) integration for Penghou.Zhinu: durable SQLite checkpoint storage and MAF graph workflows as durable Zhinu steps.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable agent maf checkpoint sqlite</tags>\r\n    <packageTypes>\r\n      <packageType name=\"SymbolsPackage\" />\r\n    </packageTypes>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Agents.AI.Workflows\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Agents.AI.Workflows\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Agents.nuspec": "7ad02bd486252b8640990378749b038c54bf03aaf67567fc1f7cf9e954e5ef75",
+        "[Content_Types].xml": "7231b19176af994340683e6c8b355dd0ac468f12b9808a76ec69d1e786964e1a",
+        "_rels/.rels": "32ab741277137b2bc93827f6c14c1396c2dca01bc7ecfe62eed15ea7e866c0fb",
+        "lib/net10.0/Penghou.Zhinu.Agents.pdb": "10d92b23e0253e5d4b21be3abe737bff448025ae5b2e9404d5af165bb6b0e7d1",
+        "lib/net8.0/Penghou.Zhinu.Agents.pdb": "5298ee877cc49b6933babcdf118c13bdd453e719cab02960d406412c4f85c566",
+        "package/services/metadata/core-properties/nuget.psmdcp": "c9cedfdaebb382c6aa57771fc074f516449dd25bf0718d49847f02dbe48d8467"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Agents.pdb",
+        "lib/net8.0/Penghou.Zhinu.Agents.pdb"
+      ]
+    },
+    "right": {
+      "filename": "Penghou.Zhinu.Agents.0.2.0-preview.10.snupkg",
+      "sha256": "2c22c519f66bf95ef7168439e7904507d499df00dd65501092592f3da4c9940d",
+      "size": 22709,
+      "id": "Penghou.Zhinu.Agents",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Agents.AI.Workflows",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Agents.AI.Workflows",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Agents</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Agents</title>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Microsoft Agent Framework (MAF) integration for Penghou.Zhinu: durable SQLite checkpoint storage and MAF graph workflows as durable Zhinu steps.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable agent maf checkpoint sqlite</tags>\r\n    <packageTypes>\r\n      <packageType name=\"SymbolsPackage\" />\r\n    </packageTypes>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Agents.AI.Workflows\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Agents.AI.Workflows\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Agents.nuspec": "7ad02bd486252b8640990378749b038c54bf03aaf67567fc1f7cf9e954e5ef75",
+        "[Content_Types].xml": "7231b19176af994340683e6c8b355dd0ac468f12b9808a76ec69d1e786964e1a",
+        "_rels/.rels": "32ab741277137b2bc93827f6c14c1396c2dca01bc7ecfe62eed15ea7e866c0fb",
+        "lib/net10.0/Penghou.Zhinu.Agents.pdb": "10d92b23e0253e5d4b21be3abe737bff448025ae5b2e9404d5af165bb6b0e7d1",
+        "lib/net8.0/Penghou.Zhinu.Agents.pdb": "5298ee877cc49b6933babcdf118c13bdd453e719cab02960d406412c4f85c566",
+        "package/services/metadata/core-properties/nuget.psmdcp": "c9cedfdaebb382c6aa57771fc074f516449dd25bf0718d49847f02dbe48d8467"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Agents.pdb",
+        "lib/net8.0/Penghou.Zhinu.Agents.pdb"
+      ]
+    },
+    "archiveByteIdentical": false,
+    "identityAndDependenciesEqual": true,
+    "allMembersEqual": true,
+    "changedMembers": [],
+    "changedBinariesOrRidAssets": [],
+    "result": "DIFFERENT ARCHIVE; INSPECT MEMBER DELTA"
+  },
+  {
+    "left": {
+      "filename": "Penghou.Zhinu.Hosting.0.2.0-preview.10.snupkg",
+      "sha256": "81f923bf350f107c9b8908bf3e7eb76e4c29fad72c5535bb65fbfc322b8a8e7a",
+      "size": 21412,
+      "id": "Penghou.Zhinu.Hosting",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Hosting.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Options",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Hosting.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Options",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Hosting</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Hosting</title>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Optional Microsoft.Extensions.Hosting integration for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable hosting background-service</tags>\r\n    <packageTypes>\r\n      <packageType name=\"SymbolsPackage\" />\r\n    </packageTypes>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Hosting.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Options\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Hosting.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Options\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Hosting.nuspec": "58379b0c9447efc7623782863066703174192b2442973489a901e67b2658f011",
+        "[Content_Types].xml": "7231b19176af994340683e6c8b355dd0ac468f12b9808a76ec69d1e786964e1a",
+        "_rels/.rels": "e4be7e43e93da12c16adf43a5acbe0e41487becfafd9d92068e355dc67bf9007",
+        "lib/net10.0/Penghou.Zhinu.Hosting.pdb": "dfc1c209ef98812b6d534b0abee3ae5d735edb6e9d0af4a1db37db5d4ae729e0",
+        "lib/net8.0/Penghou.Zhinu.Hosting.pdb": "a31126e3a1d0e4c7db798c46fa6aad076fb920be4b3de0ecaeeb3a6aa35dcacb",
+        "package/services/metadata/core-properties/nuget.psmdcp": "e94f479d189296cb7cea3afda154890e9f58e3f405d54cabb82f00ee117ef128"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Hosting.pdb",
+        "lib/net8.0/Penghou.Zhinu.Hosting.pdb"
+      ]
+    },
+    "right": {
+      "filename": "Penghou.Zhinu.Hosting.0.2.0-preview.10.snupkg",
+      "sha256": "1a844f33c724a6b7438c80761cc039829f719759781f05d5d9b1d3c336e03716",
+      "size": 21412,
+      "id": "Penghou.Zhinu.Hosting",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Hosting.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Options",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Hosting.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.Options",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Hosting</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Hosting</title>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Optional Microsoft.Extensions.Hosting integration for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable hosting background-service</tags>\r\n    <packageTypes>\r\n      <packageType name=\"SymbolsPackage\" />\r\n    </packageTypes>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Hosting.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Options\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Hosting.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.Options\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Hosting.nuspec": "58379b0c9447efc7623782863066703174192b2442973489a901e67b2658f011",
+        "[Content_Types].xml": "7231b19176af994340683e6c8b355dd0ac468f12b9808a76ec69d1e786964e1a",
+        "_rels/.rels": "e4be7e43e93da12c16adf43a5acbe0e41487becfafd9d92068e355dc67bf9007",
+        "lib/net10.0/Penghou.Zhinu.Hosting.pdb": "dfc1c209ef98812b6d534b0abee3ae5d735edb6e9d0af4a1db37db5d4ae729e0",
+        "lib/net8.0/Penghou.Zhinu.Hosting.pdb": "a31126e3a1d0e4c7db798c46fa6aad076fb920be4b3de0ecaeeb3a6aa35dcacb",
+        "package/services/metadata/core-properties/nuget.psmdcp": "e94f479d189296cb7cea3afda154890e9f58e3f405d54cabb82f00ee117ef128"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Hosting.pdb",
+        "lib/net8.0/Penghou.Zhinu.Hosting.pdb"
+      ]
+    },
+    "archiveByteIdentical": false,
+    "identityAndDependenciesEqual": true,
+    "allMembersEqual": true,
+    "changedMembers": [],
+    "changedBinariesOrRidAssets": [],
+    "result": "DIFFERENT ARCHIVE; INSPECT MEMBER DELTA"
+  },
+  {
+    "left": {
+      "filename": "Penghou.Zhinu.Hosting.AspNetCore.0.2.0-preview.10.snupkg",
+      "sha256": "a354f15b284da9d2332305ead243f2f6a11cb2a78ba8cf5114197d922299e6a0",
+      "size": 26274,
+      "id": "Penghou.Zhinu.Hosting.AspNetCore",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Hosting.AspNetCore</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Hosting AspNetCore</title>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Minimal ASP.NET Core health and diagnostics endpoints for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable health aspnetcore readiness</tags>\r\n    <packageTypes>\r\n      <packageType name=\"SymbolsPackage\" />\r\n    </packageTypes>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n    <frameworkReferences>\r\n      <group targetFramework=\"net10.0\">\r\n        <frameworkReference name=\"Microsoft.AspNetCore.App\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <frameworkReference name=\"Microsoft.AspNetCore.App\" />\r\n      </group>\r\n    </frameworkReferences>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Hosting.AspNetCore.nuspec": "c05d1a22c2d295876d2dee80c7694a0f8dadf3f9f67c9cc81b639d7e7bd7676e",
+        "[Content_Types].xml": "7231b19176af994340683e6c8b355dd0ac468f12b9808a76ec69d1e786964e1a",
+        "_rels/.rels": "dc4bc996c40147524947c589b5db60350e72f3ea59fbab98257105df5441d617",
+        "lib/net10.0/Penghou.Zhinu.Hosting.AspNetCore.pdb": "2a6c8f2c8ea15aac3b25842e68693d204ee171e2095a20f01a75923f1eb4a103",
+        "lib/net8.0/Penghou.Zhinu.Hosting.AspNetCore.pdb": "2ef7843e1c80a280f428fe4a67878b1cf1e2e0c865934a9a4294c6e8f632e0a7",
+        "package/services/metadata/core-properties/nuget.psmdcp": "91af982889a26de0366b1428176d4829237e78963372ff67dc26bca7caa1811b"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Hosting.AspNetCore.pdb",
+        "lib/net8.0/Penghou.Zhinu.Hosting.AspNetCore.pdb"
+      ]
+    },
+    "right": {
+      "filename": "Penghou.Zhinu.Hosting.AspNetCore.0.2.0-preview.10.snupkg",
+      "sha256": "3b4c4d4cd2578755e5e2b4d2faa771325877b4ed7b55400adc58611b31344e33",
+      "size": 26274,
+      "id": "Penghou.Zhinu.Hosting.AspNetCore",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Hosting.AspNetCore</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Hosting AspNetCore</title>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Minimal ASP.NET Core health and diagnostics endpoints for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable health aspnetcore readiness</tags>\r\n    <packageTypes>\r\n      <packageType name=\"SymbolsPackage\" />\r\n    </packageTypes>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n    <frameworkReferences>\r\n      <group targetFramework=\"net10.0\">\r\n        <frameworkReference name=\"Microsoft.AspNetCore.App\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <frameworkReference name=\"Microsoft.AspNetCore.App\" />\r\n      </group>\r\n    </frameworkReferences>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Hosting.AspNetCore.nuspec": "c05d1a22c2d295876d2dee80c7694a0f8dadf3f9f67c9cc81b639d7e7bd7676e",
+        "[Content_Types].xml": "7231b19176af994340683e6c8b355dd0ac468f12b9808a76ec69d1e786964e1a",
+        "_rels/.rels": "dc4bc996c40147524947c589b5db60350e72f3ea59fbab98257105df5441d617",
+        "lib/net10.0/Penghou.Zhinu.Hosting.AspNetCore.pdb": "2a6c8f2c8ea15aac3b25842e68693d204ee171e2095a20f01a75923f1eb4a103",
+        "lib/net8.0/Penghou.Zhinu.Hosting.AspNetCore.pdb": "2ef7843e1c80a280f428fe4a67878b1cf1e2e0c865934a9a4294c6e8f632e0a7",
+        "package/services/metadata/core-properties/nuget.psmdcp": "91af982889a26de0366b1428176d4829237e78963372ff67dc26bca7caa1811b"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Hosting.AspNetCore.pdb",
+        "lib/net8.0/Penghou.Zhinu.Hosting.AspNetCore.pdb"
+      ]
+    },
+    "archiveByteIdentical": false,
+    "identityAndDependenciesEqual": true,
+    "allMembersEqual": true,
+    "changedMembers": [],
+    "changedBinariesOrRidAssets": [],
+    "result": "DIFFERENT ARCHIVE; INSPECT MEMBER DELTA"
+  },
+  {
+    "left": {
+      "filename": "Penghou.Zhinu.OpenTelemetry.0.2.0-preview.10.snupkg",
+      "sha256": "456af0d62023dd3f4957c9d20b5c717b2011f62e65bf8cc089d8582a7569927d",
+      "size": 18700,
+      "id": "Penghou.Zhinu.OpenTelemetry",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "OpenTelemetry.Extensions.Hosting",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "OpenTelemetry.Extensions.Hosting",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.OpenTelemetry</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu OpenTelemetry</title>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>OpenTelemetry registration helpers for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable opentelemetry tracing metrics</tags>\r\n    <packageTypes>\r\n      <packageType name=\"SymbolsPackage\" />\r\n    </packageTypes>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"OpenTelemetry.Extensions.Hosting\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"OpenTelemetry.Extensions.Hosting\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.OpenTelemetry.nuspec": "ebc19d7adfa152de737669be555a9f41e02856a5765cdebe3686e98a482e4e71",
+        "[Content_Types].xml": "7231b19176af994340683e6c8b355dd0ac468f12b9808a76ec69d1e786964e1a",
+        "_rels/.rels": "84d0cdff3b1a13bb3df52790985cffac0857f17f770fd9f1e6bfaffc0b04035f",
+        "lib/net10.0/Penghou.Zhinu.OpenTelemetry.pdb": "8293c3126f5252e79c5f771637c48219a86c98b7be05a1ca56dff74dfcc65250",
+        "lib/net8.0/Penghou.Zhinu.OpenTelemetry.pdb": "a9ae5b83f6c915e5d09160ea32183637417f563377282e697db0bba4eacc424f",
+        "package/services/metadata/core-properties/nuget.psmdcp": "773309597e6b4d7a6dc73f34f2ce90f21180e9b58bbc80f2498277b84d6dfd67"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.OpenTelemetry.pdb",
+        "lib/net8.0/Penghou.Zhinu.OpenTelemetry.pdb"
+      ]
+    },
+    "right": {
+      "filename": "Penghou.Zhinu.OpenTelemetry.0.2.0-preview.10.snupkg",
+      "sha256": "9fff0c5e04e2ff23a77337e46000affd537b6e688065ad266c6aed9086afae5d",
+      "size": 18700,
+      "id": "Penghou.Zhinu.OpenTelemetry",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "OpenTelemetry.Extensions.Hosting",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "OpenTelemetry.Extensions.Hosting",
+              "version": "1.17.0",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.OpenTelemetry</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu OpenTelemetry</title>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>OpenTelemetry registration helpers for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable opentelemetry tracing metrics</tags>\r\n    <packageTypes>\r\n      <packageType name=\"SymbolsPackage\" />\r\n    </packageTypes>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"OpenTelemetry.Extensions.Hosting\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"OpenTelemetry.Extensions.Hosting\" version=\"1.17.0\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.OpenTelemetry.nuspec": "ebc19d7adfa152de737669be555a9f41e02856a5765cdebe3686e98a482e4e71",
+        "[Content_Types].xml": "7231b19176af994340683e6c8b355dd0ac468f12b9808a76ec69d1e786964e1a",
+        "_rels/.rels": "84d0cdff3b1a13bb3df52790985cffac0857f17f770fd9f1e6bfaffc0b04035f",
+        "lib/net10.0/Penghou.Zhinu.OpenTelemetry.pdb": "8293c3126f5252e79c5f771637c48219a86c98b7be05a1ca56dff74dfcc65250",
+        "lib/net8.0/Penghou.Zhinu.OpenTelemetry.pdb": "a9ae5b83f6c915e5d09160ea32183637417f563377282e697db0bba4eacc424f",
+        "package/services/metadata/core-properties/nuget.psmdcp": "773309597e6b4d7a6dc73f34f2ce90f21180e9b58bbc80f2498277b84d6dfd67"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.OpenTelemetry.pdb",
+        "lib/net8.0/Penghou.Zhinu.OpenTelemetry.pdb"
+      ]
+    },
+    "archiveByteIdentical": false,
+    "identityAndDependenciesEqual": true,
+    "allMembersEqual": true,
+    "changedMembers": [],
+    "changedBinariesOrRidAssets": [],
+    "result": "DIFFERENT ARCHIVE; INSPECT MEMBER DELTA"
+  },
+  {
+    "left": {
+      "filename": "Penghou.Zhinu.Sqlite.0.2.0-preview.10.snupkg",
+      "sha256": "7ed9340253920d900c6d6acccc9416199f89308f739d6f1e0134c1702d3a5af5",
+      "size": 123369,
+      "id": "Penghou.Zhinu.Sqlite",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.12",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.12",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Sqlite</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu SQLite</title>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Transactional SQLite persistence for Penghou.Zhinu durable workflows.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable embedded sqlite local-first</tags>\r\n    <packageTypes>\r\n      <packageType name=\"SymbolsPackage\" />\r\n    </packageTypes>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Data.Sqlite\" version=\"10.0.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"SQLitePCLRaw.bundle_e_sqlite3\" version=\"2.1.12\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Data.Sqlite\" version=\"10.0.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"SQLitePCLRaw.bundle_e_sqlite3\" version=\"2.1.12\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Sqlite.nuspec": "b3b59db2e49d09408dc4cbdba43610e51188ed3fa251cf66e9415af5f7e3fbdb",
+        "[Content_Types].xml": "7231b19176af994340683e6c8b355dd0ac468f12b9808a76ec69d1e786964e1a",
+        "_rels/.rels": "005dd1807c1d773ee8f33ecf59101419a1db843faf9a9ee1e46d9e9d10477064",
+        "lib/net10.0/Penghou.Zhinu.Sqlite.pdb": "a5b528d7f51c78fed12ef7579671386e855dd355de4ecae9afc883c359b134be",
+        "lib/net8.0/Penghou.Zhinu.Sqlite.pdb": "9295ef6a71ed02afb92e98630411937e4b3a0d00ca2e00d0b00a2756afbd0b6b",
+        "package/services/metadata/core-properties/nuget.psmdcp": "ef1ae91daf3bb8017604c92cb1a4f988f132a6f711a4081eb7d87060976b7de0"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Sqlite.pdb",
+        "lib/net8.0/Penghou.Zhinu.Sqlite.pdb"
+      ]
+    },
+    "right": {
+      "filename": "Penghou.Zhinu.Sqlite.0.2.0-preview.10.snupkg",
+      "sha256": "a69cd136b04df230ffa412c249148a9c411d3dbcef978b39c2af08d639459484",
+      "size": 123369,
+      "id": "Penghou.Zhinu.Sqlite",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.12",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Data.Sqlite",
+              "version": "10.0.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Microsoft.Extensions.DependencyInjection.Abstractions",
+              "version": "10.0.9",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "SQLitePCLRaw.bundle_e_sqlite3",
+              "version": "2.1.12",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Sqlite</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu SQLite</title>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Transactional SQLite persistence for Penghou.Zhinu durable workflows.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable embedded sqlite local-first</tags>\r\n    <packageTypes>\r\n      <packageType name=\"SymbolsPackage\" />\r\n    </packageTypes>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Data.Sqlite\" version=\"10.0.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"SQLitePCLRaw.bundle_e_sqlite3\" version=\"2.1.12\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Data.Sqlite\" version=\"10.0.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Microsoft.Extensions.DependencyInjection.Abstractions\" version=\"10.0.9\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"SQLitePCLRaw.bundle_e_sqlite3\" version=\"2.1.12\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Sqlite.nuspec": "b3b59db2e49d09408dc4cbdba43610e51188ed3fa251cf66e9415af5f7e3fbdb",
+        "[Content_Types].xml": "7231b19176af994340683e6c8b355dd0ac468f12b9808a76ec69d1e786964e1a",
+        "_rels/.rels": "005dd1807c1d773ee8f33ecf59101419a1db843faf9a9ee1e46d9e9d10477064",
+        "lib/net10.0/Penghou.Zhinu.Sqlite.pdb": "a5b528d7f51c78fed12ef7579671386e855dd355de4ecae9afc883c359b134be",
+        "lib/net8.0/Penghou.Zhinu.Sqlite.pdb": "9295ef6a71ed02afb92e98630411937e4b3a0d00ca2e00d0b00a2756afbd0b6b",
+        "package/services/metadata/core-properties/nuget.psmdcp": "ef1ae91daf3bb8017604c92cb1a4f988f132a6f711a4081eb7d87060976b7de0"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Sqlite.pdb",
+        "lib/net8.0/Penghou.Zhinu.Sqlite.pdb"
+      ]
+    },
+    "archiveByteIdentical": false,
+    "identityAndDependenciesEqual": true,
+    "allMembersEqual": true,
+    "changedMembers": [],
+    "changedBinariesOrRidAssets": [],
+    "result": "DIFFERENT ARCHIVE; INSPECT MEMBER DELTA"
+  },
+  {
+    "left": {
+      "filename": "Penghou.Zhinu.Testing.0.2.0-preview.10.snupkg",
+      "sha256": "e6898069d3040022256bb6357d09f7300dffe4dc5de5698feeb3faa620dbbafc",
+      "size": 27927,
+      "id": "Penghou.Zhinu.Testing",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Testing</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Testing</title>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Test fixtures and store conformance checks for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable testing</tags>\r\n    <packageTypes>\r\n      <packageType name=\"SymbolsPackage\" />\r\n    </packageTypes>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Testing.nuspec": "2fe7e278dbfc0f6f5a64239bae014a106e68d6c11617efd234218a2ea3715839",
+        "[Content_Types].xml": "7231b19176af994340683e6c8b355dd0ac468f12b9808a76ec69d1e786964e1a",
+        "_rels/.rels": "b2c9b16de340397318ab9f21520ea05ca4f684aeac3ceba9dae9dd0c31b8dc8e",
+        "lib/net10.0/Penghou.Zhinu.Testing.pdb": "c9a0fc24e2ee12ebc6a355ef827abbd9814aa5173ab2f522251a393bdd433dff",
+        "lib/net8.0/Penghou.Zhinu.Testing.pdb": "a4209e95bcb38afe380ae9f49d7a8b36a34205505b2f754376a18b0ba4e3a072",
+        "package/services/metadata/core-properties/nuget.psmdcp": "2ff77d0d471141e20c51446eba7bed01e87c4577d82559cff0b84abc3e411702"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Testing.pdb",
+        "lib/net8.0/Penghou.Zhinu.Testing.pdb"
+      ]
+    },
+    "right": {
+      "filename": "Penghou.Zhinu.Testing.0.2.0-preview.10.snupkg",
+      "sha256": "39dcdc825a70af08afd8657a0ee5ec7c8dbf04c220a7f884e17c8cc97bd65b8f",
+      "size": 27927,
+      "id": "Penghou.Zhinu.Testing",
+      "version": "0.2.0-preview.10",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/jenolaszlo-sketch/penghou-zhinu",
+        "commit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97"
+      },
+      "dependencies": [
+        {
+          "framework": "net10.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        },
+        {
+          "framework": "net8.0",
+          "dependencies": [
+            {
+              "id": "Penghou.Zhinu.Sqlite",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            },
+            {
+              "id": "Penghou.Zhinu",
+              "version": "0.2.0-preview.10",
+              "exclude": "Build,Analyzers"
+            }
+          ]
+        }
+      ],
+      "nuspec": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd\">\r\n  <metadata>\r\n    <id>Penghou.Zhinu.Testing</id>\r\n    <version>0.2.0-preview.10</version>\r\n    <title>Penghou Zhinu Testing</title>\r\n    <projectUrl>https://github.com/jenolaszlo-sketch/penghou-zhinu</projectUrl>\r\n    <description>Test fixtures and store conformance checks for Penghou.Zhinu.</description>\r\n    <copyright>Copyright (c) 2026 Jen\u0151 Konr\u00e1d L\u00e1szl\u00f3</copyright>\r\n    <tags>workflow durable testing</tags>\r\n    <packageTypes>\r\n      <packageType name=\"SymbolsPackage\" />\r\n    </packageTypes>\r\n    <repository type=\"git\" url=\"https://github.com/jenolaszlo-sketch/penghou-zhinu\" commit=\"bf33c05cf2390af6924bbe3761e09f9e377c7a97\" />\r\n    <dependencies>\r\n      <group targetFramework=\"net10.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n      <group targetFramework=\"net8.0\">\r\n        <dependency id=\"Penghou.Zhinu.Sqlite\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n        <dependency id=\"Penghou.Zhinu\" version=\"0.2.0-preview.10\" exclude=\"Build,Analyzers\" />\r\n      </group>\r\n    </dependencies>\r\n  </metadata>\r\n</package>",
+      "members": {
+        "Penghou.Zhinu.Testing.nuspec": "2fe7e278dbfc0f6f5a64239bae014a106e68d6c11617efd234218a2ea3715839",
+        "[Content_Types].xml": "7231b19176af994340683e6c8b355dd0ac468f12b9808a76ec69d1e786964e1a",
+        "_rels/.rels": "b2c9b16de340397318ab9f21520ea05ca4f684aeac3ceba9dae9dd0c31b8dc8e",
+        "lib/net10.0/Penghou.Zhinu.Testing.pdb": "c9a0fc24e2ee12ebc6a355ef827abbd9814aa5173ab2f522251a393bdd433dff",
+        "lib/net8.0/Penghou.Zhinu.Testing.pdb": "a4209e95bcb38afe380ae9f49d7a8b36a34205505b2f754376a18b0ba4e3a072",
+        "package/services/metadata/core-properties/nuget.psmdcp": "2ff77d0d471141e20c51446eba7bed01e87c4577d82559cff0b84abc3e411702"
+      },
+      "ridAssets": [],
+      "frameworkAssets": [
+        "lib/net10.0/Penghou.Zhinu.Testing.pdb",
+        "lib/net8.0/Penghou.Zhinu.Testing.pdb"
+      ]
+    },
+    "archiveByteIdentical": false,
+    "identityAndDependenciesEqual": true,
+    "allMembersEqual": true,
+    "changedMembers": [],
+    "changedBinariesOrRidAssets": [],
+    "result": "DIFFERENT ARCHIVE; INSPECT MEMBER DELTA"
+  }
+]

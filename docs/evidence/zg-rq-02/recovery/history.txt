@@ -1,0 +1,79 @@
+commit 8c7da4cfbc882804d801fe0e8b073733e4ee563c
+Author:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+AuthorDate: Tue Oct 20 22:14:16 2026 +0800
+Commit:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+CommitDate: Tue Oct 20 22:14:16 2026 +0800
+
+    docs: prepare preview.20 release packet and SQLite follow-up [skip ci]
+
+commit 1b6a9e9e26535bd01de52fdd43552c6714d7b826
+Author:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+AuthorDate: Tue Oct 20 18:47:12 2026 +0800
+Commit:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+CommitDate: Tue Oct 20 18:47:12 2026 +0800
+
+    docs: seal complete integration review qualification [skip ci]
+
+commit 3d8ee2b9573bce350f4c05584da26eaa167dbca4
+Author:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+AuthorDate: Tue Oct 20 18:29:32 2026 +0800
+Commit:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+CommitDate: Tue Oct 20 18:29:32 2026 +0800
+
+    test: respect classification-only loop control descriptors
+
+commit eca1213796d9fa4ad08423e2691cb409c892f63b
+Author:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+AuthorDate: Tue Oct 20 18:21:39 2026 +0800
+Commit:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+CommitDate: Tue Oct 20 18:21:39 2026 +0800
+
+    fix: isolate dynamic provider identity and reject ambiguous loop state
+
+commit 232d2c3c22442a9242e7575669d6bffe1a05bb53
+Author:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+AuthorDate: Tue Oct 20 17:41:25 2026 +0800
+Commit:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+CommitDate: Tue Oct 20 17:41:25 2026 +0800
+
+    docs: seal bounded selection qualification [skip ci]
+
+commit 631fa642a78075278ed2f6a58609554a52e33788
+Author:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+AuthorDate: Tue Oct 20 17:28:46 2026 +0800
+Commit:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+CommitDate: Tue Oct 20 17:28:46 2026 +0800
+
+    feat: lower bounded grouped selection to native replacement
+
+commit abec41689d9e46c6819e5345dec75273cc8a35ee
+Author:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+AuthorDate: Tue Oct 20 08:42:06 2026 +0800
+Commit:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+CommitDate: Tue Oct 20 08:42:06 2026 +0800
+
+    docs: track native Q33 selection integration boundary [skip ci]
+
+commit 27cbfda9f7d4ae6947ef3a3c077b9715e9131cbc
+Author:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+AuthorDate: Tue Oct 20 07:52:01 2026 +0800
+Commit:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+CommitDate: Tue Oct 20 07:52:01 2026 +0800
+
+    docs: seal selected activity-group qualification and review [skip ci]
+
+commit c851ac68c7047b5fec3476ab87d4ef4fb20a86e6
+Author:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+AuthorDate: Tue Oct 20 07:40:06 2026 +0800
+Commit:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+CommitDate: Tue Oct 20 07:40:06 2026 +0800
+
+    test: isolate consumer NuGet source mappings
+
+commit 74314171424ab7f32262318a0d22e6eb118e9b22
+Author:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+AuthorDate: Tue Oct 20 07:31:38 2026 +0800
+Commit:     jenol <jenolaszlo-sketch@users.noreply.github.com>
+CommitDate: Tue Oct 20 07:31:38 2026 +0800
+
+    test: inspect SQLite files with compatible Windows sharing

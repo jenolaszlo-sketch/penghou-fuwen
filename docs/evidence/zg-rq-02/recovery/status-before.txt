@@ -1,0 +1,4 @@
+ M .github/workflows/publish.yml
+?? .github/workflows/release-rehearsal.yml
+?? eng/Invoke-ReleaseRehearsal.ps1
+?? eng/Verify-NativeFeed.ps1

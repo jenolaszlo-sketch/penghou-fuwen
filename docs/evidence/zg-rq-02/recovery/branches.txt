@@ -1,0 +1,6 @@
++ codex/fuwen-activity-groups                8c7da4c (C:/Users/Laszlos/source/repos/Solo/workstreams/fuwen-activity-groups) [origin/codex/fuwen-activity-groups] docs: prepare preview.20 release packet and SQLite follow-up [skip ci]
+* codex/zg-rq-02-fuwen                       8c7da4c docs: prepare preview.20 release packet and SQLite follow-up [skip ci]
++ main                                       8c7da4c (C:/Users/Laszlos/source/repos/Penghou.Fuwen) [origin/main] docs: prepare preview.20 release packet and SQLite follow-up [skip ci]
+  remotes/origin/HEAD                        -> origin/main
+  remotes/origin/codex/fuwen-activity-groups 8c7da4c docs: prepare preview.20 release packet and SQLite follow-up [skip ci]
+  remotes/origin/main                        8c7da4c docs: prepare preview.20 release packet and SQLite follow-up [skip ci]

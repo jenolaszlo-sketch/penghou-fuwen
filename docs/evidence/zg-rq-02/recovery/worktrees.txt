@@ -1,0 +1,12 @@
+worktree C:/Users/Laszlos/source/repos/Penghou.Fuwen
+HEAD 8c7da4cfbc882804d801fe0e8b073733e4ee563c
+branch refs/heads/main
+
+worktree C:/Users/Laszlos/source/repos/Solo/workstreams/fuwen-activity-groups
+HEAD 8c7da4cfbc882804d801fe0e8b073733e4ee563c
+branch refs/heads/codex/fuwen-activity-groups
+
+worktree C:/Users/Laszlos/source/repos/zg-rq-02-fuwen
+HEAD 8c7da4cfbc882804d801fe0e8b073733e4ee563c
+branch refs/heads/codex/zg-rq-02-fuwen
+

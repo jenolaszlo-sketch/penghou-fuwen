@@ -382,7 +382,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 Diagnostic($"retained runtime={System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription} os={System.Runtime.InteropServices.RuntimeInformation.OSDescription} pooling=false directory={directory}");
                 var files = Directory.GetFiles(directory).Select(path => new
                 {
-                    name = Path.GetFileName(path), size = new FileInfo(path).Length,
+                    name = Path.GetFileName(path),
+                    size = new FileInfo(path).Length,
                     sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant()
                 }).ToArray();
                 File.WriteAllText(Path.Combine(directory, "retained-files.json"), System.Text.Json.JsonSerializer.Serialize(files));

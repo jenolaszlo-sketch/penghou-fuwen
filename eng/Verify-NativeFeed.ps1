@@ -21,6 +21,7 @@
 param(
     [Parameter(Mandatory = $true)][string] $FeedDirectory,
     [string] $PinPath = 'docs/qualification/activity-groups/zhinu-candidate.json',
+    [Parameter(Mandatory = $true)][string] $RebuildManifestPath,
     [string] $Version,
     [string] $ResolvedSourceCommit,
     [string] $ExpectedNeutralDependency = '[0.1.0-preview.2]',
@@ -69,6 +70,43 @@ $expected = $pinnedIds | ForEach-Object { "$_.$Version" }
 $unexpected = @($nupkgs | Where-Object { $_.BaseName -notin $expected })
 if ($unexpected.Count -gt 0) {
     throw "Unexpected native packages in feed: $($unexpected.Name -join ', ') (R09/R16 REFUSE)."
+}
+
+$rebuilt = Get-Content -LiteralPath $RebuildManifestPath -Raw | ConvertFrom-Json
+if ($rebuilt.SourceCommit -cne $pin.SourceCommit -or $rebuilt.Version -cne $pin.Version -or
+    $rebuilt.Provenance.Kind -cne 'source-rebuild' -or
+    $rebuilt.Provenance.OriginalArchivePinSha256 -cne (Get-FileHash -LiteralPath $PinPath -Algorithm SHA256).Hash.ToLowerInvariant()) {
+    throw 'Rebuild manifest does not bind the tracked native contract.'
+}
+if (@($rebuilt.Packages).Count -ne 7 -or @($rebuilt.Packages.Id | Sort-Object -Unique).Count -ne 7) { throw 'Invalid rebuild closure.' }
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+function Assert-PackageArchive {
+    param([string]$Path, [string]$Id, [string]$Version, [string]$Commit)
+    $zip = [IO.Compression.ZipFile]::OpenRead($Path)
+    try {
+        $specs = @($zip.Entries | Where-Object FullName -Like '*.nuspec')
+        if ($specs.Count -ne 1) { throw "Expected one nuspec: $Path" }
+        $reader = [IO.StreamReader]::new($specs[0].Open())
+        try { [xml]$doc = $reader.ReadToEnd() } finally { $reader.Dispose() }
+        $meta = $doc.package.metadata
+        if ($meta.id -cne $Id -or $meta.version -cne $Version -or $meta.repository.commit -cne $Commit) {
+            throw "Archive identity/version/source mismatch: $Path"
+        }
+        $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+        foreach ($entry in $zip.Entries) {
+            if (-not $seen.Add($entry.FullName) -or $entry.FullName -match '(^/|\\|(^|/)\.\.(/|$))') {
+                throw "Unsafe or duplicate archive member: $Path"
+            }
+        }
+    } finally { $zip.Dispose() }
+}
+
+foreach ($package in $rebuilt.Packages) {
+    if ($package.Id -notin $pinnedIds -or $package.File -cne "$($package.Id).$Version.nupkg") { throw 'Rebuild package identity mismatch.' }
+    $file = Join-Path $feed $package.File
+    if ($package.Sha256 -cne (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()) { throw "Rebuild hash mismatch: $file" }
+    Assert-PackageArchive $file $package.Id $Version $pin.SourceCommit
 }
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem

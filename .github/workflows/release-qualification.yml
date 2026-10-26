@@ -1,0 +1,231 @@
+name: Release qualification
+on:
+  workflow_call:
+    inputs:
+      require-release-tag:
+        type: boolean
+        required: true
+      release_tag:
+        type: string
+        default: ''
+permissions:
+  contents: read
+jobs:
+  prepare-native-feed:
+    name: Stage and verify the pinned native candidate feed
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact release ref
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Verify release ref and checked-in version
+        if: inputs.require-release-tag
+        shell: bash
+        env:
+          MANUAL_RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          version=$(dotnet msbuild src/Penghou.Fuwen/Penghou.Fuwen.csproj -getProperty:Version -nologo)
+          expected_tag="v${version}"
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+            echo "Release workflows must run from an existing version tag; got $GITHUB_REF." >&2
+            exit 1
+          fi
+          if [ "$GITHUB_REF_NAME" != "$expected_tag" ]; then
+            echo "Tag $GITHUB_REF_NAME does not equal checked-in version tag $expected_tag." >&2
+            exit 1
+          fi
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$MANUAL_RELEASE_TAG" != "$GITHUB_REF_NAME" ]; then
+            echo "Manual release tag $MANUAL_RELEASE_TAG does not equal selected ref $GITHUB_REF_NAME." >&2
+            exit 1
+          fi
+
+      - name: Read exact native source pin
+        id: native-pin
+        run: |
+          $pin = Get-Content docs/qualification/activity-groups/zhinu-candidate.json -Raw | ConvertFrom-Json
+          if ($pin.SourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Invalid native source pin.' }
+          "commit=$($pin.SourceCommit)" >> $env:GITHUB_OUTPUT
+          "version=$($pin.Version)" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
+      - name: Checkout pinned native source
+        uses: actions/checkout@v6
+        with:
+          repository: jenolaszlo-sketch/penghou-zhinu
+          ref: ${{ steps.native-pin.outputs.commit }}
+          path: native-candidate-source
+
+      # A source rebuild is a new per-run archive set, not a claim to reproduce
+      # the original Windows archive hashes. Pins and exact source are retained.
+      - name: Prepare exact-source native candidates
+        run: |
+          ./eng/Prepare-ZhinuSourceCandidate.ps1 -SourceDirectory native-candidate-source
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $manifest = @(Get-ChildItem artifacts/zhinu-source-candidate/zhinu-source-candidate-*.json)
+          if ($manifest.Count -ne 1) { throw 'Expected one native rebuild manifest.' }
+          Copy-Item -LiteralPath $manifest[0].FullName -Destination artifacts/zhinu-source-candidate.json
+        shell: pwsh
+
+      - name: Verify candidate preparation rejection boundaries
+        run: ./eng/Test-ZhinuCandidatePreparation.ps1 -ArtifactsDirectory artifacts/zhinu-candidate -CandidatePinPath artifacts/zhinu-source-candidate.json -OutputDirectory artifacts/candidate-preparation
+        shell: pwsh
+
+      - name: Verify staged native feed against the pin
+        run: |
+          $resolved = (& git -C native-candidate-source rev-parse HEAD).Trim()
+          ./eng/Verify-NativeFeed.ps1 `
+            -FeedDirectory artifacts/zhinu-candidate `
+            -PinPath docs/qualification/activity-groups/zhinu-candidate.json `
+            -RebuildManifestPath artifacts/zhinu-source-candidate.json `
+            -Version '${{ steps.native-pin.outputs.version }}' `
+            -ResolvedSourceCommit $resolved
+        shell: pwsh
+
+      - name: Rehearse native-feed rejection and isolated restoration
+        shell: pwsh
+        run: ./eng/Invoke-ReleaseRehearsal.ps1 -FeedDirectory artifacts/zhinu-candidate -PinPath docs/qualification/activity-groups/zhinu-candidate.json -RebuildManifestPath artifacts/zhinu-source-candidate.json -OutputDirectory artifacts/native-rehearsal
+
+      - name: Upload staged native candidate feed
+        uses: actions/upload-artifact@v6
+        with:
+          name: native-candidate-feed
+          path: |
+            artifacts/zhinu-candidate/*.nupkg
+            artifacts/zhinu-source-candidate.json
+          if-no-files-found: error
+
+  validate:
+    name: Validate the exact tagged commit against the staged feed
+    needs: prepare-native-feed
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact release ref
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Download staged native candidate feed
+        uses: actions/download-artifact@v7
+        with:
+          name: native-candidate-feed
+          path: artifacts
+
+      - name: Restore staged feed layout and verify
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path artifacts/zhinu-candidate -Force | Out-Null
+          $pin = Get-Content docs/qualification/activity-groups/zhinu-candidate.json -Raw | ConvertFrom-Json
+          ./eng/Verify-NativeFeed.ps1 `
+            -FeedDirectory artifacts/zhinu-candidate `
+            -PinPath docs/qualification/activity-groups/zhinu-candidate.json `
+            -RebuildManifestPath artifacts/zhinu-source-candidate.json `
+            -Version $pin.Version
+
+      - name: Verify release ref and checked-in version
+        if: inputs.require-release-tag
+        shell: bash
+        env:
+          MANUAL_RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          version=$(dotnet msbuild src/Penghou.Fuwen/Penghou.Fuwen.csproj -getProperty:Version -nologo)
+          expected_tag="v${version}"
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+            echo "Release workflows must run from an existing version tag; got $GITHUB_REF." >&2
+            exit 1
+          fi
+          if [ "$GITHUB_REF_NAME" != "$expected_tag" ]; then
+            echo "Tag $GITHUB_REF_NAME does not equal checked-in version tag $expected_tag." >&2
+            exit 1
+          fi
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$MANUAL_RELEASE_TAG" != "$GITHUB_REF_NAME" ]; then
+            echo "Manual release tag $MANUAL_RELEASE_TAG does not equal selected ref $GITHUB_REF_NAME." >&2
+            exit 1
+          fi
+
+      - name: Restore with an empty package cache
+        shell: pwsh
+        run: |
+          $cache = Join-Path $env:RUNNER_TEMP "release-cache-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          if (Test-Path $cache) { throw 'Release cache must start empty.' }
+          "NUGET_PACKAGES=$cache" >> $env:GITHUB_ENV
+          dotnet restore Penghou.Fuwen.slnx --packages $cache --no-http-cache
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build
+        run: dotnet build Penghou.Fuwen.slnx --configuration Release --no-restore
+
+      - name: Verify formatting
+        run: dotnet format Penghou.Fuwen.slnx --verify-no-changes --no-restore
+
+      - name: Test
+        run: dotnet test Penghou.Fuwen.slnx --configuration Release --no-build --logger 'trx;LogFilePrefix=release' --blame-hang-timeout 5m --blame-hang-dump-type none --results-directory artifacts/test-results
+
+      - name: Verify independent canonical JSON vector
+        run: python3 tests/golden/canonical_json_v1.py
+
+      - name: Pack validated commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          for csproj in \
+            src/Penghou.Fuwen/Penghou.Fuwen.csproj \
+            src/Penghou.Fuwen.Compiler/Penghou.Fuwen.Compiler.csproj \
+            src/Penghou.Fuwen.Zhinu/Penghou.Fuwen.Zhinu.csproj \
+            src/Penghou.Fuwen.Baize/Penghou.Fuwen.Baize.csproj; do
+            dotnet pack "$csproj" \
+              --configuration Release \
+              --no-build \
+              --output ./artifacts/packages
+          done
+          test "$(find artifacts/packages -maxdepth 1 -name '*.nupkg' ! -name '*.snupkg' | wc -l)" -eq 4
+          test "$(find artifacts/packages -maxdepth 1 -name '*.snupkg' | wc -l)" -eq 4
+
+      - name: Bind validated package identities and hashes
+        shell: pwsh
+        run: |
+          [xml]$props = Get-Content Directory.Build.props
+          ./eng/ReleasePackageSet.ps1 -Mode Create -Directory artifacts/packages -Version $props.Project.PropertyGroup.Version
+
+      - name: Upload validated packages
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-packages-${{ github.sha }}-${{ matrix.os }}
+          path: |
+            artifacts/packages/release-manifest.json
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Retain qualification receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-validation-${{ matrix.os }}
+          path: |
+            artifacts/test-results/**
+            artifacts/zhinu-source-candidate.json
+            artifacts/packages/release-manifest.json
+          if-no-files-found: error

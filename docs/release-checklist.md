@@ -71,3 +71,20 @@ does not rebuild packages.
   version (`v<version>`).
 - [ ] NuGet provenance/OIDC publishing completes and both symbols and packages
   are indexed before downstream projects update.
+
+## ZG-RQ-02 staged qualification
+
+The publisher and credential-free rehearsal share `release-qualification.yml`.
+It builds the pinned clean native source, binds its separate rebuild manifest to
+the original archive contract, transfers that exact staged feed, verifies every
+archive hash/identity/source, and restores with an empty package cache on Windows
+and Ubuntu. Exact native-ID source mappings remain exclusive; unrelated packages
+resolve through the public source. Same-version staged packages are not claimed
+to be published packages or byte-identical to the original qualification archives.
+
+The final four-package/symbol set has a run/source/hash manifest. The final
+publisher consumes and rechecks the Ubuntu artifacts without rebuilding. The
+rehearsal uses the checked-in candidate version and performs the same handoff,
+then requests a credential-free `nuget` checkpoint. RG-02 remains OWNER DECISION
+REQUIRED; owner self-review does not establish independent approval. No live
+environment changes or publication were authorized by ZG-RQ-02.

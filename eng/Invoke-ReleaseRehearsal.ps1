@@ -17,13 +17,19 @@ param(
     [Parameter(Mandatory = $true)][string] $FeedDirectory,
     [Parameter(Mandatory = $true)][string] $PinPath,
     [Parameter(Mandatory = $true)][string] $OutputDirectory,
+    [Parameter(Mandatory = $true)][string] $RebuildManifestPath,
     [string] $Version = '0.2.0-preview.10'
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+if (Test-Path $OutputDirectory) { throw 'Fixture output must be new.' }
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
+$OutputDirectory = (Resolve-Path $OutputDirectory).Path
+$FeedDirectory = (Resolve-Path $FeedDirectory).Path
+$PinPath = (Resolve-Path $PinPath).Path
+$RebuildManifestPath = (Resolve-Path $RebuildManifestPath).Path
 $verifier = Join-Path $PSScriptRoot 'Verify-NativeFeed.ps1'
 $results = [System.Collections.Generic.List[object]]::new()
 
@@ -35,13 +41,22 @@ function Invoke-Scenario {
     $refused = $false
     $output = ''
     try {
-        $params = @{ FeedDirectory = $Parameters.FeedDirectory; PinPath = $Parameters.PinPath; Version = $Parameters.Version }
-        if ($Parameters.ResolvedSourceCommit) { $params['ResolvedSourceCommit'] = $Parameters.ResolvedSourceCommit }
+        $params = @{ FeedDirectory = $Parameters.FeedDirectory; PinPath = $Parameters.PinPath; Version = $Parameters.Version; RebuildManifestPath = $RebuildManifestPath }
+        if ($Parameters.ContainsKey('ResolvedSourceCommit')) { $params['ResolvedSourceCommit'] = $Parameters.ResolvedSourceCommit }
         $output = & $verifier @params 2>&1 | Out-String
     }
     catch {
         $refused = $true
         $output = $_.Exception.Message
+    }
+    $reason = @{
+        'R15b-feed-absent'='Native feed directory is absent'; 'R15c-package-missing'='Feed contains 6';
+        'R15d-wrong-version'='Pin version'; 'R15e-commit-mismatch'='Resolved native source commit';
+        'R15f-invalid-pin'='SourceCommit must'; 'R09-extra-package'='Feed contains 8';
+        'R15g-corrupt-bytes'='Rebuild hash mismatch'
+    }
+    if ($Parameters.ExpectRefuse -and (-not $refused -or $output -notmatch $reason[$Id])) {
+        throw "Expected production rejection for $Id, got: $output"
     }
     $results.Add([pscustomobject]@{
         scenario = $Id
@@ -91,6 +106,12 @@ $extra = Copy-Feed 'R09'
 Copy-Item -LiteralPath (Join-Path $extra "Penghou.Zhinu.$Version.nupkg") `
     -Destination (Join-Path $extra "Penghou.Zhinu.Experimental.$Version.nupkg")
 Invoke-Scenario 'R09-extra-package' @{ FeedDirectory = $extra; PinPath = "$extra\zhinu-candidate.json"; Version = $Version; ExpectRefuse = $true }
+
+# A correct filename cannot hide modified bytes in any package.
+$corrupt = Copy-Feed 'R15g'
+$target = Join-Path $corrupt "$($pinned.Packages[2].Id).$Version.nupkg"
+[IO.File]::AppendAllText($target, 'corrupt')
+Invoke-Scenario 'R15g-corrupt-bytes' @{ FeedDirectory=$corrupt; PinPath=$PinPath; Version=$Version; ExpectRefuse=$true }
 
 # R16: the mapped feed path exists but is EMPTY. With an isolated cache the
 # restore of the adapter project must fail closed: the exclusive ID mapping
@@ -145,8 +166,8 @@ $results.Add([pscustomobject]@{
     scenario = 'R16'
     expected = 'REFUSED'
     observed = if ($restoreFailed) { 'REFUSED' } else { 'PASSED-RESTORE' }
-    status   = if ($restoreFailed) { 'PASS' } else { 'FAIL' }
-    detail   = 'Empty mapped feed with isolated cache: restore must fail closed'
+    status   = if ($restoreFailed -and $restoreOutput -match 'NU1101' -and $restoreOutput -match 'zhinu-candidate|Penghou.Zhinu') { 'PASS' } else { 'FAIL' }
+    detail   = $restoreOutput
 })
 
 # R18: the valid staged feed restores the adapter project from the mapped
@@ -206,7 +227,7 @@ $results.Add([pscustomobject]@{
     expected = 'RELEASE-ELIGIBLE (NO PUSH)'
     observed = if ($r18Refused) { 'REFUSED' } else { 'RELEASE-ELIGIBLE (NO PUSH)' }
     status   = if ($r18Refused) { 'FAIL' } else { 'RELEASE-ELIGIBLE (NO PUSH)' }
-    detail   = 'Valid staged feed restored with isolated cache; no publication code path exists in this harness'
+    detail   = $r18Output
 })
 
 $summary = [ordered]@{

@@ -1,4 +1,4 @@
-﻿> Mirror note: this document is copied from the Penghou.Zhinu ZG-RQ-02 evidence packet (`docs/evidence/zg-rq-02/` on branch `codex/zg-rq-02-zhinu`). Relative paths in the text keep the Zhinu packet's perspective: `local/...` refers to `../Penghou.Zhinu/docs/evidence/zg-rq-02/local/...`, and `../Penghou.Fuwen/...` refers to this repository's same relative path. The canonical copy lives in the Zhinu packet.
+> Mirror note: this document is copied from the Penghou.Zhinu ZG-RQ-02 evidence packet (`docs/evidence/zg-rq-02/` on branch `codex/zg-rq-02-zhinu`). Relative paths in the text keep the Zhinu packet's perspective: `local/...` refers to `../Penghou.Zhinu/docs/evidence/zg-rq-02/local/...`, and `../Penghou.Fuwen/...` refers to this repository's same relative path. The canonical copy lives in the Zhinu packet.
 
 # Git binding
 
@@ -74,10 +74,11 @@ evidence:
   release-rehearsal}.yml`, `eng/{Verify-NativeFeed,ReleasePackageSet,
   Invoke-ReleaseRehearsal}.ps1`, `eng/{sqlite_stress.py,
   test_workflow_boundaries.py}`,
-  `tests/Penghou.Fuwen.Compiler.Tests/ReleaseWorkflowContractTests.cs`,
+  `tests/Penghou.Fuwen.Compiler.Tests/ReleaseWorkflowContractTests.cs`
+  (assertions updated for the reusable-qualification workflow architecture),
   `tests/Penghou.Fuwen.Zhinu.Tests/FuwenZhinuSelectionTests.cs` (env-gated
-  diagnostic capture only; no assertion changes), `docs/release-checklist.md`,
-  `docs/evidence/**`.
+  diagnostic capture only; no assertion changes in that file),
+  `docs/release-checklist.md`, `docs/evidence/**`.
 
 ## Remote state
 
@@ -97,4 +98,3 @@ These documentation-only commits follow the implementation commits above; the
 follow-up binding commit that fills these values is the branch tip and is
 visible in `git log`. Neither commit touches `src/`, tests, workflows or
 scripts.
-

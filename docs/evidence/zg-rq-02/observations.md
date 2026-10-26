@@ -29,7 +29,6 @@
    SQLite failure. No test or format gate was removed or relaxed.
 
 All corrected attempts have distinct commits/run IDs or fresh fixture output
-directories. None overwrites a failure, creates a tag, or publishes a package.
 5. Run 40303275879 failed the repository's workflow-contract test because that
    test still pinned the pre-remediation single-file publisher instead of the
    reusable release-qualification architecture. Commit 6565822 aligns the test
@@ -50,6 +49,15 @@ directories. None overwrites a failure, creates a tag, or publishes a package.
    not the 09:43 manifest. The matrix JSON stays the historical record of that
    run; the targeted R11 fixture used the current pairing; the hosted
    prepare-native-feed job builds and verifies its own feed in the runner.
+8. Some raw API captures in `local/` were initially written in UTF-16LE by the
+   capture shell. They were normalized to UTF-8 (content unchanged) so reviewers
+   and tooling can read them; no recorded values were edited.
+9. The independent adversarial review corrected one provenance overclaim in the
+   shared documents: `eng/test_workflow_boundaries.py` is executed locally, not
+   in the hosted rehearsals. The affected sentences in `rg-01-zhinu.md`
+   (mirror) and `rehearsal-matrix.md` (mirror) were corrected; the test's own
+   output files already stated "STATIC WORKFLOW MUTATION; NOT HOSTED
+   ENFORCEMENT".
 
 All corrected attempts have distinct commits/run IDs or fresh fixture output
 directories. None overwrites a failure, creates a tag, or publishes a package.

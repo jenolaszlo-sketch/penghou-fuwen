@@ -1,4 +1,4 @@
-﻿> Mirror note: this document is copied from the Penghou.Zhinu ZG-RQ-02 evidence packet (`docs/evidence/zg-rq-02/` on branch `codex/zg-rq-02-zhinu`). Relative paths in the text keep the Zhinu packet's perspective: `local/...` refers to `../Penghou.Zhinu/docs/evidence/zg-rq-02/local/...`, and `../Penghou.Fuwen/...` refers to this repository's same relative path. The canonical copy lives in the Zhinu packet.
+> Mirror note: this document is copied from the Penghou.Zhinu ZG-RQ-02 evidence packet (`docs/evidence/zg-rq-02/` on branch `codex/zg-rq-02-zhinu`). Relative paths in the text keep the Zhinu packet's perspective: `local/...` refers to `../Penghou.Zhinu/docs/evidence/zg-rq-02/local/...`, and `../Penghou.Fuwen/...` refers to this repository's same relative path. The canonical copy lives in the Zhinu packet.
 
 # Rehearsal matrix R01-R18
 
@@ -60,7 +60,11 @@ evidence.
   after verification/validation, after `needs`, and behind `environment: nuget`.
 - `eng/test_workflow_boundaries.py` (both repositories) asserts the absence of
   unauthorized triggers, ambient OIDC, and push steps outside the protected
-  job; it ran in the hosted rehearsals.
+  job. It is executed **locally** (raw outputs
+  `local/zhinu-workflow-boundaries.json`,
+  `local/fuwen-workflow-boundaries.json`, classified "STATIC WORKFLOW
+  MUTATION; NOT HOSTED ENFORCEMENT"); the hosted no-push/no-OIDC properties
+  rest on workflow inspection and the hosted run records, not on this test.
 - No tag was created and no package was published at any point.
 
 ## Preserved failures
@@ -71,4 +75,3 @@ attempts, the three pre-fix Fuwen hosted runs, the REL-SQLITE-01 hosted
 recurrence (attempt 1) with its passing rerun (attempt 2), and the initial
 naive artifact-comparison observation are recorded in `observations.md`,
 `known-findings.md` and the raw files under `local/`.
-

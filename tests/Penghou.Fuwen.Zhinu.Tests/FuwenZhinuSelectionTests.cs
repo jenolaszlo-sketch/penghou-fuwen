@@ -269,7 +269,13 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         var ct = timeout.Token;
         var admission = await AdmitSelection();
         var directory = Path.Combine(Path.GetTempPath(), "fuwen-selection-process", Guid.NewGuid().ToString("N"));
+        var preserve = Environment.GetEnvironmentVariable("ZG_SQLITE_STRESS") == "1";
         System.Diagnostics.Process? worker = null;
+        Task<string>? workerError = null;
+        void Diagnostic(string message)
+        {
+            if (preserve) File.AppendAllText(Path.Combine(directory, "stress-diagnostics.log"), $"{DateTimeOffset.UtcNow:o} {message}{Environment.NewLine}");
+        }
         try
         {
             var definitions = new DirectoryWorkflowDefinitionStore(directory);
@@ -282,7 +288,9 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             async Task ReachBarrier(string mode)
             {
                 worker = StartGroupWorker(directory, admission.Definition!.Fingerprint, mode);
-                var error = worker.StandardError.ReadToEndAsync(ct);
+                workerError = worker.StandardError.ReadToEndAsync(CancellationToken.None);
+                Diagnostic($"started mode={mode} pid={worker.Id}");
+                var error = workerError;
                 while (!File.Exists(Path.Combine(directory, "barrier")))
                 {
                     if (worker.HasExited) throw new InvalidOperationException(await error);
@@ -293,6 +301,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             {
                 worker!.Kill(entireProcessTree: true);
                 await worker.WaitForExitAsync(ct);
+                Diagnostic($"terminated pid={worker.Id} exit={worker.ExitCode} stderr={await workerError!}");
                 worker.Dispose(); worker = null;
                 File.Delete(Path.Combine(directory, "barrier"));
                 File.Delete(Path.Combine(directory, "fanout-second-entered"));
@@ -326,7 +335,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             // Neither selector nor selected membership may be recomputed on recovery.
             await File.WriteAllTextAsync(Path.Combine(directory, "choice.json"), "invalid selector result", ct);
             worker = StartGroupWorker(directory, admission.Definition!.Fingerprint, "selection-resume");
-            var recoveryError = worker.StandardError.ReadToEndAsync(ct);
+            workerError = worker.StandardError.ReadToEndAsync(CancellationToken.None);
+            var recoveryError = workerError;
             await worker.WaitForExitAsync(ct);
             worker.ExitCode.Should().Be(0, await recoveryError);
             worker.Dispose(); worker = null;
@@ -348,14 +358,36 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             state.Work.Known.Should().Be(3);
             state.Work.Completed.Should().Be(3);
         }
+        catch (Exception exception)
+        {
+            Diagnostic(exception.ToString());
+            for (Exception? current = exception; current is not null; current = current.InnerException)
+            {
+                if (current is Microsoft.Data.Sqlite.SqliteException sqlite)
+                    Diagnostic($"sqlite primary={sqlite.SqliteErrorCode} extended={sqlite.SqliteExtendedErrorCode}");
+            }
+            throw;
+        }
         finally
         {
             if (worker is not null)
             {
                 if (!worker.HasExited) { worker.Kill(entireProcessTree: true); await worker.WaitForExitAsync(CancellationToken.None); }
+                Diagnostic($"cleanup pid={worker.Id} exit={worker.ExitCode} stderr={(workerError is null ? "" : await workerError)}");
                 worker.Dispose();
             }
-            DeleteDirectory(directory);
+            if (preserve)
+            {
+                // Retain original files untouched after all workers exit. Integrity checks run on copies.
+                Diagnostic($"retained runtime={System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription} os={System.Runtime.InteropServices.RuntimeInformation.OSDescription} pooling=false directory={directory}");
+                var files = Directory.GetFiles(directory).Select(path => new
+                {
+                    name = Path.GetFileName(path), size = new FileInfo(path).Length,
+                    sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant()
+                }).ToArray();
+                File.WriteAllText(Path.Combine(directory, "retained-files.json"), System.Text.Json.JsonSerializer.Serialize(files));
+            }
+            else DeleteDirectory(directory);
         }
     }
 }

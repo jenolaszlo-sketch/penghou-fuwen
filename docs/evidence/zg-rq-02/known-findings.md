@@ -1,4 +1,4 @@
-﻿> Mirror note: this document is copied from the Penghou.Zhinu ZG-RQ-02 evidence packet (`docs/evidence/zg-rq-02/` on branch `codex/zg-rq-02-zhinu`). Relative paths in the text keep the Zhinu packet's perspective: `local/...` refers to `../Penghou.Zhinu/docs/evidence/zg-rq-02/local/...`, and `../Penghou.Fuwen/...` refers to this repository's same relative path. The canonical copy lives in the Zhinu packet.
+> Mirror note: this document is copied from the Penghou.Zhinu ZG-RQ-02 evidence packet (`docs/evidence/zg-rq-02/` on branch `codex/zg-rq-02-zhinu`). Relative paths in the text keep the Zhinu packet's perspective: `local/...` refers to `../Penghou.Zhinu/docs/evidence/zg-rq-02/local/...`, and `../Penghou.Fuwen/...` refers to this repository's same relative path. The canonical copy lives in the Zhinu packet.
 
 # Known findings and open items
 
@@ -13,7 +13,7 @@ not claimed as fixed**. Nothing here authorizes publication.
 | RG-03 | Fuwen could not guarantee the native Zhinu feed | Exclusive source mapping + staged source rebuild from the pinned commit, verified before restore; publisher consumes only validated artifacts | `rg-03-fuwen.md`, `../Penghou.Fuwen/docs/evidence/zg-rq-02/local/feed-rehearsal-02.json`, hosted run `40308636700` |
 | RG-02 | Publication environment was not demonstrably enforcing approval | `required_reviewers` on both `nuget` environments, admins cannot bypass, live pending/approval cycle exercised | `rg-02-environment.md`, `local/environment-*-nuget-2026-10-26.json`, Zhinu rehearsal `40308720683` |
 
-## Open â€” not remediated
+## Open — not remediated
 
 ### REL-SQLITE-01 (OPEN)
 

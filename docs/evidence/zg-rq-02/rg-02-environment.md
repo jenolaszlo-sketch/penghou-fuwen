@@ -1,4 +1,4 @@
-﻿> Mirror note: this document is copied from the Penghou.Zhinu ZG-RQ-02 evidence packet (`docs/evidence/zg-rq-02/` on branch `codex/zg-rq-02-zhinu`). Relative paths in the text keep the Zhinu packet's perspective: `local/...` refers to `../Penghou.Zhinu/docs/evidence/zg-rq-02/local/...`, and `../Penghou.Fuwen/...` refers to this repository's same relative path. The canonical copy lives in the Zhinu packet.
+> Mirror note: this document is copied from the Penghou.Zhinu ZG-RQ-02 evidence packet (`docs/evidence/zg-rq-02/` on branch `codex/zg-rq-02-zhinu`). Relative paths in the text keep the Zhinu packet's perspective: `local/...` refers to `../Penghou.Zhinu/docs/evidence/zg-rq-02/local/...`, and `../Penghou.Fuwen/...` refers to this repository's same relative path. The canonical copy lives in the Zhinu packet.
 
 # RG-02: publication environment enforcement
 
@@ -64,7 +64,7 @@ Fuwen rehearsal run `40308636700` exercised both directions:
 - attempt 1: the dependent `authorization-probe` job was **skipped** after the
   windows qualification failed (REL-SQLITE-01 recurrence, see
   `stress-qualification.md`). A failed qualification prevents the environment
-  checkpoint and the publisher from running â€” the fail-closed direction.
+  checkpoint and the publisher from running — the fail-closed direction.
 - attempt 2: after the same commit passed, the run paused at the pending
   deployment on the Fuwen `nuget` environment (id `22645578735`, reviewer
   `jenolaszlo-sketch`, `current_user_can_approve: true`), the owner approved

@@ -28,7 +28,6 @@
    whitespace correction. This is a harness formatting defect, not production
    SQLite failure. No test or format gate was removed or relaxed.
 
-All corrected attempts have distinct commits/run IDs or fresh fixture output
 5. Run 40303275879 failed the repository's workflow-contract test because that
    test still pinned the pre-remediation single-file publisher instead of the
    reusable release-qualification architecture. Commit 6565822 aligns the test
@@ -58,6 +57,10 @@ All corrected attempts have distinct commits/run IDs or fresh fixture output
    (mirror) and `rehearsal-matrix.md` (mirror) were corrected; the test's own
    output files already stated "STATIC WORKFLOW MUTATION; NOT HOSTED
    ENFORCEMENT".
+10. The mirrored shared documents carried pre-existing em-dash mojibake
+    introduced by earlier PowerShell 5.1 mirror writes (UTF-8 read as ANSI).
+    It was corrected cosmetically; no content or claim changed. The canonical
+    Zhinu copies were never affected.
 
 All corrected attempts have distinct commits/run IDs or fresh fixture output
 directories. None overwrites a failure, creates a tag, or publishes a package.

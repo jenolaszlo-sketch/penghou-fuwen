@@ -1,8 +1,9 @@
 # ZG-RQ-02: Fuwen evidence packet
 
 Status: **remediation executed; hosted rehearsal attempt 1 failed closed and
-attempt 2 passed after owner approval; REL-SQLITE-01 remains OPEN; publication
-remains unauthorized.**
+attempt 2 passed after owner approval; independent adversarial review recorded
+(verdict QUALIFIED WITH QUALIFICATIONS — see `independent-review.md`);
+REL-SQLITE-01 remains OPEN; publication remains unauthorized.**
 
 This is the Fuwen-side packet of the ZG-RQ-02 milestone (Q6 delta remediation of
 ZG-RQ-01 findings RG-01, RG-02, RG-03). Shared, cross-repository documents are
@@ -29,7 +30,7 @@ a mirror note; Fuwen-specific evidence is native to this packet.
 
 `git-binding.md`, `rg-01-zhinu.md`, `rg-02-environment.md`, `rg-03-fuwen.md`,
 `rehearsal-matrix.md`, `permissions-review.md`, `known-findings.md`,
-`handoff.md`, `zhinu-artifact-equivalence.md`.
+`handoff.md`, `independent-review.md`, `zhinu-artifact-equivalence.md`.
 
 ## Key results
 

@@ -1,8 +1,8 @@
-﻿> Mirror note: this document is copied from the Penghou.Zhinu ZG-RQ-02 evidence packet (`docs/evidence/zg-rq-02/` on branch `codex/zg-rq-02-zhinu`). Relative paths in the text keep the Zhinu packet's perspective: `local/...` refers to `../Penghou.Zhinu/docs/evidence/zg-rq-02/local/...`, and `../Penghou.Fuwen/...` refers to this repository's same relative path. The canonical copy lives in the Zhinu packet.
+> Mirror note: this document is copied from the Penghou.Zhinu ZG-RQ-02 evidence packet (`docs/evidence/zg-rq-02/` on branch `codex/zg-rq-02-zhinu`). Relative paths in the text keep the Zhinu packet's perspective: `local/...` refers to `../Penghou.Zhinu/docs/evidence/zg-rq-02/local/...`, and `../Penghou.Fuwen/...` refers to this repository's same relative path. The canonical copy lives in the Zhinu packet.
 
 # RG-03: Fuwen native-feed resolution
 
-Verdict: **RESOLVED** â€” the Fuwen release path can only resolve the seven
+Verdict: **RESOLVED** — the Fuwen release path can only resolve the seven
 pinned Zhinu native packages from a staged feed built from the exact pinned
 source commit; there is no public-feed fallback and no widened version range.
 The hosted Windows validation is separately blocked by the open REL-SQLITE-01
@@ -100,9 +100,9 @@ runner, so this local workspace detail does not affect the hosted evidence.
 
 Rehearsal run `40308636700` at `6565822`:
 
-- `prepare-native-feed`: **SUCCESS** â€” pinned source checkout, seven-package
+- `prepare-native-feed`: **SUCCESS** — pinned source checkout, seven-package
   source build, preparation rejection boundaries, feed verification, upload.
-- `validate (ubuntu-latest)`: **SUCCESS** â€” downloaded and re-verified the
+- `validate (ubuntu-latest)`: **SUCCESS** — downloaded and re-verified the
   staged feed, empty-cache restore, build, format, full tests, canonical JSON
   vector, pack, package-set binding, upload.
 - `validate (windows-latest)`: **FAILED at Test** with the REL-SQLITE-01

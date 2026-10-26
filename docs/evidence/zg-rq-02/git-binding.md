@@ -22,9 +22,9 @@ ZG-RQ-01 evidence branch: `codex/zg-rq-01` at
 | Repository | Branch | Worktree | HEAD commit | Tree | Parent | Worktree state | Pushed |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Penghou.Zhinu | `codex/zg-rq-02-zhinu` | sibling `zg-rq-02-zhinu` | `009c7f5876a2dd6133f2ebc80e0806790e6e9aba` | `202bdf3c3ac4daca3f8e314f4ce9c70a4d44ba02` | `a4bdfa503f88fee8e1416e0ba769a3a5b67ed149` | evidence files committed in this packet's commit(s); otherwise clean | `origin/codex/zg-rq-02-zhinu` |
-| Penghou.Zhinu | `codex/zg-rq-02-rehearsal` (dispatch ref) | same commit | `009c7f5876a2dd6133f2ebc80e0806790e6e9aba` | â€” | â€” | â€” | `origin/codex/zg-rq-02-rehearsal` |
+| Penghou.Zhinu | `codex/zg-rq-02-rehearsal` (dispatch ref) | same commit | `009c7f5876a2dd6133f2ebc80e0806790e6e9aba` | — | — | — | `origin/codex/zg-rq-02-rehearsal` |
 | Penghou.Fuwen | `codex/zg-rq-02-fuwen` | sibling `zg-rq-02-fuwen` | `65658227151cfbcc69fde752832e4b6b0691d861` | `7ea3abc322dd55dc2007d7ecf2e95ffe09322e9a` | `5ec24791b6107bab2605ecfe6c45436cd3b74aaa` | evidence files committed in this packet's commit; otherwise clean | `origin/codex/zg-rq-02-fuwen` |
-| Penghou.Fuwen | `codex/zg-rq-02-rehearsal` (dispatch ref) | same commit | `65658227151cfbcc69fde752832e4b6b0691d861` | â€” | â€” | â€” | `origin/codex/zg-rq-02-rehearsal` |
+| Penghou.Fuwen | `codex/zg-rq-02-rehearsal` (dispatch ref) | same commit | `65658227151cfbcc69fde752832e4b6b0691d861` | — | — | — | `origin/codex/zg-rq-02-rehearsal` |
 
 Pinned native source worktree (read-only staging input):
 `zg-rq-02-native` at `bf33c05cf2390af6924bbe3761e09f9e377c7a97` (detached).

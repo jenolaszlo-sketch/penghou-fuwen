@@ -1,4 +1,4 @@
-﻿> Mirror note: this document is copied from the Penghou.Zhinu ZG-RQ-02 evidence packet (`docs/evidence/zg-rq-02/` on branch `codex/zg-rq-02-zhinu`). Relative paths in the text keep the Zhinu packet's perspective: `local/...` refers to `../Penghou.Zhinu/docs/evidence/zg-rq-02/local/...`, and `../Penghou.Fuwen/...` refers to this repository's same relative path. The canonical copy lives in the Zhinu packet.
+> Mirror note: this document is copied from the Penghou.Zhinu ZG-RQ-02 evidence packet (`docs/evidence/zg-rq-02/` on branch `codex/zg-rq-02-zhinu`). Relative paths in the text keep the Zhinu packet's perspective: `local/...` refers to `../Penghou.Zhinu/docs/evidence/zg-rq-02/local/...`, and `../Penghou.Fuwen/...` refers to this repository's same relative path. The canonical copy lives in the Zhinu packet.
 
 # ZG-RQ-02 handoff (sections A-H)
 
@@ -177,24 +177,27 @@ overwritten or rewritten:
 
 ## G. Verdict and independent review
 
-- Provisional author verdict: **QUALIFIED WITH QUALIFICATIONS** — RG-01,
-  RG-02 and RG-03 are remediated with positive and negative evidence and
-  fail-closed behavior; the qualifications are REL-SQLITE-01 (OPEN, fail-closed
-  when it reproduces), the single-owner approval limitation, and the
-  not-byte-reproducible/not-actually-published limits above.
-- **The author does not certify this packet.** An independent reviewer (not the
-  author) must adversarially review this packet and the implementation before
-  any qualification claim is final. The review must at minimum: reproduce the
-  exact commits/trees; attempt to make a failed, stale, wrong-repo or
-  wrong-workflow qualification publish; attempt to substitute or tamper with a
-  package and bypass hash/set/dependency checks; attempt to reach the publisher
-  without environment approval or without verification; confirm the rehearsals
-  structurally cannot push or obtain OIDC; and confirm no tag/publication/merge
-  occurred. The reviewer must sign off with one of QUALIFIED / QUALIFIED WITH
-  QUALIFICATIONS / REMEDIATION REQUIRED / BLOCKED, and this file must be updated
-  with that result (or a separate review file referenced here).
-- Until then, this packet is **evidence of a completed remediation attempt, not
-  a final qualification**.
+- **Recorded independent verdict: QUALIFIED WITH QUALIFICATIONS** (full record
+  in [independent-review.md](independent-review.md)). Independent reviewer
+  sessions, separate from the author, conducted the adversarial review in two
+  rounds. Round 1 confirmed every structural property but returned REMEDIATION
+  REQUIRED for one documentation provenance overclaim
+  (`eng/test_workflow_boundaries.py` described as hosted-executed; it runs
+  locally). The claim was corrected at `0be6cd9` (Zhinu) / `f2d044f` (Fuwen),
+  and round 2 confirmed the remediation and issued QUALIFIED WITH
+  QUALIFICATIONS. The reviewer independently re-ran live-API negatives,
+  checked publisher credential ordering, live environment enforcement, the
+  absence of push/OIDC capability in rehearsals, the preserved REL-SQLITE-01
+  evidence, and that no tag, publication or `main` movement occurred.
+- Carried qualifications (pre-existing limits, not defects): REL-SQLITE-01
+  OPEN and fail-closed when it reproduces; single-owner approval limitation
+  (`prevent_self_review=false`, compensated by `can_admins_bypass=false`);
+  artifacts semantically equivalent but not byte-identical; the actual
+  publication path (tag, OIDC exchange, NuGet trusted-publisher policy) was
+  not exercised and would fail closed at `NuGet/login` on a mismatch.
+- The author does not self-certify: the qualification above is the independent
+  reviewers' verdict, not the author's. Any future change to the workflows,
+  environment or artifacts invalidates this review and requires a new one.
 
 ## H. How to verify (reproduce)
 
@@ -217,4 +220,3 @@ pwsh -NoProfile -File eng/Verify-QualificationRun.ps1 -Repository jenolaszlo-ske
 Never run the publisher (`publish.yml`) or push a `v*` tag as part of review;
 the rehearsal workflow is the nonpublishing exercise of the same verification
 path.
-

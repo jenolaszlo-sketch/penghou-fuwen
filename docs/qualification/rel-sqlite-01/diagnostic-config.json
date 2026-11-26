@@ -3,8 +3,8 @@
   "repetitions": 1,
   "instrumented": true,
   "pclrawVersion": "",
-  "zhinuSourceCommit": "bf33c05cf2390af6924bbe3761e09f9e377c7a97",
+  "zhinuSourceCommit": "1cd7959593c1dcf63e2585541b5c23718105d758",
   "settleMs": 0,
   "journal": "wal",
-  "note": "REL-SQLITE-01 Control A. Change one field per diagnostic run and record the commit. zhinuSourceCommit selects the native source rebuild; non-pin values are diagnostic-only instrumented revisions that must never be published."
+  "note": "REL-SQLITE-01 Control A with the diagnostic-instrumented Zhinu feed (native errno capture). Diagnostic-only revision; never publish."
 }

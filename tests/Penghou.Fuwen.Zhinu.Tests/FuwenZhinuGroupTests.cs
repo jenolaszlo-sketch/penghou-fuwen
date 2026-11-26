@@ -199,8 +199,15 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             worker = null;
             RelSqlite01Diagnostics.Capture("grouped-wait-after-kill", root,
                 extras: new Dictionary<string, object?> { ["repeat"] = repeat });
+            var settle = RelSqlite01Diagnostics.SettleDelay();
+            if (settle > TimeSpan.Zero)
+            {
+                await Task.Delay(settle, ct);
+                RelSqlite01Diagnostics.Capture("grouped-wait-after-settle", root,
+                    extras: new Dictionary<string, object?> { ["repeat"] = repeat, ["settleMs"] = settle.TotalMilliseconds });
+            }
             var runId = Guid.Parse(await File.ReadAllTextAsync(Path.Combine(root, "run-id"), ct));
-            var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(root, "run.db"), Pooling = false });
+            var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(root, "run.db"), Pooling = false, EnableWal = RelSqlite01Diagnostics.WalEnabled });
             using var reader = new WorkflowGroupReader(store);
             // Inspect independently before starting a recovery worker.
             var before = await ReadGroupOccurrences(reader, runId, ct);
@@ -231,6 +238,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         {
             RelSqlite01Diagnostics.Capture("grouped-wait-failure", root, null, exception,
                 new Dictionary<string, object?> { ["repeat"] = repeat });
+            RelSqlite01Diagnostics.ProbeCopy("grouped-wait-failure", root);
             throw;
         }
         finally

@@ -44,7 +44,8 @@ var registration = await new FuwenZhinuWorkflowFactory(definitions, identity,
     new FuwenZhinuExecutionPorts(new Echo(directory, blockOnSecond: mode is "fanout-start" or "selection-start" or "selection-partial"), new UnusedContext(), new UnusedInference(),
         observer: null, options: new FuwenZhinuExecutionPorts.Options(maximumFanOutConcurrency: fanOutMode ? 1 : 32)))
     .CreateGroupedAsync("group-process", "1", admission);
-var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(directory, "run.db"), Pooling = false });
+var enableWal = !string.Equals(Environment.GetEnvironmentVariable("ZG_DIAG_JOURNAL"), "delete", StringComparison.OrdinalIgnoreCase);
+var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(directory, "run.db"), Pooling = false, EnableWal = enableWal });
 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(40));
 var ct = timeout.Token;
 await using var engine = new WorkflowEngine(store, registration.Register(new WorkflowRegistry()), new ZhinuOptions

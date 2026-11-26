@@ -309,7 +309,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
 
             await ReachBarrier("selection-start");
             var runId = Guid.Parse(await File.ReadAllTextAsync(Path.Combine(directory, "run-id"), ct));
-            var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(directory, "run.db"), Pooling = false });
+            var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(directory, "run.db"), Pooling = false, EnableWal = RelSqlite01Diagnostics.WalEnabled });
             var before = (await store.ReadGroupSnapshotAsync(runId, new(), ct)).Value!;
             var oldCompleted = before.Steps.Where(value => value.Status == StepStatus.Completed &&
                 value.Role == ActivityGroupMemberRole.Work && value.StepKey != "demo/$group/root/decide").ToArray();
@@ -317,6 +317,13 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             await KillWorker();
             RelSqlite01Diagnostics.Capture("selection-after-kill-1", directory, Diagnostic,
                 extras: new Dictionary<string, object?> { ["blockedItem"] = blockedItem });
+            var settleOne = RelSqlite01Diagnostics.SettleDelay();
+            if (settleOne > TimeSpan.Zero)
+            {
+                await Task.Delay(settleOne, ct);
+                RelSqlite01Diagnostics.Capture("selection-after-settle-1", directory, Diagnostic,
+                    extras: new Dictionary<string, object?> { ["blockedItem"] = blockedItem, ["settleMs"] = settleOne.TotalMilliseconds });
+            }
             await using (var engine = new WorkflowEngine(store, registration.Register(new WorkflowRegistry())))
             {
                 await engine.RestartStepAsync(runId, "demo/$group/root/decide", new RestartStepOptions { Mode = StepRestartMode.StepOnly }, ct);
@@ -335,6 +342,13 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             await KillWorker();
             RelSqlite01Diagnostics.Capture("selection-after-kill-2", directory, Diagnostic,
                 extras: new Dictionary<string, object?> { ["blockedItem"] = blockedItem });
+            var settleTwo = RelSqlite01Diagnostics.SettleDelay();
+            if (settleTwo > TimeSpan.Zero)
+            {
+                await Task.Delay(settleTwo, ct);
+                RelSqlite01Diagnostics.Capture("selection-after-settle-2", directory, Diagnostic,
+                    extras: new Dictionary<string, object?> { ["blockedItem"] = blockedItem, ["settleMs"] = settleTwo.TotalMilliseconds });
+            }
 
             // Neither selector nor selected membership may be recomputed on recovery.
             await File.WriteAllTextAsync(Path.Combine(directory, "choice.json"), "invalid selector result", ct);
@@ -366,6 +380,7 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         {
             RelSqlite01Diagnostics.Capture("selection-failure", directory, Diagnostic, exception,
                 new Dictionary<string, object?> { ["blockedItem"] = blockedItem });
+            RelSqlite01Diagnostics.ProbeCopy("selection-failure", directory, Diagnostic);
             Diagnostic(exception.ToString());
             for (Exception? current = exception; current is not null; current = current.InnerException)
             {

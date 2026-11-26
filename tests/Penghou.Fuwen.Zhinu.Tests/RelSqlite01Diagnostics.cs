@@ -137,6 +137,117 @@ internal static class RelSqlite01Diagnostics
         }
     }
 
+    public static TimeSpan SettleDelay()
+    {
+        var value = Environment.GetEnvironmentVariable("ZG_DIAG_SETTLE_MS");
+        return int.TryParse(value, out var milliseconds) && milliseconds > 0
+            ? TimeSpan.FromMilliseconds(milliseconds)
+            : TimeSpan.Zero;
+    }
+
+    public static bool WalEnabled =>
+        !string.Equals(
+            Environment.GetEnvironmentVariable("ZG_DIAG_JOURNAL"),
+            "delete",
+            StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Forensic experiment on a disposable copy of the post-failure files.
+    /// Never opens the originals. Bounded to three attempts so transience can
+    /// be observed without becoming a retry policy.
+    /// </summary>
+    public static void ProbeCopy(string label, string databaseDirectory, Action<string>? log = null)
+    {
+        if (!Enabled)
+            return;
+        var notes = new List<string>();
+        void Note(string message)
+        {
+            notes.Add(message);
+            log?.Invoke(message);
+        }
+
+        string? target = null;
+        try
+        {
+            var configured = Environment.GetEnvironmentVariable("ZG_DIAG_EVIDENCE");
+            var root = string.IsNullOrWhiteSpace(configured)
+                ? Path.GetFullPath(Path.Combine(Path.GetTempPath(), "..", "rel-sqlite-01-evidence"))
+                : Path.GetFullPath(configured);
+            target = Path.Combine(root, Sanitize(label) + "-probe-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(target);
+            foreach (var name in new[]
+                     {
+                         "run.db", "run.db-wal", "run.db-shm",
+                         "workflow.db", "workflow.db-wal", "workflow.db-shm"
+                     })
+            {
+                var source = Path.Combine(databaseDirectory, name);
+                if (File.Exists(source))
+                    CopyRaw(source, Path.Combine(target, name));
+            }
+
+            var database = new[] { "run.db", "workflow.db" }
+                .Select(name => Path.Combine(target!, name))
+                .FirstOrDefault(File.Exists);
+            if (database is null)
+            {
+                Note($"probe-copy {label}: no database copy");
+                return;
+            }
+
+            var connectionString = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+            {
+                DataSource = database,
+                Pooling = false,
+                DefaultTimeout = 5
+            }.ToString();
+            for (var attempt = 1; attempt <= 3; attempt++)
+            {
+                var started = Stopwatch.GetTimestamp();
+                try
+                {
+                    using var connection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString);
+                    connection.Open();
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = "SELECT COUNT(*) FROM sqlite_master;";
+                        _ = command.ExecuteScalar();
+                    }
+                    using (var transaction = connection.BeginTransaction(deferred: false))
+                    {
+                        transaction.Rollback();
+                    }
+                    Note($"probe-copy attempt={attempt} ok elapsedMs={Stopwatch.GetElapsedTime(started).TotalMilliseconds:F1}");
+                    break;
+                }
+                catch (Microsoft.Data.Sqlite.SqliteException exception)
+                {
+                    Note($"probe-copy attempt={attempt} failed primary={exception.SqliteErrorCode} extended={exception.SqliteExtendedErrorCode} elapsedMs={Stopwatch.GetElapsedTime(started).TotalMilliseconds:F1} message={exception.Message}");
+                    Thread.Sleep(50);
+                }
+            }
+        }
+        catch (Exception probeError)
+        {
+            Note($"probe-copy-failed {probeError.GetType().Name}: {probeError.Message}");
+        }
+        finally
+        {
+            if (target is not null)
+            {
+                try
+                {
+                    File.WriteAllLines(Path.Combine(target, "probe.log"), notes);
+                }
+                catch
+                {
+                    // Diagnostic-only path.
+                }
+            }
+        }
+    }
+
     private static void CopyAndDescribe(string directory, string target, string name, Action<string> note)
     {
         var source = Path.Combine(directory, name);

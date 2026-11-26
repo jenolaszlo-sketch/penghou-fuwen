@@ -4,7 +4,7 @@ name: REL-SQLITE-01 diagnostic (nonpublishing)
 # It has no publication, tagging, push or release-environment capability.
 # It rebuilds the pinned native feed from source, executes only the implicated
 # process-loss test families on a hosted Windows runner, and preserves
-# first-failure evidence.
+# first-failure evidence, including native SQLite error state.
 #
 # Triggering: push to the dedicated diagnostic branch, or manual dispatch.
 # The run configuration is versioned in
@@ -50,7 +50,7 @@ jobs:
   diagnose:
     name: REL-SQLITE-01 hosted diagnostic
     runs-on: windows-latest
-    timeout-minutes: 75
+    timeout-minutes: 80
     permissions:
       contents: read
     steps:
@@ -58,6 +58,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Resolve diagnostic configuration
+        id: config
         shell: pwsh
         run: |
           $configPath = 'docs/qualification/rel-sqlite-01/diagnostic-config.json'
@@ -65,24 +66,37 @@ jobs:
           $reps = 1
           $instrumented = $true
           $pclraw = ''
+          $zhinu = 'bf33c05cf2390af6924bbe3761e09f9e377c7a97'
+          $settle = 0
+          $journal = 'wal'
           if (Test-Path $configPath) {
             $config = Get-Content $configPath -Raw | ConvertFrom-Json
             if ($config.mode) { $mode = $config.mode }
             if ($config.repetitions) { $reps = [int]$config.repetitions }
             if ($null -ne $config.instrumented) { $instrumented = [bool]$config.instrumented }
             if ($config.pclrawVersion) { $pclraw = [string]$config.pclrawVersion }
+            if ($config.zhinuSourceCommit) { $zhinu = [string]$config.zhinuSourceCommit }
+            if ($null -ne $config.settleMs) { $settle = [int]$config.settleMs }
+            if ($config.journal) { $journal = [string]$config.journal }
           }
           if ('${{ inputs.mode }}' -ne '') { $mode = '${{ inputs.mode }}' }
           if ('${{ inputs.repetitions }}' -ne '') { $reps = [int]'${{ inputs.repetitions }}' }
           if ('${{ inputs.instrumented }}' -ne '') { $instrumented = ('${{ inputs.instrumented }}' -eq 'true') }
           if ('${{ inputs.pclraw_version }}' -ne '') { $pclraw = '${{ inputs.pclraw_version }}' }
           if ($reps -lt 1 -or $reps -gt 20) { throw 'repetitions must be between 1 and 20' }
+          if ($zhinu -notmatch '^[0-9a-f]{40}$') { throw 'zhinuSourceCommit must be a 40-character commit SHA' }
+          if ($settle -lt 0 -or $settle -gt 5000) { throw 'settleMs must be between 0 and 5000' }
+          if ($journal -notin @('wal', 'delete')) { throw 'journal must be wal or delete' }
           "DIAG_MODE=$mode" >> $env:GITHUB_ENV
           "DIAG_REPETITIONS=$reps" >> $env:GITHUB_ENV
           "DIAG_INSTRUMENTED=$($instrumented.ToString().ToLowerInvariant())" >> $env:GITHUB_ENV
           "DIAG_PCLRAW=$pclraw" >> $env:GITHUB_ENV
+          "DIAG_ZHINU=$zhinu" >> $env:GITHUB_ENV
+          "DIAG_SETTLE=$settle" >> $env:GITHUB_ENV
+          "DIAG_JOURNAL=$journal" >> $env:GITHUB_ENV
           "ZG_SQLITE_STRESS=$([int]$instrumented)" >> $env:GITHUB_ENV
-          Write-Host "mode=$mode repetitions=$reps instrumented=$instrumented pclraw=$pclraw"
+          "zhinu=$zhinu" >> $env:GITHUB_OUTPUT
+          Write-Host "mode=$mode repetitions=$reps instrumented=$instrumented pclraw=$pclraw zhinu=$zhinu settleMs=$settle journal=$journal"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -112,15 +126,16 @@ jobs:
             "DIAG_MODE=$env:DIAG_MODE",
             "DIAG_REPETITIONS=$env:DIAG_REPETITIONS",
             "DIAG_INSTRUMENTED=$env:DIAG_INSTRUMENTED",
-            "DIAG_PCLRAW=$env:DIAG_PCLRAW"
+            "DIAG_PCLRAW=$env:DIAG_PCLRAW",
+            "DIAG_ZHINU=$env:DIAG_ZHINU",
+            "DIAG_SETTLE=$env:DIAG_SETTLE",
+            "DIAG_JOURNAL=$env:DIAG_JOURNAL"
           ) | Set-Content "$out/runner.txt"
           dotnet --info | Out-File "$out/dotnet-info.txt"
           dotnet --list-sdks | Out-File "$out/dotnet-sdks.txt"
           dotnet --list-runtimes | Out-File "$out/dotnet-runtimes.txt"
           Get-ComputerInfo | Select-Object WindowsProductName,WindowsVersion,OsBuildNumber,OsArchitecture,CsProcessors,CsTotalPhysicalMemory | Out-File "$out/computer.txt"
           Get-Volume | Select-Object DriveLetter,FileSystem,FileSystemType,DriveType,Size,SizeRemaining | Out-File "$out/volumes.txt"
-          fsutil fsinfo volumeinfo C:\ | Out-File "$out/fs-c.txt"
-          fsutil fsinfo volumeinfo D:\ | Out-File "$out/fs-d.txt"
           Get-MpComputerStatus -ErrorAction SilentlyContinue | Out-File "$out/defender-status.txt"
           Get-MpPreference -ErrorAction SilentlyContinue | Select-Object DisableRealtimeMonitoring,ExclusionPath,ExclusionExtension,ExclusionProcess | Out-File "$out/defender-preference.txt"
           Get-Process | Select-Object Id,ProcessName,WorkingSet64 | Sort-Object Id | Out-File "$out/processes.txt"
@@ -131,8 +146,27 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: jenolaszlo-sketch/penghou-zhinu
-          ref: bf33c05cf2390af6924bbe3761e09f9e377c7a97
+          ref: ${{ steps.config.outputs.zhinu }}
           path: native-candidate-source
+
+      - name: Record effective native source and pin
+        shell: pwsh
+        run: |
+          $out = 'artifacts/rel-sqlite-01/environment'
+          git -C native-candidate-source rev-parse HEAD | Out-File "$out/zhinu-source-head.txt"
+          git -C native-candidate-source rev-parse 'HEAD^{tree}' | Out-File "$out/zhinu-source-tree.txt"
+          git -C native-candidate-source log -1 --format='%H %s' | Out-File "$out/zhinu-source-commit.txt"
+          git -C native-candidate-source diff --stat bf33c05cf2390af6924bbe3761e09f9e377c7a97 HEAD | Out-File "$out/zhinu-source-delta.txt"
+          $pinPath = 'docs/qualification/activity-groups/zhinu-candidate.json'
+          $pin = Get-Content $pinPath -Raw | ConvertFrom-Json
+          if ($pin.SourceCommit -ne $env:DIAG_ZHINU) {
+            $pin.SourceCommit = $env:DIAG_ZHINU
+            $pin.Publication = 'Unpublished diagnostic instrumented candidate (never publish)'
+            $pin | ConvertTo-Json -Depth 20 | Set-Content $pinPath -Encoding utf8
+          }
+          Copy-Item -LiteralPath $pinPath -Destination "$out/zhinu-candidate-effective.json"
+          (Get-FileHash -LiteralPath $pinPath -Algorithm SHA256).Hash.ToLowerInvariant() |
+            Out-File "$out/zhinu-candidate-effective.sha256.txt"
 
       - name: Stage exact-source native feed
         shell: pwsh
@@ -199,6 +233,10 @@ jobs:
           $evidenceRoot = Join-Path $env:GITHUB_WORKSPACE 'artifacts/rel-sqlite-01/evidence'
           $resultsRoot = Join-Path $env:GITHUB_WORKSPACE 'artifacts/rel-sqlite-01/results'
           New-Item -ItemType Directory -Force -Path $evidenceRoot, $resultsRoot | Out-Null
+          $env:ZG_DIAG_SQLITE_ERROR_LOG = Join-Path $evidenceRoot 'sqlite-error-events.jsonl'
+          $env:ZG_DIAG_SETTLE_MS = $env:DIAG_SETTLE
+          $env:ZG_DIAG_JOURNAL = $env:DIAG_JOURNAL
+          Write-Host "ZG_DIAG_JOURNAL=$env:ZG_DIAG_JOURNAL ZG_DIAG_SETTLE_MS=$env:ZG_DIAG_SETTLE_MS ZG_DIAG_SQLITE_ERROR_LOG=$env:ZG_DIAG_SQLITE_ERROR_LOG"
           $outcomes = @()
           $failed = $false
           if ($mode -eq 'exact-suite') {
@@ -270,6 +308,16 @@ jobs:
           foreach ($file in Get-ChildItem -Path $root -Recurse -Filter exception.txt -ErrorAction SilentlyContinue) {
             Write-Host "::group::$($file.FullName)"
             Get-Content $file.FullName | Select-Object -First 80
+            Write-Host "::endgroup::"
+          }
+          foreach ($file in Get-ChildItem -Path $root -Recurse -Filter probe.log -ErrorAction SilentlyContinue) {
+            Write-Host "::group::$($file.FullName)"
+            Get-Content $file.FullName
+            Write-Host "::endgroup::"
+          }
+          foreach ($file in Get-ChildItem -Path $root -Recurse -Filter *.jsonl -ErrorAction SilentlyContinue) {
+            Write-Host "::group::$($file.FullName)"
+            Get-Content $file.FullName | Select-Object -Last 40
             Write-Host "::endgroup::"
           }
           foreach ($file in Get-ChildItem -Path $root -Recurse -Filter stress-diagnostics.log -ErrorAction SilentlyContinue) {

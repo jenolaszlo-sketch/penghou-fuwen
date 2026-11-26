@@ -125,6 +125,7 @@ jobs:
           Get-MpPreference -ErrorAction SilentlyContinue | Select-Object DisableRealtimeMonitoring,ExclusionPath,ExclusionExtension,ExclusionProcess | Out-File "$out/defender-preference.txt"
           Get-Process | Select-Object Id,ProcessName,WorkingSet64 | Sort-Object Id | Out-File "$out/processes.txt"
           Write-Host "ImageOS=$env:ImageOS ImageVersion=$env:ImageVersion"
+          exit 0
 
       - name: Checkout pinned native source
         uses: actions/checkout@v6

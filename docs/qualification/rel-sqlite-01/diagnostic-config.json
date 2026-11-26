@@ -1,10 +1,10 @@
 {
   "mode": "exact-suite",
-  "repetitions": 2,
+  "repetitions": 4,
   "instrumented": true,
   "pclrawVersion": "",
   "zhinuSourceCommit": "1cd7959593c1dcf63e2585541b5c23718105d758",
   "settleMs": 0,
   "journal": "wal",
-  "note": "Target capture completion: instrumented Zhinu feed, exact suite, two bounded exposures, nested process-loss test now file-instrumented. Diagnostic-only revision; never publish."
+  "note": "Bounded repetition campaign (4 full exact suites, stop on first failure) to capture a lease.recover instance and the DB/WAL/SHM bundle. Diagnostic-only feed; never publish."
 }

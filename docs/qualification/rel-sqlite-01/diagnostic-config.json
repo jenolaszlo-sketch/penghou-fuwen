@@ -1,10 +1,11 @@
 {
   "mode": "exact-suite",
-  "repetitions": 4,
+  "repetitions": 2,
   "instrumented": true,
   "pclrawVersion": "",
   "zhinuSourceCommit": "1cd7959593c1dcf63e2585541b5c23718105d758",
   "settleMs": 0,
   "journal": "wal",
-  "note": "Bounded repetition campaign (4 full exact suites, stop on first failure) to capture a lease.recover instance and the DB/WAL/SHM bundle. Diagnostic-only feed; never publish."
+  "note": "Forced-mapping control: the worker holds a read connection so every kill has a live WAL index. Diagnostic-only; never publish.",
+  "holdRead": true
 }

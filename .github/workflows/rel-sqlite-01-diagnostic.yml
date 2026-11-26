@@ -69,6 +69,7 @@ jobs:
           $zhinu = 'bf33c05cf2390af6924bbe3761e09f9e377c7a97'
           $settle = 0
           $journal = 'wal'
+          $hold = $false
           if (Test-Path $configPath) {
             $config = Get-Content $configPath -Raw | ConvertFrom-Json
             if ($config.mode) { $mode = $config.mode }
@@ -78,6 +79,7 @@ jobs:
             if ($config.zhinuSourceCommit) { $zhinu = [string]$config.zhinuSourceCommit }
             if ($null -ne $config.settleMs) { $settle = [int]$config.settleMs }
             if ($config.journal) { $journal = [string]$config.journal }
+            if ($null -ne $config.holdRead) { $hold = [bool]$config.holdRead }
           }
           if ('${{ inputs.mode }}' -ne '') { $mode = '${{ inputs.mode }}' }
           if ('${{ inputs.repetitions }}' -ne '') { $reps = [int]'${{ inputs.repetitions }}' }
@@ -94,9 +96,10 @@ jobs:
           "DIAG_ZHINU=$zhinu" >> $env:GITHUB_ENV
           "DIAG_SETTLE=$settle" >> $env:GITHUB_ENV
           "DIAG_JOURNAL=$journal" >> $env:GITHUB_ENV
+          "DIAG_HOLD_READ=$($hold.ToString().ToLowerInvariant())" >> $env:GITHUB_ENV
           "ZG_SQLITE_STRESS=$([int]$instrumented)" >> $env:GITHUB_ENV
           "zhinu=$zhinu" >> $env:GITHUB_OUTPUT
-          Write-Host "mode=$mode repetitions=$reps instrumented=$instrumented pclraw=$pclraw zhinu=$zhinu settleMs=$settle journal=$journal"
+          Write-Host "mode=$mode repetitions=$reps instrumented=$instrumented pclraw=$pclraw zhinu=$zhinu settleMs=$settle journal=$journal holdRead=$hold"
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -129,7 +132,8 @@ jobs:
             "DIAG_PCLRAW=$env:DIAG_PCLRAW",
             "DIAG_ZHINU=$env:DIAG_ZHINU",
             "DIAG_SETTLE=$env:DIAG_SETTLE",
-            "DIAG_JOURNAL=$env:DIAG_JOURNAL"
+            "DIAG_JOURNAL=$env:DIAG_JOURNAL",
+            "DIAG_HOLD_READ=$env:DIAG_HOLD_READ"
           ) | Set-Content "$out/runner.txt"
           dotnet --info | Out-File "$out/dotnet-info.txt"
           dotnet --list-sdks | Out-File "$out/dotnet-sdks.txt"
@@ -240,7 +244,8 @@ jobs:
           $env:ZG_DIAG_SQLITE_ERROR_LOG = Join-Path $evidenceRoot 'sqlite-error-events.jsonl'
           $env:ZG_DIAG_SETTLE_MS = $env:DIAG_SETTLE
           $env:ZG_DIAG_JOURNAL = $env:DIAG_JOURNAL
-          Write-Host "ZG_DIAG_JOURNAL=$env:ZG_DIAG_JOURNAL ZG_DIAG_SETTLE_MS=$env:ZG_DIAG_SETTLE_MS ZG_DIAG_SQLITE_ERROR_LOG=$env:ZG_DIAG_SQLITE_ERROR_LOG"
+          $env:ZG_DIAG_HOLD_READ = $env:DIAG_HOLD_READ
+          Write-Host "ZG_DIAG_JOURNAL=$env:ZG_DIAG_JOURNAL ZG_DIAG_SETTLE_MS=$env:ZG_DIAG_SETTLE_MS ZG_DIAG_HOLD_READ=$env:ZG_DIAG_HOLD_READ ZG_DIAG_SQLITE_ERROR_LOG=$env:ZG_DIAG_SQLITE_ERROR_LOG"
           $outcomes = @()
           $failed = $false
           if ($mode -eq 'exact-suite') {

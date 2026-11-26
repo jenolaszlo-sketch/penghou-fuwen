@@ -14,6 +14,26 @@ var selectionMode = mode.StartsWith("selection-", StringComparison.Ordinal);
 var fanOutMode = mode.StartsWith("fanout-", StringComparison.Ordinal) || selectionMode;
 var nestedRepeatMode = mode.StartsWith("nested-", StringComparison.Ordinal);
 var definitions = new DirectoryWorkflowDefinitionStore(directory);
+// REL-SQLITE-01 diagnostic-only control: keep a read connection open so the
+// killed worker definitely holds a memory-mapped WAL index when terminated.
+// This changes no workflow semantics and does not take a write lock.
+Microsoft.Data.Sqlite.SqliteConnection? heldReadConnection = null;
+void HoldRead()
+{
+    if (Environment.GetEnvironmentVariable("ZG_DIAG_HOLD_READ") != "1" || heldReadConnection is not null)
+        return;
+    var connectionString = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+    {
+        DataSource = Path.Combine(directory, "run.db"),
+        Pooling = false,
+        DefaultTimeout = 5
+    }.ToString();
+    heldReadConnection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString);
+    heldReadConnection.Open();
+    using var command = heldReadConnection.CreateCommand();
+    command.CommandText = "SELECT COUNT(*) FROM sqlite_master;";
+    _ = command.ExecuteScalar();
+}
 var pinned = await definitions.ReadGroupedAsync(args[1]) ?? throw new InvalidOperationException("Missing pinned expansion.");
 var text = new PrimitiveType(FuwenPrimitiveKind.String);
 var descriptors = new List<TrustedCatalogueDescriptor> {
@@ -65,13 +85,15 @@ if (mode is "start" or "fanout-start" or "nested-start" or "selection-start")
     {
         while (!File.Exists(Path.Combine(directory, "fanout-second-entered")))
             await Task.Delay(20, ct);
+        HoldRead();
         await File.WriteAllTextAsync(Path.Combine(directory, "barrier"), "second-operation", ct);
         await Task.Delay(Timeout.InfiniteTimeSpan, ct);
         return 3; // The parent kills this launch after operation one's durable commit.
     }
     while (!(await store.GetStepsAsync(runId, ct)).Any(s => s.Status == StepStatus.Waiting))
         await Task.Delay(20, ct);
-    await File.WriteAllTextAsync(Path.Combine(directory, "barrier"), "waiting", ct);
+    HoldRead();
+        await File.WriteAllTextAsync(Path.Combine(directory, "barrier"), "waiting", ct);
     await execution;
     return 3; // The parent must terminate this launch at the durable wait barrier.
 }
@@ -81,7 +103,8 @@ var resumed = engine.ExecuteAsync(runId, ct);
 if (mode == "selection-partial")
 {
     while (!File.Exists(Path.Combine(directory, "fanout-second-entered"))) await Task.Delay(20, ct);
-    await File.WriteAllTextAsync(Path.Combine(directory, "barrier"), "replacement-partial", ct);
+    HoldRead();
+        await File.WriteAllTextAsync(Path.Combine(directory, "barrier"), "replacement-partial", ct);
     await Task.Delay(Timeout.InfiniteTimeSpan, ct);
     return 3;
 }

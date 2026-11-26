@@ -148,6 +148,7 @@ jobs:
           repository: jenolaszlo-sketch/penghou-zhinu
           ref: ${{ steps.config.outputs.zhinu }}
           path: native-candidate-source
+          fetch-depth: 0
 
       - name: Record effective native source and pin
         shell: pwsh
@@ -156,7 +157,9 @@ jobs:
           git -C native-candidate-source rev-parse HEAD | Out-File "$out/zhinu-source-head.txt"
           git -C native-candidate-source rev-parse 'HEAD^{tree}' | Out-File "$out/zhinu-source-tree.txt"
           git -C native-candidate-source log -1 --format='%H %s' | Out-File "$out/zhinu-source-commit.txt"
-          git -C native-candidate-source diff --stat bf33c05cf2390af6924bbe3761e09f9e377c7a97 HEAD | Out-File "$out/zhinu-source-delta.txt"
+          git -C native-candidate-source diff --stat bf33c05cf2390af6924bbe3761e09f9e377c7a97 HEAD *> "$out/zhinu-source-delta.txt"
+          if ($LASTEXITCODE -ne 0) { "diff unavailable (shallow or missing base)" | Out-File "$out/zhinu-source-delta.txt" -Append }
+          $global:LASTEXITCODE = 0
           $pinPath = 'docs/qualification/activity-groups/zhinu-candidate.json'
           $pin = Get-Content $pinPath -Raw | ConvertFrom-Json
           if ($pin.SourceCommit -ne $env:DIAG_ZHINU) {
@@ -167,6 +170,7 @@ jobs:
           Copy-Item -LiteralPath $pinPath -Destination "$out/zhinu-candidate-effective.json"
           (Get-FileHash -LiteralPath $pinPath -Algorithm SHA256).Hash.ToLowerInvariant() |
             Out-File "$out/zhinu-candidate-effective.sha256.txt"
+          exit 0
 
       - name: Stage exact-source native feed
         shell: pwsh

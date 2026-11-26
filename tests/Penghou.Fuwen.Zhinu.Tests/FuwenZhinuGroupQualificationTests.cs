@@ -354,9 +354,17 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             await worker.WaitForExitAsync(ct);
             worker.Dispose();
             worker = null;
+            RelSqlite01Diagnostics.Capture("nested-after-kill", root);
+            var nestedSettle = RelSqlite01Diagnostics.SettleDelay();
+            if (nestedSettle > TimeSpan.Zero)
+            {
+                await Task.Delay(nestedSettle, ct);
+                RelSqlite01Diagnostics.Capture("nested-after-settle", root,
+                    extras: new Dictionary<string, object?> { ["settleMs"] = nestedSettle.TotalMilliseconds });
+            }
 
             var run = Guid.Parse(await File.ReadAllTextAsync(Path.Combine(root, "run-id"), ct));
-            var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(root, "run.db"), Pooling = false });
+            var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(root, "run.db"), Pooling = false, EnableWal = RelSqlite01Diagnostics.WalEnabled });
             using var reader = new WorkflowGroupReader(store);
             var beforeGroups = await ReadGroupOccurrences(reader, run, ct);
             beforeGroups.Should().HaveCount(4); // root, first iteration, Review, Normalize
@@ -427,6 +435,12 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 if (membership is not null)
                     afterGroups.Should().Contain(group => group.OccurrenceId == membership.GroupOccurrenceId, step.StepKey);
             }
+        }
+        catch (Exception exception)
+        {
+            RelSqlite01Diagnostics.Capture("nested-failure", root, null, exception);
+            RelSqlite01Diagnostics.ProbeCopy("nested-failure", root);
+            throw;
         }
         finally
         {

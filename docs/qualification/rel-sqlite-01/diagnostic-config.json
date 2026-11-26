@@ -1,10 +1,10 @@
 {
   "mode": "exact-suite",
-  "repetitions": 1,
+  "repetitions": 2,
   "instrumented": true,
   "pclrawVersion": "",
   "zhinuSourceCommit": "1cd7959593c1dcf63e2585541b5c23718105d758",
   "settleMs": 0,
   "journal": "wal",
-  "note": "REL-SQLITE-01 Control A with the diagnostic-instrumented Zhinu feed (native errno capture). Diagnostic-only revision; never publish."
+  "note": "Target capture completion: instrumented Zhinu feed, exact suite, two bounded exposures, nested process-loss test now file-instrumented. Diagnostic-only revision; never publish."
 }

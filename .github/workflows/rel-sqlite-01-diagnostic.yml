@@ -1,0 +1,290 @@
+name: REL-SQLITE-01 diagnostic (nonpublishing)
+
+# Diagnostic-only workflow for ZG-RQ-03-REL-SQLITE-01-DIAG-01.
+# It has no publication, tagging, push or release-environment capability.
+# It rebuilds the pinned native feed from source, executes only the implicated
+# process-loss test families on a hosted Windows runner, and preserves
+# first-failure evidence.
+#
+# Triggering: push to the dedicated diagnostic branch, or manual dispatch.
+# The run configuration is versioned in
+# docs/qualification/rel-sqlite-01/diagnostic-config.json so every executed
+# configuration is bound to an exact commit. Explicit workflow_dispatch inputs
+# override that file when dispatch is available.
+
+on:
+  push:
+    branches:
+      - codex/rel-sqlite-01-diagnostic
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Execution mode
+        type: choice
+        options:
+          - exact-suite
+          - selection-stress
+          - grouped-stress
+        default: exact-suite
+      repetitions:
+        description: Bounded repetition count (1-20)
+        type: number
+        default: 1
+      instrumented:
+        description: Enable env-gated first-failure evidence capture
+        type: boolean
+        default: true
+      pclraw_version:
+        description: Optional SQLitePCLRaw override (for example 2.1.13); empty uses the qualified graph
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rel-sqlite-01-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    name: REL-SQLITE-01 hosted diagnostic
+    runs-on: windows-latest
+    timeout-minutes: 75
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout diagnostic revision
+        uses: actions/checkout@v6
+
+      - name: Resolve diagnostic configuration
+        shell: pwsh
+        run: |
+          $configPath = 'docs/qualification/rel-sqlite-01/diagnostic-config.json'
+          $mode = 'exact-suite'
+          $reps = 1
+          $instrumented = $true
+          $pclraw = ''
+          if (Test-Path $configPath) {
+            $config = Get-Content $configPath -Raw | ConvertFrom-Json
+            if ($config.mode) { $mode = $config.mode }
+            if ($config.repetitions) { $reps = [int]$config.repetitions }
+            if ($null -ne $config.instrumented) { $instrumented = [bool]$config.instrumented }
+            if ($config.pclrawVersion) { $pclraw = [string]$config.pclrawVersion }
+          }
+          if ('${{ inputs.mode }}' -ne '') { $mode = '${{ inputs.mode }}' }
+          if ('${{ inputs.repetitions }}' -ne '') { $reps = [int]'${{ inputs.repetitions }}' }
+          if ('${{ inputs.instrumented }}' -ne '') { $instrumented = ('${{ inputs.instrumented }}' -eq 'true') }
+          if ('${{ inputs.pclraw_version }}' -ne '') { $pclraw = '${{ inputs.pclraw_version }}' }
+          if ($reps -lt 1 -or $reps -gt 20) { throw 'repetitions must be between 1 and 20' }
+          "DIAG_MODE=$mode" >> $env:GITHUB_ENV
+          "DIAG_REPETITIONS=$reps" >> $env:GITHUB_ENV
+          "DIAG_INSTRUMENTED=$($instrumented.ToString().ToLowerInvariant())" >> $env:GITHUB_ENV
+          "DIAG_PCLRAW=$pclraw" >> $env:GITHUB_ENV
+          "ZG_SQLITE_STRESS=$([int]$instrumented)" >> $env:GITHUB_ENV
+          Write-Host "mode=$mode repetitions=$reps instrumented=$instrumented pclraw=$pclraw"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Record runner and toolchain identity
+        shell: pwsh
+        run: |
+          $out = 'artifacts/rel-sqlite-01/environment'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          @(
+            "GITHUB_SHA=$env:GITHUB_SHA",
+            "GITHUB_REF=$env:GITHUB_REF",
+            "GITHUB_RUN_ID=$env:GITHUB_RUN_ID",
+            "GITHUB_RUN_ATTEMPT=$env:GITHUB_RUN_ATTEMPT",
+            "RUNNER_OS=$env:RUNNER_OS",
+            "RUNNER_ARCH=$env:RUNNER_ARCH",
+            "RUNNER_NAME=$env:RUNNER_NAME",
+            "RUNNER_TEMP=$env:RUNNER_TEMP",
+            "ImageOS=$env:ImageOS",
+            "ImageVersion=$env:ImageVersion",
+            "TEMP=$env:TEMP",
+            "TMP=$env:TMP",
+            "DIAG_MODE=$env:DIAG_MODE",
+            "DIAG_REPETITIONS=$env:DIAG_REPETITIONS",
+            "DIAG_INSTRUMENTED=$env:DIAG_INSTRUMENTED",
+            "DIAG_PCLRAW=$env:DIAG_PCLRAW"
+          ) | Set-Content "$out/runner.txt"
+          dotnet --info | Out-File "$out/dotnet-info.txt"
+          dotnet --list-sdks | Out-File "$out/dotnet-sdks.txt"
+          dotnet --list-runtimes | Out-File "$out/dotnet-runtimes.txt"
+          Get-ComputerInfo | Select-Object WindowsProductName,WindowsVersion,OsBuildNumber,OsArchitecture,CsProcessors,CsTotalPhysicalMemory | Out-File "$out/computer.txt"
+          Get-Volume | Select-Object DriveLetter,FileSystem,FileSystemType,DriveType,Size,SizeRemaining | Out-File "$out/volumes.txt"
+          fsutil fsinfo volumeinfo C:\ | Out-File "$out/fs-c.txt"
+          fsutil fsinfo volumeinfo D:\ | Out-File "$out/fs-d.txt"
+          Get-MpComputerStatus -ErrorAction SilentlyContinue | Out-File "$out/defender-status.txt"
+          Get-MpPreference -ErrorAction SilentlyContinue | Select-Object DisableRealtimeMonitoring,ExclusionPath,ExclusionExtension,ExclusionProcess | Out-File "$out/defender-preference.txt"
+          Get-Process | Select-Object Id,ProcessName,WorkingSet64 | Sort-Object Id | Out-File "$out/processes.txt"
+          Write-Host "ImageOS=$env:ImageOS ImageVersion=$env:ImageVersion"
+
+      - name: Checkout pinned native source
+        uses: actions/checkout@v6
+        with:
+          repository: jenolaszlo-sketch/penghou-zhinu
+          ref: bf33c05cf2390af6924bbe3761e09f9e377c7a97
+          path: native-candidate-source
+
+      - name: Stage exact-source native feed
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          ./eng/Prepare-ZhinuSourceCandidate.ps1 -SourceDirectory native-candidate-source -ArtifactsDirectory artifacts/zhinu-candidate
+          if ($LASTEXITCODE -ne 0) { throw 'Native candidate preparation failed.' }
+          $manifest = @(Get-ChildItem artifacts/zhinu-candidate/zhinu-source-candidate-*.json)
+          if ($manifest.Count -ne 1) { throw 'Expected one native rebuild manifest.' }
+          Copy-Item -LiteralPath $manifest[0].FullName -Destination artifacts/zhinu-source-candidate.json
+          $pin = Get-Content docs/qualification/activity-groups/zhinu-candidate.json -Raw | ConvertFrom-Json
+          ./eng/Verify-NativeFeed.ps1 `
+            -FeedDirectory artifacts/zhinu-candidate `
+            -PinPath docs/qualification/activity-groups/zhinu-candidate.json `
+            -RebuildManifestPath artifacts/zhinu-source-candidate.json `
+            -Version $pin.Version
+          if ($LASTEXITCODE -ne 0) { throw 'Native feed verification failed.' }
+          (Get-ChildItem artifacts/zhinu-candidate -Filter *.nupkg | Sort-Object Name | ForEach-Object {
+            "$($_.Name) $((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())"
+          }) | Set-Content artifacts/rel-sqlite-01/environment/native-feed-sha256.txt
+
+      - name: Restore and build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cache = Join-Path $env:RUNNER_TEMP "rel-sqlite-01-cache-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          if (Test-Path $cache) { throw 'Diagnostic cache must start empty.' }
+          "NUGET_PACKAGES=$cache" >> $env:GITHUB_ENV
+          $extra = @()
+          if ($env:DIAG_PCLRAW -ne '') {
+            $extra = @("-p:RelSqlite01PclRawVersion=$env:DIAG_PCLRAW")
+          }
+          dotnet restore Penghou.Fuwen.slnx --packages $cache --no-http-cache @extra
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build Penghou.Fuwen.slnx --configuration Release --no-restore @extra
+          if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
+
+      - name: Record dependency and native identity
+        shell: pwsh
+        run: |
+          $out = 'artifacts/rel-sqlite-01/environment'
+          $assets = Get-Content tests/Penghou.Fuwen.Zhinu.Tests/obj/project.assets.json -Raw | ConvertFrom-Json
+          $assets.libraries.PSObject.Properties.Name |
+            Where-Object { $_ -match '^(SQLitePCLRaw|Microsoft\.Data\.Sqlite|Penghou\.Zhinu)' } |
+            Sort-Object | Set-Content "$out/resolved-packages.txt"
+          foreach ($framework in 'net8.0','net10.0') {
+            $native = "tests/Penghou.Fuwen.Zhinu.Tests/bin/Release/$framework/runtimes/win-x64/native/e_sqlite3.dll"
+            if (Test-Path $native) {
+              "$framework $((Get-FileHash $native -Algorithm SHA256).Hash.ToLowerInvariant()) $((Get-Item $native).Length)" |
+                Add-Content "$out/native-sqlite.txt"
+              (Get-Item $native).VersionInfo | Select-Object FileVersion,ProductVersion,FileDescription |
+                Out-File "$out/native-version-$framework.txt"
+            }
+          }
+          Get-Content "$out/resolved-packages.txt"
+          Get-Content "$out/native-sqlite.txt"
+
+      - name: Execute bounded diagnostic
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $mode = $env:DIAG_MODE
+          $reps = [int]$env:DIAG_REPETITIONS
+          $evidenceRoot = Join-Path $env:GITHUB_WORKSPACE 'artifacts/rel-sqlite-01/evidence'
+          $resultsRoot = Join-Path $env:GITHUB_WORKSPACE 'artifacts/rel-sqlite-01/results'
+          New-Item -ItemType Directory -Force -Path $evidenceRoot, $resultsRoot | Out-Null
+          $outcomes = @()
+          $failed = $false
+          if ($mode -eq 'exact-suite') {
+            for ($i = 1; $i -le $reps; $i++) {
+              $env:ZG_DIAG_EVIDENCE = Join-Path $evidenceRoot "rep$i"
+              $results = Join-Path $resultsRoot "rep$i"
+              New-Item -ItemType Directory -Force -Path $results | Out-Null
+              Write-Host "::group::exact-suite repetition $i of $reps"
+              dotnet test Penghou.Fuwen.slnx --configuration Release --no-build --logger "trx;LogFilePrefix=diag-rep$i" --blame-hang-timeout 5m --blame-hang-dump-type none --results-directory $results
+              $code = $LASTEXITCODE
+              Write-Host "::endgroup::"
+              $outcomes += [pscustomobject]@{ repetition = $i; exitCode = $code }
+              if ($code -ne 0) { $failed = $true; break }
+            }
+          }
+          elseif ($mode -eq 'selection-stress') {
+            $env:ZG_DIAG_REPETITIONS = "$reps"
+            python eng/sqlite_stress.py --output (Join-Path $env:GITHUB_WORKSPACE 'artifacts/rel-sqlite-01/stress')
+            $code = $LASTEXITCODE
+            $outcomes += [pscustomobject]@{ repetitions = $reps; exitCode = $code }
+            if ($code -ne 0) { $failed = $true }
+          }
+          elseif ($mode -eq 'grouped-stress') {
+            foreach ($framework in 'net8.0','net10.0') {
+              for ($i = 1; $i -le $reps; $i++) {
+                $env:ZG_DIAG_EVIDENCE = Join-Path $evidenceRoot "grouped-$framework-rep$i"
+                $results = Join-Path $resultsRoot "grouped-$framework-rep$i"
+                New-Item -ItemType Directory -Force -Path $results | Out-Null
+                Write-Host "::group::grouped-wait $framework repetition $i of $reps"
+                dotnet test tests/Penghou.Fuwen.Zhinu.Tests/Penghou.Fuwen.Zhinu.Tests.csproj -c Release -f $framework --no-build --no-restore --filter "FullyQualifiedName~Process_loss_at_a_grouped_wait_preserves_history_without_repeating_committed_effects" --logger "trx;LogFilePrefix=grouped-$framework-rep$i" --results-directory $results
+                $code = $LASTEXITCODE
+                Write-Host "::endgroup::"
+                $outcomes += [pscustomobject]@{ framework = $framework; repetition = $i; exitCode = $code }
+                if ($code -ne 0) { $failed = $true; break }
+              }
+              if ($failed) { break }
+            }
+          }
+          else { throw "Unknown mode: $mode" }
+          $outcomes | ConvertTo-Json | Set-Content artifacts/rel-sqlite-01/run-outcomes.json
+          if ($failed) { exit 1 }
+
+      - name: Collect retained harness directories
+        if: always()
+        shell: pwsh
+        run: |
+          $temp = [System.IO.Path]::GetTempPath()
+          $dest = 'artifacts/rel-sqlite-01/retained'
+          foreach ($name in 'fuwen-selection-process','fuwen-group-process') {
+            $source = Join-Path $temp $name
+            if (Test-Path $source) {
+              New-Item -ItemType Directory -Force -Path $dest | Out-Null
+              Copy-Item -LiteralPath $source -Destination $dest -Recurse -Force -ErrorAction Continue
+            }
+          }
+          Get-ChildItem -Path $temp -Directory -Filter 'fuwen-*' -ErrorAction SilentlyContinue |
+            Select-Object FullName, LastWriteTime | Out-File artifacts/rel-sqlite-01/retained-directories.txt
+
+      - name: Print first-failure evidence summary
+        if: always()
+        shell: pwsh
+        run: |
+          $root = 'artifacts/rel-sqlite-01'
+          foreach ($file in Get-ChildItem -Path $root -Recurse -Filter capture.log -ErrorAction SilentlyContinue) {
+            Write-Host "::group::$($file.FullName)"
+            Get-Content $file.FullName
+            Write-Host "::endgroup::"
+          }
+          foreach ($file in Get-ChildItem -Path $root -Recurse -Filter exception.txt -ErrorAction SilentlyContinue) {
+            Write-Host "::group::$($file.FullName)"
+            Get-Content $file.FullName | Select-Object -First 80
+            Write-Host "::endgroup::"
+          }
+          foreach ($file in Get-ChildItem -Path $root -Recurse -Filter stress-diagnostics.log -ErrorAction SilentlyContinue) {
+            Write-Host "::group::$($file.FullName)"
+            Get-Content $file.FullName | Select-Object -Last 60
+            Write-Host "::endgroup::"
+          }
+
+      - name: Retain diagnostic artifacts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: rel-sqlite-01-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/rel-sqlite-01/**
+            artifacts/test-results/**
+            artifacts/zhinu-source-candidate.json
+          if-no-files-found: warn
+          retention-days: 14

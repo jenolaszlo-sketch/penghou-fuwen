@@ -18,6 +18,9 @@ import xml.etree.ElementTree as ET
 p = argparse.ArgumentParser()
 p.add_argument('--output', required=True)
 a = p.parse_args()
+repetitions = int(os.environ.get('ZG_DIAG_REPETITIONS', '16'))
+if not 1 <= repetitions <= 32:
+    raise SystemExit('ZG_DIAG_REPETITIONS must be between 1 and 32')
 root = Path(__file__).resolve().parent.parent
 out = Path(a.output).resolve()
 out.mkdir(parents=True, exist_ok=False)
@@ -42,18 +45,20 @@ environment = {
     'nativeLibrarySha256': digest(native), 'diagnosticSqliteVersion': sqlite3.sqlite_version,
     'journal': 'WAL', 'pooling': False, 'busyTimeoutMs': 5000,
     'scope': 'Serial, both initial and replacement process-loss barriers; no retries',
-    'expectedCases': 64, 'startedUtc': dt.datetime.now(dt.timezone.utc).isoformat(),
+    'expectedCases': 2 * repetitions * 2, 'startedUtc': dt.datetime.now(dt.timezone.utc).isoformat(),
     'freeBytesAtStart': shutil.disk_usage(out).free,
     'packages': [{'file': x.name, 'sha256': digest(x)} for x in sorted((root/'artifacts/zhinu-candidate').glob('*.nupkg'))],
 }
 save('environment.json', environment)
 observations = []
 for framework in ('net8.0','net10.0'):
-    for repetition in range(1,17):
+    for repetition in range(1,repetitions+1):
         run = out/f'{framework}-{repetition:02d}'
         run.mkdir()
         temp = run/'temporary'; temp.mkdir()
-        env = dict(os.environ, TEMP=str(temp), TMP=str(temp), TMPDIR=str(temp), ZG_SQLITE_STRESS='1')
+        evidence = run/'evidence'
+        env = dict(os.environ, TEMP=str(temp), TMP=str(temp), TMPDIR=str(temp), ZG_SQLITE_STRESS='1',
+                   ZG_DIAG_EVIDENCE=str(evidence))
         args = ['dotnet','test',str(project),'-c','Release','-f',framework,'--no-build','--no-restore',
                 '--filter','FullyQualifiedName~Explicit_selection_process_loss_retires_partial_history_and_recovers_durable_replacement',
                 '--logger','trx;LogFileName=stress.trx','--logger','console;verbosity=normal',

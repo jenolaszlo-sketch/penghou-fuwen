@@ -4,7 +4,14 @@
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- REL-SQLITE-01 diagnostic-only switch: empty means the qualified
+         transitive SQLitePCLRaw graph. Set to 2.1.13 for the version control. -->
+    <RelSqlite01PclRawVersion Condition="'$(RelSqlite01PclRawVersion)' == ''"></RelSqlite01PclRawVersion>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(RelSqlite01PclRawVersion)' != ''">
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="$(RelSqlite01PclRawVersion)" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Penghou.Fuwen.GroupProcessProbe\Penghou.Fuwen.GroupProcessProbe.csproj" ReferenceOutputAssembly="false" />

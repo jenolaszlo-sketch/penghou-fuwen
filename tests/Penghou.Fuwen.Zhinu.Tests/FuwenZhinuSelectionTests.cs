@@ -315,6 +315,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 value.Role == ActivityGroupMemberRole.Work && value.StepKey != "demo/$group/root/decide").ToArray();
             oldCompleted.Should().HaveCount(blockedItem == "a" ? 1 : 3);
             await KillWorker();
+            RelSqlite01Diagnostics.Capture("selection-after-kill-1", directory, Diagnostic,
+                extras: new Dictionary<string, object?> { ["blockedItem"] = blockedItem });
             await using (var engine = new WorkflowEngine(store, registration.Register(new WorkflowRegistry())))
             {
                 await engine.RestartStepAsync(runId, "demo/$group/root/decide", new RestartStepOptions { Mode = StepRestartMode.StepOnly }, ct);
@@ -331,6 +333,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             foreach (var step in before.Steps.Where(value => value.Status == StepStatus.Running))
                 partial.Steps.Single(value => value.StepId == step.StepId).Status.Should().Be(StepStatus.Cancelled);
             await KillWorker();
+            RelSqlite01Diagnostics.Capture("selection-after-kill-2", directory, Diagnostic,
+                extras: new Dictionary<string, object?> { ["blockedItem"] = blockedItem });
 
             // Neither selector nor selected membership may be recomputed on recovery.
             await File.WriteAllTextAsync(Path.Combine(directory, "choice.json"), "invalid selector result", ct);
@@ -360,6 +364,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
         }
         catch (Exception exception)
         {
+            RelSqlite01Diagnostics.Capture("selection-failure", directory, Diagnostic, exception,
+                new Dictionary<string, object?> { ["blockedItem"] = blockedItem });
             Diagnostic(exception.ToString());
             for (Exception? current = exception; current is not null; current = current.InnerException)
             {

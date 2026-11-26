@@ -1,0 +1,7 @@
+{
+  "mode": "exact-suite",
+  "repetitions": 1,
+  "instrumented": true,
+  "pclrawVersion": "",
+  "note": "REL-SQLITE-01 Control A: exact original hosted test command, net8.0+net10.0, instrumentation on. Change one field per diagnostic run and record the commit."
+}

@@ -197,6 +197,8 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
             await worker.WaitForExitAsync(ct);
             worker.Dispose();
             worker = null;
+            RelSqlite01Diagnostics.Capture("grouped-wait-after-kill", root,
+                extras: new Dictionary<string, object?> { ["repeat"] = repeat });
             var runId = Guid.Parse(await File.ReadAllTextAsync(Path.Combine(root, "run-id"), ct));
             var store = new SqliteWorkflowStore(new ZhinuSqliteOptions { DatabasePath = Path.Combine(root, "run.db"), Pooling = false });
             using var reader = new WorkflowGroupReader(store);
@@ -224,6 +226,12 @@ public sealed partial class FuwenZhinuSequentialInterpreterTests
                 (await store.GetStepGroupMembershipAsync(membership.StepId, ct)).Should().BeEquivalentTo(membership);
             (await File.ReadAllLinesAsync(Path.Combine(root, "effects"), ct)).Should().ContainSingle();
             (await File.ReadAllTextAsync(Path.Combine(root, "result"), ct)).Should().Be("accepted");
+        }
+        catch (Exception exception)
+        {
+            RelSqlite01Diagnostics.Capture("grouped-wait-failure", root, null, exception,
+                new Dictionary<string, object?> { ["repeat"] = repeat });
+            throw;
         }
         finally
         {

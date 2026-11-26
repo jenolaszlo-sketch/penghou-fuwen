@@ -138,9 +138,9 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          ./eng/Prepare-ZhinuSourceCandidate.ps1 -SourceDirectory native-candidate-source -ArtifactsDirectory artifacts/zhinu-candidate
+          ./eng/Prepare-ZhinuSourceCandidate.ps1 -SourceDirectory native-candidate-source
           if ($LASTEXITCODE -ne 0) { throw 'Native candidate preparation failed.' }
-          $manifest = @(Get-ChildItem artifacts/zhinu-candidate/zhinu-source-candidate-*.json)
+          $manifest = @(Get-ChildItem artifacts/zhinu-source-candidate/zhinu-source-candidate-*.json)
           if ($manifest.Count -ne 1) { throw 'Expected one native rebuild manifest.' }
           Copy-Item -LiteralPath $manifest[0].FullName -Destination artifacts/zhinu-source-candidate.json
           $pin = Get-Content docs/qualification/activity-groups/zhinu-candidate.json -Raw | ConvertFrom-Json

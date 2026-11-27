@@ -1,8 +1,11 @@
 # Activity groups: supported cross-repository profile
 
-The current unpublished candidate pair is Fuwen preview.20 and exact Zhinu
-preview.10/schema 10. The [native pin](qualification/activity-groups/zhinu-candidate.json)
-identifies the original Q33 archives and source. The prior preview.18/preview.9
+The current candidate pair is Fuwen preview.20 and the signed public Zhinu
+preview.10/schema 10 baseline. The
+[public baseline](qualification/activity-groups/zhinu-public-baseline.json)
+is authoritative for canonical build and release validation. The historical
+[native pin](qualification/activity-groups/zhinu-candidate.json) records the
+original Q33 archives/source and is not a canonical dependency path. The prior preview.18/preview.9
 [ZG-7 qualification](qualification/activity-groups/zg7.md) retains its original
 [archive pin](qualification/activity-groups/zhinu-zg7-candidate.json) and evidence.
 The new [explicit selection profile](activity-groups-selection.md) extends that
@@ -55,15 +58,25 @@ Recovery re-admits the exact immutable stored bundle without source recompilatio
 or macro-library lookup. Changed execution or manifest pins are rejected before
 provider re-execution and cannot rewrite the original admitted hierarchy.
 
-## Reproducible candidate and compatibility checks
+## Reproducible dependency and compatibility checks
 
-`eng/Prepare-ZhinuCandidate.ps1` verifies the exact seven original archive hashes
-by default. The optional explicit source-rebuild manifest must preserve source,
-version and package identities and bind back to the original archive pin.
-`eng/Prepare-ZhinuSourceCandidate.ps1` requires a clean checkout at that exact
-source commit and builds only the seven shipped projects. Rebuilt archives get
-their own hashes and provenance; their bytes are not claimed to equal the original
-Windows build. The tracked original archive pin is never overwritten by CI.
+Canonical CI, release validation and consumer proof consume the seven signed
+public Zhinu `0.2.0-preview.10` packages from nuget.org. Their tracked
+[public baseline](qualification/activity-groups/zhinu-public-baseline.json)
+binds package IDs, SHA-256 archive and symbol hashes, repository signatures and
+the public source commit. `eng/Verify-PublicZhinuBaseline.ps1` re-downloads and
+verifies that closure on every canonical run, and
+`eng/Test-PublicZhinuBaselineRejection.ps1` proves a mutated hash is refused.
+
+The historical source-rebuild scripts (`eng/Prepare-ZhinuCandidate.ps1`,
+`eng/Prepare-ZhinuSourceCandidate.ps1`, `eng/Verify-NativeFeed.ps1`) are
+retained only as evidence. `Prepare-ZhinuCandidate.ps1` verifies the exact seven
+original archive hashes; the optional source-rebuild manifest must preserve
+source, version and package identities and bind back to the original archive pin.
+`Prepare-ZhinuSourceCandidate.ps1` requires a clean checkout at that exact source
+commit and builds only the seven shipped projects. Rebuilt archives get their own
+hashes and provenance; their bytes are not claimed to equal the original Windows
+build. Neither path may construct canonical release artifacts.
 
 Both OS package consumers download the same Ubuntu producer archives. The
 consumer verifier checks absence of project references, exact versions/source,

@@ -1,15 +1,10 @@
 name: Publish to NuGet
 
-# ZG-RQ-02 RG-03: the tag-based release path prepares the exclusive native
-# candidate feed before any restore. The root NuGet.config maps all seven
-# native package IDs exclusively to artifacts/zhinu-candidate; the
-# prepare-native-feed job stages exactly the pinned native candidate
-# (source commit from docs/qualification/activity-groups/zhinu-candidate.json)
-# and verifies it. The validate job consumes the staged feed, performs the
-# full validation of the exact tagged commit and uploads the validated
-# packages. The publish job consumes only those artifacts, behind the
-# protected nuget environment approval. Nothing in this workflow can resolve
-# a native dependency outside the approved staged feed.
+# The canonical release path validates the exact tagged commit against the
+# signed public Zhinu 0.2.0-preview.10 baseline, packs only from that validated
+# source, and publishes exactly the artifacts uploaded by the validation job.
+# Nothing in this workflow rebuilds, stages a source-rebuilt native feed, or
+# substitutes packages between validation and publication.
 
 on:
   push:

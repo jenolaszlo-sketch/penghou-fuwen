@@ -98,12 +98,16 @@ FM-2 and ZG-7 remained open at that static checkpoint. The later
 lowering, mechanical progress and remote gates for the selected profile. The
 original static record remains Windows-only and does not authorize publication.
 
-## Candidate package reproduction
+## Dependency reproduction
 
-The current branch restores the exact seven unpublished Zhinu preview.10
-packages in [the current pin](qualification/activity-groups/zhinu-candidate.json).
-Run `eng/Prepare-ZhinuCandidate.ps1 -ArtifactsDirectory <qualified-package-directory>`
-with the exact Q33 directory. The original ZG-7 preview.9 archives are preserved in
+Canonical development and release validation restore the seven signed public
+Zhinu preview.10 packages described by the
+[public baseline](qualification/activity-groups/zhinu-public-baseline.json) from
+nuget.org; no local feed is required. The historical unpublished archive pin is
+retained at [the historical pin](qualification/activity-groups/zhinu-candidate.json)
+for reproducing the original Q33 directory with
+`eng/Prepare-ZhinuCandidate.ps1 -ArtifactsDirectory <qualified-package-directory>`.
+That path is evidence only and never constructs release artifacts. The original ZG-7 preview.9 archives are preserved in
 [their historical pin](qualification/activity-groups/zhinu-zg7-candidate.json);
 reproduce that checkpoint from its recorded source checkout.
 The original repeat preview.7 pin is

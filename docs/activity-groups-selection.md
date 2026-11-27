@@ -1,7 +1,8 @@
 # Explicit bounded grouped selection
 
-Fuwen preview.19 adds `fuwen-ir/v5-selection`, using the exact unpublished Zhinu
-preview.10/schema 10 candidate in [the current pin](qualification/activity-groups/zhinu-candidate.json).
+Fuwen preview.19 adds `fuwen-ir/v5-selection`, using the signed Zhinu
+preview.10/schema 10 baseline. The original unpublished archive pin is retained at
+[the historical pin](qualification/activity-groups/zhinu-candidate.json).
 The [ZG-7 pin](qualification/activity-groups/zhinu-zg7-candidate.json) preserves
 the original preview.9 archives. Existing v1–v4 plans retain their canonical
 bytes, fingerprints, lowering and keys. This is an opt-in authoring contract.

@@ -51,9 +51,10 @@ feed and original unsigned archive pin are separate records.
 
 The earlier activity-groups `0.1.0-preview.18` candidate requires its preserved
 unpublished Zhinu `0.2.0-preview.9` closure. The current preview.20 candidate uses
-the original preview.10/schema 10 archives described above. Prepare the local feed using
-`eng/Prepare-ZhinuCandidate.ps1`; see the
-[static profile](activity-groups-static-profile.md). Existing ungrouped APIs
+the signed public Zhinu preview.10/schema 10 baseline; see the
+[public baseline](qualification/activity-groups/public-baseline.md). The original
+archives remain reproducible only through the historical evidence path
+`eng/Prepare-ZhinuCandidate.ps1`, which is not used for release artifacts. Existing ungrouped APIs
 remain available. Grouped source returns a `GroupedDefinition`; admit it with
 `AdmitGroupedAsync`, persist/reload that exact bundle, and use `CreateGroupedAsync`.
 Do not register expanded v4/v5 IR or expanded-group v6 IR through plain `CreateAsync` or recompute macros

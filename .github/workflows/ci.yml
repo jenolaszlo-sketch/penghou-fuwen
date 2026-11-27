@@ -29,46 +29,14 @@ jobs:
           New-Item -ItemType Directory -Path $temporary -Force | Out-Null
           foreach ($name in @('TEMP', 'TMP', 'TMPDIR')) { "$name=$temporary" >> $env:GITHUB_ENV }
 
-      - name: Read exact native source pin
-        id: native-pin
-        run: |
-          $pin = Get-Content docs/qualification/activity-groups/zhinu-candidate.json -Raw | ConvertFrom-Json
-          if ($pin.SourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Invalid native source pin.' }
-          "commit=$($pin.SourceCommit)" >> $env:GITHUB_OUTPUT
-          "version=$($pin.Version)" >> $env:GITHUB_OUTPUT
-
-      - name: Checkout pinned native source
-        uses: actions/checkout@v6
-        with:
-          repository: jenolaszlo-sketch/penghou-zhinu
-          ref: ${{ steps.native-pin.outputs.commit }}
-          path: native-candidate-source
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             10.0.x
 
-      # A source rebuild is a new per-run archive set, not a claim to reproduce
-      # the original Windows archive hashes. Both pins and exact source are retained.
-      - name: Prepare exact-source native candidates
-        run: |
-          ./eng/Prepare-ZhinuSourceCandidate.ps1 -SourceDirectory native-candidate-source
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $manifest = @(Get-ChildItem artifacts/zhinu-source-candidate/zhinu-source-candidate-*.json)
-          if ($manifest.Count -ne 1) { throw 'Expected one native rebuild manifest.' }
-          Copy-Item -LiteralPath $manifest[0].FullName -Destination artifacts/zhinu-source-candidate.json
-          Copy-Item artifacts/zhinu-candidate/*.nupkg artifacts/
-
-      - name: Verify candidate preparation rejection boundaries
-        run: ./eng/Test-ZhinuCandidatePreparation.ps1 -ArtifactsDirectory artifacts/zhinu-candidate -CandidatePinPath artifacts/zhinu-source-candidate.json -OutputDirectory artifacts/candidate-preparation
-
-      - name: Verify native package closure and precompiled legacy consumer
-        run: |
-          ./native-candidate-source/eng/Verify-WorkflowPackageClosure.ps1 -ArtifactsDirectory artifacts/zhinu-candidate -PackageVersion '${{ steps.native-pin.outputs.version }}' -OutputDirectory artifacts/native-qualification/package-closure
-          ./native-candidate-source/eng/Verify-LegacyWorkflowConsumer.ps1 -ArtifactsDirectory artifacts/zhinu-candidate -PackageVersion '${{ steps.native-pin.outputs.version }}' -OutputDirectory artifacts/native-qualification/legacy-consumer
+      - name: Verify signed public Zhinu baseline
+        run: ./eng/Verify-PublicZhinuBaseline.ps1 -OutputDirectory artifacts/zhinu-public -ReceiptPath artifacts/zhinu-public-baseline.json
 
       - name: Build
         run: dotnet build Penghou.Fuwen.slnx --configuration Release
@@ -92,10 +60,10 @@ jobs:
           path: |
             artifacts/*.nupkg
             artifacts/*.snupkg
-            artifacts/zhinu-source-candidate.json
+            artifacts/zhinu-public-baseline.json
           if-no-files-found: error
 
-      - name: Retain build and native qualification evidence
+      - name: Retain build and public-dependency evidence
         if: always()
         uses: actions/upload-artifact@v6
         with:
@@ -103,10 +71,7 @@ jobs:
           path: |
             artifacts/test-results/*.trx
             artifacts/test-results/**/Sequence*.xml
-            artifacts/candidate-preparation/**/qualification.json
-            artifacts/native-qualification/**/qualification.json
-            artifacts/native-qualification/**/logs/*.log
-            artifacts/zhinu-source-candidate.json
+            artifacts/zhinu-public-baseline.json
           if-no-files-found: ignore
 
   consumer-proof:
@@ -132,47 +97,46 @@ jobs:
           New-Item -ItemType Directory -Path $temporary -Force | Out-Null
           foreach ($name in @('TEMP', 'TMP', 'TMPDIR')) { "$name=$temporary" >> $env:GITHUB_ENV }
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.0.x
             10.0.x
 
-      # Both OS consumers use the same producer archives, including native DLLs.
-      # This proves package portability rather than merely rebuilding on each OS.
-      - name: Download canonical producer packages
+      - name: Download canonical Fuwen candidate packages
         uses: actions/download-artifact@v6
         with:
           name: nuget-packages-ubuntu-latest
           path: artifacts
 
-      - name: Validate and prepare downloaded native candidates
-        run: ./eng/Prepare-ZhinuCandidate.ps1 -ArtifactsDirectory artifacts -PinPath artifacts/zhinu-source-candidate.json
+      - name: Verify signed public Zhinu baseline
+        run: ./eng/Verify-PublicZhinuBaseline.ps1 -OutputDirectory artifacts/zhinu-public -ReceiptPath artifacts/zhinu-public-baseline.json
 
-      - name: Marang consumer proof
-        run: >
-          dotnet test tests/Penghou.Fuwen.MarangConsumer.Tests/Penghou.Fuwen.MarangConsumer.Tests.csproj
-          --configuration Release
-          -p:FuwenPackageVersion=0.0.0-ci.${{ github.run_id }}
-          --logger 'trx;LogFilePrefix=consumer'
-          --results-directory artifacts/consumer-results/marang
+      - name: Stage Fuwen candidate feed
+        run: |
+          New-Item -ItemType Directory -Path artifacts/fuwen-candidate -Force | Out-Null
+          Get-ChildItem artifacts -File | Where-Object { $_.Extension -in '.nupkg','.snupkg' } | Copy-Item -Destination artifacts/fuwen-candidate -Force
 
-      - name: Review consumer proof
-        run: >
-          dotnet test tests/Penghou.Fuwen.ReviewConsumer.Tests/Penghou.Fuwen.ReviewConsumer.Tests.csproj
-          --configuration Release
-          -p:FuwenPackageVersion=0.0.0-ci.${{ github.run_id }}
-          --logger 'trx;LogFilePrefix=consumer'
-          --results-directory artifacts/consumer-results/review
+      - name: Marang and Review consumer proof
+        run: |
+          $version = '0.0.0-ci.${{ github.run_id }}'
+          foreach ($tf in @('net8.0', 'net10.0')) {
+            foreach ($project in @('Penghou.Fuwen.MarangConsumer.Tests', 'Penghou.Fuwen.ReviewConsumer.Tests')) {
+              $csproj = "tests/$project/$project.csproj"
+              dotnet restore $csproj --configfile eng/NuGet.Consumer.config --packages "artifacts/consumer-cache-$tf" -p:TargetFramework=$tf -p:FuwenPackageVersion=$version
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+              dotnet build $csproj --configuration Release -f $tf --no-restore -p:FuwenPackageVersion=$version
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+              dotnet test $csproj --configuration Release -f $tf --no-build --no-restore -p:FuwenPackageVersion=$version --logger 'trx;LogFilePrefix=consumer' --results-directory artifacts/consumer-results
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            }
+          }
 
-      - name: Verify isolated resolved candidate archives
-        run: ./eng/Verify-CandidateConsumers.ps1 -ArtifactsDirectory artifacts -PackageVersion '0.0.0-ci.${{ github.run_id }}' -ZhinuPinPath artifacts/zhinu-source-candidate.json -ResultsDirectory artifacts/consumer-results -OutputPath artifacts/consumer-qualification.json
+      - name: Verify isolated public-dependency candidate archives
+        run: ./eng/Verify-PublicCandidateConsumers.ps1 -ArtifactsDirectory artifacts -PackageVersion '0.0.0-ci.${{ github.run_id }}' -BaselinePath docs/qualification/activity-groups/zhinu-public-baseline.json -ResultsDirectory artifacts/consumer-results -OutputPath artifacts/consumer-qualification.json
 
       - name: Verify precompiled public Fuwen consumer and schema boundaries
-        run: |
-          $pin = Get-Content artifacts/zhinu-source-candidate.json -Raw | ConvertFrom-Json
-          ./eng/Verify-LegacyFuwenConsumer.ps1 -ArtifactsDirectory artifacts -PackageVersion '0.0.0-ci.${{ github.run_id }}' -ZhinuArtifactsDirectory artifacts -ZhinuPackageVersion $pin.Version -OutputDirectory artifacts/legacy-fuwen
+        run: ./eng/Verify-LegacyFuwenConsumer.ps1 -ArtifactsDirectory artifacts -PackageVersion '0.0.0-ci.${{ github.run_id }}' -ZhinuArtifactsDirectory artifacts/zhinu-public -ZhinuPackageVersion '0.2.0-preview.10' -OutputDirectory artifacts/legacy-fuwen
 
       - name: Verify consumer formatting
         run: |
@@ -189,5 +153,5 @@ jobs:
             artifacts/consumer-qualification.json
             artifacts/legacy-fuwen/**/qualification.json
             artifacts/legacy-fuwen/**/logs/*.log
-            artifacts/zhinu-source-candidate.json
+            artifacts/zhinu-public-baseline.json
           if-no-files-found: ignore

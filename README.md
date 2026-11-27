@@ -224,17 +224,19 @@ machine-assisted repair.
 
 ## Development
 
-On the activity-groups branch, prepare the exact unpublished Zhinu candidate
-feed before restoring. Package hashes and source are pinned; see the
-[static integration profile](docs/activity-groups-static-profile.md) and
+Canonical development consumes the signed public Zhinu `0.2.0-preview.10`
+packages from nuget.org. Verify the identity/signature/hash baseline first; no
+local dependency feed is required. See the
+[public dependency baseline](docs/qualification/activity-groups/public-baseline.md),
+the [static integration profile](docs/activity-groups-static-profile.md),
 [single-level repeat extension](docs/activity-groups-repeat-profile.md) and
 [bounded fan-out profile](docs/activity-groups-fanout-profile.md).
 The [current supported profile](docs/activity-groups-qualified-profile.md) explains
-progress, compatibility and the exact-source CI candidate path. Public-package
-release gates remain separate.
+progress and compatibility. Source-rebuild scripts are historical and
+non-canonical.
 
 ```powershell
-./eng/Prepare-ZhinuCandidate.ps1 -ArtifactsDirectory <qualified-zhinu-packages>
+./eng/Verify-PublicZhinuBaseline.ps1 -OutputDirectory artifacts/zhinu-public -ReceiptPath artifacts/zhinu-public-baseline.json
 dotnet build Penghou.Fuwen.slnx --configuration Release
 dotnet test Penghou.Fuwen.slnx --configuration Release --no-build
 dotnet pack Penghou.Fuwen.slnx --configuration Release --no-build --output artifacts

@@ -1,0 +1,52 @@
+{
+  "Version": "0.2.0-preview.10",
+  "Repository": "jenolaszlo-sketch/penghou-zhinu",
+  "SourceCommit": "4ac6f238cb3734f0597356fa09e8c23554563902",
+  "Tree": "f8432be07ddffd38f032515384863bc1471a5115",
+  "Publication": "Published on nuget.org",
+  "PackageSource": "https://api.nuget.org/v3/index.json",
+  "Packages": [
+    {
+      "Id": "Penghou.Zhinu",
+      "File": "Penghou.Zhinu.0.2.0-preview.10.nupkg",
+      "Sha256": "8e735c4d783a8d57c8aa256a5652cb16d6e4063cc4611342281d1372456bac71",
+      "SnupkgSha256": "f111e737d1406d3bb5ce597795eab8e06196e9c4f9aa21bca1d2074112d514e5"
+    },
+    {
+      "Id": "Penghou.Zhinu.Agents",
+      "File": "Penghou.Zhinu.Agents.0.2.0-preview.10.nupkg",
+      "Sha256": "168a0aef26a60a7feb970e4de4475963d0f52af6a4774472ac45984775cc5946",
+      "SnupkgSha256": "7753556acb6878ad6dc589aee952cc95a3cecbc223c161ec016e6f89856a387a"
+    },
+    {
+      "Id": "Penghou.Zhinu.Hosting",
+      "File": "Penghou.Zhinu.Hosting.0.2.0-preview.10.nupkg",
+      "Sha256": "279e89259ea0320b57f27ebbb171e2bb3f78e70667518b0d634af75c747b554d",
+      "SnupkgSha256": "0eb8c994dedd40589afc94d270c543deeacd1fd1685cffdc0ac3a012a2b77cbb"
+    },
+    {
+      "Id": "Penghou.Zhinu.Hosting.AspNetCore",
+      "File": "Penghou.Zhinu.Hosting.AspNetCore.0.2.0-preview.10.nupkg",
+      "Sha256": "6ea9bab11d0b694a434aa4859f6162f631e44185cc16148f42ebbb45b81d60ef",
+      "SnupkgSha256": "a4a19b9ef2d5c3fa4e0f3999d71ac22061d1d359a1bc072c24b1c9caa108e72f"
+    },
+    {
+      "Id": "Penghou.Zhinu.OpenTelemetry",
+      "File": "Penghou.Zhinu.OpenTelemetry.0.2.0-preview.10.nupkg",
+      "Sha256": "1d910c52acf6aa75459fcba9aae66ea76cb4128317c13561786555fec9c69e8a",
+      "SnupkgSha256": "1260d2156a94f3db3a5800dc4fbaa1c73f8be535fc7d7ccd0fd59697cc7f3719"
+    },
+    {
+      "Id": "Penghou.Zhinu.Sqlite",
+      "File": "Penghou.Zhinu.Sqlite.0.2.0-preview.10.nupkg",
+      "Sha256": "a92f273306352a61ce2b743977d67c5f840fef48225c397271cb6e6fa30bbd70",
+      "SnupkgSha256": "381a33199720dfaca84845bb68ca6175ced33ab13bcdc452d101478e84c34a4e"
+    },
+    {
+      "Id": "Penghou.Zhinu.Testing",
+      "File": "Penghou.Zhinu.Testing.0.2.0-preview.10.nupkg",
+      "Sha256": "33b742d94c5c207048906aaad4421af1b2d5851b1343eb5b93f0327b53cc814d",
+      "SnupkgSha256": "73609b951f93ecfe3ba94ff967023b7b7885b4e7d2ced4f94efa0a27d50e6201"
+    }
+  ]
+}

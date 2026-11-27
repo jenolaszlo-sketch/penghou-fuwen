@@ -1,4 +1,5 @@
 using FluentAssertions;
+using System.Text.Json;
 using System.Xml.Linq;
 
 namespace Penghou.Fuwen.Compiler.Tests;
@@ -54,13 +55,18 @@ public sealed class ReleaseWorkflowContractTests
         workflow.IndexOf("NuGet login", StringComparison.Ordinal).Should().BeLessThan(
             workflow.IndexOf("Push packages to NuGet", StringComparison.Ordinal));
 
-        // The reusable qualification workflow performs the full validation of
-        // the exact versioned commit against the pinned staged native feed.
+        // The reusable qualification workflow validates the exact versioned
+        // commit against the signed public Zhinu baseline. Source-rebuilt native
+        // feed staging is not part of the canonical release path.
         qualification.Should().Contain("expected_tag=\"v${version}\"");
         qualification.Should().Contain("[ \"$GITHUB_REF_NAME\" != \"$expected_tag\" ]");
         qualification.Should().NotContain("version=\"${GITHUB_REF_NAME#v}\"");
-        qualification.Should().Contain("Prepare-ZhinuSourceCandidate.ps1");
-        qualification.Should().Contain("Verify-NativeFeed.ps1");
+        qualification.Should().Contain("Verify-PublicZhinuBaseline.ps1");
+        qualification.Should().Contain("Test-PublicZhinuBaselineRejection.ps1");
+        qualification.Should().NotContain("Prepare-ZhinuSourceCandidate.ps1");
+        qualification.Should().NotContain("Verify-NativeFeed.ps1");
+        qualification.Should().NotContain("artifacts/zhinu-candidate");
+        workflow.Should().NotContain("zhinu-candidate");
         qualification.Should().Contain("dotnet build Penghou.Fuwen.slnx --configuration Release");
         qualification.Should().Contain("dotnet format Penghou.Fuwen.slnx --verify-no-changes --no-restore");
         qualification.Should().Contain("dotnet test Penghou.Fuwen.slnx --configuration Release --no-build");
@@ -68,13 +74,50 @@ public sealed class ReleaseWorkflowContractTests
         qualification.Should().Contain("if-no-files-found: error");
         qualification.Should().Contain("release-packages-${{ github.sha }}-${{ matrix.os }}");
 
-        // Validation order: stage the feed, build, test, then pack and upload.
-        qualification.IndexOf("Prepare exact-source native candidates", StringComparison.Ordinal).Should().BeLessThan(
+        // Validation order: verify the public baseline, build, test, then pack and upload.
+        qualification.IndexOf("Verify signed public Zhinu baseline", StringComparison.Ordinal).Should().BeLessThan(
             qualification.IndexOf("Build", StringComparison.Ordinal));
         qualification.IndexOf("Build", StringComparison.Ordinal).Should().BeLessThan(
             qualification.IndexOf("Pack validated commit", StringComparison.Ordinal));
         qualification.IndexOf("Pack validated commit", StringComparison.Ordinal).Should().BeLessThan(
             qualification.IndexOf("Upload validated packages", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Canonical_dependency_resolution_uses_the_public_zhinu_baseline()
+    {
+        var root = FindRepositoryRoot();
+        var nuget = await File.ReadAllTextAsync(
+            Path.Combine(root, "NuGet.config"), TestContext.Current.CancellationToken);
+        nuget.Should().Contain("https://api.nuget.org/v3/index.json");
+        nuget.Should().NotContain("zhinu-candidate");
+
+        var consumerNuget = await File.ReadAllTextAsync(
+            Path.Combine(root, "eng", "NuGet.Consumer.config"),
+            TestContext.Current.CancellationToken);
+        consumerNuget.Should().Contain("fuwen-candidate");
+        consumerNuget.Should().Contain("https://api.nuget.org/v3/index.json");
+        consumerNuget.Should().Contain("<package pattern=\"Penghou.Fuwen*\" />");
+
+        var baselinePath = Path.Combine(
+            root, "docs", "qualification", "activity-groups", "zhinu-public-baseline.json");
+        using var baseline = JsonDocument.Parse(
+            await File.ReadAllTextAsync(baselinePath, TestContext.Current.CancellationToken));
+        baseline.RootElement.GetProperty("Version").GetString().Should().Be("0.2.0-preview.10");
+        baseline.RootElement.GetProperty("SourceCommit").GetString()
+            .Should().Be("4ac6f238cb3734f0597356fa09e8c23554563902");
+        var packages = baseline.RootElement.GetProperty("Packages").EnumerateArray().ToArray();
+        packages.Should().HaveCount(7);
+        packages.Should().OnlyContain(package =>
+            package.GetProperty("Sha256").GetString()!.Length == 64 &&
+            package.GetProperty("SnupkgSha256").GetString()!.Length == 64);
+
+        var ci = await File.ReadAllTextAsync(
+            Path.Combine(root, ".github", "workflows", "ci.yml"),
+            TestContext.Current.CancellationToken);
+        ci.Should().Contain("Verify-PublicZhinuBaseline.ps1");
+        ci.Should().NotContain("Prepare-ZhinuCandidate");
+        ci.Should().NotContain("zhinu-candidate");
     }
 
     private static string FindRepositoryRoot()

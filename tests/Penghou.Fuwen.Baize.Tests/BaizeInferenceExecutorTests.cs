@@ -772,13 +772,13 @@ public sealed class BaizeInferenceExecutorTests
             submissionDelay: duringPolling ? null : TimeSpan.FromSeconds(5),
             pollingDelay: duringPolling ? TimeSpan.FromSeconds(5) : null,
             initiallyQueued: duringPolling,
-            // Cancel deterministically from inside the first poll instead of
-            // racing a wall-clock timeout against the poll loop.
+            // Cancel deterministically at the submission or polling boundary
+            // instead of racing a wall-clock elapsed-time assumption.
+            onSubmission: duringPolling ? null : cancellation.Cancel,
             onPolling: duringPolling ? cancellation.Cancel : null);
-        if (!duringPolling)
-            cancellation.CancelAfter(TimeSpan.FromMilliseconds(50));
-        else
-            cancellation.CancelAfter(TimeSpan.FromSeconds(30));
+        // Bounded watchdog only: the boundary callback determines cancellation
+        // ordering; this prevents a deadlocked test from hanging indefinitely.
+        cancellation.CancelAfter(TimeSpan.FromSeconds(30));
         var binding = new BaizeGenerationBinding(
             profile, prompt, artifactDescriptor, BaizeGenerationModality.Image,
             "endpoint", "provider", "model", generation,
@@ -795,6 +795,29 @@ public sealed class BaizeInferenceExecutorTests
         await act.Should().ThrowAsync<OperationCanceledException>();
         generation.SubmissionCalls.Should().Be(1);
         generation.PollingCalls.Should().Be(duringPolling ? 1 : 0);
+    }
+
+    [Fact]
+    public async Task Generation_preserves_pre_cancelled_caller_token_without_submission()
+    {
+        var (profile, prompt) = Descriptors();
+        var artifactDescriptor = Descriptor(DescriptorKind.Artifact, "generated-image");
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var generation = new DelayedGenerationClient();
+        var binding = new BaizeGenerationBinding(
+            profile, prompt, artifactDescriptor, BaizeGenerationModality.Image,
+            "endpoint", "provider", "model", generation,
+            request => new ImageGenerationRequest { Prompt = "draw", IdempotencyKey = request.Invocation.OperationKey },
+            new FakeGeneratedAssetPublisher());
+
+        var act = () => new BaizeGenerationInferenceExecutor([binding]).ExecuteAsync(
+            Request(profile, prompt, new ArtifactType(artifactDescriptor), new InferenceLimits(null, 5)),
+            cancellation.Token).AsTask();
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        generation.SubmissionCalls.Should().Be(0);
+        generation.PollingCalls.Should().Be(0);
     }
 
     [Fact]
@@ -1498,7 +1521,8 @@ public sealed class BaizeInferenceExecutorTests
         TimeSpan? submissionDelay = null,
         TimeSpan? pollingDelay = null,
         bool initiallyQueued = false,
-        Action? onPolling = null) : IGenerationClient
+        Action? onPolling = null,
+        Action? onSubmission = null) : IGenerationClient
     {
         private readonly GenerationOperationHandle handle = new(
             "provider", "endpoint", "delayed-operation", "model", new Dictionary<string, string>());
@@ -1515,6 +1539,7 @@ public sealed class BaizeInferenceExecutorTests
             CancellationToken cancellationToken = default)
         {
             SubmissionCalls++;
+            onSubmission?.Invoke();
             if (submissionDelay is { } delay)
                 await Task.Delay(delay, cancellationToken);
             return initiallyQueued
